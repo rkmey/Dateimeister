@@ -1,0 +1,43 @@
+Erforderliche Konfiguration:
+
+[Subdirs]
+# für jeden Imagetyp muss hier das Zieldirectory angegeben werden, dass an OUTDIR angehängt wird
+JPEG:  photo/JPEG
+RAW:   photo/RAW
+#MOV:   video/MOV
+MP4:   video/MP4
+#AVI:   video/AVI
+VIDEO: video
+
+[Cameras]
+# für jede Kamera müssen hier, durch Pluszeichen getrennt, die Bildformate und in Klammern die zugehörigen Dateiendungen angegeben werden
+# mehrere Änderungen sind möglich, sie müssen durch Komma getrennt werden
+# jedes Bildformat muss unter Imagetypes vorhanden sein, sonst gibt es eine Fehlermeldung
+Z7:     JPEG (JPG) + RAW (NEF) + MP4 (MP4)
+GFX50S: JPEG (JPG) + RAW (RAF) + MP4 (MP4)
+G9:     JPEG (JPG) + RAW (RW2) + MP4 (MP4)
+# vor allem, um Bilder ohne Rücksicht auf eine Kamera von A nach B kopiert werden sollen, gibt es OTHER
+# OTHER:  JPEG (JPEG, JPG) + RAW (RW2, NEF, RAW) + MP4 (MP4) + MOV (MOV) + AVI (AVI)
+OTHER:  JPEG (JPEG, JPG) + RAW (RW2, NEF, RAW) + VIDEO(MP4, MOV, AVI)
+
+[process_image]
+# hier muss für jede Dateiendung eine Verarbeitungsanweisung angegeben sein
+# derzeit werden nur "jpeg", "use_jpeg" sowie die Videoformate unterstützt. "jpeg" wird direkt von Pillow unterstützt und kann deshalb direkt angezeigt werden
+# "use_jpeg" bedeutet, dass nach einem gleichnamigen jpeg gesucht wird. Fall vorhanden wird es angezeigt, falls nicht, wird in
+# der Galerie nur ein blaues Recheck angezeigt
+JPEG = jpeg
+JPG  = jpeg
+RAF  = use_jpeg
+NEF  = use_jpeg
+RW2  = use_jpeg 
+MP4  = VIDEO
+MOV  = VIDEO
+AVI  = VIDEO
+
+Kamera: must have 1...n Type
+	Type used by Dateimeister Browse / Edit output and by configfiles xml (indir -> type -> config_file)
+Type: must have exactly 1 subdir
+Type: must have 1...n suffix
+Suffix: must have exactly 1 process_image, different suffixes may have the same process_image
+
+

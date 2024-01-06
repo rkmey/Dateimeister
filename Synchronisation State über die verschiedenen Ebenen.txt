@@ -1,0 +1,30 @@
+Synchronisation der Stes zwischen Main, FSImage und Duplicate
+
+main -> duplicate:
+main ruft duplicate.exclude_call auf, weil duplicate-thumbnail sich beim Anlegen bei main-Thumbnail registriert hat
+duplicate ermittelt, um welches eigene Thumbnail es sich handelt und aktualisiert den state
+
+duplicate -> main:
+duplicate - thumbnail kennt sein zugehöriges parent-thumbnail aus main und ruft auf: parent.setState
+
+duplicate -> FSImage:
+duplicate ruft für sein eigenes Thumbnail auf thumbnail.setState.
+da FSImage aus diesem entstanden ist, erfolgt die Aktualisierung automatisch automatisch
+
+FSImage -> duplicate:
+FSimag ruft für sein eigenes thumbnail self.thumbnail.setState auf. 
+Da dies das thumbnail von duplicate ist, erfolgt die Aktualisierung automatisch
+
+main -> duplicate -> FSImage
+main ruft duplicate.exclude_call auf, weil duplicate-thumbnail sich beim Anlegen bei main-Thumbnail registriert hat
+duplicate ermittelt, um welches eigene Thumbnail es sich handelt und aktualisiert den state
+da FSImage aus diesem entstanden ist, erfolgt die Aktualisierung automatisch automatisch
+
+FSImage -> duplicate -> main
+FSImage synchronisiert automatisch duplicate (s.o)
+duplicate - thumbnail kennt sein zugehöriges parent-thumbnail aus main und ruft auf: parent.setState
+
+
+WICHTIG:
+um eine Enlosschleife zu verhindern, wird duplicate.exclude_call nur ausgeführt, wenn der Aufrufer von setState nicht duplicate.thumbnail.setState war
+um dies zu erkennen, wird das Caller-Objekt mit dem thumbnail.self.dupl-Objekt verglichen
