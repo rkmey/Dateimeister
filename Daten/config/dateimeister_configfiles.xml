@@ -1,0 +1,97 @@
+<config_files>
+  <outdir name="//hugo123/zzz/fotos" usedate="20231220-15:04:21" />
+  <outdir name="//hugo123/zzz/arbeit/python/dateimeister/backups" usedate="20231223-18:30:09" />
+  <indir name="e:/fotos/dateimeister" usedate="20240106-19:50:30">
+    <type name="JPEG" num_images="49">
+      <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_other_jpeg-2.xml" usedate="20231223-18:27:46" num_images="49" />
+      <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_other_jpeg-3.xml" usedate="20231224-12:35:09" num_images="49" />
+      <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_gfx50s_jpeg7.xml" usedate="20231230-15:45:35" num_images="49" />
+      <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_retina_reflex_jpeg.xml" usedate="20231231-22:23:01" num_images="49" />
+    </type>
+    <type name="VIDEO" num_images="6">
+      <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_other_video4.xml" usedate="20231218-20:32:15" num_images="6" />
+      <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_other_video5.xml" usedate="20231218-20:32:25" num_images="6" />
+      <config_file filename="e:/arbeit/python/dateimeister/daten/config/neu.xml" usedate="20231218-20:34:52" num_images="6" />
+      <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_other_video6.xml" usedate="20231223-18:31:05" num_images="6" />
+    </type>
+  </indir>
+  <outdir name="c:/users/rkmey/pictures" usedate="20231220-15:03:18" />
+  <camera name="Leica" usedate="20231220-20:21:57">
+    <type name="JPEG">
+      <suffix name="jpeg" />
+      <suffix name="jpg" />
+    </type>
+    <type name="RAW">
+      <suffix name="RWL" />
+    </type>
+    <type name="VIDEO">
+      <suffix name="MP4" />
+      <suffix name="MOV" />
+    </type>
+  </camera>
+  <camera name="Z7" usedate="20231224-20:21:57">
+    <type name="JPEG">
+      <suffix name="JPG" />
+    </type>
+    <type name="RAW">
+      <suffix name="RW2" />
+    </type>
+    <type name="MP4">
+      <suffix name="MP4" />
+    </type>
+    <type name="MOV">
+      <suffix name="MOV" />
+    </type>
+  </camera>
+  <camera name="OTHER" usedate="20231224-20:21:57">
+    <type name="JPEG">
+      <suffix name="JPG" />
+      <suffix name="JPEG" />
+    </type>
+    <type name="RAW">
+      <suffix name="RW2" />
+      <suffix name="NEF" />
+      <suffix name="RAW" />
+    </type>
+    <type name="VIDEO">
+      <suffix name="MP4" />
+      <suffix name="MOV" />
+      <suffix name="AVI" />
+    </type>
+  </camera>
+  <camera name="Testcamera" usedate="20231220-20:21:57">
+    <type name="TESTFORMAT">
+      <suffix name="testsuffix" />
+    </type>
+  </camera>
+  <process_image suffix_name="JPEG" process="jpeg" />
+  <process_image suffix_name="JPG" process="jpeg" />
+  <process_image suffix_name="RAF" process="use_jpeg" />
+  <process_image suffix_name="NEF" process="use_jpeg" />
+  <process_image suffix_name="RW2" process="use_jpeg" />
+  <process_image suffix_name="MP4" process="VIDEO" />
+  <process_image suffix_name="MOV" process="VIDEO" />
+  <process_image suffix_name="AVI" process="VIDEO" />
+  <subdir type_name="JPEG" subdir="photo/JPEG" />
+  <subdir type_name="RAW" subdir="photo/RAW" />
+  <subdir type_name="MOV" subdir="video/MOV" />
+  <subdir type_name="MP4" subdir="video/MP4" />
+  <subdir type_name="AVI" subdir="video/AVI" />
+  <subdir type_name="VIDEO" subdir="video" />
+  <indir name="c:/fotos/dateimeister" usedate="20231227-12:05:30" />
+  <outdir name="e:/arbeit/python/dateimeister/daten/nas" usedate="20240106-19:50:30" />
+  <indir name="e:/fotos/aaa/icloud photos" usedate="20231230-15:48:02">
+    <type name="JPEG" num_images="4">
+      <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_gfx50s_aaa.xml" usedate="20231230-15:49:16" num_images="4" />
+    </type>
+  </indir>
+  <camera name="Retina Reflex" usedate="20231231-18:40:54">
+    <type name="JPEG">
+      <suffix name="JPG" />
+      <suffix name="JPEG" />
+    </type>
+    <type name="VIDEO">
+      <suffix name="MOV" />
+    </type>
+  </camera>
+</config_files>

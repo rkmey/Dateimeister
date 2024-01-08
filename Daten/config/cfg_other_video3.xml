@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<thumbnails time="20231208-17:46:54">
+    <thumbnail filename="E:\Fotos\Dateimeister\v1.mp4">
+        <image>E:\Fotos\Dateimeister\v1.mp4</image>
+        <state>state.INCLUDE</state>
+    </thumbnail>
+    <thumbnail filename="E:\Fotos\Dateimeister\_AVI.avi">
+        <image>E:\Fotos\Dateimeister\_AVI.avi</image>
+        <state>state.INCLUDE</state>
+    </thumbnail>
+    <thumbnail filename="E:\Fotos\Dateimeister\_Burda.mp4">
+        <image>E:\Fotos\Dateimeister\_Burda.mp4</image>
+        <state>state.INCLUDE</state>
+    </thumbnail>
+    <thumbnail filename="E:\Fotos\Dateimeister\_Mov.mov">
+        <image>E:\Fotos\Dateimeister\_Mov.mov</image>
+        <state>state.INCLUDE</state>
+    </thumbnail>
+    <thumbnail filename="E:\Fotos\Dateimeister\bearbeitet\_Burda.mp4">
+        <image>E:\Fotos\Dateimeister\bearbeitet\_Burda.mp4</image>
+        <state>state.EXCLUDE</state>
+    </thumbnail>
+    <thumbnail filename="E:\Fotos\Dateimeister\bearbeitet\_Mov.mov">
+        <image>E:\Fotos\Dateimeister\bearbeitet\_Mov.mov</image>
+        <state>state.INCLUDE</state>
+    </thumbnail>
+</thumbnails>
