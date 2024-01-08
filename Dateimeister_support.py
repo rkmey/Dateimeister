@@ -1775,6 +1775,7 @@ def Press_generate(*args):
         #print("dict_gen_files[dateityp]: ", str(dict_gen_files[dateityp]), " datadir is: ", datadir)
 
         # save name for delete files
+        # important: subdir MUST NOT start with a slash!
         cmd_file_name_delete = "_delete_" + dateityp + '.cmd'
         cmd_file_full_delete = os.path.join(datadir, cmd_files_subdir, cmd_file_name_delete)
         # generierte Dateien in dict festhalten
