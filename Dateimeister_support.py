@@ -938,7 +938,7 @@ def init(tk_root,gui):
         cmd_files_subdir, _timestamp, delay_default, thumbnails_duplicates, dict_thumbnails_duplicates, \
         button_save, button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, cb_delrelpath, cb_delrelpath_var, \
         combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
-        button_indir_from_list, button_outdir_from_list, platform, button_delete, datadir
+        button_indir_from_list, button_outdir_from_list, platform, button_delete, datadir, oldcamera, button_call
 #    print("Init called\n")
     windll = ctypes.windll.kernel32
     _codepage = windll.GetUserDefaultUILanguage()
@@ -990,6 +990,8 @@ def init(tk_root,gui):
     b_button1 = w.Button1
     b_button2 = w.Button2
     b_button_outdir = w.Button_outdir
+    button_call = w.Button_call
+    button_call.config(command = Press_generate)
     button_save = w.Button_save
     button_save.config(command = button_save_pressed)
     button_exec = w.Button_exec
@@ -1024,6 +1026,7 @@ def init(tk_root,gui):
     button_save.config(state = DISABLED)
     button_exec.config(state = DISABLED)
     button_delete.config(state = DISABLED)
+    button_call.config(state = DISABLED) # generate-Button
     
     label_indir  = w.Label_indir
     label_outdir = w.Label_outdir
@@ -1042,18 +1045,22 @@ def init(tk_root,gui):
     t_text1.configure(wrap="none")
     
     cb_recursive = w.Checkbutton1
+    cb_recursive.config(command = state_gen_required)
     cb_recursive_var = w.cb1_val
     cb_recursive_var.set(1)
     
     cb_prefix = w.Checkbutton_use_camera_name
+    cb_prefix.config(command = state_gen_required)
     cb_prefix_var = w.cb_prefix_var
     cb_prefix_var.set(1)
 
     cb_addrelpath = w.Checkbutton_addrelpath
+    cb_addrelpath.config(command = state_gen_required)
     cb_addrelpath_var = w.cb_addrelpath_var
     cb_addrelpath_var.set(0)
 
     cb_newer = w.Checkbutton_newer
+    cb_newer.config(command = state_gen_required)
     cb_newer_var = w.cb_newer_var
     cb_newer_var.set(0)
 
@@ -1146,6 +1153,7 @@ def init(tk_root,gui):
     gap = 10
     config_file = ""
     title = root.title()
+    oldcamera = ""
 
     
     # Fenstergröße
@@ -1579,6 +1587,7 @@ def Press_outdir(*args):
     label_outdir.config(text = outdir)
 
 def B_camera_press(*args):
+    global oldcamera
     if _debug:
         print('Dateimeister_support.B_camera_press')
         for arg in args:
@@ -1591,6 +1600,37 @@ def B_camera_press(*args):
     clear_textbox(o_camera)
     insert_text(o_camera, thiscamera)
     _button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
+    button_call.config(state = NORMAL)
+    if thiscamera != oldcamera:
+        _button_undo.config(state = DISABLED)    
+        _button_redo.config(state = DISABLED)
+        clear_text(t_text1)
+        canvas_gallery.delete("all")
+        filemenu.entryconfig(1, state=DISABLED)
+        _button_exclude.config(state = DISABLED)
+        _button_include.config(state = DISABLED)
+        button_save.config(state = DISABLED)
+        button_exec.config(state = DISABLED)
+        _button_duplicates.config(state = DISABLED)
+        label_num.config(text = "0")
+        clear_textbox(lb_gen)
+        oldcamera = thiscamera
+
+def state_gen_required():
+    _button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
+    _button_undo.config(state = DISABLED)    
+    _button_redo.config(state = DISABLED)
+    clear_text(t_text1)
+    canvas_gallery.delete("all")
+    filemenu.entryconfig(1, state=DISABLED)
+    _button_exclude.config(state = DISABLED)
+    _button_include.config(state = DISABLED)
+    button_save.config(state = DISABLED)
+    button_exec.config(state = DISABLED)
+    _button_duplicates.config(state = DISABLED)
+    #button_call.config(state = DISABLED)
+    label_num.config(text = "0")
+    clear_textbox(lb_gen)
 
 def new_dir_in_xml(dirtype, max_dirs, dir_chosen, ts):
     do_del = True
@@ -1862,7 +1902,6 @@ def Press_generate(*args):
     _button_include.config(state = DISABLED)
     button_save.config(state = DISABLED)
     button_exec.config(state = DISABLED)
-    _button_include.config(state = DISABLED)
     _button_duplicates.config(state = DISABLED)
     label_num.config(text = "0")
     os.chdir(owndir)
