@@ -880,6 +880,39 @@ class MyDuplicates:
         self.a = 1
         print("*** Deleting MyDuplicates-Objekt. Outdir is " + str(_outdir))
 
+# hier speichern wir die full-size-Bilder
+class MyCameraWindow:
+
+    # The class "constructor" - It's actually an initializer 
+    def __init__(self, cameraname):
+        self.cameraname = cameraname
+        self.root = tk.Toplevel()
+        self.w = Dateimeister.Toplevel_camera(self.root)
+        self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
+
+        self.root.title(cameraname)
+        width,height=_screen_width,_screen_height
+        v_dim=str(width)+'x'+str(height)
+        self.root.geometry(v_dim)
+        self.root.resizable(True, False)
+
+        # Scrollbars
+        self.V_I = Scrollbar(self.Frame_camera_name)
+        self.V_I.config(command=self.Frame_camera_name.yview)
+        self.Frame_camera_name.config(yscrollcommand=self.V_I.set)  
+        self.H_I = Scrollbar(self.Frame_camera_name, orient = HORIZONTAL)
+        self.H_I.config(command=self.Frame_camera_name.xview)
+        self.Frame_camera_name.config(xscrollcommand=self.H_I.set)
+        self.V_I.pack(side=RIGHT, fill=Y)
+        self.H_I.pack(side=BOTTOM, fill=BOTH)
+    
+    def close_handler(self): #calles when window is closing:
+        self.root.destroy()
+
+    def __del__(self):
+        self.a = 1
+        #print("*** Deleting Camera-Objekt.")
+
 
 def main(*args):
     '''Main entry point for the application.'''
