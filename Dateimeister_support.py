@@ -880,7 +880,7 @@ class MyDuplicates:
         self.a = 1
         print("*** Deleting MyDuplicates-Objekt. Outdir is " + str(_outdir))
 
-# hier speichern wir die full-size-Bilder
+# Camera Dialog
 class MyCameraWindow:
 
     # The class "constructor" - It's actually an initializer 
@@ -938,7 +938,7 @@ def init(tk_root,gui):
         cmd_files_subdir, _timestamp, delay_default, thumbnails_duplicates, dict_thumbnails_duplicates, \
         button_save, button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, cb_delrelpath, cb_delrelpath_var, \
         combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
-        button_indir_from_list, button_outdir_from_list, platform, button_delete
+        button_indir_from_list, button_outdir_from_list, platform, button_delete, datadir
 #    print("Init called\n")
     windll = ctypes.windll.kernel32
     _codepage = windll.GetUserDefaultUILanguage()
@@ -954,9 +954,10 @@ def init(tk_root,gui):
     config.read(inifile)
     default_indir  = config["dirs"]["indir"]
     default_outdir = config["dirs"]["outdir"]
-    config_files_xml = config["misc"]["config_files_xml"]
+    datadir = config["dirs"]["datadir"]
     config_files_subdir = config["dirs"]["config_files_subdir"]
     cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
+    config_files_xml = config["misc"]["config_files_xml"]
     delay_default = 20 #ToDo: Ini
 
     dict_templates = {}
@@ -1331,7 +1332,7 @@ def open_config():
     # get config_files for indir / type
     
     endung = 'xml'
-    config_file = fd.askopenfilename(initialdir = os. getcwd() + config_files_subdir, filetypes=[("config files", endung)])
+    config_file = fd.askopenfilename(os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
     filemenu.entryconfig(4, state=NORMAL)
     root.title(title + ' ' + config_file)
     filemenu.entryconfig(2, state=NORMAL)
@@ -1374,7 +1375,7 @@ def save_config(): # Config-xml speichern
 def saveas_config(): # Config-xml unter neuem Namen sichern
     global config_file
     endung = 'xml'
-    config_file = fd.asksaveasfilename(initialdir = os. getcwd() + config_files_subdir, filetypes=[("config files", endung)])
+    config_file = fd.asksaveasfilename(initialdir = os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
     if (len(config_file) > 0):
         match = re.search(rf".*?{endung}$", config_file)
         if match:
@@ -1767,22 +1768,22 @@ def Press_generate(*args):
             num_files += 1
         print(dateityp + " F NUM: " + str(num_files))
         # save name for cmdfile
-        cmd_file_name = "_kopiere_" + dateityp + '.cmd'
-        cmd_file_full = os.path.join(owndir + cmd_files_subdir, cmd_file_name)
+        cmd_file_name = "_copy_" + dateityp + '.cmd'
+        cmd_file_full = os.path.join(datadir, cmd_files_subdir, cmd_file_name)
         # generierte Dateien in dict festhalten
         dict_gen_files[dateityp] = cmd_file_full
-        #print("dict_gen_files[dateityp]: ", str(dict_gen_files[dateityp]))
+        #print("dict_gen_files[dateityp]: ", str(dict_gen_files[dateityp]), " datadir is: ", datadir)
 
         # save name for delete files
         cmd_file_name_delete = "_delete_" + dateityp + '.cmd'
-        cmd_file_full_delete = os.path.join(owndir + cmd_files_subdir, cmd_file_name_delete)
+        cmd_file_full_delete = os.path.join(datadir, cmd_files_subdir, cmd_file_name_delete)
         # generierte Dateien in dict festhalten
         dict_gen_files_delete[dateityp] = cmd_file_full_delete
         #print("dict_gen_files_delete[dateityp]: ", str(dict_gen_files_delete[dateityp]))
 
         # save name for delrelpath files
         cmd_file_name_delrelpath = "_delrelpath_" + dateityp + '.cmd'
-        cmd_file_full_delrelpath = os.path.join(owndir + cmd_files_subdir, cmd_file_name_delrelpath)
+        cmd_file_full_delrelpath = os.path.join(datadir, cmd_files_subdir, cmd_file_name_delrelpath)
         # generierte Dateien in dict festhalten
         dict_gen_files_delrelpath[dateityp] = cmd_file_full_delrelpath
         #print("dict_gen_files_delrelpath[dateityp]: ", str(dict_gen_files_delrelpath[dateityp]))
@@ -1892,7 +1893,7 @@ def button_delete_pressed():
     cmdfile = dict_gen_files_delete[_imagetype]
     my_cmd = "call " + cmdfile 
     owndir = os.getcwd()
-    os.chdir(owndir + '/' + cmd_files_subdir)    
+    os.chdir(os.path.join(datadir, cmd_files_subdir))    
     my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     clear_text(t_text1)
     (output, error) = my_cmd_output.communicate()
@@ -1916,7 +1917,7 @@ def button_exec_pressed():
     cmdfile = dict_gen_files[_imagetype]
     my_cmd = "call " + cmdfile 
     owndir = os.getcwd()
-    os.chdir(owndir + '/' + cmd_files_subdir)    
+    os.chdir(os.path.join(datadir, cmd_files_subdir))    
     my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     clear_text(t_text1)
     (output, error) = my_cmd_output.communicate()
