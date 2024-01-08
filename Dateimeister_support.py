@@ -1332,7 +1332,7 @@ def open_config():
     # get config_files for indir / type
     
     endung = 'xml'
-    config_file = fd.askopenfilename(os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
+    config_file = fd.askopenfilename(initialdir = os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
     filemenu.entryconfig(4, state=NORMAL)
     root.title(title + ' ' + config_file)
     filemenu.entryconfig(2, state=NORMAL)
