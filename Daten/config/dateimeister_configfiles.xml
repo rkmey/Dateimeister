@@ -1,7 +1,7 @@
 <config_files>
   <outdir name="//hugo123/zzz/fotos" usedate="20231220-15:04:21" />
   <outdir name="//hugo123/zzz/arbeit/python/dateimeister/backups" usedate="20231223-18:30:09" />
-  <indir name="e:/fotos/dateimeister" usedate="20240106-19:50:30">
+  <indir name="e:/fotos/dateimeister" usedate="20240108-15:39:04">
     <type name="JPEG" num_images="49">
       <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_other_jpeg-2.xml" usedate="20231223-18:27:46" num_images="49" />
       <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_other_jpeg-3.xml" usedate="20231224-12:35:09" num_images="49" />
@@ -79,7 +79,7 @@
   <subdir type_name="AVI" subdir="video/AVI" />
   <subdir type_name="VIDEO" subdir="video" />
   <indir name="c:/fotos/dateimeister" usedate="20231227-12:05:30" />
-  <outdir name="e:/arbeit/python/dateimeister/daten/nas" usedate="20240106-19:50:30" />
+  <outdir name="e:/arbeit/python/dateimeister/daten/nas" usedate="20240108-15:39:04" />
   <indir name="e:/fotos/aaa/icloud photos" usedate="20231230-15:48:02">
     <type name="JPEG" num_images="4">
       <config_file filename="e:/arbeit/python/dateimeister/daten/config/cfg_gfx50s_aaa.xml" usedate="20231230-15:49:16" num_images="4" />
