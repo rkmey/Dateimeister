@@ -884,7 +884,7 @@ class MyDuplicates:
 class MyCameraWindow:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, cameraname):
+    def __init__(self, cameraname = None):
         self.cameraname = cameraname
         self.root = tk.Toplevel()
         self.w = Dateimeister.Toplevel_camera(self.root)
@@ -894,18 +894,36 @@ class MyCameraWindow:
         width,height=_screen_width,_screen_height
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
-        self.root.resizable(True, False)
+        self.root.resizable(True, True)
 
         # Scrollbars
-        self.V_I = Scrollbar(self.Frame_camera_name)
-        self.V_I.config(command=self.Frame_camera_name.yview)
-        self.Frame_camera_name.config(yscrollcommand=self.V_I.set)  
-        self.H_I = Scrollbar(self.Frame_camera_name, orient = HORIZONTAL)
-        self.H_I.config(command=self.Frame_camera_name.xview)
-        self.Frame_camera_name.config(xscrollcommand=self.H_I.set)
-        self.V_I.pack(side=RIGHT, fill=Y)
-        self.H_I.pack(side=BOTTOM, fill=BOTH)
+        self.V_C = Scrollbar(self.w.Frame_camera_name)
+        self.V_C.config(command=self.w.Listbox_camera_name.yview)
+        self.w.Listbox_camera_name.config(yscrollcommand=self.V_C.set)  
+        self.H_C = Scrollbar(self.w.Frame_camera_name, orient = HORIZONTAL)
+        self.H_C.config(command=self.w.Listbox_camera_name.xview)
+        self.w.Listbox_camera_name.config(xscrollcommand=self.H_C.set)
+        self.V_C.place(relx = 1, rely = 0,     relheight = 0.975, relwidth = 0.025, anchor = tk.NE)
+        self.H_C.place(relx = 0, rely = 0.975, relheight = 0.025, relwidth = 0.975, anchor = tk.NW)
     
+        self.V_T = Scrollbar(self.w.Frame_camera_type)
+        self.V_T.config(command=self.w.Listbox_camera_type.yview)
+        self.w.Listbox_camera_type.config(yscrollcommand=self.V_T.set)  
+        self.H_T = Scrollbar(self.w.Frame_camera_type, orient = HORIZONTAL)
+        self.H_T.config(command=self.w.Listbox_camera_type.xview)
+        self.w.Listbox_camera_type.config(xscrollcommand=self.H_T.set)
+        self.V_T.place(relx = 1, rely = 0,     relheight = 0.975, relwidth = 0.025, anchor = tk.NE)
+        self.H_T.place(relx = 0, rely = 0.975, relheight = 0.025, relwidth = 0.975, anchor = tk.NW)
+
+        self.V_S = Scrollbar(self.w.Frame_camera_suffix)
+        self.V_S.config(command=self.w.Listbox_camera_suffix.yview)
+        self.w.Listbox_camera_suffix.config(yscrollcommand=self.V_S.set)  
+        self.H_S = Scrollbar(self.w.Frame_camera_suffix, orient = HORIZONTAL)
+        self.H_S.config(command=self.w.Listbox_camera_suffix.xview)
+        self.w.Listbox_camera_suffix.config(xscrollcommand=self.H_S.set)
+        self.V_S.place(relx = 1, rely = 0,     relheight = 0.975, relwidth = 0.025, anchor = tk.NE)
+        self.H_S.place(relx = 0, rely = 0.975, relheight = 0.025, relwidth = 0.975, anchor = tk.NW)
+
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
 
@@ -1190,8 +1208,8 @@ def init(tk_root,gui):
     
     # camera menu
     cameramenu = Menu(menubar, tearoff=0)
-    cameramenu.add_command(label="New", command=donothing)
-    cameramenu.add_command(label="Open camera", command=open_config)
+    cameramenu.add_command(label="New", command = menu_camera_new)
+    cameramenu.add_command(label="Open camera", command = menu_camera_new)
     menubar.add_cascade(label="Camera", menu=cameramenu)
 
     helpmenu = Menu(menubar, tearoff=0)
@@ -1612,9 +1630,16 @@ def B_camera_press(*args):
         button_save.config(state = DISABLED)
         button_exec.config(state = DISABLED)
         _button_duplicates.config(state = DISABLED)
+        button_delete.config(state = DISABLED)
         label_num.config(text = "0")
         clear_textbox(lb_gen)
         oldcamera = thiscamera
+        if _imagetype in thumbnails:
+            print("try to delete thumbnails...")
+            thumbnails[_imagetype].clear()
+        if _imagetype in _dict_thumbnails:
+            print("try to delete dict_thumbnails...")
+            _dict_thumbnails[_imagetype] = {}
 
 def state_gen_required():
     _button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
@@ -1628,9 +1653,16 @@ def state_gen_required():
     button_save.config(state = DISABLED)
     button_exec.config(state = DISABLED)
     _button_duplicates.config(state = DISABLED)
+    button_delete.config(state = DISABLED)
     #button_call.config(state = DISABLED)
     label_num.config(text = "0")
     clear_textbox(lb_gen)
+    if _imagetype in thumbnails:
+        print("try to delete thumbnails...")
+        thumbnails[_imagetype].clear()
+    if _imagetype in _dict_thumbnails:
+        print("try to delete dict_thumbnails...")
+        _dict_thumbnails[_imagetype] = {}
 
 def new_dir_in_xml(dirtype, max_dirs, dir_chosen, ts):
     do_del = True
@@ -2780,6 +2812,10 @@ def button_duplicates():
                 print("   " + mysource)
     _win_duplicates = MyDuplicates() 
    
+def menu_camera_new():
+    global _win_camera
+    _win_camera = MyCameraWindow() 
+
 def on_window_destroy(self):
     a = 1
     #print ("Destroy called.")
