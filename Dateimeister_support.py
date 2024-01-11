@@ -880,6 +880,42 @@ class MyDuplicates:
         self.a = 1
         print("*** Deleting MyDuplicates-Objekt. Outdir is " + str(_outdir))
 
+# Message Output from generated scripts
+class MyMessagesWindow:
+
+    # The class "constructor" - It's actually an initializer 
+    def __init__(self, scriptfile = None):
+        self.scriptfile = scriptfile
+        self.root = tk.Toplevel()
+        self.w = Dateimeister.Toplevel_messages(self.root)
+        self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
+
+        self.root.title(scriptfile)
+        width,height=_screen_width,_screen_height
+        v_dim=str(width)+'x'+str(height)
+        self.root.geometry(v_dim)
+        self.root.resizable(True, True)
+
+        # Scrollbars
+        parent_width  = self.w.Frame_messages.winfo_width()
+        parent_height = self.w.Frame_messages.winfo_height()
+        self.V = Scrollbar(self.w.Frame_messages)
+        self.V.config(command=self.w.Text_messages.yview)
+        self.w.Text_messages.config(yscrollcommand=self.V.set)  
+        self.H = Scrollbar(self.w.Frame_messages, orient = HORIZONTAL)
+        self.H.config(command=self.w.Text_messages.xview)
+        self.w.Text_messages.config(xscrollcommand=self.H.set)
+        self.V.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.01, anchor = tk.NE)
+        self.H.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.99, anchor = tk.SW)
+    
+    def close_handler(self): #calles when window is closing:
+        self.root.destroy()
+
+    def __del__(self):
+        self.a = 1
+        #print("*** Deleting Camera-Objekt.")
+
+
 # Camera Dialog
 class MyCameraWindow:
 
@@ -1985,6 +2021,8 @@ def button_delete_pressed():
     os.chdir(owndir)
 
 def button_exec_pressed():
+    global _win_messages
+    _win_messages = MyMessagesWindow() 
     #print("button_exec_pressed not yet implemented")
     cmdfile = dict_gen_files[_imagetype]
     my_cmd = "call " + cmdfile 
