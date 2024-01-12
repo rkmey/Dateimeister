@@ -65,6 +65,7 @@ _dict_duplicates_sourcefiles = {}
 _duplicates = False
 _dict_file_image = {} # key: Imagefilename, value MyFSImage-Objekt, mit fullscale Image, canvas id, window...
 _win_duplicates = None
+_win_messages = None
 
 from enum import Enum
 class state(Enum):
@@ -897,17 +898,40 @@ class MyMessagesWindow:
         self.root.resizable(True, True)
 
         # Scrollbars
+        #Messages
         parent_width  = self.w.Frame_messages.winfo_width()
         parent_height = self.w.Frame_messages.winfo_height()
-        self.V = Scrollbar(self.w.Frame_messages)
-        self.V.config(command=self.w.Text_messages.yview)
-        self.w.Text_messages.config(yscrollcommand=self.V.set)  
-        self.H = Scrollbar(self.w.Frame_messages, orient = HORIZONTAL)
-        self.H.config(command=self.w.Text_messages.xview)
-        self.w.Text_messages.config(xscrollcommand=self.H.set)
-        self.V.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.01, anchor = tk.NE)
-        self.H.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.99, anchor = tk.SW)
-    
+        self.VM = Scrollbar(self.w.Frame_messages)
+        self.VM.config(command=self.w.Text_messages.yview)
+        self.w.Text_messages.config(yscrollcommand=self.VM.set)  
+        self.HM = Scrollbar(self.w.Frame_messages, orient = HORIZONTAL)
+        self.HM.config(command=self.w.Text_messages.xview)
+        self.w.Text_messages.config(xscrollcommand=self.HM.set)
+        self.VM.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.02, anchor = tk.NE)
+        self.HM.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.98, anchor = tk.SW)
+        
+        # Errors
+        parent_width  = self.w.Frame_errors.winfo_width()
+        parent_height = self.w.Frame_errors.winfo_height()
+        self.VE = Scrollbar(self.w.Frame_errors)
+        self.VE.config(command=self.w.Text_errors.yview)
+        self.w.Text_errors.config(yscrollcommand=self.VE.set)  
+        self.HE = Scrollbar(self.w.Frame_errors, orient = HORIZONTAL)
+        self.HE.config(command=self.w.Text_errors.xview)
+        self.w.Text_errors.config(xscrollcommand=self.HE.set)
+        self.VE.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.02, anchor = tk.NE)
+        self.HE.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.98, anchor = tk.SW)
+        
+    def show_messages(self, text):
+        self.w.Text_messages.delete(1.0, 'end')
+        self.w.Text_messages.insert('end', text)
+        self.w.Text_messages.insert('end', "\r\n")
+
+    def show_errors(self, text):
+        self.w.Text_errors.delete(1.0, 'end')
+        self.w.Text_errors.insert('end', text)
+        self.w.Text_errors.insert('end', "\r\n")
+
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
 
@@ -1308,7 +1332,7 @@ def init(tk_root,gui):
     for tfile in sorted_d:
         combobox_outdir.insert(END, tfile)
         if not os.path.isdir(tfile):
-            #print("OUTDIR: " + tfile + " INDEX: " + str(ii))
+            print("OUTDIR: " + tfile + " INDEX: " + str(ii))
             indexes.append(ii) # list of indizes to disable because dir does not exist
         ii += 1
     if ii > 0:
@@ -2022,19 +2046,19 @@ def button_delete_pressed():
 
 def button_exec_pressed():
     global _win_messages
-    _win_messages = MyMessagesWindow() 
     #print("button_exec_pressed not yet implemented")
     cmdfile = dict_gen_files[_imagetype]
     my_cmd = "call " + cmdfile 
     owndir = os.getcwd()
     os.chdir(os.path.join(datadir, cmd_files_subdir))    
     my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    clear_text(t_text1)
     (output, error) = my_cmd_output.communicate()
-    insert_text(t_text1, output)   
-    insert_text(t_text1, error)   
-    insert_text(t_text1, "\r\n")
-    l_label1.config(text = "Output from Script : " + cmdfile)
+    if _win_messages is not None: # stop MyMessagesWindow-Objekt
+        _win_messages.close_handler()
+        _win_messages = None
+    _win_messages = MyMessagesWindow(cmdfile) 
+    _win_messages.show_messages(output)
+    _win_messages.show_errors(error)
     os.chdir(owndir)
     
 
