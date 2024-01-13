@@ -885,19 +885,30 @@ class MyDuplicates:
 class MyMessagesWindow:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, scriptfile = None):
-        self.scriptfile = scriptfile
+    def __init__(self, copyscript = None, deletescript = None, delrelpathscript = None):
         self.root = tk.Toplevel()
         self.w = Dateimeister.Toplevel_messages(self.root)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
-        self.root.title(scriptfile)
+        self.root.title(copyscript)
         width,height=_screen_width,_screen_height
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
         self.root.resizable(True, True)
 
         # Scrollbars
+        # Script
+        parent_width  = self.w.Frame_script.winfo_width()
+        parent_height = self.w.Frame_script.winfo_height()
+        self.VS = Scrollbar(self.w.Frame_script)
+        self.VS.config(command=self.w.Text_script.yview)
+        self.w.Text_script.config(yscrollcommand=self.VS.set) 
+        self.HS = Scrollbar(self.w.Frame_script, orient = HORIZONTAL)
+        self.HS.config(command=self.w.Text_script.xview)
+        self.w.Text_script.config(xscrollcommand=self.HS.set)
+        self.VS.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.04, anchor = tk.NE)
+        self.HS.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.96, anchor = tk.SW)
+
         #Messages
         parent_width  = self.w.Frame_messages.winfo_width()
         parent_height = self.w.Frame_messages.winfo_height()
@@ -915,13 +926,36 @@ class MyMessagesWindow:
         parent_height = self.w.Frame_errors.winfo_height()
         self.VE = Scrollbar(self.w.Frame_errors)
         self.VE.config(command=self.w.Text_errors.yview)
-        self.w.Text_errors.config(yscrollcommand=self.VE.set)  
+        self.w.Text_errors.config(yscrollcommand=self.VE.set) 
         self.HE = Scrollbar(self.w.Frame_errors, orient = HORIZONTAL)
         self.HE.config(command=self.w.Text_errors.xview)
         self.w.Text_errors.config(xscrollcommand=self.HE.set)
-        self.VE.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.02, anchor = tk.NE)
-        self.HE.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.98, anchor = tk.SW)
+        self.VE.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.04, anchor = tk.NE)
+        self.HE.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.96, anchor = tk.SW)
         
+        # Radio Buttons for selection of script
+        # control variable
+        self.rb_value = tk.StringVar()
+        # Radiobutton
+        self.w.Radiobutton_copyscript.config(value = copyscript, variable = self.rb_value, command = self.script_select)
+        self.w.Radiobutton_deletescript.config(value = deletescript, variable = self.rb_value, command = self.script_select)
+        self.w.Radiobutton_delrelpathscript.config(value = delrelpathscript, variable = self.rb_value, command = self.script_select)
+        self.w.Radiobutton_copyscript.select()    
+        self.show_script(copyscript)        
+    def script_select(self):
+        print("Script selected is: " + self.rb_value.get())
+        self.show_script(self.rb_value.get())
+
+    def show_script(self, script):        
+        try:
+            file = open(script)
+        except FileNotFoundError:
+            print("File does not exist: " + script)
+        text = file.read()
+        self.w.Text_script.delete(1.0, 'end')
+        self.w.Text_script.insert('end', text)
+        self.w.Text_script.insert('end', "\r\n")
+
     def show_messages(self, text):
         self.w.Text_messages.delete(1.0, 'end')
         self.w.Text_messages.insert('end', text)
@@ -2056,7 +2090,7 @@ def button_exec_pressed():
     if _win_messages is not None: # stop MyMessagesWindow-Objekt
         _win_messages.close_handler()
         _win_messages = None
-    _win_messages = MyMessagesWindow(cmdfile) 
+    _win_messages = MyMessagesWindow(dict_gen_files[_imagetype], dict_gen_files_delete[_imagetype], dict_gen_files_delrelpath[_imagetype]) 
     _win_messages.show_messages(output)
     _win_messages.show_errors(error)
     os.chdir(owndir)
