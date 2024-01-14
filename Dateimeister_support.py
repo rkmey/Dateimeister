@@ -954,6 +954,8 @@ class MyMessagesWindow:
         self.show_script(copyscript)        
         self.action = "copy"
         self.w.Label_script.config(text = copyscript)
+        self.w.Checkbutton_delrelpath.config(state = DISABLED)
+        self.w.Label_scripttype.config(text = "Copyscript")
     def script_select(self):
         print("Script selected is: " + self.rb_value.get())
         if self.rb_value.get() == "copy":
@@ -961,16 +963,22 @@ class MyMessagesWindow:
             self.action = "copy"
             self.w.Button_execute.config(state = NORMAL)
             self.w.Label_script.config(text = self.copyscript)
+            self.w.Checkbutton_delrelpath.config(state = DISABLED)
+            self.w.Label_scripttype.config(text = "Copyscript")
         elif self.rb_value.get() == "delete":
             self.show_script(self.deletescript)
             self.action = "delete"
             self.w.Button_execute.config(state = NORMAL)
             self.w.Label_script.config(text = self.deletescript)
+            self.w.Checkbutton_delrelpath.config(state = NORMAL)
+            self.w.Label_scripttype.config(text = "Deletescript")
         elif self.rb_value.get() == "delrelpath":
             self.show_script(self.delrelpathscript)
             self.action = "delrelpath"
             self.w.Button_execute.config(state = DISABLED)
             self.w.Label_script.config(text = self.delrelpathscript)
+            self.w.Checkbutton_delrelpath.config(state = DISABLED)
+            self.w.Label_scripttype.config(text = "Delrelpathscript")
         self.w.Button_execute.config(text = self.action)
 
     def show_script(self, script):        
