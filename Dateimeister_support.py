@@ -127,7 +127,7 @@ class MyThumbnail:
     def getDuplicate(self):
         return self.duplicate    
 
-    def setState(self, state, caller = None):
+    def setState(self, state, caller = None, do_save = True):
         if state != self.state:
             state_changed = True
         else:
@@ -171,6 +171,9 @@ class MyThumbnail:
             if caller != self.dupl: # to avoid loop
                 self.dupl.exclude_call(self, state) # synchronisiert das Duplicate, falls vorhanden
                 #print("Duplicate Exclude-Call")
+        if state_changed and do_save:
+            write_cmdfile(_imagetype)
+            print ("setState: SAVE requested")
     def getState(self):
         return self.state   
 
@@ -1097,7 +1100,7 @@ def init(tk_root,gui):
         _dict_image_lineno, _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
         cb_newer, cb_newer_var, config_files_xml, recentmenu, config_file, title, label_num, num_images, config_files_subdir, \
         cmd_files_subdir, _timestamp, delay_default, thumbnails_duplicates, dict_thumbnails_duplicates, \
-        button_save, button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
+        button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
         combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
         button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, button_call
 #    print("Init called\n")
@@ -1153,8 +1156,6 @@ def init(tk_root,gui):
     b_button_outdir = w.Button_outdir
     button_call = w.Button_call
     button_call.config(command = Press_generate)
-    button_save = w.Button_save
-    button_save.config(command = button_save_pressed)
     button_exec = w.Button_exec
     button_exec.config(command = button_exec_pressed)
     
@@ -1182,7 +1183,6 @@ def init(tk_root,gui):
     _button_duplicates.config(state = DISABLED)
     _button_be = w.Button_be
     _button_be.config(state = DISABLED)
-    button_save.config(state = DISABLED)
     button_exec.config(state = DISABLED)
     button_call.config(state = DISABLED) # generate-Button
     
@@ -1514,15 +1514,16 @@ def apply_config():
         if image in _dict_thumbnails[_imagetype]:
             if _dict_thumbnails[_imagetype][image] in thumbnails[_imagetype]:
                 if mystate == "state.INCLUDE":
-                    _dict_thumbnails[_imagetype][image].setState(state.INCLUDE)
+                    _dict_thumbnails[_imagetype][image].setState(state.INCLUDE, None, False)
                 else:
-                    _dict_thumbnails[_imagetype][image].setState(state.EXCLUDE)
+                    _dict_thumbnails[_imagetype][image].setState(state.EXCLUDE, None, False)
             else:
                 print("thumbnail for " + _imagetype + " file " + image + " not found")
                 print(thumbnails)
         else:
             print("Imagefile: " + image + " not found in _dict thumdnails of type " + _imagetype)
     historize_process()
+    write_cmdfile(_imagetype)
 
 
 def save_config(): # Config-xml speichern
@@ -1763,7 +1764,6 @@ def B_camera_press(*args):
         filemenu.entryconfig(1, state=DISABLED)
         _button_exclude.config(state = DISABLED)
         _button_include.config(state = DISABLED)
-        button_save.config(state = DISABLED)
         button_exec.config(state = DISABLED)
         _button_duplicates.config(state = DISABLED)
         label_num.config(text = "0")
@@ -1785,7 +1785,6 @@ def state_gen_required():
     filemenu.entryconfig(1, state=DISABLED)
     _button_exclude.config(state = DISABLED)
     _button_include.config(state = DISABLED)
-    button_save.config(state = DISABLED)
     button_exec.config(state = DISABLED)
     _button_duplicates.config(state = DISABLED)
     #button_call.config(state = DISABLED)
@@ -2066,7 +2065,6 @@ def Press_generate(*args):
     filemenu.entryconfig(1, state=DISABLED)
     _button_exclude.config(state = DISABLED)
     _button_include.config(state = DISABLED)
-    button_save.config(state = DISABLED)
     button_exec.config(state = DISABLED)
     _button_duplicates.config(state = DISABLED)
     label_num.config(text = "0")
@@ -2101,9 +2099,6 @@ def button_exec_pressed():
         _win_messages = None
     _win_messages = MyMessagesWindow(_imagetype, dict_gen_files[_imagetype], dict_gen_files_delete[_imagetype], dict_gen_files_delrelpath[_imagetype]) 
 
-def button_save_pressed(): # overrite the cmd-file for imagetype from textbox, also the corresponding delete-file
-    write_cmdfile(_imagetype)
-    
 def write_cmdfiles():
     for imagetype in dict_source_target:
         write_cmdfile(imagetype)
@@ -2358,7 +2353,7 @@ def Button_be_pressed(*args):
             myimage = MyThumbnail(pimg, _lastposition, _lastposition + image_width, file, showfile, id, \
                 text_id, rect_id, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
             if file in dict_source_target_tooold[imagetype]: #start with state.exclude
-                myimage.setState(state.EXCLUDE)
+                myimage.setState(state.EXCLUDE, None, False)
                 myimage.set_tooold(True)
                 canvas_gallery.itemconfig(text_id, text="EXC OVW")
             thumbnails[imagetype].append(myimage)
@@ -2382,7 +2377,7 @@ def Button_be_pressed(*args):
             myimage = MyThumbnail(0, _lastposition, _lastposition + image_width, file, showfile, id, \
                 text_id, rect_id, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
             if file in dict_source_target_tooold[imagetype]: #start with state.exclude
-                myimage.setState(state.EXCLUDE)
+                myimage.setState(state.EXCLUDE, None, False)
                 myimage.set_tooold(True)
                 canvas_gallery.itemconfig(text_id, text="EXC OVW")
             thumbnails[imagetype].append(myimage)
@@ -2447,8 +2442,8 @@ def Button_be_pressed(*args):
         _button_duplicates.config(state = DISABLED)
     
     label_num.config(text = str(num_images))
-    button_save.config(state = NORMAL)
     button_exec.config(state = NORMAL)
+    write_cmdfile(imagetype)
 
 def get_thumbnail_by_position(canvas_x, canvas_y):
     index = -1
@@ -2764,15 +2759,17 @@ def canvas_gallery_exclude(event):
 def Button_exclude_all(*args):
     for thumbnail in thumbnails[_imagetype]:
         if thumbnail.getState() == state.INCLUDE:
-            thumbnail.setState(state.EXCLUDE)
+            thumbnail.setState(state.EXCLUDE, None, False)
     historize_process()
+    write_cmdfile(_imagetype)
             
 def Button_include_all(*args):
     for thumbnail in thumbnails[_imagetype]:
         if thumbnail.getState() == state.EXCLUDE:
-            thumbnail.setState(state.INCLUDE)
+            thumbnail.setState(state.INCLUDE, None, False)
     historize_process()
-
+    write_cmdfile(_imagetype)
+ 
 def historize_process():
     global _processid_akt, _processid_high, _processid_low, _list_processids, _dict_process_image
     _processid_high += 10
@@ -2867,9 +2864,10 @@ def apply_process_id(process_id):
     i = 0
     for thumbnail in thumbnails[_imagetype]:
         #_dict_process_image[_processid_akt].append(thumbnail.setState(_dict_process_image[process_id][i]))
-        thumbnail.setState(_dict_process_image[process_id][i])
+        thumbnail.setState(_dict_process_image[process_id][i], None, False)
         i += 1
     update_button_state()
+    write_cmdfile(_imagetype)
     
 def update_button_state(): # enabled / disabled include / Exclude buttons
 
