@@ -885,17 +885,24 @@ class MyDuplicates:
 class MyMessagesWindow:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, copyscript = None, deletescript = None, delrelpathscript = None):
+    def __init__(self, imagetype, copyscript = None, deletescript = None, delrelpathscript = None):
         self.root = tk.Toplevel()
         self.w = Dateimeister.Toplevel_messages(self.root)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
-        self.root.title(copyscript)
+        self.copyscript = copyscript
+        self.deletescript = deletescript
+        self.delrelpathscript = delrelpathscript
+        self.root.title(imagetype)
         width,height=_screen_width,_screen_height
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
         self.root.resizable(True, True)
 
+        self.w.cb_delrelpath = self.w.Checkbutton_delrelpath
+        self.w.cb_delrelpath_var.set(0)
+
+        self.w.Button_execute.config(command = self.exec_handler)
         # Scrollbars
         # Script
         parent_width  = self.w.Frame_script.winfo_width()
@@ -937,14 +944,31 @@ class MyMessagesWindow:
         # control variable
         self.rb_value = tk.StringVar()
         # Radiobutton
-        self.w.Radiobutton_copyscript.config(value = copyscript, variable = self.rb_value, command = self.script_select)
-        self.w.Radiobutton_deletescript.config(value = deletescript, variable = self.rb_value, command = self.script_select)
-        self.w.Radiobutton_delrelpathscript.config(value = delrelpathscript, variable = self.rb_value, command = self.script_select)
+        self.w.Radiobutton_copyscript.config(value = "copy", variable = self.rb_value, command = self.script_select)
+        self.w.Radiobutton_deletescript.config(value = "delete", variable = self.rb_value, command = self.script_select)
+        self.w.Radiobutton_delrelpathscript.config(value = "delrelpath", variable = self.rb_value, command = self.script_select)
         self.w.Radiobutton_copyscript.select()    
         self.show_script(copyscript)        
+        self.action = "copy"
+        self.w.Label_script.config(text = copyscript)
     def script_select(self):
         print("Script selected is: " + self.rb_value.get())
-        self.show_script(self.rb_value.get())
+        if self.rb_value.get() == "copy":
+            self.show_script(self.copyscript)
+            self.action = "copy"
+            self.w.Button_execute.config(state = NORMAL)
+            self.w.Label_script.config(text = self.copyscript)
+        elif self.rb_value.get() == "delete":
+            self.show_script(self.deletescript)
+            self.action = "delete"
+            self.w.Button_execute.config(state = NORMAL)
+            self.w.Label_script.config(text = self.deletescript)
+        elif self.rb_value.get() == "delrelpath":
+            self.show_script(self.delrelpathscript)
+            self.action = "delrelpath"
+            self.w.Button_execute.config(state = DISABLED)
+            self.w.Label_script.config(text = self.delrelpathscript)
+        self.w.Button_execute.config(text = self.action)
 
     def show_script(self, script):        
         try:
@@ -956,15 +980,40 @@ class MyMessagesWindow:
         self.w.Text_script.insert('end', text)
         self.w.Text_script.insert('end', "\r\n")
 
-    def show_messages(self, text):
-        self.w.Text_messages.delete(1.0, 'end')
+    def show_messages(self, text, b_clear):
+        if b_clear:
+            self.w.Text_messages.delete(1.0, 'end')
         self.w.Text_messages.insert('end', text)
         self.w.Text_messages.insert('end', "\r\n")
 
-    def show_errors(self, text):
-        self.w.Text_errors.delete(1.0, 'end')
+    def show_errors(self, text, b_clear):
+        if b_clear:
+            self.w.Text_errors.delete(1.0, 'end')
         self.w.Text_errors.insert('end', text)
         self.w.Text_errors.insert('end', "\r\n")
+        
+    def exec_handler(self):
+        if self.action == "copy":
+            cmdfile = self.copyscript
+        elif self.action == "delete" or self.action == "delrelpath":
+            cmdfile = self.deletescript
+        self.w.Label_script.config(text = cmdfile)
+        my_cmd = "call " + cmdfile 
+        owndir = os.getcwd()
+        os.chdir(os.path.join(datadir, cmd_files_subdir))    
+        my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        (output, error) = my_cmd_output.communicate()
+        self.show_messages(output, True)
+        self.show_errors(error, True)
+        if self.action == "delete" and self.delrelpathscript is not None and self.w.cb_delrelpath_var.get():
+            cmdfile_delrelpath = self.delrelpathscript
+            my_cmd = "call " + cmdfile_delrelpath 
+            my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            (output, error) = my_cmd_output.communicate()
+            self.show_messages(output, False)
+            self.show_errors(error, False)
+            self.w.Label_script.config(text = cmdfile + ' + ' + cmdfile_delrelpath)
+        os.chdir(owndir)
 
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
@@ -1048,9 +1097,9 @@ def init(tk_root,gui):
         _dict_image_lineno, _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
         cb_newer, cb_newer_var, config_files_xml, recentmenu, config_file, title, label_num, num_images, config_files_subdir, \
         cmd_files_subdir, _timestamp, delay_default, thumbnails_duplicates, dict_thumbnails_duplicates, \
-        button_save, button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, cb_delrelpath, cb_delrelpath_var, \
+        button_save, button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
         combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
-        button_indir_from_list, button_outdir_from_list, platform, button_delete, datadir, oldcamera, button_call
+        button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, button_call
 #    print("Init called\n")
     windll = ctypes.windll.kernel32
     _codepage = windll.GetUserDefaultUILanguage()
@@ -1108,8 +1157,6 @@ def init(tk_root,gui):
     button_save.config(command = button_save_pressed)
     button_exec = w.Button_exec
     button_exec.config(command = button_exec_pressed)
-    button_delete = w.Button_delete
-    button_delete.config(command = button_delete_pressed)
     
     t_text1 = w.Text1
     # set font
@@ -1137,7 +1184,6 @@ def init(tk_root,gui):
     _button_be.config(state = DISABLED)
     button_save.config(state = DISABLED)
     button_exec.config(state = DISABLED)
-    button_delete.config(state = DISABLED)
     button_call.config(state = DISABLED) # generate-Button
     
     label_indir  = w.Label_indir
@@ -1179,10 +1225,6 @@ def init(tk_root,gui):
     cb_num = w.Checkbutton_num
     cb_num_var = w.cbnum_var
     cb_num_var.set(1)
-
-    cb_delrelpath = w.Checkbutton_delrelpath
-    cb_delrelpath_var = w.cbdelrelpath_var
-    cb_delrelpath_var.set(1)
 
     combobox_indir = w.TCombobox_indir
     combobox_indir_var = w.combobox_indir
@@ -1724,7 +1766,6 @@ def B_camera_press(*args):
         button_save.config(state = DISABLED)
         button_exec.config(state = DISABLED)
         _button_duplicates.config(state = DISABLED)
-        button_delete.config(state = DISABLED)
         label_num.config(text = "0")
         clear_textbox(lb_gen)
         oldcamera = thiscamera
@@ -1747,7 +1788,6 @@ def state_gen_required():
     button_save.config(state = DISABLED)
     button_exec.config(state = DISABLED)
     _button_duplicates.config(state = DISABLED)
-    button_delete.config(state = DISABLED)
     #button_call.config(state = DISABLED)
     label_num.config(text = "0")
     clear_textbox(lb_gen)
@@ -2054,47 +2094,12 @@ def get_templates():
     templates = re.sub(r'<<<NL>>>', '\n', templates)
     #print(templates)
         
-def button_delete_pressed():
-    #print("button_delete_pressed not yet implemented")
-    cmdfile = dict_gen_files_delete[_imagetype]
-    my_cmd = "call " + cmdfile 
-    owndir = os.getcwd()
-    os.chdir(os.path.join(datadir, cmd_files_subdir))    
-    my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    clear_text(t_text1)
-    (output, error) = my_cmd_output.communicate()
-    insert_text(t_text1, output)   
-    insert_text(t_text1, error)   
-    insert_text(t_text1, "\r\n")
-    l_label1.config(text = "Output from Script : " + cmdfile)
-    if cb_addrelpath_var.get():
-        cmdfile_delrelpath = dict_gen_files_delrelpath[_imagetype]
-        my_cmd = "call " + cmdfile_delrelpath 
-        my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        (output, error) = my_cmd_output.communicate()
-        insert_text(t_text1, output)   
-        insert_text(t_text1, error)   
-        insert_text(t_text1, "\r\n")
-        l_label1.config(text = "Output from Scripts : " + cmdfile + ' + ' + cmdfile_delrelpath)
-    os.chdir(owndir)
-
 def button_exec_pressed():
     global _win_messages
-    #print("button_exec_pressed not yet implemented")
-    cmdfile = dict_gen_files[_imagetype]
-    my_cmd = "call " + cmdfile 
-    owndir = os.getcwd()
-    os.chdir(os.path.join(datadir, cmd_files_subdir))    
-    my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    (output, error) = my_cmd_output.communicate()
     if _win_messages is not None: # stop MyMessagesWindow-Objekt
         _win_messages.close_handler()
         _win_messages = None
-    _win_messages = MyMessagesWindow(dict_gen_files[_imagetype], dict_gen_files_delete[_imagetype], dict_gen_files_delrelpath[_imagetype]) 
-    _win_messages.show_messages(output)
-    _win_messages.show_errors(error)
-    os.chdir(owndir)
-    
+    _win_messages = MyMessagesWindow(_imagetype, dict_gen_files[_imagetype], dict_gen_files_delete[_imagetype], dict_gen_files_delrelpath[_imagetype]) 
 
 def button_save_pressed(): # overrite the cmd-file for imagetype from textbox, also the corresponding delete-file
     write_cmdfile(_imagetype)
@@ -2444,7 +2449,6 @@ def Button_be_pressed(*args):
     label_num.config(text = str(num_images))
     button_save.config(state = NORMAL)
     button_exec.config(state = NORMAL)
-    button_delete.config(state = NORMAL)
 
 def get_thumbnail_by_position(canvas_x, canvas_y):
     index = -1
