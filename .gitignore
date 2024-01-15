@@ -2,3 +2,6 @@
 __pycache__/
 *.tcl##
 backups/
+Dateimeister_support.spec
+build/
+dist/
