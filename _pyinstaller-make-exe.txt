@@ -1,0 +1,12 @@
+make exe
+
+cmd in E:\Arbeit\python\Dateimeister_deploy>
+pyinstaller Dateimeister_support.py --clean --add-data=E:\Arbeit\python\Dateimeister\Dateimeister.ini;.\Dateimeister_support
+- führt clean durch, kopiert Dateimeister.ini nach E:\Arbeit\python\Dateimeister\dist\Dateimeister_support\_internal\Dateimeister_support
+
+Achtung: von da muss sie noch nach E:\Arbeit\python\Dateimeister\dist\Dateimeister_support kopiert werden oder der Pfad zur ini-Datei muss im Programm angepasst werden!
+
+copy E:\Arbeit\python\Dateimeister\dist\Dateimeister_support\_internal\Dateimeister_support\Dateimeister.ini to E:\Arbeit\python\Dateimeister_deploy\dist\Dateimeister_support
+> Dateimeister_support.exe
+
+fertig!!!
