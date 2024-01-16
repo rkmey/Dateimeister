@@ -1085,6 +1085,29 @@ class MyCameraWindow:
         self.a = 1
         #print("*** Deleting Camera-Objekt.")
 
+# Camera Treeview
+class MyCameraTreeview:
+
+    # The class "constructor" - It's actually an initializer 
+    def __init__(self, cameraname = None):
+        self.cameraname = cameraname
+        self.root = tk.Toplevel()
+        self.w = Dateimeister.Toplevel_treeview_camera(self.root)
+        self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
+
+        self.root.title(cameraname)
+        width,height=_screen_width,_screen_height
+        v_dim=str(width)+'x'+str(height)
+        self.root.geometry(v_dim)
+        self.root.resizable(True, True)
+
+    def close_handler(self): #calles when window is closing:
+        self.root.destroy()
+
+    def __del__(self):
+        self.a = 1
+        #print("*** Deleting Camera-Objekt.")
+
 
 def main(*args):
     '''Main entry point for the application.'''
@@ -2920,7 +2943,7 @@ def button_duplicates():
    
 def menu_camera_new():
     global _win_camera
-    _win_camera = MyCameraWindow() 
+    _win_camera = MyCameraTreeview() 
 
 def on_window_destroy(self):
     a = 1
