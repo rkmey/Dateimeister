@@ -5,3 +5,4 @@ backups/
 Dateimeister_support.spec
 build/
 dist/
+_make-exe.txt
