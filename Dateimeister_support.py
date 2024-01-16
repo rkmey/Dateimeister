@@ -1100,6 +1100,28 @@ class MyCameraTreeview:
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
         self.root.resizable(True, True)
+        self.tv = self.w.Scrolledtreeview_camera
+
+        #retrieve cameras from xml-file
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        dict_cameras = DX.get_cameras_types_suffixes(config_files_xml)
+        for camera in dict_cameras:
+            ctype_num = 0
+            cid = self.tv.insert("", tk.END, text = camera)
+            for ctype in dict_cameras[camera]:
+                ctype_num += 1
+                tid = self.tv.insert(cid, tk.END, text = ctype)
+                csuffix_num = 0
+                for csuffix in dict_cameras[camera][ctype]:
+                    csuffix_num += 1
+                    sid = self.tv.insert(tid, tk.END, text = csuffix)
+                    print("Camera: " + camera + " Type: " + ctype + " Suffix: " + csuffix)
+                if csuffix_num == 0:
+                    messagebox.showerror("INIT", "Camera " + camera + " type " + ctype + " no suffix defined")
+                    exit()
+            if ctype_num == 0:
+                messagebox.showerror("INIT", "Camera " + camera + " no type defined")
+                exit()
 
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
