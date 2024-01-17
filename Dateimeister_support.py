@@ -1101,13 +1101,21 @@ class MyCameraTreeview:
         self.root.geometry(v_dim)
         self.root.resizable(True, True)
         self.tv = self.w.Scrolledtreeview_camera
-
+        self.tv.heading("#0", text="Camera")
+        self.tv.heading("#1", text="Last modification")
+        self.tv.config(selectmode = tk.BROWSE)
+        # bind select event
+        self.tv.tag_bind("mycamera", "<<TreeviewSelect>>", self.item_selected)
+        
         #retrieve cameras from xml-file
+        #get usedates
+        dict_cameras_usedate = DX.get_cameras_usedate(config_files_xml)
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         dict_cameras = DX.get_cameras_types_suffixes(config_files_xml)
         for camera in dict_cameras:
             ctype_num = 0
-            cid = self.tv.insert("", tk.END, text = camera)
+            usedate = dict_cameras_usedate[camera]
+            cid = self.tv.insert("", tk.END, text = camera, values = (usedate), tags=("mycamera",))
             for ctype in dict_cameras[camera]:
                 ctype_num += 1
                 tid = self.tv.insert(cid, tk.END, text = ctype)
@@ -1115,7 +1123,7 @@ class MyCameraTreeview:
                 for csuffix in dict_cameras[camera][ctype]:
                     csuffix_num += 1
                     sid = self.tv.insert(tid, tk.END, text = csuffix)
-                    print("Camera: " + camera + " Type: " + ctype + " Suffix: " + csuffix)
+                    print("Camera: " + camera + " Type: " + ctype + " Suffix: " + csuffix + " camera_usedate: " + usedate)
                 if csuffix_num == 0:
                     messagebox.showerror("INIT", "Camera " + camera + " type " + ctype + " no suffix defined")
                     exit()
@@ -1123,6 +1131,24 @@ class MyCameraTreeview:
                 messagebox.showerror("INIT", "Camera " + camera + " no type defined")
                 exit()
 
+    def item_selected(self, event):
+        self.show_selection()
+    
+    def show_selection(self):
+        try:
+            # Get the Id of the first selected item.
+            item = self.tv.selection()[0]
+        except IndexError:
+            # If the tuple is empty, there is no selected item.
+            messagebox.showwarning(
+                message="Nothin selected",
+                title="Treeview Selection"
+            )
+        else:
+            # Get and display the text of the selected item.
+            text = self.tv.item(item, option="text")
+            messagebox.showinfo(message=text, title="Treeview Selection")    
+            
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
 

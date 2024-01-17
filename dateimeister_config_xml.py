@@ -264,6 +264,18 @@ def get_cameras(xmlfile):
         cameras[i.attrib['name']]['usedate'] = i.attrib['usedate']
     return cameras
 
+# return usedate for cameras, camera should be unique
+def get_cameras_usedate(xmlfile):
+    dict_result = {}
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    fstr = ("camera")
+    result = mytree.findall(fstr)
+    for i in result:
+        dict_result[i.attrib['name'].upper()] = i.attrib['usedate']
+    return dict_result
+
+
 # returns camera->typs->list_of_suffixes
 def get_cameras_types_suffixes(xmlfile):
     dict_result = {}
@@ -325,6 +337,8 @@ def new_camera_type_suffix(xmlfile, cameraname, ctype, suffix, usedate):
     result = mytree.findall(fstr_camera)
     if result: # if camera exists, check if type exists
         for i in result:
+            # update usedate
+            i.set("usedate", usedate)
             result2 = i.findall(fstr_type)
             if not result2: # type does not exist in indir
                 j = ET.SubElement(i, 'type')
