@@ -1160,12 +1160,12 @@ class MyCameraTreeview:
         self.retrieve_item(event)
     
     
-    # retrieves item tag and text for the selected item and show context menu
+    # retrieves item tag and text for the selected item and show context menu if button-3 pressed
     def retrieve_item(self, event):
         try:
             # Get the Id of the first selected item.
             self.item = self.tv.selection()[0]
-            #print("Item selected: " , str(self.tv.selection()))
+            print("Item selected: " , str(self.tv.selection()))
         except IndexError:
             # If the tuple is empty, there is no selected item.
             messagebox.showwarning(message="Nothin selected", title="Treeview Selection", parent = self.root)
@@ -1175,20 +1175,28 @@ class MyCameraTreeview:
             self.tag  = self.tv.item(self.item,  option="tag")[0]
             #messagebox.showinfo(message = self.tag, title="Treeview Selection", parent = self.root) 
             if self.context_menu_required:
-                self.context_menu.entryconfig(1, label = "change " + self.tag + '.' + self.text)
-                self.context_menu.entryconfig(2, label = "delete " + self.tag + '.' + self.text)
+                if self.tag.upper() == "CAMERA":
+                    self.context_menu.entryconfig(0, label = self.text + " new type", state =  NORMAL)
+                elif self.tag.upper() == "TYPE":
+                    self.context_menu.entryconfig(0, label = self.text + " new suffix", state =  NORMAL)
+                else: # suffix nothing new possible
+                    self.context_menu.entryconfig(0, label = "new...", state =  DISABLED)
+                self.context_menu.entryconfig(1, label = self.text + " change")
+                self.context_menu.entryconfig(2, label = self.text + " delete")
                 #self.context_menu.post(self.event.x_root, self.event.y_root)
-                self.context_menu.post(self.event.x, self.event.y)
+                self.context_menu.post(self.event.x_root, self.event.y_root)
             self.context_menu_required = False
             
     def set_selection_by_button3(self, event):
         iid = self.tv.identify('item', event.x, event.y)
         self.event = event
-        #print("iid is: " + str(iid)) 
+        print("button 3 clicked, iid is: " + str(iid)) 
         if iid:
             # mouse pointer over item
+            self.tv.focus(iid)
             self.tv.selection_set(iid)
             self.context_menu_required = True
+            print(" iid is: " + str(iid)) 
         else:
             # mouse pointer not over item
             # occurs when items do not fill frame
@@ -1734,6 +1742,7 @@ def update_config_xml(config_file): # Config-xml unter neuem Namen sichern und u
 def update_recent_menu(indir, imagetype):
     # descending by usedate
     result, sorted_d = get_dict_of_config_files(indir, imagetype)
+    print("get_dict_of_config_files: " + str(sorted_d))
     
     recentmenu.delete(0, "end")
     ii = 0
