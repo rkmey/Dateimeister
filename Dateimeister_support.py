@@ -1104,25 +1104,45 @@ class MyCameraTreeview:
         self.tv.heading("#0", text="Camera")
         self.tv.heading("#1", text="Last modification")
         self.tv.config(selectmode = tk.BROWSE)
-        # bind select event
-        self.tv.tag_bind("mycamera", "<<TreeviewSelect>>", self.item_selected)
+        # bind select events
+        self.tv.tag_bind("camera", "<<TreeviewSelect>>", self.item_selected_camera)
+        self.tv.tag_bind("type",   "<<TreeviewSelect>>", self.item_selected_type)
+        self.tv.tag_bind("suffix", "<<TreeviewSelect>>", self.item_selected_suffix)
+        
+        # Create the context menus
+        self.context_menu = tk.Menu(self.tv, tearoff=0)
+        self.context_menu.add_command(label="new suffix", command=self.type_new_suffix)    
+        self.context_menu.add_command(label="change"    , command=self.type_change)    
+        self.context_menu.add_command(label="delete"    , command=self.type_delete)    
+        self.tv.bind("<Button-3>", self.set_selection_by_button3) # selects item at mouse position just like left-click   
+
+        # some instance variables 
+        # select item, tag, text
+        self.item = ""
+        self.tag  = ""
+        self.text = ""
+        self.event = []
+        self.context_menu_required = False
         
         #retrieve cameras from xml-file
         #get usedates
         dict_cameras_usedate = DX.get_cameras_usedate(config_files_xml)
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         dict_cameras = DX.get_cameras_types_suffixes(config_files_xml)
+        initial_id = ""
         for camera in dict_cameras:
             ctype_num = 0
             usedate = dict_cameras_usedate[camera]
-            cid = self.tv.insert("", tk.END, text = camera, values = (usedate), tags=("mycamera",))
+            cid = self.tv.insert("", tk.END, text = camera, values = (usedate), tag = ("camera"))
+            if initial_id == "":
+                initial_id = cid # for selection of first camera after initializing treeview
             for ctype in dict_cameras[camera]:
                 ctype_num += 1
-                tid = self.tv.insert(cid, tk.END, text = ctype)
+                tid = self.tv.insert(cid, tk.END, text = ctype, tag = ("type"))
                 csuffix_num = 0
                 for csuffix in dict_cameras[camera][ctype]:
                     csuffix_num += 1
-                    sid = self.tv.insert(tid, tk.END, text = csuffix)
+                    sid = self.tv.insert(tid, tk.END, text = csuffix, tag = ("suffix"))
                     print("Camera: " + camera + " Type: " + ctype + " Suffix: " + csuffix + " camera_usedate: " + usedate)
                 if csuffix_num == 0:
                     messagebox.showerror("INIT", "Camera " + camera + " type " + ctype + " no suffix defined")
@@ -1130,25 +1150,60 @@ class MyCameraTreeview:
             if ctype_num == 0:
                 messagebox.showerror("INIT", "Camera " + camera + " no type defined")
                 exit()
-
-    def item_selected(self, event):
-        self.show_selection()
+        #self.tv.selection_set(initial_id)
+    # called when selected depending on bindings defined for tags
+    def item_selected_camera(self, event):
+        self.retrieve_item(event)
+    def item_selected_type(self, event):
+        self.retrieve_item(event)
+    def item_selected_suffix(self, event):
+        self.retrieve_item(event)
     
-    def show_selection(self):
+    
+    # retrieves item tag and text for the selected item and show context menu
+    def retrieve_item(self, event):
         try:
             # Get the Id of the first selected item.
-            item = self.tv.selection()[0]
+            self.item = self.tv.selection()[0]
+            #print("Item selected: " , str(self.tv.selection()))
         except IndexError:
             # If the tuple is empty, there is no selected item.
-            messagebox.showwarning(
-                message="Nothin selected",
-                title="Treeview Selection"
-            )
+            messagebox.showwarning(message="Nothin selected", title="Treeview Selection", parent = self.root)
         else:
             # Get and display the text of the selected item.
-            text = self.tv.item(item, option="text")
-            messagebox.showinfo(message=text, title="Treeview Selection")    
+            self.text = self.tv.item(self.item, option="text")
+            self.tag  = self.tv.item(self.item,  option="tag")[0]
+            #messagebox.showinfo(message = self.tag, title="Treeview Selection", parent = self.root) 
+            if self.context_menu_required:
+                self.context_menu.entryconfig(1, label = "change " + self.tag + '.' + self.text)
+                self.context_menu.entryconfig(2, label = "delete " + self.tag + '.' + self.text)
+                #self.context_menu.post(self.event.x_root, self.event.y_root)
+                self.context_menu.post(self.event.x, self.event.y)
+            self.context_menu_required = False
             
+    def set_selection_by_button3(self, event):
+        iid = self.tv.identify('item', event.x, event.y)
+        self.event = event
+        #print("iid is: " + str(iid)) 
+        if iid:
+            # mouse pointer over item
+            self.tv.selection_set(iid)
+            self.context_menu_required = True
+        else:
+            # mouse pointer not over item
+            # occurs when items do not fill frame
+            # no action required
+            pass        
+        
+    def type_new_suffix(self):
+        print("new suffix selected from context menu")
+
+    def type_change(self):
+        print("change selected from context menu")
+
+    def type_delete(self):
+        print("delete selected from context menu")
+
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
 
