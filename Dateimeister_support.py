@@ -1111,7 +1111,7 @@ class MyCameraTreeview:
         
         # Create the context menus
         self.context_menu = tk.Menu(self.tv, tearoff=0)
-        self.context_menu.add_command(label="new suffix", command=self.type_new_suffix)    
+        #self.context_menu.add_command(label="new suffix", command=self.type_new_suffix)    
         self.context_menu.add_command(label="change"    , command=self.type_change)    
         self.context_menu.add_command(label="delete"    , command=self.type_delete)    
         self.tv.bind("<Button-3>", self.set_selection_by_button3) # selects item at mouse position just like left-click   
@@ -1176,14 +1176,19 @@ class MyCameraTreeview:
             #messagebox.showinfo(message = self.tag, title="Treeview Selection", parent = self.root) 
             if self.context_menu_required:
                 if self.tag.upper() == "CAMERA":
-                    self.context_menu.entryconfig(0, label = self.text + " new type", state =  NORMAL)
+                    self.context_menu.delete(0, 2)
+                    self.context_menu.insert_command(0, label = self.text + " new type...", command=self.camera_new_type)
+                    self.context_menu.insert_command(1, label = self.text + " change...", command=self.camera_change)
+                    self.context_menu.insert_command(2, label = self.text + " delete", command=self.camera_delete)
                 elif self.tag.upper() == "TYPE":
-                    self.context_menu.entryconfig(0, label = self.text + " new suffix", state =  NORMAL)
-                else: # suffix nothing new possible
-                    self.context_menu.entryconfig(0, label = "new...", state =  DISABLED)
-                self.context_menu.entryconfig(1, label = self.text + " change")
-                self.context_menu.entryconfig(2, label = self.text + " delete")
-                #self.context_menu.post(self.event.x_root, self.event.y_root)
+                    self.context_menu.delete(0, 2)
+                    self.context_menu.insert_command(0, label = self.text + " new suffix...", command=self.type_new_suffix)
+                    self.context_menu.insert_command(1, label = self.text + " change...", command=self.type_change)
+                    self.context_menu.insert_command(2, label = self.text + " delete", command=self.type_delete)
+                elif self.tag.upper() == "SUFFIX": # suffix nothing new possible
+                    self.context_menu.delete(0, 2)
+                    self.context_menu.insert_command(1, label = self.text + " change...", command=self.suffix_change)
+                    self.context_menu.insert_command(2, label = self.text + " delete", command=self.suffix_delete)
                 self.context_menu.post(self.event.x_root, self.event.y_root)
             self.context_menu_required = False
             
@@ -1203,14 +1208,29 @@ class MyCameraTreeview:
             # no action required
             pass        
         
+    def camera_new_type(self):
+        print(self.text + " camera new type selected from context menu")
+    
+    def camera_change(self):
+        print(self.text + " camera change selected from context menu")
+
+    def camera_delete(self):
+        print(self.text + " camera delete selected from context menu")
+    
     def type_new_suffix(self):
-        print("new suffix selected from context menu")
+        print(self.text + " type new suffix selected from context menu")
 
     def type_change(self):
-        print("change selected from context menu")
+        print(self.text + " type change selected from context menu")
 
     def type_delete(self):
-        print("delete selected from context menu")
+        print(self.text + " type delete selected from context menu")
+
+    def suffix_change(self):
+        print(self.text + " suffix change selected from context menu")
+
+    def suffix_delete(self):
+        print(self.text + " suffix delete selected from context menu")
 
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
