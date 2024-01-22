@@ -5,7 +5,7 @@ pyinstaller Dateimeister_support.py --clean --add-data=E:\Arbeit\python\Dateimei
 - führt clean durch, kopiert Dateimeister.ini nach E:\Arbeit\python\Dateimeister\dist\Dateimeister_support\_internal\Dateimeister_support
 
 pyinstaller Dateimeister_support.py --clean --noconfirm --add-data=E:\Arbeit\python\Dateimeister\Dateimeister.ini;.\Dateimeister_support
-nocosorgt beim rebuild dafür, dass nicht gefragt wird, ob das dist-Verzeichnis überschrieben werden soll
+noconfirm sorgt beim rebuild dafür, dass nicht gefragt wird, ob das dist-Verzeichnis überschrieben werden soll
 
 Achtung: von da muss sie noch nach E:\Arbeit\python\Dateimeister\dist\Dateimeister_support kopiert werden oder der Pfad zur ini-Datei muss im Programm angepasst werden!
 

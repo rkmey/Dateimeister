@@ -1109,6 +1109,11 @@ class MyCameraTreeview:
         self.tv.tag_bind("type",   "<<TreeviewSelect>>", self.item_selected_type)
         self.tv.tag_bind("suffix", "<<TreeviewSelect>>", self.item_selected_suffix)
         
+        self.entry_new = self.w.Entry_new
+        self.label_new = self.w.Label_new
+        self.button_apply = self.w.Button_apply
+        self.button_apply.config(command = self.apply_new)
+
         # Create the context menus
         self.context_menu = tk.Menu(self.tv, tearoff=0)
         #self.context_menu.add_command(label="new suffix", command=self.type_new_suffix)    
@@ -1123,12 +1128,20 @@ class MyCameraTreeview:
         self.text = ""
         self.event = []
         self.context_menu_required = False
+        self.newitem = "" 
+        self.camera = ""
+        self.ctype  = ""
+        self.suffix = ""
         
+        # fille treeview from xml
+        self.treeview_from_xml(config_files_xml)
+       
+    def treeview_from_xml(self, xml):
         #retrieve cameras from xml-file
         #get usedates
-        dict_cameras_usedate = DX.get_cameras_usedate(config_files_xml)
+        dict_cameras_usedate = DX.get_cameras_usedate(xml)
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-        dict_cameras = DX.get_cameras_types_suffixes(config_files_xml)
+        dict_cameras = DX.get_cameras_types_suffixes(xml)
         initial_id = ""
         for camera in dict_cameras:
             ctype_num = 0
@@ -1219,18 +1232,51 @@ class MyCameraTreeview:
     
     def type_new_suffix(self):
         print(self.text + " type new suffix selected from context menu")
-
+        # ask for suffix name
+        camera, ctype = self.get_camera_type(self.item)
+        self.entry_new.focus_set()
+        self.label_new.config(text = "Enter new suffix")
+        self.newitem = "SUFFIX" 
+        self.camera = camera
+        self.ctype  = ctype
+        self.suffix = self.text
     def type_change(self):
         print(self.text + " type change selected from context menu")
 
     def type_delete(self):
         print(self.text + " type delete selected from context menu")
+        camera, ctype = self.get_camera_type(self.item)
+        print(camera + ' ' + ctype)
 
     def suffix_change(self):
         print(self.text + " suffix change selected from context menu")
 
     def suffix_delete(self):
         print(self.text + " suffix delete selected from context menu")
+        camera, ctype, suffix = self.get_camera_type_suffix(self.item)
+        print(camera + ' ' + ctype + ' ' + suffix)
+
+    def get_camera_type_suffix(self, iid):
+        iid = self.item 
+        suffix = self.text
+        iid = self.tv.parent(iid)
+        ctype = self.tv.item(iid, option="text")
+        iid = self.tv.parent(iid)
+        camera = self.tv.item(iid, option="text")
+        return camera, ctype, suffix
+        
+    def get_camera_type(self, iid):
+        iid = self.item 
+        ctype = self.text
+        iid = self.tv.parent(iid)
+        camera = self.tv.item(iid, option="text")
+        return camera, ctype
+        
+    def apply_new(self):
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        if self.newitem == "SUFFIX":
+            suffix = self.entry_new.get()
+            rc = DX.new_camera_type_suffix(config_files_xml, self.camera, self.ctype, suffix, ts) 
 
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
