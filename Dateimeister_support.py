@@ -1314,10 +1314,10 @@ class MyCameraTreeview:
     def apply_new(self, event = None):
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         if self.newitem == "SUFFIX_NEW":
-            suffix = self.entry_new.get()
+            suffix = self.entry_new.get().upper()
             rc = DX.new_camera_type_suffix(config_files_xml, self.camera, self.ctype, suffix, ts) 
         elif self.newitem == "SUFFIX_RENAME":
-            suffix_new = self.entry_new.get()
+            suffix_new = self.entry_new.get().upper()
             rc = DX.update_camera_type_suffix(config_files_xml, self.camera, self.ctype, self.suffix, suffix_new, ts) 
         self.treeview_from_xml(config_files_xml) # refresh treeview from changed xml
         iid = self.dict_camera_iid[self.camera]
