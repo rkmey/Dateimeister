@@ -364,6 +364,7 @@ def new_camera_type_suffix(xmlfile, cameraname, ctype, suffix, usedate):
 #    else (type exists):
 #    if suffix not exists: error 
 #    else rename suffix under existing type
+# if newname = "" delete suffix
 def update_camera_type_suffix(xmlfile, cameraname, ctype, suffix, newname, usedate):
     rc = 0
     mytree = ET.parse(xmlfile)
@@ -387,10 +388,14 @@ def update_camera_type_suffix(xmlfile, cameraname, ctype, suffix, newname, useda
                     result3 = j.findall(fstr_suffix)
                     if not result3: # new suffix only if it does nor exist
                         rc = 3 # suffix does not exist
+                        print("update_camera_type_suffix - suffix not found: " + suffix)
                         break
                     else: #rename suffix
                         for ii in result3:
-                            ii.set("name", newname)
+                            if newname == "":
+                                j.remove(ii)
+                            else:
+                                ii.set("name", newname)
         indent(myroot)
         mytree.write(xmlfile)
     else:
@@ -398,6 +403,74 @@ def update_camera_type_suffix(xmlfile, cameraname, ctype, suffix, newname, useda
         pass # camera does not exist
     return rc
 
+# create new camera-type-node. 
+# if camera not exists: create camera, camera-type and suffix
+# if camera exists:
+# if type not exists create type
+#    else (type exists): error
+def new_camera_type(xmlfile, cameraname, ctype, usedate):
+    rc = 0
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    fstr_camera = ("camera[@name=" + '"' + "%s" + "\"]")
+    fstr_camera = (fstr_camera % cameraname)
+    fstr_type = ("type[@name=" + '"' + "%s" + "\"]")
+    fstr_type = (fstr_type % ctype)
+    result = mytree.findall(fstr_camera)
+    if result: # if camera exists, check if type exists
+        for i in result:
+            # update usedate
+            i.set("usedate", usedate)
+            result2 = i.findall(fstr_type)
+            if not result2: # type does not exist in indir
+                j = ET.SubElement(i, 'type')
+                j.set("name", ctype)
+            else: # type already exists
+                rc = 2 # error type already exists
+                print("new_camera_type type already exists: " + cameraname + '.' + ctype)
+                break
+        indent(myroot)
+        mytree.write(xmlfile)
+    else:
+        rc = 1 # error camera does not exist
+        print("new_camera_type camera not found: " + cameraname)
+    return rc
+   
+# update type-node. 
+# if camera not exists: error
+# if camera exists:
+# if type not exists error
+#    else (type exists):
+#    set type.name = newname
+# if newname = "" delete suffix
+def update_camera_type(xmlfile, cameraname, ctype, newname, usedate):
+    rc = 0
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    fstr_camera = ("camera[@name=" + '"' + "%s" + "\"]")
+    fstr_camera = (fstr_camera % cameraname)
+    fstr_type = ("type[@name=" + '"' + "%s" + "\"]")
+    fstr_type = (fstr_type % ctype)
+    result = mytree.findall(fstr_camera)
+    if result: # if camera exists, check if type exists
+        for i in result:
+            result2 = i.findall(fstr_type)
+            if not result2: # type does not exist in indir
+                rc = 2 # type does not exist
+                break
+            else: # type already exists, rename
+                #print("camera / type node alredy exists: " + cameraname + ' / ' + ctype)
+                for j in result2:
+                    if newname == "":
+                        i.remove(j)
+                    else:
+                        j.set("name", newname)
+        indent(myroot)
+        mytree.write(xmlfile)
+    else:
+        rc = 1
+        pass # camera does not exist
+    return rc
 # beautify
 
 def indent(elem, level=0):
