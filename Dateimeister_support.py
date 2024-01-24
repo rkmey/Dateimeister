@@ -1185,9 +1185,14 @@ class MyCameraTreeview:
                     #print("Camera: " + camera + " Type: " + ctype + " Suffix: " + csuffix + " camera_usedate: " + usedate)
                 if csuffix_num == 0:
                     messagebox.showinfo("MyCameraTreeview", "Camera " + camera + " type " + ctype + " no suffix defined. At least 1 is needed", parent = self.root)
+                    # this does not yet function
+                    self.tv.focus(tid)
+                    self.tv.selection_set(tid)
+                    self.context_menu_required = True
+                    self.retrieve_item(self.event)
+                    self.type_new_suffix()
             if ctype_num == 0:
                 messagebox.showinfo("INIT", "Camera " + camera + " no type defined. At least 1 is needed", parent = self.root)
-                exit()
 
     # called when selected depending on bindings defined for tags
     def item_selected_camera(self, event):
@@ -1263,9 +1268,10 @@ class MyCameraTreeview:
         print(self.text + " camera delete selected from context menu")
     
     def type_new_suffix(self):
-        print(self.text + " type new suffix selected from context menu")
+        print(self.text + " type new suffix selected from context menu or from treeview_from_xml because new type has no suffix")
         # ask for suffix name
         camera, ctype, iid = self.get_camera_type(self.item)
+        self.entry_new.delete(0, 'end')
         self.entry_new.focus_set()
         self.label_new.config(text = "Enter new suffix for " + ctype)
         self.newitem = "SUFFIX_NEW" 
@@ -1275,11 +1281,21 @@ class MyCameraTreeview:
  
     def type_change(self):
         print(self.text + " type change selected from context menu")
+        # ask for type name
+        camera, ctype, iid = self.get_camera_type(self.item)
+        self.entry_new.focus_set()
+        self.label_new.config(text = "Enter new name for type " + ctype)
+        self.newitem = "TYPE_RENAME" 
+        self.camera = camera
+        self.ctype  = ctype
 
     def type_delete(self):
         print(self.text + " type delete selected from context menu")
         camera, ctype, iid = self.get_camera_type(self.item)
-        print(camera + ' ' + ctype)
+        self.newitem = "TYPE_DELETE" 
+        self.camera = camera
+        self.ctype  = ctype
+        self.apply_new()
 
     def suffix_change(self):
         print(self.text + " suffix change selected from context menu")
@@ -1337,6 +1353,12 @@ class MyCameraTreeview:
         elif self.newitem == "TYPE_NEW":
             ctype = self.entry_new.get().upper()
             rc = DX.new_camera_type(config_files_xml, self.camera, ctype, ts) 
+        elif self.newitem == "TYPE_RENAME":
+            type_new = self.entry_new.get().upper()
+            rc = DX.update_camera_type(config_files_xml, self.camera, self.ctype, type_new, ts) 
+        elif self.newitem == "TYPE_DELETE":
+            #print(" delete requested for: " + self.camera + '.' + self.ctype)
+            rc = DX.update_camera_type(config_files_xml, self.camera, self.ctype, "", ts)  # empty newname will delete suffix
         self.treeview_from_xml(config_files_xml) # refresh treeview from changed xml
         iid = self.dict_camera_iid[self.camera]
         #print ("try to open iid " + iid)
