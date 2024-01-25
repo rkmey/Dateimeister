@@ -1125,6 +1125,7 @@ class MyCameraTreeview:
         self.context_menu.add_command(label="change"    , command=self.type_change)    
         self.context_menu.add_command(label="delete"    , command=self.type_delete)    
         self.tv.bind("<Button-3>", self.set_selection_by_button3) # selects item at mouse position just like left-click   
+        self.proctype_menu = Menu(self.context_menu, tearoff=0)
 
         # some instance variables 
         # select item, tag, text
@@ -1137,10 +1138,14 @@ class MyCameraTreeview:
         self.camera = ""
         self.ctype  = ""
         self.suffix = ""
+        self.proctype = ""
         self.dict_camera_iid = {}  # initial, refresh after applying changed xml       
         self.dict_subdirs = {}
         self.dict_process_image = {}
         
+        # populate proctype submenue with proctypes from ini
+        self.update_proctype_menu()
+            
         # fille treeview from xml
         self.treeview_from_xml(config_files_xml)
     
@@ -1200,7 +1205,6 @@ class MyCameraTreeview:
                 self.context_menu_required = True
                 self.retrieve_item(self.event)
                 self.type_new_suffix()
-            
 
     # called when selected depending on bindings defined for tags
     def item_selected_camera(self, event):
@@ -1240,9 +1244,30 @@ class MyCameraTreeview:
                     self.context_menu.delete(0, 2)
                     self.context_menu.insert_command(1, label = self.text + " change...", command=self.suffix_change)
                     self.context_menu.insert_command(2, label = self.text + " delete", command=self.suffix_delete)
+                    self.context_menu.add_cascade(label="Select processing type", menu = self.proctype_menu) # add submenu of processing types
                 self.context_menu.post(self.event.x_root, self.event.y_root)
             self.context_menu_required = False
             
+    def update_proctype_menu(self):
+        # descending by usedate
+        self.proctype_menu.delete(0, "end")
+        # populate proctype_menu
+        for item in dict_proctypes: # global, filled in dateimeister.init from inifile
+            print("Process Image  {:s}, {:s}".format(item, dict_proctypes[item]))
+            labeltext = dict_proctypes[item]
+            self.proctype_menu.add_command(label=labeltext, command = lambda item=item: self.proctype_apply(item))
+        
+    def proctype_apply(self, i): # react to proctype_menu, i is proctype-key from submenu 
+        proctype = dict_proctypes[i].upper()
+        camera, ctype, suffix, iid = self.get_camera_type_suffix(self.item)
+        self.camera = camera
+        self.ctype  = ctype
+        self.suffix = suffix
+        self.proctype = proctype
+        self.newitem = "PROCTYPE_NEW"
+        print("** Menuitem selected: " + i + " proctype is: " + proctype + " for suffix: " + suffix)
+        self.apply_new()
+
     def set_selection_by_button3(self, event):
         iid = self.tv.identify('item', event.x, event.y)
         self.event = event
@@ -1370,6 +1395,13 @@ class MyCameraTreeview:
         elif self.newitem == "TYPE_DELETE":
             #print(" delete requested for: " + self.camera + '.' + self.ctype)
             rc = DX.update_camera_type(config_files_xml, self.camera, self.ctype, "", ts)  # empty newname will delete suffix
+        elif self.newitem == "PROCTYPE_NEW":
+            # create new process_image in xml or update if suffix already exists
+            rc = DX.new_process_image(config_files_xml, self.suffix, self.proctype)
+            if rc == 0:
+                print("process_image node does not exist, make new for suffix: " + self.suffix + " process: " + self.proctype)
+            elif rc == 1:
+                print("process_image already exists, update proctype for suffix: " + self.suffix + " process: " + self.proctype)
         self.treeview_from_xml(config_files_xml) # refresh treeview from changed xml
         self.open_camera(self.camera) # expand camera node
 
@@ -1415,7 +1447,7 @@ def init(tk_root,gui):
         cmd_files_subdir, _timestamp, delay_default, thumbnails_duplicates, dict_thumbnails_duplicates, \
         button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
         combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
-        button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, button_call
+        button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, button_call, dict_proctypes
 #    print("Init called\n")
     windll = ctypes.windll.kernel32
     _codepage = windll.GetUserDefaultUILanguage()
@@ -1435,6 +1467,12 @@ def init(tk_root,gui):
     config_files_subdir = config["dirs"]["config_files_subdir"]
     cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
     config_files_xml = config["misc"]["config_files_xml"]
+    
+    # read process_types from ini because depemdent on dateimeister implementation
+    dict_proctypes = default_outdir = config["proc_types"]
+    for t in dict_proctypes:
+        print("Proctype: " + dict_proctypes[t]) 
+    
     delay_default = 20 #ToDo: Ini
 
     dict_templates = {}

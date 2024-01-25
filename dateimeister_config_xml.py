@@ -471,6 +471,31 @@ def update_camera_type(xmlfile, cameraname, ctype, newname, usedate):
         rc = 1
         pass # camera does not exist
     return rc
+
+# create new process
+def new_process_image(xmlfile, suffix_name, process):
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    rc = 0
+    fstr_suffix = ("process_image[@suffix_name=" + '"' + "%s" + "\"]")
+    fstr_suffix = (fstr_suffix % suffix_name)
+    result = mytree.findall(fstr_suffix)
+    if not result: # process_image does not exist in xml
+        #print("new_process_image try to create process_image-entry for: " + suffix_name)
+        i = ET.SubElement(myroot, 'process_image')
+        i.set("suffix_name", suffix_name)
+        i.set("process", process)
+    else:
+        #print("process_image node alredy exists: " + suffix_name + " will update process: " + process)
+        for i in result:
+            i.set("process", process)
+        rc = 1
+    indent(myroot)
+    mytree.write(xmlfile)
+    return rc
+
+
+
 # beautify
 
 def indent(elem, level=0):
