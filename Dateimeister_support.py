@@ -1095,7 +1095,10 @@ class MyCameraTreeview:
         self.w = Dateimeister.Toplevel_treeview_camera(self.root)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
-        self.root.title(cameraname)
+        if cameraname is not None:
+            self.root.title(cameraname)
+        else:
+            self.root.title("Cameras")
         width,height=_screen_width,_screen_height
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
@@ -1142,6 +1145,8 @@ class MyCameraTreeview:
         self.dict_camera_iid = {}  # initial, refresh after applying changed xml       
         self.dict_subdirs = {}
         self.dict_process_image = {}
+        self.do_something = False # True only when status = something selected from context menu
+        self.enable_processing(False)
         
         # populate proctype submenue with proctypes from ini
         self.update_proctype_menu()
@@ -1266,6 +1271,7 @@ class MyCameraTreeview:
         self.proctype = proctype
         self.newitem = "PROCTYPE_NEW"
         print("** Menuitem selected: " + i + " proctype is: " + proctype + " for suffix: " + suffix)
+        self.enable_processing(True) # set do_something to True, enable entry, button, return key
         self.apply_new()
 
     def set_selection_by_button3(self, event):
@@ -1294,12 +1300,15 @@ class MyCameraTreeview:
         self.label_new.config(text = "Enter new type for " + str(camera))
         self.newitem = "TYPE_NEW" 
         self.camera = camera
+        self.enable_processing(True) # set do_something to True, enable entry, button, return key
     
     def camera_change(self):
         print(self.text + " camera change selected from context menu")
+        self.enable_processing(True) # set do_something to True, enable entry, button, return key
 
     def camera_delete(self):
         print(self.text + " camera delete selected from context menu")
+        self.enable_processing(True) # set do_something to True, enable entry, button, return key
     
     def type_new_suffix(self):
         print(self.text + " type new suffix selected from context menu or from treeview_from_xml because new type has no suffix")
@@ -1312,6 +1321,7 @@ class MyCameraTreeview:
         self.camera = camera
         self.ctype  = ctype
         self.suffix = self.text
+        self.enable_processing(True) # set do_something to True, enable entry, button, return key
  
     def type_change(self):
         print(self.text + " type change selected from context menu")
@@ -1323,6 +1333,7 @@ class MyCameraTreeview:
         self.newitem = "TYPE_RENAME" 
         self.camera = camera
         self.ctype  = ctype
+        self.enable_processing(True) # set do_something to True, enable entry, button, return key
 
     def type_delete(self):
         print(self.text + " type delete selected from context menu")
@@ -1330,6 +1341,7 @@ class MyCameraTreeview:
         self.newitem = "TYPE_DELETE" 
         self.camera = camera
         self.ctype  = ctype
+        self.enable_processing(True) # set do_something to True, enable entry, button, return key
         self.apply_new()
 
     def suffix_change(self):
@@ -1343,6 +1355,7 @@ class MyCameraTreeview:
         self.camera = camera
         self.ctype  = ctype
         self.suffix = self.text
+        self.enable_processing(True) # set do_something to True, enable entry, button, return key
 
     def suffix_delete(self):
         print(self.text + " suffix delete selected from context menu")
@@ -1351,7 +1364,20 @@ class MyCameraTreeview:
         self.camera = camera
         self.ctype  = ctype
         self.suffix = self.text
+        self.enable_processing(True) # set do_something to True, enable entry, button, return key
         self.apply_new()
+
+    def enable_processing(self, b):
+        if b == True:
+            self.do_something = True
+            self.entry_new.config(state = NORMAL)
+            self.button_apply.config(state = NORMAL)
+            self.root.bind('<Return>', self.apply_new)
+        else:
+            self.do_something = False
+            self.entry_new.config(state = DISABLED)
+            self.button_apply.config(state = DISABLED)
+            self.root.unbind('<Return>')
 
     def get_camera_type_suffix(self, iid): # find parent of parent of suffix
         iid = self.item 
@@ -1375,6 +1401,9 @@ class MyCameraTreeview:
         return camera, iid # iid of camera
 
     def apply_new(self, event = None):
+        if self.do_something == False:
+            messagebox.showwarning(message="cannot process, do_something = False", title="Treeview apply new", parent = self.root)
+            return
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         if self.newitem == "SUFFIX_NEW":
             suffix = self.entry_new.get().upper()
@@ -1404,6 +1433,7 @@ class MyCameraTreeview:
                 print("process_image already exists, update proctype for suffix: " + self.suffix + " process: " + self.proctype)
         self.treeview_from_xml(config_files_xml) # refresh treeview from changed xml
         self.open_camera(self.camera) # expand camera node
+        self.enable_processing(False) # set do_something to False, disable entry, button, return key
 
     def open_camera(self, camera):
         iid = self.dict_camera_iid[camera]
@@ -1469,7 +1499,7 @@ def init(tk_root,gui):
     config_files_xml = config["misc"]["config_files_xml"]
     
     # read process_types from ini because depemdent on dateimeister implementation
-    dict_proctypes = default_outdir = config["proc_types"]
+    dict_proctypes = config["proc_types"]
     for t in dict_proctypes:
         print("Proctype: " + dict_proctypes[t]) 
     
@@ -1951,7 +1981,7 @@ def update_config_xml(config_file): # Config-xml unter neuem Namen sichern und u
 def update_recent_menu(indir, imagetype):
     # descending by usedate
     result, sorted_d = get_dict_of_config_files(indir, imagetype)
-    print("get_dict_of_config_files: " + str(sorted_d))
+    #print("get_dict_of_config_files: " + str(sorted_d))
     
     recentmenu.delete(0, "end")
     ii = 0
@@ -2562,7 +2592,7 @@ def Button_be_pressed(*args):
     global _canvas_gallery_width_all
     global _lastposition, _dict_file_image
     global _imagetype, _list_processids, _processid_high, _processid_akt, _processid_low, _dict_duplicates, \
-        _duplicates, num_images, config_file, _dict_duplicates_sourcefiles, _win_duplicates, dict_source_target
+        _duplicates, num_images, config_file, _dict_duplicates_sourcefiles, _win_duplicates, dict_source_target, _win_messages
 
     if _debug:
         print('Dateimeister_support.Press_be_out')
@@ -2796,6 +2826,9 @@ def Button_be_pressed(*args):
     label_num.config(text = str(num_images))
     button_exec.config(state = NORMAL)
     write_cmdfile(imagetype)
+    if _win_messages is not None: # stop MyMessagesWindow-Objekt
+        _win_messages.close_handler()
+        _win_messages = None
 
 def get_thumbnail_by_position(canvas_x, canvas_y):
     index = -1
