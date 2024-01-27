@@ -494,6 +494,27 @@ def new_process_image(xmlfile, suffix_name, process):
     mytree.write(xmlfile)
     return rc
 
+# create new subdir (for type)
+def new_subdir(xmlfile, type_name, subdir):
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    rc = 0
+    fstr_type = ("subdir[@type_name=" + '"' + "%s" + "\"]")
+    fstr_type = (fstr_type % type_name)
+    result = mytree.findall(fstr_type)
+    if not result: # type does not exist in xml
+        #print("new_subdir try to create subdir-entry for: " + type_name)
+        i = ET.SubElement(myroot, 'subdir')
+        i.set("type_name", type_name)
+        i.set("subdir", subdir)
+    else:
+        #print("subdir node alredy exists: " + type_name + " will update subdir: " + subdir)
+        for i in result:
+            i.set("subdir", subdir)
+        rc = 1
+    indent(myroot)
+    mytree.write(xmlfile)
+    return rc
 
 
 # beautify

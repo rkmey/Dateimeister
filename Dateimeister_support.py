@@ -1241,10 +1241,11 @@ class MyCameraTreeview:
                     self.context_menu.insert_command(1, label = self.text + " change...", command=self.camera_change)
                     self.context_menu.insert_command(2, label = self.text + " delete", command=self.camera_delete)
                 elif self.tag.upper() == "TYPE":
-                    self.context_menu.delete(0, 2)
+                    self.context_menu.delete(0, 3)
                     self.context_menu.insert_command(0, label = self.text + " new suffix...", command=self.type_new_suffix)
                     self.context_menu.insert_command(1, label = self.text + " change...", command=self.type_change)
                     self.context_menu.insert_command(2, label = self.text + " delete", command=self.type_delete)
+                    self.context_menu.insert_command(3, label = self.text + " subdir...", command=self.type_subdir)
                 elif self.tag.upper() == "SUFFIX": # suffix nothing new possible
                     self.context_menu.delete(0, 2)
                     self.context_menu.insert_command(1, label = self.text + " change...", command=self.suffix_change)
@@ -1344,6 +1345,18 @@ class MyCameraTreeview:
         self.enable_processing(True) # set do_something to True, enable entry, button, return key
         self.apply_new()
 
+    def type_subdir(self):
+        print(self.text + " type subdir selected from context menu")
+        # ask for type name
+        camera, ctype, iid = self.get_camera_type(self.item)
+        self.entry_new.delete(0, 'end')
+        self.entry_new.focus_set()
+        self.label_new.config(text = "Enter subdir for type " + ctype)
+        self.newitem = "TYPE_SUBDIR" 
+        self.camera = camera
+        self.ctype  = ctype
+        self.enable_processing(True) # set do_something to True, enable entry, button, return key
+
     def suffix_change(self):
         print(self.text + " suffix change selected from context menu")
         # ask for suffix name
@@ -1424,6 +1437,14 @@ class MyCameraTreeview:
         elif self.newitem == "TYPE_DELETE":
             #print(" delete requested for: " + self.camera + '.' + self.ctype)
             rc = DX.update_camera_type(config_files_xml, self.camera, self.ctype, "", ts)  # empty newname will delete suffix
+        elif self.newitem == "TYPE_SUBDIR":
+            # create new subdir in xml or update if type-subdir already exists
+            subdir = self.entry_new.get()
+            rc = DX.new_subdir(config_files_xml, self.ctype, subdir)
+            if rc == 0:
+                print("subdir node does not exist, make new for type: " + self.ctype + " subdir: " + subdir)
+            elif rc == 1:
+                print("subdir already exists, update subdir for type: " + self.ctype + " subdir: " + subdir)
         elif self.newitem == "PROCTYPE_NEW":
             # create new process_image in xml or update if suffix already exists
             rc = DX.new_process_image(config_files_xml, self.suffix, self.proctype)
