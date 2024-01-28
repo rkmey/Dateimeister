@@ -1236,20 +1236,20 @@ class MyCameraTreeview:
             #messagebox.showinfo(message = self.tag, title="Treeview Selection", parent = self.root) 
             if self.context_menu_required:
                 if self.tag.upper() == "CAMERA":
-                    self.context_menu.delete(0, 2)
+                    self.context_menu.delete(0, 10)
                     self.context_menu.insert_command(0, label = self.text + " new type...", command=self.camera_new_type)
                     self.context_menu.insert_command(1, label = self.text + " change...", command=self.camera_change)
                     self.context_menu.insert_command(2, label = self.text + " delete", command=self.camera_delete)
                 elif self.tag.upper() == "TYPE":
-                    self.context_menu.delete(0, 3)
+                    self.context_menu.delete(0, 10)
                     self.context_menu.insert_command(0, label = self.text + " new suffix...", command=self.type_new_suffix)
                     self.context_menu.insert_command(1, label = self.text + " change...", command=self.type_change)
                     self.context_menu.insert_command(2, label = self.text + " delete", command=self.type_delete)
                     self.context_menu.insert_command(3, label = self.text + " subdir...", command=self.type_subdir)
                 elif self.tag.upper() == "SUFFIX": # suffix nothing new possible
-                    self.context_menu.delete(0, 2)
-                    self.context_menu.insert_command(1, label = self.text + " change...", command=self.suffix_change)
-                    self.context_menu.insert_command(2, label = self.text + " delete", command=self.suffix_delete)
+                    self.context_menu.delete(0, 10)
+                    self.context_menu.insert_command(0, label = self.text + " change...", command=self.suffix_change)
+                    self.context_menu.insert_command(1, label = self.text + " delete", command=self.suffix_delete)
                     self.context_menu.add_cascade(label="Select processing type", menu = self.proctype_menu) # add submenu of processing types
                 self.context_menu.post(self.event.x_root, self.event.y_root)
             self.context_menu_required = False
