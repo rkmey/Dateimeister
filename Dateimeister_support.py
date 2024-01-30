@@ -1114,8 +1114,8 @@ class MyCameraTreeview:
         self.tv.tag_bind("type",   "<<TreeviewSelect>>", self.item_selected_type)
         self.tv.tag_bind("suffix", "<<TreeviewSelect>>", self.item_selected_suffix)
         
-        self.entry_new = self.w.Entry_new
-        self.label_new = self.w.Label_new
+        self.entry_camera = self.w.Entry_camera
+        self.label_camera = self.w.Label_camera
         self.entry_type = self.w.Entry_type
         self.label_type = self.w.Label_type
         self.entry_suffix = self.w.Entry_suffix
@@ -1126,7 +1126,7 @@ class MyCameraTreeview:
         self.button_apply.config(command = self.apply_new)
         self.root.bind('<Return>', self.apply_new)
 
-        self.label_new.config(text = "new item")
+        self.label_camera.config(text = "new item")
 
         # Create the context menus
         self.context_menu = tk.Menu(self.tv, tearoff=0)
@@ -1152,6 +1152,7 @@ class MyCameraTreeview:
         self.dict_subdirs = {}
         self.dict_process_image = {}
         self.do_something = False # True only when status = something selected from context menu
+        self.locked = False # True when incomplete data (new type without suffx), as it is not possible to disable treeview
         self.enable_processing(False, False, False, False)
         
         # populate proctype submenue with proctypes from ini
@@ -1228,37 +1229,38 @@ class MyCameraTreeview:
     
     # retrieves item tag and text for the selected item and show context menu if button-3 pressed or from program
     def retrieve_item(self, event):
-        try:
-            # Get the Id of the first selected item.
-            self.item = self.tv.selection()[0]
-            print("Item selected: " , str(self.tv.selection()))
-        except IndexError:
-            # If the tuple is empty, there is no selected item.
-            messagebox.showwarning(message="Nothin selected", title="Treeview Selection", parent = self.root)
-        else:
-            # Get and display the text of the selected item.
-            self.text = self.tv.item(self.item, option="text")
-            self.tag  = self.tv.item(self.item,  option="tag")[0]
-            #messagebox.showinfo(message = self.tag, title="Treeview Selection", parent = self.root) 
-            if self.context_menu_required:
-                if self.tag.upper() == "CAMERA":
-                    self.context_menu.delete(0, 10)
-                    self.context_menu.insert_command(0, label = self.text + " new type...", command=self.camera_new_type)
-                    self.context_menu.insert_command(1, label = self.text + " change...", command=self.camera_change)
-                    self.context_menu.insert_command(2, label = self.text + " delete", command=self.camera_delete)
-                elif self.tag.upper() == "TYPE":
-                    self.context_menu.delete(0, 10)
-                    self.context_menu.insert_command(0, label = self.text + " new suffix...", command=self.type_new_suffix)
-                    self.context_menu.insert_command(1, label = self.text + " change...", command=self.type_change)
-                    self.context_menu.insert_command(2, label = self.text + " delete", command=self.type_delete)
-                    self.context_menu.insert_command(3, label = self.text + " subdir...", command=self.type_subdir)
-                elif self.tag.upper() == "SUFFIX": # suffix nothing new possible
-                    self.context_menu.delete(0, 10)
-                    self.context_menu.insert_command(0, label = self.text + " change...", command=self.suffix_change)
-                    self.context_menu.insert_command(1, label = self.text + " delete", command=self.suffix_delete)
-                    self.context_menu.add_cascade(label="Select processing type", menu = self.proctype_menu) # add submenu of processing types
-                self.context_menu.post(self.event.x_root, self.event.y_root)
-            self.context_menu_required = False
+        if self.locked == False: # there is no incomplete work (e.g. new type without suffix)
+            try:
+                # Get the Id of the first selected item.
+                self.item = self.tv.selection()[0]
+                print("Item selected: " , str(self.tv.selection()))
+            except IndexError:
+                # If the tuple is empty, there is no selected item.
+                messagebox.showwarning(message="Nothin selected", title="Treeview Selection", parent = self.root)
+            else:
+                # Get and display the text of the selected item.
+                self.text = self.tv.item(self.item, option="text")
+                self.tag  = self.tv.item(self.item,  option="tag")[0]
+                #messagebox.showinfo(message = self.tag, title="Treeview Selection", parent = self.root) 
+                if self.context_menu_required:
+                    if self.tag.upper() == "CAMERA":
+                        self.context_menu.delete(0, 10)
+                        self.context_menu.insert_command(0, label = self.text + " new type...", command=self.camera_new_type)
+                        self.context_menu.insert_command(1, label = self.text + " change...", command=self.camera_change)
+                        self.context_menu.insert_command(2, label = self.text + " delete", command=self.camera_delete)
+                    elif self.tag.upper() == "TYPE":
+                        self.context_menu.delete(0, 10)
+                        self.context_menu.insert_command(0, label = self.text + " new suffix...", command=self.type_new_suffix)
+                        self.context_menu.insert_command(1, label = self.text + " change...", command=self.type_change)
+                        self.context_menu.insert_command(2, label = self.text + " delete", command=self.type_delete)
+                        self.context_menu.insert_command(3, label = self.text + " subdir...", command=self.type_subdir)
+                    elif self.tag.upper() == "SUFFIX": # suffix nothing new possible
+                        self.context_menu.delete(0, 10)
+                        self.context_menu.insert_command(0, label = self.text + " change...", command=self.suffix_change)
+                        self.context_menu.insert_command(1, label = self.text + " delete", command=self.suffix_delete)
+                        self.context_menu.add_cascade(label="Select processing type", menu = self.proctype_menu) # add submenu of processing types
+                    self.context_menu.post(self.event.x_root, self.event.y_root)
+                self.context_menu_required = False
             
     def update_proctype_menu(self):
         # descending by usedate
@@ -1282,6 +1284,7 @@ class MyCameraTreeview:
         self.do_something = True
         self.apply_new()
 
+    # handler for mouse right click in treeview
     def set_selection_by_button3(self, event):
         iid = self.tv.identify('item', event.x, event.y)
         self.event = event
@@ -1298,18 +1301,11 @@ class MyCameraTreeview:
             # no action required
             pass        
         
-    def camera_new_type(self):
-        print(self.text + " camera new type selected from context menu")
-        # ask for suffix name
-        camera, iid = self.get_camera(self.item)
-        self.entry_new.delete(0, 'end')
-        print("Camer for new type: " + camera)
-        self.entry_new.focus_set()
-        self.label_new.config(text = "Enter new type for " + str(camera))
-        self.newitem = "TYPE_NEW" 
-        self.camera = camera
-        self.enable_processing(False, True, False, False) # set do_something to True, enable entry, button, return key
-    
+    # the command handlers for treeview context menu
+    def camera_new(self):
+        print(self.text + " camera new selected by button")
+        self.enable_processing(True, False, False, False) # set do_something to True, enable entry, button, return key
+
     def camera_change(self):
         print(self.text + " camera change selected from context menu")
         self.enable_processing(True, False, False, False) # set do_something to True, enable entry, button, return key
@@ -1318,26 +1314,21 @@ class MyCameraTreeview:
         print(self.text + " camera delete selected from context menu")
         self.enable_processing(True, False, False, False) # set do_something to True, enable entry, button, return key
     
-    def type_new_suffix(self):
-        print(self.text + " type new suffix selected from context menu or from treeview_from_xml because new type has no suffix")
+    def camera_new_type(self):
+        print(self.text + " camera new type selected from context menu")
         # ask for suffix name
-        camera, ctype, iid = self.get_camera_type(self.item)
-        self.entry_new.delete(0, 'end')
-        self.entry_new.focus_set()
-        self.label_new.config(text = "Enter new suffix for " + ctype)
-        self.newitem = "SUFFIX_NEW" 
+        camera, iid = self.get_camera(self.item)
+        self.newitem = "TYPE_NEW" 
         self.camera = camera
-        self.ctype  = ctype
-        self.suffix = self.text
-        self.enable_processing(False, False, True, False) # set do_something to True, enable entry, button, return key
- 
+        self.enable_processing(False, True, True, False) # set do_something to True, enable entry, button, return key
+    
     def type_change(self):
         print(self.text + " type change selected from context menu")
         # ask for type name
         camera, ctype, iid = self.get_camera_type(self.item)
-        self.entry_new.delete(0, 'end')
-        self.entry_new.focus_set()
-        self.label_new.config(text = "Enter new name for type " + ctype)
+        self.entry_camera.delete(0, 'end')
+        self.entry_camera.focus_set()
+        self.label_camera.config(text = "Enter new name for type " + ctype)
         self.newitem = "TYPE_RENAME" 
         self.camera = camera
         self.ctype  = ctype
@@ -1350,15 +1341,29 @@ class MyCameraTreeview:
         self.camera = camera
         self.ctype  = ctype
         self.enable_processing(False, False, False, False) # set do_something to True, enable entry, button, return key
+        self.do_something = True # must be set explicitely because disabling all entries above will set do_something to false
         self.apply_new()
 
+    def type_new_suffix(self):
+        print(self.text + " type new suffix selected from context menu or from treeview_from_xml because new type has no suffix")
+        # ask for suffix name
+        camera, ctype, iid = self.get_camera_type(self.item)
+        self.entry_camera.delete(0, 'end')
+        self.entry_camera.focus_set()
+        self.label_camera.config(text = "Enter new suffix for " + ctype)
+        self.newitem = "SUFFIX_NEW" 
+        self.camera = camera
+        self.ctype  = ctype
+        self.suffix = self.text
+        self.enable_processing(False, False, True, False) # set do_something to True, enable entry, button, return key
+ 
     def type_subdir(self):
         print(self.text + " type subdir selected from context menu")
         # ask for type name
         camera, ctype, iid = self.get_camera_type(self.item)
-        self.entry_new.delete(0, 'end')
-        self.entry_new.focus_set()
-        self.label_new.config(text = "Enter subdir for type " + ctype)
+        self.entry_camera.delete(0, 'end')
+        self.entry_camera.focus_set()
+        self.label_camera.config(text = "Enter subdir for type " + ctype)
         self.newitem = "TYPE_SUBDIR" 
         self.camera = camera
         self.ctype  = ctype
@@ -1368,9 +1373,9 @@ class MyCameraTreeview:
         print(self.text + " suffix change selected from context menu")
         # ask for suffix name
         camera, ctype, suffix, iid = self.get_camera_type_suffix(self.item)
-        self.entry_new.delete(0, 'end')
-        self.entry_new.focus_set()
-        self.label_new.config(text = "Enter new name for suffix " + suffix)
+        self.entry_camera.delete(0, 'end')
+        self.entry_camera.focus_set()
+        self.label_camera.config(text = "Enter new name for suffix " + suffix)
         self.newitem = "SUFFIX_RENAME" 
         self.camera = camera
         self.ctype  = ctype
@@ -1390,41 +1395,47 @@ class MyCameraTreeview:
     def enable_processing(self, b_camera, b_type, b_suffix, b_subdir):
         self.do_something = False # default, can be overridden
         self.root.unbind('<Return>')
+        self.button_apply.config(state = DISABLED)
+        focus = False
         if b_camera == True:
-            self.entry_new.config(state = NORMAL, background = 'yellow')
-            self.button_apply.config(state = NORMAL)
+            self.entry_camera.config(state = NORMAL, background = 'yellow')
+            self.entry_camera.focus_set()
             self.do_something = True
-            self.root.bind('<Return>', self.apply_new)
+            focus = True
         else:
-            self.entry_new.config(state = DISABLED)
-            self.button_apply.config(state = DISABLED)
+            self.entry_camera.config(state = DISABLED)
 
         if b_type == True:
             self.entry_type.config(state = NORMAL, background = 'yellow')
-            self.button_apply.config(state = NORMAL)
+            if not focus: # dont override focus from higher level object
+                self.entry_type.focus_set()
+                focus = True
             self.do_something = True
-            self.root.bind('<Return>', self.apply_new)
         else:
             self.entry_type.config(state = DISABLED)
-            self.button_apply.config(state = DISABLED)
 
         if b_suffix == True:
             self.entry_suffix.config(state = NORMAL, background = 'yellow')
-            self.button_apply.config(state = NORMAL)
+            if not focus: # dont override focus from higher level object
+                self.entry_suffix.focus_set()
+                focus = True
             self.do_something = True
-            self.root.bind('<Return>', self.apply_new)
         else:
             self.entry_suffix.config(state = DISABLED)
-            self.button_apply.config(state = DISABLED)
 
         if b_subdir == True:
             self.entry_subdir.config(state = NORMAL, background = 'yellow')
-            self.button_apply.config(state = NORMAL)
+            if not focus: # dont override focus from higher level object
+                self.entry_subdir.focus_set()
+                focus = True
             self.do_something = True
-            self.root.bind('<Return>', self.apply_new)
         else:
             self.entry_subdir.config(state = DISABLED)
-            self.button_apply.config(state = DISABLED)
+
+        # finally enable button if something has tobe done
+        if self.do_something:
+            self.button_apply.config(state = NORMAL)
+            self.root.bind('<Return>', self.apply_new)
 
 
     def get_camera_type_suffix(self, iid): # find parent of parent of suffix
@@ -1454,27 +1465,41 @@ class MyCameraTreeview:
             return
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         if self.newitem == "SUFFIX_NEW":
-            suffix = self.entry_new.get().upper()
+            suffix = self.entry_camera.get().upper()
             rc = DX.new_camera_type_suffix(config_files_xml, self.camera, self.ctype, suffix, ts) 
         elif self.newitem == "SUFFIX_RENAME":
-            suffix_new = self.entry_new.get().upper()
+            suffix_new = self.entry_camera.get().upper()
             rc = DX.update_camera_type_suffix(config_files_xml, self.camera, self.ctype, self.suffix, suffix_new, ts) 
         elif self.newitem == "SUFFIX_DELETE":
             suffix = self.suffix
             rc = DX.update_camera_type_suffix(config_files_xml, self.camera, self.ctype, suffix, "", ts)  # empty newname will delete suffix
             print("delete suffix rc: " + str(rc))
         elif self.newitem == "TYPE_NEW":
-            ctype = self.entry_new.get().upper()
-            rc = DX.new_camera_type(config_files_xml, self.camera, ctype, ts) 
+            ctype  = self.entry_type.get().upper()
+            if ctype is not None and ctype != "":
+                suffix = self.entry_suffix.get().upper()
+                if suffix is None or suffix == "":
+                    messagebox.showinfo("MyCameraTreeview", "Camera " + self.camera + " type " + ctype + " no suffix defined. At least 1 is needed", parent = self.root)
+                    self.entry_suffix.focus_set()
+                    # disable treeview, no selection is possible before suffix for new type has been given
+                    self.tv.unbind("<Button-3>") # temporarily disable until suffix is given   
+                    self.tv.state = DISABLED
+                    self.locked = True
+                    return
+                else:
+                    rc = DX.new_camera_type_suffix(config_files_xml, self.camera, ctype, suffix, ts)
+                    self.tv.bind("<Button-3>", self.set_selection_by_button3) # enable as new type is complete with new suffix
+                    self.locked = False
+                    #self.tv.config(state = NORMAL)                
         elif self.newitem == "TYPE_RENAME":
-            type_new = self.entry_new.get().upper()
+            type_new = self.entry_camera.get().upper()
             rc = DX.update_camera_type(config_files_xml, self.camera, self.ctype, type_new, ts) 
         elif self.newitem == "TYPE_DELETE":
             #print(" delete requested for: " + self.camera + '.' + self.ctype)
             rc = DX.update_camera_type(config_files_xml, self.camera, self.ctype, "", ts)  # empty newname will delete suffix
         elif self.newitem == "TYPE_SUBDIR":
             # create new subdir in xml or update if type-subdir already exists
-            subdir = self.entry_new.get()
+            subdir = self.entry_camera.get()
             rc = DX.new_subdir(config_files_xml, self.ctype, subdir)
             if rc == 0:
                 print("subdir node does not exist, make new for type: " + self.ctype + " subdir: " + subdir)
