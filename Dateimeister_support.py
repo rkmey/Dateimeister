@@ -1161,6 +1161,12 @@ class MyCameraTreeview:
         # fille treeview from xml
         self.treeview_from_xml(config_files_xml)
     
+    def clear_text(self, o):
+        o.delete(0, 'end')
+
+    def insert_text(self, o, text):
+        o.insert('end', text)
+
     def treeview_clear(self):    
         for i in self.tv.get_children():
            self.tv.delete(i)
@@ -1403,6 +1409,9 @@ class MyCameraTreeview:
             self.do_something = True
             focus = True
         else:
+            self.entry_camera.config(state = 'normal')
+            self.clear_text(self.entry_camera) 
+            self.insert_text(self.entry_camera, self.camera)
             self.entry_camera.config(state = DISABLED)
 
         if b_type == True:
@@ -1412,6 +1421,9 @@ class MyCameraTreeview:
                 focus = True
             self.do_something = True
         else:
+            self.entry_type.config(state = 'normal') # insert tex only possible when state = normal
+            self.clear_text(self.entry_type) 
+            self.insert_text(self.entry_type, self.ctype)
             self.entry_type.config(state = DISABLED)
 
         if b_suffix == True:
@@ -1421,6 +1433,9 @@ class MyCameraTreeview:
                 focus = True
             self.do_something = True
         else:
+            self.entry_suffix.config(state = 'normal') # insert tex only possible when state = normal
+            self.clear_text(self.entry_suffix) 
+            self.insert_text(self.entry_suffix, self.suffix)
             self.entry_suffix.config(state = DISABLED)
 
         if b_subdir == True:
@@ -1465,7 +1480,7 @@ class MyCameraTreeview:
             return
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         if self.newitem == "SUFFIX_NEW":
-            suffix = self.entry_camera.get().upper()
+            suffix = self.entry_suffix.get().upper()
             rc = DX.new_camera_type_suffix(config_files_xml, self.camera, self.ctype, suffix, ts) 
         elif self.newitem == "SUFFIX_RENAME":
             suffix_new = self.entry_camera.get().upper()
