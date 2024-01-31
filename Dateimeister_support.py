@@ -1124,6 +1124,8 @@ class MyCameraTreeview:
         self.label_subdir = self.w.Label_subdir
         self.button_apply = self.w.Button_apply
         self.button_apply.config(command = self.apply_new)
+        self.button_cancel = self.w.Button_cancel
+        self.button_cancel.config(command = self.cancel_new)
         self.root.bind('<Return>', self.apply_new)
 
         self.label_camera.config(text = "new item")
@@ -1148,12 +1150,16 @@ class MyCameraTreeview:
         self.ctype  = ""
         self.suffix = ""
         self.proctype = ""
+        self.subdir = ""
         self.dict_camera_iid = {}  # initial, refresh after applying changed xml       
         self.dict_subdirs = {}
         self.dict_process_image = {}
         self.do_something = False # True only when status = something selected from context menu
         self.locked = False
-        self.enable_processing(False, False, False, False)
+        self.entry_camera.config(state = DISABLED)                  
+        self.entry_type.config(state = DISABLED)                  
+        self.entry_suffix.config(state = DISABLED)                  
+        self.entry_subdir.config(state = DISABLED)                  
         self.lock_treeview(False)
         # populate proctype submenue with proctypes from ini
         self.update_proctype_menu()
@@ -1412,16 +1418,33 @@ class MyCameraTreeview:
         self.do_something = False # default, can be overridden
         self.root.unbind('<Return>')
         self.button_apply.config(state = DISABLED)
+
+        # enable all entries, just for set text
+        self.entry_camera.config(state = NORMAL)                  
+        self.entry_type.config(state = NORMAL)                  
+        self.entry_suffix.config(state = NORMAL)                  
+        self.entry_subdir.config(state = NORMAL)                  
+        # fill entries with selection from treeview
+        self.new_text(self.entry_camera, self.camera)
+        self.new_text(self.entry_type, self.ctype)
+        self.new_text(self.entry_suffix, self.suffix)
+        self.dict_subdirs = DX.get_subdirs(config_files_xml)
+        if self.ctype in self.dict_subdirs:
+            self.new_text(self.entry_subdir, self.dict_subdirs[self.ctype])
+        else:
+            self.new_text(self.entry_subdir, "")
+
+        # initially disable all entries, can be overridden
+        self.entry_camera.config(state = DISABLED)                  
+        self.entry_type.config(state = DISABLED)                  
+        self.entry_suffix.config(state = DISABLED)                  
+        self.entry_subdir.config(state = DISABLED)                  
         focus = False
         if b_camera == True:
             self.entry_camera.config(state = NORMAL, background = 'yellow')
             self.entry_camera.focus_set()
             self.do_something = True
             focus = True
-        else:
-            self.entry_camera.config(state = 'normal')
-            self.new_text(self.entry_camera, self.camera)
-            self.entry_camera.config(state = DISABLED)
 
         if b_type == True:
             self.entry_type.config(state = NORMAL, background = 'yellow')
@@ -1429,10 +1452,6 @@ class MyCameraTreeview:
                 self.entry_type.focus_set()
                 focus = True
             self.do_something = True
-        else:
-            self.entry_type.config(state = 'normal') # insert tex only possible when state = normal
-            self.new_text(self.entry_type, self.ctype)
-            self.entry_type.config(state = DISABLED)
 
         if b_suffix == True:
             self.entry_suffix.config(state = NORMAL, background = 'yellow')
@@ -1440,10 +1459,6 @@ class MyCameraTreeview:
                 self.entry_suffix.focus_set()
                 focus = True
             self.do_something = True
-        else:
-            self.entry_suffix.config(state = 'normal') # insert tex only possible when state = normal
-            self.new_text(self.entry_suffix, self.suffix)
-            self.entry_suffix.config(state = DISABLED)
 
         if b_subdir == True:
             self.entry_subdir.config(state = NORMAL, background = 'yellow')
@@ -1451,10 +1466,8 @@ class MyCameraTreeview:
                 self.entry_subdir.focus_set()
                 focus = True
             self.do_something = True
-        else:
-            self.entry_subdir.config(state = DISABLED)
 
-        # finally enable button if something has tobe done
+        # finally enable button if something has to be done
         if self.do_something:
             self.button_apply.config(state = NORMAL)
             self.root.bind('<Return>', self.apply_new)
@@ -1489,7 +1502,13 @@ class MyCameraTreeview:
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         if self.newitem == "SUFFIX_NEW":
             suffix = self.entry_suffix.get().upper()
-            rc = DX.new_camera_type_suffix(config_files_xml, self.camera, self.ctype, suffix, ts) 
+            if suffix is not None and suffix != "":
+                rc = DX.new_camera_type_suffix(config_files_xml, self.camera, self.ctype, suffix, ts) 
+            else: # entry_suffix is empty
+                messagebox.showinfo("MyCameraTreeview", "Camera " + self.camera + " type " + ctype + \
+                 " no suffix defined. At least 1 is needed  or press cancel", parent = self.root)
+                self.entry_suffix.focus_set()
+                return
         elif self.newitem == "SUFFIX_RENAME":
             suffix_new = self.entry_camera.get().upper()
             rc = DX.update_camera_type_suffix(config_files_xml, self.camera, self.ctype, self.suffix, suffix_new, ts) 
@@ -1502,16 +1521,16 @@ class MyCameraTreeview:
             if ctype is not None and ctype != "":
                 suffix = self.entry_suffix.get().upper()
                 if suffix is None or suffix == "":
-                    messagebox.showinfo("MyCameraTreeview", "Camera " + self.camera + " type " + ctype + " no suffix defined. At least 1 is needed", parent = self.root)
+                    messagebox.showinfo("MyCameraTreeview", "Camera " + self.camera + " type " + ctype + \
+                     " no suffix defined. At least 1 is needed  or press cancel", parent = self.root)
                     self.entry_suffix.focus_set()
-                    # disable treeview, no selection is possible before suffix for new type has been given
-                    self.tv.unbind("<Button-3>") # temporarily disable until suffix is given   
-                    self.tv.state = DISABLED
                     return
                 else:
                     rc = DX.new_camera_type_suffix(config_files_xml, self.camera, ctype, suffix, ts)
-                    self.tv.bind("<Button-3>", self.set_selection_by_button3) # enable as new type is complete with new suffix
-                    #self.tv.config(state = NORMAL)                
+            else: # entry_type is empty
+                messagebox.showinfo("MyCameraTreeview", "Camera " + self.camera + " no type defined. Please enter type or press cancel", parent = self.root)
+                self.entry_type.focus_set()
+                return
         elif self.newitem == "TYPE_RENAME":
             type_new = self.entry_camera.get().upper()
             rc = DX.update_camera_type(config_files_xml, self.camera, self.ctype, type_new, ts) 
@@ -1534,6 +1553,11 @@ class MyCameraTreeview:
             elif rc == 1:
                 print("process_image already exists, update proctype for suffix: " + self.suffix + " process: " + self.proctype)
         self.treeview_from_xml(config_files_xml) # refresh treeview from changed xml
+        self.open_camera(self.camera) # expand camera node
+        self.enable_processing(False, False, False, False) # set do_something to False, disable entry, button, return key
+        self.lock_treeview(False)
+
+    def cancel_new(self, event = None):
         self.open_camera(self.camera) # expand camera node
         self.enable_processing(False, False, False, False) # set do_something to False, disable entry, button, return key
         self.lock_treeview(False)
