@@ -1152,25 +1152,32 @@ class MyCameraTreeview:
         self.dict_subdirs = {}
         self.dict_process_image = {}
         self.do_something = False # True only when status = something selected from context menu
-        self.locked = False # True when incomplete data (new type without suffx), as it is not possible to disable treeview
+        self.locked = False
         self.enable_processing(False, False, False, False)
-        
+        self.lock_treeview(False)
         # populate proctype submenue with proctypes from ini
         self.update_proctype_menu()
             
         # fille treeview from xml
         self.treeview_from_xml(config_files_xml)
     
-    def clear_text(self, o):
+    def new_text(self, o, text):
         o.delete(0, 'end')
-
-    def insert_text(self, o, text):
         o.insert('end', text)
 
     def treeview_clear(self):    
         for i in self.tv.get_children():
            self.tv.delete(i)
         root.update()    
+
+    def lock_treeview(self, block):
+        if block == False: #set to not lockes
+            self.locked = False # remove lock from treeview
+            ttk.Style().configure("Treeview", background="white", foreground="black", fieldbackground="white")
+        else: #
+            self.locked = True # remove lock from treeview
+            ttk.Style().configure("Treeview", background="lightgrey", foreground="black", fieldbackground="lightgrey")
+    
     
     def treeview_from_xml(self, xml):
         #retrieve cameras from xml-file
@@ -1267,6 +1274,9 @@ class MyCameraTreeview:
                         self.context_menu.add_cascade(label="Select processing type", menu = self.proctype_menu) # add submenu of processing types
                     self.context_menu.post(self.event.x_root, self.event.y_root)
                 self.context_menu_required = False
+        else: # locked
+            print("retrieve_item is locked")
+
             
     def update_proctype_menu(self):
         # descending by usedate
@@ -1410,8 +1420,7 @@ class MyCameraTreeview:
             focus = True
         else:
             self.entry_camera.config(state = 'normal')
-            self.clear_text(self.entry_camera) 
-            self.insert_text(self.entry_camera, self.camera)
+            self.new_text(self.entry_camera, self.camera)
             self.entry_camera.config(state = DISABLED)
 
         if b_type == True:
@@ -1422,8 +1431,7 @@ class MyCameraTreeview:
             self.do_something = True
         else:
             self.entry_type.config(state = 'normal') # insert tex only possible when state = normal
-            self.clear_text(self.entry_type) 
-            self.insert_text(self.entry_type, self.ctype)
+            self.new_text(self.entry_type, self.ctype)
             self.entry_type.config(state = DISABLED)
 
         if b_suffix == True:
@@ -1434,8 +1442,7 @@ class MyCameraTreeview:
             self.do_something = True
         else:
             self.entry_suffix.config(state = 'normal') # insert tex only possible when state = normal
-            self.clear_text(self.entry_suffix) 
-            self.insert_text(self.entry_suffix, self.suffix)
+            self.new_text(self.entry_suffix, self.suffix)
             self.entry_suffix.config(state = DISABLED)
 
         if b_subdir == True:
@@ -1451,6 +1458,7 @@ class MyCameraTreeview:
         if self.do_something:
             self.button_apply.config(state = NORMAL)
             self.root.bind('<Return>', self.apply_new)
+        self.lock_treeview(True)
 
 
     def get_camera_type_suffix(self, iid): # find parent of parent of suffix
@@ -1499,12 +1507,10 @@ class MyCameraTreeview:
                     # disable treeview, no selection is possible before suffix for new type has been given
                     self.tv.unbind("<Button-3>") # temporarily disable until suffix is given   
                     self.tv.state = DISABLED
-                    self.locked = True
                     return
                 else:
                     rc = DX.new_camera_type_suffix(config_files_xml, self.camera, ctype, suffix, ts)
                     self.tv.bind("<Button-3>", self.set_selection_by_button3) # enable as new type is complete with new suffix
-                    self.locked = False
                     #self.tv.config(state = NORMAL)                
         elif self.newitem == "TYPE_RENAME":
             type_new = self.entry_camera.get().upper()
@@ -1530,6 +1536,7 @@ class MyCameraTreeview:
         self.treeview_from_xml(config_files_xml) # refresh treeview from changed xml
         self.open_camera(self.camera) # expand camera node
         self.enable_processing(False, False, False, False) # set do_something to False, disable entry, button, return key
+        self.lock_treeview(False)
 
     def open_camera(self, camera):
         iid = self.dict_camera_iid[camera]
