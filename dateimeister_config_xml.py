@@ -472,6 +472,22 @@ def update_camera_type(xmlfile, cameraname, ctype, newname, usedate):
         pass # camera does not exist
     return rc
 
+# delete camera and all children if newname is empty else delete
+def update_camera(xmlfile, cameraname, newname):
+    #print("*** searching in "  + xmlfile + ' for ' + filename + ' ' + ftype)
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    fstr_camera = ("camera[@name=" + '"' + "%s" + "\"]")
+    fstr_camera = (fstr_camera % cameraname)
+    result = mytree.findall(fstr_camera)
+    for i in result:
+        if newname == "":
+            myroot.remove(i)
+        else:
+            i.set("name", newname)
+    indent(myroot)
+    mytree.write(xmlfile)
+
 # create new process
 def new_process_image(xmlfile, suffix_name, process):
     mytree = ET.parse(xmlfile)
