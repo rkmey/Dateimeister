@@ -1616,6 +1616,7 @@ class MyCameraTreeview:
     def update_main_window(self):
         state_gen_required()
         get_camera_xml()
+        # todo close all windows which depend on main window (duplicates, messages,...)
 
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
