@@ -1594,6 +1594,8 @@ class MyCameraTreeview:
             self.open_camera(self.camera) # expand camera node
         self.enable_processing(False, False, False, False, False, "", "", "", "") # enable/ disable entries, buttons, return key
         self.lock_treeview(False)
+        # main window needs new camera data
+        self.update_main_window()
 
     def cancel_new(self, event = None):
         if self.camera is not None and self.camera != "":
@@ -1611,7 +1613,10 @@ class MyCameraTreeview:
             for iid_child in item_children:
                 self.tv.item(iid_child, open=True)
 
-    
+    def update_main_window(self):
+        state_gen_required()
+        get_camera_xml()
+
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
 
@@ -1670,21 +1675,6 @@ def init(tk_root,gui):
     for t in dict_proctypes:
         print("Proctype: " + dict_proctypes[t]) 
     
-    delay_default = 20 #ToDo: Ini
-
-    dict_templates = {}
-    _dict_cameras = get_camera_xml()
-
-    _dict_subdirs = {}
-    _dict_subdirs = DX.get_subdirs(config_files_xml)
-    for imagetype in _dict_subdirs:
-        print("Subdir {:s}, {:s}".format(imagetype, _dict_subdirs[imagetype]))
-    
-    _dict_process_image = {}
-    _dict_process_image = DX.get_process_image(config_files_xml)
-    for t in _dict_process_image:
-        print("Process Image  {:s}, {:s}".format(t, _dict_process_image[t]))
-    
     _uncomment = config["misc"]["uncomment"] + " "        
     templatefile = config["misc"]["templatefile"]
     #max number of config_file-, indir-, outdir-entries in xml
@@ -1696,6 +1686,11 @@ def init(tk_root,gui):
         messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + platform)
         exit()
     
+    delay_default = 20 #ToDo: Ini
+
+    dict_templates = {}
+
+    # configure some controls
     o_camera  = w.Entry_camera
     lb_camera = w.Listbox1
     lb_camera.configure(exportselection=False)
@@ -1706,7 +1701,10 @@ def init(tk_root,gui):
     button_call.config(command = Press_generate)
     button_exec = w.Button_exec
     button_exec.config(command = button_exec_pressed)
-    
+
+    # get all camera information and fill camera-listbox
+    _dict_cameras, _dict_subdirs, _dict_process_image = get_camera_xml()
+
     t_text1 = w.Text1
     # set font
     font_tuple = ("Lucida Console", 10, "normal")
@@ -1838,9 +1836,6 @@ def init(tk_root,gui):
     button_indir_from_list.config(command = combobox_indir_double)  
     button_outdir_from_list.config(command = combobox_outdir_double)  
     
-    for key in _dict_cameras:
-        lb_camera.insert(END, key)
-    lb_camera.selection_set(END)
     label_indir.config(text = default_indir)
     label_outdir.config(text = default_outdir)
     l_label1.config(text = "Messages")
@@ -1892,8 +1887,7 @@ def init(tk_root,gui):
     
     # camera menu
     cameramenu = Menu(menubar, tearoff=0)
-    cameramenu.add_command(label="New", command = menu_camera_new)
-    cameramenu.add_command(label="Open camera", command = menu_camera_new)
+    cameramenu.add_command(label="Edit Cameras...", command = menu_cameras_edit)
     menubar.add_cascade(label="Camera", menu=cameramenu)
 
     helpmenu = Menu(menubar, tearoff=0)
@@ -1997,7 +1991,23 @@ def get_camera_xml(): # returns dict with all cameras, types and suffixes
         if type_num == 0:
             messagebox.showerror("INIT", "Camera " + camera + " no type defined")
             exit()
-    return dict_t
+
+    dict_subdirs = {}
+    dict_subdirs = DX.get_subdirs(config_files_xml)
+    for imagetype in dict_subdirs:
+        print("Subdir {:s}, {:s}".format(imagetype, dict_subdirs[imagetype]))
+    
+    dict_process_image = {}
+    dict_process_image = DX.get_process_image(config_files_xml)
+    for t in dict_process_image:
+        print("Process Image  {:s}, {:s}".format(t, dict_process_image[t]))
+    
+    lb_camera.delete(0, END)
+    for key in dict_t:
+        lb_camera.insert(END, key)
+    lb_camera.selection_set(END)
+
+    return dict_t, dict_subdirs, dict_process_image
 
 def timer_end():
     print("Timer has elapsed")
@@ -3462,7 +3472,7 @@ def button_duplicates():
                 print("   " + mysource)
     _win_duplicates = MyDuplicates() 
    
-def menu_camera_new():
+def menu_cameras_edit():
     global _win_camera
     _win_camera = MyCameraTreeview() 
 
