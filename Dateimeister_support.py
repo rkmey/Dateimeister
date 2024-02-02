@@ -59,7 +59,6 @@ _tooltiptext = ""
 _use_camera_prefix = True
 _dict_thumbnails = {}
 _dict_thumbnails_lineno = {}
-_dict_thumbnails_duplicates = {}
 _dict_duplicates = {}
 _dict_duplicates_sourcefiles = {}
 _duplicates = False
@@ -403,20 +402,21 @@ class MyFSImage:
         del t
         
     def mousewheel_handler(self, event):
-        zoomincrement = (event.delta / 120) / 100 # Windows-spezifisch, macOS: keine Division durch 120
-        if (zoomincrement > 0):
-            if self.zoomfaktor + zoomincrement <= 1:
-                newzoomfaktor = self.zoomfaktor + zoomincrement
-            else:
-                newzoomfaktor = 1.0
-        else: # lt 0
-            if self.zoomfaktor + zoomincrement >= .1:
-                newzoomfaktor = self.zoomfaktor + zoomincrement
-            else:
-                newzoomfaktor = 0.1
-        #print ("Mousewheel Delta is " + str(event.delta) + " Zoomfaktor old / new is: " + str(self.zoomfaktor) + ' / ' + str(newzoomfaktor))
-        self.zoomfaktor = newzoomfaktor
-        self.image_zoom(self.zoomfaktor)
+        if self.player is None: # exception when used for video
+            zoomincrement = (event.delta / 120) / 100 # Windows-spezifisch, macOS: keine Division durch 120
+            if (zoomincrement > 0):
+                if self.zoomfaktor + zoomincrement <= 1:
+                    newzoomfaktor = self.zoomfaktor + zoomincrement
+                else:
+                    newzoomfaktor = 1.0
+            else: # lt 0
+                if self.zoomfaktor + zoomincrement >= .1:
+                    newzoomfaktor = self.zoomfaktor + zoomincrement
+                else:
+                    newzoomfaktor = 0.1
+            #print ("Mousewheel Delta is " + str(event.delta) + " Zoomfaktor old / new is: " + str(self.zoomfaktor) + ' / ' + str(newzoomfaktor))
+            self.zoomfaktor = newzoomfaktor
+            self.image_zoom(self.zoomfaktor)
 
     def button_fit(self):
         self.image_zoom(0) # damit bringt image_zoom das Foto vollständig und canvas-füllend zur Anzeige
@@ -471,11 +471,14 @@ class MyDuplicates:
     # The class "constructor" - It's actually an initializer 
     def __init__(self):
         self.player = None
+        self.thumbnails_duplicates = {}
+        self.dict_thumbnails_duplicates = {}
         # register at thumbnail, so it can call us for reacting to state
         # Create secondary (or popup) window.
         self.root3 = tk.Toplevel()
         self.w3 = Dateimeister.Toplevel_dupl(self.root3)
         self.f = self.w3.Canvas_dupl
+        self.f.delete('all')
         self.w3.Button_dupl.config(command = self.dupl_handler)
         self.root3.protocol("WM_DELETE_WINDOW", self.close_handler)
 
@@ -629,7 +632,7 @@ class MyDuplicates:
         #x, y = canvas.winfo_pointerxy()
         text = "no image available"
         # canvas is drawn before the thumbnails are created, so check existence and length
-        if _imagetype in thumbnails_duplicates and len(thumbnails_duplicates[_imagetype]) > 0:
+        if _imagetype in self.thumbnails_duplicates and len(self.thumbnails_duplicates[_imagetype]) > 0:
             canvas_x = self.f.canvasx(event.x)
             canvas_y = self.f.canvasy(event.y)
             thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
@@ -725,8 +728,8 @@ class MyDuplicates:
     def stop_all_players(self):
         # stop all video players
         _button_duplicates.config(state = DISABLED)
-        if _imagetype in thumbnails_duplicates:
-            for t in thumbnails_duplicates[_imagetype]: # stop all running players
+        if _imagetype in self.thumbnails_duplicates:
+            for t in self.thumbnails_duplicates[_imagetype]: # stop all running players
                 thisplayer = t.getPlayer()
                 if thisplayer is not None:
                     if thisplayer.getRun(): # running
@@ -736,8 +739,8 @@ class MyDuplicates:
     def display_duplicate(self, target_file):
         stop_all_players() # should not continue running 
         self.f.delete('all')
-        thumbnails_duplicates[_imagetype] = []
-        dict_thumbnails_duplicates[_imagetype] = {}
+        self.thumbnails_duplicates[_imagetype] = []
+        self.dict_thumbnails_duplicates[_imagetype] = {}
         list_duplicate_sourcefiles = _dict_duplicates[_imagetype][target_file]
         self.lastposition = 0
         self.num_images = 0
@@ -776,9 +779,9 @@ class MyDuplicates:
                 # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
                 myimage = MyThumbnail(pimg, self.lastposition, self.lastposition + image_width, showfile, showfile, id, \
                     text_id, rect_id, _dict_image_lineno[_imagetype][showfile], player, 'j', self.f, None, None, thumbnail)
-                thumbnails_duplicates[_imagetype].append(myimage)
+                self.thumbnails_duplicates[_imagetype].append(myimage)
                 myimage.setState(state)
-                dict_thumbnails_duplicates[_imagetype][showfile] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
+                self.dict_thumbnails_duplicates[_imagetype][showfile] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
                 self.lastposition += image_width + gap 
             else: # wir haben kein Bild, ein Rechteck einfügen
                 image_height = canvas_height
@@ -789,8 +792,8 @@ class MyDuplicates:
                 self.f.tag_raise("text")
                 myimage = MyThumbnail(0, self.lastposition, self.lastposition + image_width, showfile, showfile, id, \
                     text_id, rect_id, _dict_image_lineno[_imagetype][file], player, 'j', self.f, None, None, thumbnail)
-                thumbnails_duplicates[_imagetype].append(myimage)
-                dict_thumbnails_duplicates[_imagetype][showfile] = myimage
+                self.thumbnails_duplicates[_imagetype].append(myimage)
+                self.dict_thumbnails_duplicates[_imagetype][showfile] = myimage
                 self.lastposition += image_width + gap 
             self.num_images += 1
             # register at parent-thumbnail, so it can call us for reacting to state
@@ -800,8 +803,8 @@ class MyDuplicates:
         # gap haben wir einmal zuviel (fürs letzte) gezählt
         self.lastposition -= gap
         # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
-        if len(thumbnails_duplicates[_imagetype]) > 0: 
-            thumbnail = thumbnails_duplicates[_imagetype][-1]
+        if len(self.thumbnails_duplicates[_imagetype]) > 0: 
+            thumbnail = self.thumbnails_duplicates[_imagetype][-1]
             rect_len = self.canvas_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + gap)
             self.f.create_rectangle(self.lastposition, 0, self.lastposition + rect_len, canvas_height, fill="yellow")
             self.f.config(scrollregion = self.f.bbox('all')) 
@@ -813,7 +816,7 @@ class MyDuplicates:
         for child in self.dict_child_parent:
             parent = self.dict_child_parent[child]
             print("Child file / parent file is: " + child.getFile() + ' / ' + parent.getFile())
-        #print("thumbnails_duplicates is: " + str(thumbnails_duplicates))
+        #print("self.thumbnails_duplicates is: " + str(self.thumbnails_duplicates))
         self.f.focus_set()
 
     def xview(self, *args):
@@ -846,7 +849,7 @@ class MyDuplicates:
                         #print("Bild links abgeschnitten, weil canvas_x = " + str(canvas_x) + " und Bildstart = " + str(thumbnail.getStart()))
                     else: #Bild ist vollständig zu sehen, also zurück zum nächsten
                         if index > 0: # es gibt einen Vorgänger
-                            scrolldelta = (thumbnails_duplicates[_imagetype][index - 1].getStart()) - canvas_x
+                            scrolldelta = (self.thumbnails_duplicates[_imagetype][index - 1].getStart()) - canvas_x
                             #print("Vorgänger ist: " + thumbnails[_imagetype][index - 1].getFile() + " Start: " + str(thumbnails[_imagetype][index - 1].getStart())\
                             #    + " canvas_x is: " + str(canvas_x) + " scrolldelta is: " + str(scrolldelta))
                 
@@ -867,11 +870,11 @@ class MyDuplicates:
     def get_thumbnail_by_position(self, canvas_x, canvas_y):
         index = -1
         found = False
-        for thumbnail in thumbnails_duplicates[_imagetype]:
+        for thumbnail in self.thumbnails_duplicates[_imagetype]:
             start = thumbnail.getStart()
             end   = thumbnail.getEnd()
             if (canvas_x >= start and canvas_x <= end):
-                index = thumbnails_duplicates[_imagetype].index(thumbnail)
+                index = self.thumbnails_duplicates[_imagetype].index(thumbnail)
                 #print("retrieved " + thumbnail.getFile() + " Index: " + str(index))
                 found = True
                 break
@@ -1614,9 +1617,13 @@ class MyCameraTreeview:
                 self.tv.item(iid_child, open=True)
 
     def update_main_window(self):
+        # cleanup: close all child windows of main except this one because nothing can be changed which affects camera window
+        global _dict_cameras, _dict_subdirs, _dict_process_image
+        close_child_windows()
         state_gen_required()
-        get_camera_xml()
-        # todo close all windows which depend on main window (duplicates, messages,...)
+        _dict_cameras, _dict_subdirs, _dict_process_image = get_camera_xml()
+        #print("update_main_window dict_camera: " + str(_dict_cameras))
+
 
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
@@ -1647,10 +1654,10 @@ def init(tk_root,gui):
         thumbnails, images, scroll_canvas_x, gap, context_menu, \
         _dict_image_lineno, _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
         cb_newer, cb_newer_var, config_files_xml, recentmenu, config_file, title, label_num, num_images, config_files_subdir, \
-        cmd_files_subdir, _timestamp, delay_default, thumbnails_duplicates, dict_thumbnails_duplicates, \
+        cmd_files_subdir, _timestamp, delay_default, \
         button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
         combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
-        button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, button_call, dict_proctypes
+        button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, button_call, dict_proctypes, _dict_file_image
 #    print("Init called\n")
     windll = ctypes.windll.kernel32
     _codepage = windll.GetUserDefaultUILanguage()
@@ -1690,6 +1697,8 @@ def init(tk_root,gui):
     delay_default = 20 #ToDo: Ini
 
     dict_templates = {}
+    _dict_file_image = {}
+
 
     # configure some controls
     o_camera  = w.Entry_camera
@@ -1844,8 +1853,6 @@ def init(tk_root,gui):
     dict_gen_files = {}
     dict_gen_files_delete = {}
     thumbnails = {}
-    thumbnails_duplicates = {}
-    dict_thumbnails_duplicates = {}
     images = []
     _dict_image_lineno = {}
     gap = 10
@@ -2417,10 +2424,25 @@ def new_dir_in_xml(dirtype, max_dirs, dir_chosen, ts):
     if dirtype == 'outdir':
         DX.new_outdir(config_files_xml, dir_chosen, ts)
 
-    
+def close_child_windows(): #closes duplicates, fs-images and exec-windows    
+    global _win_duplicates, _dict_file_image, _win_messages
+    # cleanup
+    stop_all_players() # should not continue running 
+    if _win_duplicates is not None: # stop MyDuplicates-Objekt
+        _win_duplicates.close_handler()
+        _win_duplicates = None
+    # delete all fsimage by close-call
+    for t in _dict_file_image:
+        u = _dict_file_image[t]
+        u.close_handler_external()
+    _dict_file_image = {}
+    if _win_messages is not None: # stop MyMessagesWindow-Objekt
+        _win_messages.close_handler()
+        _win_messages = None
+
 def Press_generate(*args):
     global _dict_firstname_fullname, _dict_duplicates, dict_gen_files, dict_gen_files_delete, _dict_duplicates_sourcefiles, \
-        _outdir, _win_duplicates, dict_source_target, dict_relpath, dict_gen_files_delrelpath, dict_source_target_tooold, dict_outdirs
+        _outdir, _win_duplicates, dict_source_target, dict_relpath, dict_gen_files_delrelpath, dict_source_target_tooold, dict_outdirs, _dict_file_image
     if _debug:
         print('Dateimeister_support.B_camera_press')
         for arg in args:
@@ -2428,10 +2450,7 @@ def Press_generate(*args):
         sys.stdout.flush()
     
     # cleanup
-    stop_all_players() # should not continue running 
-    if _win_duplicates is not None: # stop MyDuplicates-Objekt
-        _win_duplicates.close_handler()
-        _win_duplicates = None
+    close_child_windows()
     # reset all process-states
     _list_processids = []
     _processid_akt  = 0
@@ -2778,9 +2797,6 @@ def Button_be_pressed(*args):
             print ('    another arg:', arg)
         sys.stdout.flush()
 
-    if _win_duplicates is not None: # stop MyDuplicates-Objekt
-        _win_duplicates.close_handler()
-        _win_duplicates = None
     # reset all process-states
     _list_processids = []
     _processid_akt  = 0
@@ -2812,11 +2828,10 @@ def Button_be_pressed(*args):
         thumbnails[imagetype].clear() # damit werden implizit jetzt alle Bilder gelöscht
     else:
         thumbnails[imagetype] = []
-    # delete all fsimage by close-call
-    for t in _dict_file_image:
-        u = _dict_file_image[t]
-        u.close_handler_external()
-    _dict_file_image = {}
+    
+    # cleanup
+    close_child_windows()
+    
     l_label1.config(text = "Output from Dateimeister : " + filename)
     _dict_image_lineno[imagetype] = {} # in Python muss das sein, sonst gehts in der nächsten Ebene nicht
     lineno = 0
