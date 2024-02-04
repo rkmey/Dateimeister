@@ -12,7 +12,7 @@ Es müsste also alles disabled werden, bis browse / edit gedrückt wird. Dann m�
 zurückholen. Besser wäre wohl, die Ergebnisse von copy / delete nicht in der Image-Textbox anzuzeigen sondern in einem separaten Fenster.
 +++ 20240114 in eigenes Fenster verschoben
 
-apply config automatisch nach pen config?
+apply config automatisch nach open config?
 
 wenn in der Textbox eine Datei durch Doppelclick ausgewählt wird, muss die Zeile den Select-Zustand erhalten
 
@@ -24,3 +24,18 @@ listbox-camera scrollbar
 warnung, wenn apply in camera window, dass alle Änderungen in Main (include / exclude) verloren gehen
 wenn nicht gespeicherte manuelle Änderungen (include / exclude), fragen, ob diese in einer config-Datei gespeichert werden sollen
   das erkennen wir daran, dass ein dirty-Flag durch include / exclude gesetzt wird, das durch save oder save as zurückgesetzt wird.
+  
+REM erweitern zu REM exclude / REM toold
+
+Scroll canvas mit mouse-Rad
+
+Resize für alle Windows?
+
+Video-Ton
+
+Einbindung RAW-Konverter???
+
+wenn eine neue Config gespeichert wird (save as) sollte diese sofort unter "recent" sichtbar sein.
+Das ist sie heute nicht, sondern erst, wenn browse / edit gedrückt wird
+
+Sowas wie Alben unterstützen?
