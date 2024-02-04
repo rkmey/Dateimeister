@@ -1,0 +1,19 @@
+generate erzeugt die Skripte. Dabei ist exc_ovw bereits berücksichtigr.
+Wenn jetzt manuell images excluded oder included werden, sollten die Buttons copy und delete disabled werden,
+weil ja das, was passieren wird, nicht mit dem, was zu sehen ist, übereinstimmt.
+erst nach Save sollten sie enabled sein. wenn nach dem Save weitere exclude / include erfolgen, muss natürlich wieder disabled werden.
+Implementieren ließe es sich, indem ein dirty-Flag gesetzt wird, wenn für mind. 1 Thumbnail include / exclude aufgerufen wird. Wenn die Konfiguration
+der beim letzten Save (explizit oder nach generate) entspricht, muss natürlich nicht Save gedrückt werden. D.h. bei jedem Include /Exclude müsste geprüft
+ob die neue Konfiguration der letzten Save-Konfiguration entspricht. Falls ja, sollte der Save-Button disabled werde und copy / delete enabled werden.
++++ 20240114 autosave nach jeder Statusänderung. Aus Performancegründen bei Schleifen (exclude/include all, apply config,...) nur einmal am Ende
+
+nach dem copy / delete zeigt die Textbox die Ergebnisse an und nicht mehr die Images. Galerie und Text passen also nicht mehr zusammen.
+Es müsste also alles disabled werden, bis browse / edit gedrückt wird. Dann müsste man aber die Config temporär speichern und wieder 
+zurückholen. Besser wäre wohl, die Ergebnisse von copy / delete nicht in der Image-Textbox anzuzeigen sondern in einem separaten Fenster.
++++ 20240114 in eigenes Fenster verschoben
+
+apply config automatisch nach pen config?
+
+wenn in der Textbox eine Datei durch Doppelclick ausgewählt wird, muss die Zeile den Select-Zustand erhalten
+
+Camera Window undo / redo connect bearbid to xml-File
