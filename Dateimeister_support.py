@@ -1135,6 +1135,14 @@ class MyCameraTreeview:
 
         self.label_camera.config(text = "new item")
 
+        # Undo /Redo Funktionen
+        self.button_undo = self.w.Button_undo
+        self.button_redo = self.w.Button_redo
+        self.button_undo.config(state = DISABLED)
+        self.button_redo.config(state = DISABLED)
+        self.button_undo.config(command = self.button_undo)
+        self.button_redo.config(command = self.button_redo)
+
         # Create the context menus
         self.context_menu = tk.Menu(self.tv, tearoff=0)
         #self.context_menu.add_command(label="new suffix", command=self.type_new_suffix)    
@@ -1164,6 +1172,13 @@ class MyCameraTreeview:
         self.entry_type.config(state = DISABLED)                  
         self.entry_suffix.config(state = DISABLED)                  
         self.entry_subdir.config(state = DISABLED)                  
+
+        # Undo /Redo Funktionen
+        self.list_processids = []
+        self.processid_akt = 0
+        self.processid_high = 0
+        self.processid_low = 999999
+
         self.lock_treeview(False)
         # populate proctype submenue with proctypes from ini
         self.update_proctype_menu()
@@ -1623,6 +1638,65 @@ class MyCameraTreeview:
         state_gen_required()
         _dict_cameras, _dict_subdirs, _dict_process_image = get_camera_xml()
         #print("update_main_window dict_camera: " + str(_dict_cameras))
+
+
+
+    # Undo /Redo Funktionen
+    def process_undo(self, event):
+        print("ctrl_z pressed.")
+        if self.button_undo["state"] == DISABLED:
+            messagebox.showinfo("UNDO", "no further processes which can be undone")
+            return
+        i = len(self.list_processids) - 1
+        while i >= 0:
+            print (" UNDO I: " + str(i) + " processid von i: " + str(self.list_processids[i]) + " processid_akt: " + str(self.processid_akt))
+            if self.list_processids[i] < self.processid_akt:
+                print ("  UNDO Bedingung erfuellt. I: " + str(i) + " Wert Liste: " + str(self.list_processids[i]) + " processid_akt: " + str(self.processid_akt))
+                self.list_processids.append(self.list_processids.pop(i))
+                break
+            i -= 1
+        self.processid_akt = self.list_processids[-1] # das oberste Element
+        print (" UNDO Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt) + " List is: " + str(self.list_processids))
+        apply_process_id(self.processid_akt)
+        if self.processid_akt == _processid_low:
+            self.button_undo.config(state = DISABLED)
+        self.button_redo.config(state = NORMAL)
+
+    def process_redo(self, event):
+        print("ctrl_y pressed.")
+        if self.button_redo["state"] == DISABLED:
+            messagebox.showinfo("REDO", "no further processes which can be redone")
+            return
+        i = len(self.list_processids) - 1
+        while i >= 0:
+            print (" REDO I: " + str(i) + " processid von i: " + str(self.list_processids[i]) + " processid_akt: " + str(self.processid_akt))
+            if self.list_processids[i] > self.processid_akt:
+                print ("  REDO Bedingung erfuellt. I: " + str(i) + " Wert Liste: " + str(self.list_processids[i]) + " processid_akt: " + str(self.processid_akt))
+                self.list_processids.append(self.list_processids.pop(i))
+                break
+            i -= 1
+        self.processid_akt = self.list_processids[-1] # das oberste Element
+        print (" REDO Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt) + " List is: " + str(self.list_processids))
+        apply_process_id(self.processid_akt)
+        if self.processid_akt == self.processid_high:
+            self.button_redo.config(state = DISABLED)
+        self.button_undo.config(state = NORMAL)
+
+    def apply_process_id(self, process_id):
+        # apply xml for actual processid
+        i = 0
+        for thumbnail in thumbnails[_imagetype]:
+            #_dict_process_image[self.processid_akt].append(thumbnail.setState(_dict_process_image[process_id][i]))
+            thumbnail.setState(_dict_process_image[process_id][i], None, False)
+            i += 1
+        write_cmdfile(_imagetype)
+        
+    def button_undo(self):
+        process_undo((0, 0))
+        
+    def button_redo(self):
+        process_redo((0, 0))
+    # Ende undo /redo-Funktionen
 
 
     def close_handler(self): #calles when window is closing:
