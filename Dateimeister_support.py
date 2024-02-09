@@ -1143,6 +1143,8 @@ class MyCameraTreeview:
         self.button_redo.config(command = self.button_redo_h)
         self.button_undo.config(state = DISABLED)
         self.button_redo.config(state = DISABLED)
+        self.root.bind('<Control-z>', lambda event: self.process_undo(event))
+        self.root.bind('<Control-y>', lambda event: self.process_redo(event))
 
         # Create the context menus
         self.context_menu = tk.Menu(self.tv, tearoff=0)
@@ -1650,7 +1652,7 @@ class MyCameraTreeview:
     def process_undo(self, event):
         print("ctrl_z pressed.")
         if self.button_undo["state"] == DISABLED:
-            messagebox.showinfo("UNDO", "no further processes which can be undone")
+            messagebox.showinfo("UNDO", "no further processes which can be undone", parent = self.root)
             return
         i = len(self.list_processids) - 1
         while i >= 0:
@@ -1670,7 +1672,7 @@ class MyCameraTreeview:
     def process_redo(self, event):
         print("ctrl_y pressed.")
         if self.button_redo["state"] == DISABLED:
-            messagebox.showinfo("REDO", "no further processes which can be redone")
+            messagebox.showinfo("REDO", "no further processes which can be redone", parent = self.root)
             return
         i = len(self.list_processids) - 1
         while i >= 0:
