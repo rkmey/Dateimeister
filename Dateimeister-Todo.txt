@@ -19,8 +19,9 @@ wenn in der Textbox eine Datei durch Doppelclick ausgewählt wird, muss die Zeil
 Camera Window undo / redo connect bearbid to xml-File
 
 
-
 listbox-camera scrollbar
+
+
 warnung, wenn apply in camera window, dass alle Änderungen in Main (include / exclude) verloren gehen
 wenn nicht gespeicherte manuelle Änderungen (include / exclude), fragen, ob diese in einer config-Datei gespeichert werden sollen
   das erkennen wir daran, dass ein dirty-Flag durch include / exclude gesetzt wird, das durch save oder save as zurückgesetzt wird.

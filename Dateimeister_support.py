@@ -1178,6 +1178,7 @@ class MyCameraTreeview:
         self.processid_akt = 0
         self.processid_high = 0
         self.processid_low = 999999
+        self.dict_process_image = {}
 
         self.lock_treeview(False)
         # populate proctype submenue with proctypes from ini
@@ -1686,11 +1687,35 @@ class MyCameraTreeview:
         # apply xml for actual processid
         i = 0
         for thumbnail in thumbnails[_imagetype]:
-            #_dict_process_image[self.processid_akt].append(thumbnail.setState(_dict_process_image[process_id][i]))
-            thumbnail.setState(_dict_process_image[process_id][i], None, False)
+            #self.dict_process_image[self.processid_akt].append(thumbnail.setState(self.dict_process_image[process_id][i]))
+            thumbnail.setState(self.dict_process_image[process_id][i], None, False)
             i += 1
         write_cmdfile(_imagetype)
         
+    def historize_process():
+        self.processid_high += 10
+        self.processid_akt = self.processid_high
+        if self.processid_akt < self.processid_low: # das ist nur einmal erfüllt, da auf high value initialisiert
+            self.processid_low  = self.processid_akt
+        self.list_processids.append(self.processid_akt)
+        print ("Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt) + " List is: " + str(self.list_processids))
+        # wir bilden jetzt zu der aktuellen processid eine Liste der states der thumbnails
+        self.dict_process_image[self.processid_akt] = []
+        for thumbnail in thumbnails[_imagetype]:
+            self.dict_process_image[self.processid_akt].append(thumbnail.getState())
+        update_button_state() # refer to function comment
+        
+        # UNDO / REDO disabeln, wenn Aktion nicht möglich, weil es keine frühere / spätere Bearbeitung gibt
+        if self.processid_akt > self.processid_low:
+            self.button_undo.config(state = NORMAL)
+        else:
+            self.button_undo.config(state = DISABLED)
+        if self.processid_akt < self.processid_high:
+            self.button_redo.config(state = NORMAL)
+        else:
+            self.button_redo.config(state = DISABLED)
+
+
     def button_undo(self):
         process_undo((0, 0))
         
