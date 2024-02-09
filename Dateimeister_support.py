@@ -16,6 +16,7 @@ import operator
 import threading
 import copy
 import subprocess
+import shutil
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -1138,10 +1139,10 @@ class MyCameraTreeview:
         # Undo /Redo Funktionen
         self.button_undo = self.w.Button_undo
         self.button_redo = self.w.Button_redo
+        self.button_undo.config(command = self.button_undo_h)
+        self.button_redo.config(command = self.button_redo_h)
         self.button_undo.config(state = DISABLED)
         self.button_redo.config(state = DISABLED)
-        self.button_undo.config(command = self.button_undo)
-        self.button_redo.config(command = self.button_redo)
 
         # Create the context menus
         self.context_menu = tk.Menu(self.tv, tearoff=0)
@@ -1178,7 +1179,9 @@ class MyCameraTreeview:
         self.processid_akt = 0
         self.processid_high = 0
         self.processid_low = 999999
-        self.dict_process_image = {}
+        self.dict_processid_xmlfile = {}
+        # historize initial state
+        self.historize_process()
 
         self.lock_treeview(False)
         # populate proctype submenue with proctypes from ini
@@ -1615,6 +1618,7 @@ class MyCameraTreeview:
         self.lock_treeview(False)
         # main window needs new camera data
         self.update_main_window()
+        self.historize_process()
 
     def cancel_new(self, event = None):
         if self.camera is not None and self.camera != "":
@@ -1658,8 +1662,8 @@ class MyCameraTreeview:
             i -= 1
         self.processid_akt = self.list_processids[-1] # das oberste Element
         print (" UNDO Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt) + " List is: " + str(self.list_processids))
-        apply_process_id(self.processid_akt)
-        if self.processid_akt == _processid_low:
+        self.apply_process_id(self.processid_akt)
+        if self.processid_akt == self.processid_low:
             self.button_undo.config(state = DISABLED)
         self.button_redo.config(state = NORMAL)
 
@@ -1678,33 +1682,81 @@ class MyCameraTreeview:
             i -= 1
         self.processid_akt = self.list_processids[-1] # das oberste Element
         print (" REDO Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt) + " List is: " + str(self.list_processids))
-        apply_process_id(self.processid_akt)
+        self.apply_process_id(self.processid_akt)
         if self.processid_akt == self.processid_high:
             self.button_redo.config(state = DISABLED)
         self.button_undo.config(state = NORMAL)
 
     def apply_process_id(self, process_id):
         # apply xml for actual processid
-        i = 0
-        for thumbnail in thumbnails[_imagetype]:
-            #self.dict_process_image[self.processid_akt].append(thumbnail.setState(self.dict_process_image[process_id][i]))
-            thumbnail.setState(self.dict_process_image[process_id][i], None, False)
-            i += 1
-        write_cmdfile(_imagetype)
+        # copy xml for processid_akt to "normal" xml and apply it
+        xml_filename = self.dict_processid_xmlfile[process_id]
+        print("apply_process_id, xml to apply is: ", xml_filename)
+        # copy historized xml to "normal" xml
+        sourcefile = xml_filename
+        targetfile = config_files_xml
+        try:
+            shutil.copy(sourcefile, targetfile)
+            #print("Source file copied to destination successfully.")
+         
+        # If source and destination are same
+        except shutil.FileNotFoundError:
+            print("Source file " + sourcefile + " not found.")
+         
+        # If source not exists
+        except shutil.SameFileError:
+            print("Source and destination represents the same file.")
+         
+        # If there is any permission issue
+        except PermissionError:
+            print("Permission denied.")
+         
+        # For other errors
+        except:
+            print("Error occurred while copying file.")
+        # now apply xml
+        self.treeview_from_xml(config_files_xml) # refresh treeview from changed xml
+        if self.camera is not None and self.camera != "":
+            self.open_camera(self.camera) # expand camera node
         
-    def historize_process():
+    def historize_process(self):
         self.processid_high += 10
         self.processid_akt = self.processid_high
         if self.processid_akt < self.processid_low: # das ist nur einmal erfüllt, da auf high value initialisiert
             self.processid_low  = self.processid_akt
         self.list_processids.append(self.processid_akt)
         print ("Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt) + " List is: " + str(self.list_processids))
-        # wir bilden jetzt zu der aktuellen processid eine Liste der states der thumbnails
-        self.dict_process_image[self.processid_akt] = []
-        for thumbnail in thumbnails[_imagetype]:
-            self.dict_process_image[self.processid_akt].append(thumbnail.getState())
-        update_button_state() # refer to function comment
-        
+        # wir we save the current xml-file to firstname-<processid>.xml
+        # E:/Arbeit/python/Dateimeister_vor_git/daten/config/dateimeister_configfiles.xml
+        config_dir = os.path.join(datadir, config_files_subdir)
+        xml_filename = config_files_xml
+        # replace last . by <processid>.
+        xml_filename = re.sub(r'\.([^\.]+)$', rf"_{self.processid_akt}.\1", xml_filename) # reconstruct newline in template
+        self.dict_processid_xmlfile[self.processid_akt] = xml_filename
+        print("historize_process, new xml is: ", xml_filename)
+        # save actual xml (changed by the action which called historize_processorize) to a config file with xml_filename containing the actual processid
+        sourcefile = config_files_xml
+        targetfile = xml_filename
+        try:
+            shutil.copy(sourcefile, targetfile)
+            #print("Source file copied to destination successfully.")
+         
+        # If source and destination are same
+        except shutil.FileNotFoundError:
+            print("Source file " + sourcefile + " not found.")
+         
+        # If source not exists
+        except shutil.SameFileError:
+            print("Source and destination represents the same file.")
+         
+        # If there is any permission issue
+        except PermissionError:
+            print("Permission denied.")
+         
+        # For other errors
+        except:
+            print("Error occurred while copying file.")
+
         # UNDO / REDO disabeln, wenn Aktion nicht möglich, weil es keine frühere / spätere Bearbeitung gibt
         if self.processid_akt > self.processid_low:
             self.button_undo.config(state = NORMAL)
@@ -1716,11 +1768,12 @@ class MyCameraTreeview:
             self.button_redo.config(state = DISABLED)
 
 
-    def button_undo(self):
-        process_undo((0, 0))
+    def button_undo_h(self, event = None):
+        print("UUNdo pressed")
+        self.process_undo((0, 0))
         
-    def button_redo(self):
-        process_redo((0, 0))
+    def button_redo_h(self, event = None):
+        self.process_redo((0, 0))
     # Ende undo /redo-Funktionen
 
 
