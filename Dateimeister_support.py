@@ -3391,9 +3391,10 @@ def text1_double(event):
     print(row, col)
     thumbnail = _dict_thumbnails_lineno[_imagetype][row]
     scrollToImage(thumbnail)
-    # we dont need the file anymore because we have a method to scroll cancas to the lineno associated with thumbnail
-    # but here we have a usefull code to get the text line after mouse click
     thumbnail.scrollTextToLineno() # select this line
+
+    # we dont need the following code anymore because we have a method to scroll canvas to the lineno associated with thumbnail
+    # but here we have a usefull code to get the text line after mouse click
     lstart = "%d.0" % int(row)
     lend   = "%d.0 lineend" % int(row)
     # tindex = "%d.0, %d.0 lineend" % (lineno, lineno + 1)
