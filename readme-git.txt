@@ -1,0 +1,11 @@
+git tag erstellen
+git tag <name>, z,B, v.1.0.0
+
+tad gilt nur lokal! Um es auf den remote server zu bringen:
+git push origin <tag_name>
+
+das Tag auf einen anderen Rechner bringen:
+git pull
+
+ansehen mit:
+git tag
