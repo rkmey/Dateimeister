@@ -38,5 +38,6 @@ Einbindung RAW-Konverter???
 
 wenn eine neue Config gespeichert wird (save as) sollte diese sofort unter "recent" sichtbar sein.
 Das ist sie heute nicht, sondern erst, wenn browse / edit gedrückt wird
++++ stimmt nicht oder wurde zwischenzeitlich korrigiert
 
 Sowas wie Alben unterstützen?
