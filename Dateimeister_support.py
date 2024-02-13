@@ -1902,12 +1902,12 @@ def init(tk_root,gui):
     button_outdir_from_list = w.Button_outdir_from_list
     
     # Scrollbars
-    V = Scrollbar(t_text1)
-    V.pack(side=RIGHT, fill=Y)
+    V = Scrollbar(w.Frame1)
+    V.place(relx = 1, rely = 0, relheight = .976, relwidth = .01, anchor = tk.NE)
     V.config(command=t_text1.yview)
     t_text1.config(yscrollcommand=V.set)  
-    H = Scrollbar(t_text1, orient = HORIZONTAL)
-    H.pack(side=BOTTOM, fill=BOTH)
+    H = Scrollbar(w.Frame1, orient = HORIZONTAL)
+    H.place(relx = 0, rely = 1, relheight = 0.024, relwidth = .99, anchor = tk.SW)
     H.config(command=t_text1.xview)
     t_text1.config(xscrollcommand=H.set)  
     t_text1.configure(wrap="none")
