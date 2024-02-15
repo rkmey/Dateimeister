@@ -1856,7 +1856,7 @@ def init(tk_root,gui):
 
     # configure some controls
     o_camera  = w.Entry_camera
-    lb_camera = w.Listbox1
+    lb_camera = w.Listbox_camera
     lb_camera.configure(exportselection=False)
     b_button1 = w.Button1
     b_button2 = w.Button2
@@ -1952,6 +1952,11 @@ def init(tk_root,gui):
     VO.place(relx = 1, rely = 0, relheight = 1, relwidth = .015, anchor = tk.NE)
     VO.config(command = combobox_outdir.yview)
     combobox_outdir.config(yscrollcommand = VO.set)
+    #listbox camera
+    VC = Scrollbar(w.Frame_camera, orient= VERTICAL)
+    VC.place(relx = 1, rely = 0.01, relheight = .96, relwidth = .03, anchor = tk.NE)
+    VC.config(command = lb_camera.yview)
+    lb_camera.config(yscrollcommand = VC.set)
     
     canvas_gallery = w.Canvas1
     # Scrollbars
