@@ -715,6 +715,7 @@ class MyDuplicates:
         self.display_duplicate(self.thisduplicate)
 
     def close_handler(self): #calles when window is closing
+        global _win_duplicates
         print("ToDo, cleanup when window is closed")
         self.stop_all_players() # unregister to avoid calls after duplicate has been destroyed
         for child in self.dict_child_parent:
@@ -725,6 +726,7 @@ class MyDuplicates:
             u = self.dict_file_image[t]
             u.close_handler_external()
         _button_duplicates.config(state = NORMAL)
+        _win_duplicates = None
         
     def stop_all_players(self):
         # stop all video players
@@ -3181,6 +3183,7 @@ def Button_be_pressed(*args):
     if _win_messages is not None: # stop MyMessagesWindow-Objekt
         _win_messages.close_handler()
         _win_messages = None
+    canvas_gallery.xview('moveto', 0)
 
 def get_thumbnail_by_position(canvas_x, canvas_y):
     index = -1
