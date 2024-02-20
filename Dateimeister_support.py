@@ -75,7 +75,7 @@ class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, image, start, end, file, showfile, id, text_id, rect_id, lineno, player, duplicate, canvas, targetfile, \
+    def __init__(self, image, start, end, file, showfile, id, text_id, rect_id, frameids, lineno, player, duplicate, canvas, targetfile, \
       text = None, parent = None, tooold = False):
         self.image = image
         self.start = start
@@ -85,6 +85,7 @@ class MyThumbnail:
         self.image_id = id
         self.state_id_text = text_id
         self.state_id_rect = rect_id
+        self.frameids = frameids
         self.lineno = lineno
         self.player = player 
         self.targetfile = targetfile
@@ -182,7 +183,7 @@ class MyThumbnail:
     def setLineno(self, lineno):
         self.lineno = lineno 
         
-    def scrollTextToLineno(self): # reset all lines to "unselect", keep exclude / include Info
+    def scrollTextToLineno(self): # reset all lines to "unselect", keep exclude / include Info, hide frame
         for t in thumbnails[_imagetype]:
             lineno = t.getLineno()
             lstart = "%d.0" % (lineno)
@@ -196,6 +197,7 @@ class MyThumbnail:
                 self.text.tag_add("normal_include", lstart, lend)
             else:
                 self.text.tag_add("normal_exclude", lstart, lend)
+            self.canvas.itemconfigure("imageframe", state = 'hidden')
         # now set tag for this thumbnail
         lstart = "%d.0" % (self.lineno)
         lend   = "%d.0 lineend" % (self.lineno)
@@ -211,6 +213,10 @@ class MyThumbnail:
         self.text.see(lstart)
         lineinfo = self.text.dlineinfo(lstart)
         self.text.yview_scroll(lineinfo[1], 'pixels' )
+        #self.canvas.itemconfigure("imageframe", state = 'normal')
+        print("Frameids: " + str(self.frameids))
+        for frameid in self.frameids:
+            self.canvas.itemconfigure(frameid, state = 'normal')
 
     def register_FSimage(self, fsimage):
         self.fsimage = fsimage
@@ -746,6 +752,12 @@ class MyDuplicates:
         list_duplicate_sourcefiles = _dict_duplicates[_imagetype][target_file]
         self.lastposition = 0
         self.num_images = 0
+        # distance from border for text-boxes
+        dist_text  = 10
+        # distance from border for image-frame
+        dist_frame = 20
+        height_scrollbar = self.H_I.winfo_height()
+
         for source_file in list_duplicate_sourcefiles:
             thumbnail = _dict_thumbnails[_imagetype][source_file]
             showfile = thumbnail.getShowfile()
@@ -771,16 +783,28 @@ class MyDuplicates:
                        + " factor is " + str(faktor))
                     pimg = ImageTk.PhotoImage(r_img)
                 id = self.f.create_image(self.lastposition, 0, anchor='nw',image = pimg, tags = 'images')
-                text_id = self.f.create_text(self.lastposition, 0, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
+                text_id = self.f.create_text(self.lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
                 rect_id = self.f.create_rectangle(self.f.bbox(text_id), outline="blue", fill = "white", tag = 'rect')
+                # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
+                north_west = (self.lastposition + dist_frame, dist_frame)
+                north_east = (self.lastposition + image_width - dist_frame, dist_frame)
+                south_west = (self.lastposition + dist_frame, image_height - dist_frame)
+                south_east = (self.lastposition + image_width - dist_frame, image_height - dist_frame)
+                line_north = self.f.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_east  = self.f.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_south = self.f.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_west  = self.f.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+                frameids = (line_north, line_east, line_south, line_west)
+
                 self.f.tag_raise("rect")
                 self.f.tag_raise("text")
                 self.f.tag_raise("line")
+                #self.f.tag_raise("imageframe")
                 if player is not None:
                     player.setId(id)
                 # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
                 myimage = MyThumbnail(pimg, self.lastposition, self.lastposition + image_width, showfile, showfile, id, \
-                    text_id, rect_id, _dict_image_lineno[_imagetype][showfile], player, 'j', self.f, None, None, thumbnail)
+                    text_id, rect_id, frameids, _dict_image_lineno[_imagetype][showfile], player, 'j', self.f, None, None, thumbnail)
                 self.thumbnails_duplicates[_imagetype].append(myimage)
                 myimage.setState(state)
                 self.dict_thumbnails_duplicates[_imagetype][showfile] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
@@ -791,9 +815,20 @@ class MyDuplicates:
                 id = self.f.create_rectangle(self.lastposition, 0, self.lastposition + image_width, canvas_height, fill="blue", tags = 'images')
                 text_id = self.f.create_text(self.lastposition, 0, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
                 rect_id = self.f.create_rectangle(self.f.bbox(text_id), outline="blue", fill = "white")
+                # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
+                north_west = (self.lastposition + dist_frame, dist_frame)
+                north_east = (self.lastposition + image_width - dist_frame, dist_frame)
+                south_west = (self.lastposition + dist_frame, image_height - dist_frame)
+                south_east = (self.lastposition + image_width - dist_frame, image_height - dist_frame)
+                line_north = self.f.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_east  = self.f.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_south = self.f.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_west  = self.f.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+                frameids = (line_north, line_east, line_south, line_west)
                 self.f.tag_raise("text")
+                #self.f.tag_raise("imageframe")
                 myimage = MyThumbnail(0, self.lastposition, self.lastposition + image_width, showfile, showfile, id, \
-                    text_id, rect_id, _dict_image_lineno[_imagetype][file], player, 'j', self.f, None, None, thumbnail)
+                    text_id, rect_id, frameids, _dict_image_lineno[_imagetype][file], player, 'j', self.f, None, None, thumbnail)
                 self.thumbnails_duplicates[_imagetype].append(myimage)
                 self.dict_thumbnails_duplicates[_imagetype][showfile] = myimage
                 self.lastposition += image_width + gap 
@@ -3040,6 +3075,10 @@ def Button_be_pressed(*args):
             duplicate = 'n'
         #print ("Process-type, file" , process_type, ' ', file)
         this_lineno = _dict_image_lineno[imagetype][file]
+        # distance from border for text-boxes
+        dist_text  = 10
+        # distance from border for image-frame
+        dist_frame = 20
         if  process_type != "none": 
             if process_type != 'VIDEO': # we have to convert image to photoimage
                 img  = Image.open(showfile)
@@ -3054,15 +3093,25 @@ def Button_be_pressed(*args):
             # an den Thumbnails führen wir einige Attribute, außerdem sorgt die Liste dafür, dass der Garbage-Kollektor das Bild nicht löscht.
             # indem wir es in eine Liste einfügen, bleibt der Referenz-Count > 0
             id = canvas_gallery.create_image(_lastposition, 0, anchor='nw',image = pimg, tags = 'images')
-            text_id = canvas_gallery.create_text(_lastposition, 0, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
+            text_id = canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
             rect_id = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id), outline="blue", fill = "white", tag = 'rect')
-            text_id_num = canvas_gallery.create_text(_lastposition, image_height - 10, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
+            text_id_num = canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
             rect_id_num = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
+            # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
+            north_west = (_lastposition + dist_frame, dist_frame)
+            north_east = (_lastposition + image_width - dist_frame, dist_frame)
+            south_west = (_lastposition + dist_frame, image_height - dist_frame)
+            south_east = (_lastposition + image_width - dist_frame, image_height - dist_frame)
+            line_north = canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_east  = canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_south = canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_west  = canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+            frameids = (line_north, line_east, line_south, line_west)
             
             if player is not None:
                 player.setId(id)
             myimage = MyThumbnail(pimg, _lastposition, _lastposition + image_width, file, showfile, id, \
-                text_id, rect_id, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
+                text_id, rect_id, frameids, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
             if file in dict_source_target_tooold[imagetype]: #start with state.exclude
                 myimage.setState(state.EXCLUDE, None, False)
                 myimage.set_tooold(True)
@@ -3072,8 +3121,8 @@ def Button_be_pressed(*args):
             _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
             _lastposition += image_width + gap 
             if myimage.getDuplicate() == 'j':
-                text_id_dup = canvas_gallery.create_text(_lastposition - gap, 0, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
-                rect_id_dup =canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
+                text_id_dup = canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                rect_id_dup = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
             #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(_dict_image_lineno[imagetype][file]))
             if process_type != 'VIDEO':
                 img.close()
@@ -3081,12 +3130,22 @@ def Button_be_pressed(*args):
             image_height = canvas_height
             image_width  = int(canvas_height * 4 / 3)
             id = canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + image_width, canvas_height, fill="blue", tags = 'images')
-            text_id = canvas_gallery.create_text(_lastposition, 0, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
+            text_id = canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
             rect_id = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id), outline="blue", fill = "white")
-            text_id_num = canvas_gallery.create_text(_lastposition, image_height - 10, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
+            text_id_num = canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
             rect_id_num = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
+            # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
+            north_west = (_lastposition + dist_frame, dist_frame)
+            north_east = (_lastposition + image_width - dist_frame, dist_frame)
+            south_west = (_lastposition + dist_frame, image_height - dist_frame)
+            south_east = (_lastposition + image_width - dist_frame, image_height - dist_frame)
+            line_north = canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_east  = canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_south = canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_west  = canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+            frameids = (line_north, line_east, line_south, line_west)
             myimage = MyThumbnail(0, _lastposition, _lastposition + image_width, file, showfile, id, \
-                text_id, rect_id, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
+                text_id, rect_id, frameids, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
             if file in dict_source_target_tooold[imagetype]: #start with state.exclude
                 myimage.setState(state.EXCLUDE, None, False)
                 myimage.set_tooold(True)
@@ -3094,6 +3153,10 @@ def Button_be_pressed(*args):
             thumbnails[imagetype].append(myimage)
             _dict_thumbnails[imagetype][file] = myimage
             _lastposition += image_width + gap 
+            if myimage.getDuplicate() == 'j':
+                text_id_dup = canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                rect_id_dup =canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
+            #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(_dict_image_lineno[imagetype][file]))
     canvas_gallery.tag_raise("dup_rect")
     canvas_gallery.tag_raise("dup_text")
     canvas_gallery.tag_raise("rect")
@@ -3101,6 +3164,8 @@ def Button_be_pressed(*args):
     canvas_gallery.tag_raise("line")
     canvas_gallery.tag_raise("rect_numbers")
     canvas_gallery.tag_raise("numbers")
+    #canvas_gallery.tag_raise("imageframe")
+    # the frame for selected image
     # gap haben wir einmal zuviel (fürs letzte) gezählt
     _lastposition -= gap
     #print ("Canvas_gallery sichtbare Breite : " + str(_canvas_gallery_width_visible))
