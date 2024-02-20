@@ -3152,6 +3152,7 @@ def Button_be_pressed(*args):
                 canvas_gallery.itemconfig(text_id, text="EXC OVW")
             thumbnails[imagetype].append(myimage)
             _dict_thumbnails[imagetype][file] = myimage
+            _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
             _lastposition += image_width + gap 
             if myimage.getDuplicate() == 'j':
                 text_id_dup = canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
