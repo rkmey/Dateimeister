@@ -205,6 +205,7 @@ class MyThumbnail:
         # without delete / insert tag_add will not work. Bug in tkinter?
         self.text.delete(lstart, lend) # without delete / insert highlighttag does not work. Bug in Python?
         self.text.insert(lstart, line)
+        #self.text.mark_set(tk.INSERT, "%d.%d" % (self.lineno, 0))
         #print("try to select line " + line)
         if self.getState() == state.INCLUDE:
             self.text.tag_add("select_include", lstart, lend)
@@ -2012,12 +2013,14 @@ def init(tk_root,gui):
     canvas_gallery.bind('<FocusOut>', focus_out)
     lb_gen.bind('<Double-1>', lb_gen_double)
     lb_camera.bind('<Double-1>', lb_camera_double)
-    t_text1.bindtags(('Text', '.t_text1', '.', 'all'))
+
     t_text1.bind('<Double-1>', text1_double)
     t_text1.bind('<Button-1>', text1_double)
-    # the up / Down bindings behave strangely
-    t_text1.bind('<KeyRelease>', text1_key)
-    #t_text1.bind('<Down>', text1_double)
+    t_text1.bind('<Key>', text1_key)
+    # handler for arrow up / down must be called AFTER the Text-class handler or the bind-handler is 1 step ahead
+    t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
+    print("Bindtags: %s " % str(t_text1.bindtags()))
+
     cb_num.config(command = on_cb_num_toggle)
     combobox_indir.bind('<Double-1>', combobox_indir_double)
     combobox_outdir.bind('<Double-1>', combobox_outdir_double)
@@ -3464,6 +3467,12 @@ def text1_key(event): # called for every keyboard input
     print("Key pressed: ")
     print(event.char, event.keysym, event.keycode)
     print(row, col)
+    if event.keysym == 'Up' or event.keysym == 'Down':
+        if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
+            thumbnail = _dict_thumbnails_lineno[_imagetype][row]
+            scrollToImage(thumbnail)
+            thumbnail.scrollTextToLineno() # select this line
+    t_text1.mark_set(tk.INSERT, "%d.%d" % (int(row), 0))
 
 
 def scrollToImage(thumbnail): # scroll to start-position of thumbnail identified by filename
