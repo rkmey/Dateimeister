@@ -214,7 +214,7 @@ class MyThumbnail:
         lineinfo = self.text.dlineinfo(lstart)
         self.text.yview_scroll(lineinfo[1], 'pixels' )
         #self.canvas.itemconfigure("imageframe", state = 'normal')
-        print("Frameids: " + str(self.frameids))
+        #print("Frameids: " + str(self.frameids))
         for frameid in self.frameids:
             self.canvas.itemconfigure(frameid, state = 'normal')
 
@@ -2012,7 +2012,12 @@ def init(tk_root,gui):
     canvas_gallery.bind('<FocusOut>', focus_out)
     lb_gen.bind('<Double-1>', lb_gen_double)
     lb_camera.bind('<Double-1>', lb_camera_double)
+    t_text1.bindtags(('Text', '.t_text1', '.', 'all'))
     t_text1.bind('<Double-1>', text1_double)
+    t_text1.bind('<Button-1>', text1_double)
+    # the up / Down bindings behave strangely
+    t_text1.bind('<KeyRelease>', text1_key)
+    #t_text1.bind('<Down>', text1_double)
     cb_num.config(command = on_cb_num_toggle)
     combobox_indir.bind('<Double-1>', combobox_indir_double)
     combobox_outdir.bind('<Double-1>', combobox_outdir_double)
@@ -3438,9 +3443,10 @@ def xview(*args):
 def text1_double(event):
     (row, col) = t_text1.index(tk.CURRENT).split(".")
     print(row, col)
-    thumbnail = _dict_thumbnails_lineno[_imagetype][row]
-    scrollToImage(thumbnail)
-    thumbnail.scrollTextToLineno() # select this line
+    if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
+        thumbnail = _dict_thumbnails_lineno[_imagetype][row]
+        scrollToImage(thumbnail)
+        thumbnail.scrollTextToLineno() # select this line
 
     # we dont need the following code anymore because we have a method to scroll canvas to the lineno associated with thumbnail
     # but here we have a usefull code to get the text line after mouse click
@@ -3450,6 +3456,15 @@ def text1_double(event):
     line    = t_text1.get(lstart, lend)
     regpattern = r'[\/\\]([^\/\\.]+)\.([^\/\\.]+)' 
     #print(t_text1.index(f"@{event.x},{event.y}"), t_text1.index("current"), line)
+    
+def text1_key(event): # called for every keyboard input
+    (row, col) = t_text1.index(tk.INSERT).split(".")
+    #print("Event x: ", event.x, " Event y: ",event.y)
+    #print("Event is " + str(event))
+    print("Key pressed: ")
+    print(event.char, event.keysym, event.keycode)
+    print(row, col)
+
 
 def scrollToImage(thumbnail): # scroll to start-position of thumbnail identified by filename
     global _canvas_gallery_width_visible
