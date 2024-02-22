@@ -1993,6 +1993,7 @@ def init(tk_root,gui):
     # deshalb exlude und show über Kontext-Menü (rechte Maustaste), Show zusätzlich auch mit Doppelclick
     #canvas_gallery.bind("<Button-1>", canvas_gallery_exclude)
     canvas_gallery.bind("<Double-Button-1>", canvas_gallery_show)
+    canvas_gallery.bind('<Return>', canvas_gallery_show)    # show FSImage for selected thumbnail
     # Pfeitasten fürs scrollen
     canvas_gallery.bind("<Left>",  lambda event: xview("scroll", -1, "units"))
     canvas_gallery.bind("<Right>", lambda event: xview("scroll",  1, "units"))
@@ -2014,8 +2015,8 @@ def init(tk_root,gui):
     lb_gen.bind('<Double-1>', lb_gen_double)
     lb_camera.bind('<Double-1>', lb_camera_double)
 
-    t_text1.bind('<Double-1>', text1_double)
-    t_text1.bind('<Button-1>', text1_double)
+    t_text1.bind('<Double-1>', text1_double)  # show FSImage for selected line
+    t_text1.bind('<Button-1>', text1_single)  # synchronize zext / gallery
     t_text1.bind('<Key>', text1_key)
     # handler for arrow up / down must be called AFTER the Text-class handler or the bind-handler is 1 step ahead
     t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
@@ -3443,7 +3444,7 @@ def xview(*args):
             #return
         canvas_gallery.xview(*args)
 
-def text1_double(event):
+def text1_single(event): # synchronize text / gallery
     (row, col) = t_text1.index(tk.CURRENT).split(".")
     print(row, col)
     if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
@@ -3460,6 +3461,17 @@ def text1_double(event):
     regpattern = r'[\/\\]([^\/\\.]+)\.([^\/\\.]+)' 
     #print(t_text1.index(f"@{event.x},{event.y}"), t_text1.index("current"), line)
     
+def text1_double(event): # synchronize text / gallery and display FSImage 
+    (row, col) = t_text1.index(tk.CURRENT).split(".")
+    print(row, col)
+    if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
+        thumbnail = _dict_thumbnails_lineno[_imagetype][row]
+        if thumbnail is not None:
+            scrollToImage(thumbnail)
+            thumbnail.scrollTextToLineno() # select this line
+            display_image(thumbnail)
+    return("break")  # should stop event processing but doesn't  
+
 def text1_key(event): # called for every keyboard input
     (row, col) = t_text1.index(tk.INSERT).split(".")
     #print("Event x: ", event.x, " Event y: ",event.y)
@@ -3512,9 +3524,10 @@ def display_image(thumbnail):
             player.restart()
             fs_image.setPlaystatus('play') # Status, Buttontext
     else: # ein neues Objekt anlegen und in _dict_file_image eintragen
-        print ("FSImage does not exist for file: " + file)
-        fs_image = MyFSImage(file, thumbnail, _dict_file_image)
-        _dict_file_image[file] = fs_image
+        if file != 'none':
+            print ("FSImage does not exist for file: " + file)
+            fs_image = MyFSImage(file, thumbnail, _dict_file_image)
+            _dict_file_image[file] = fs_image
 
 def show_context_menu(event):
     global context_men, _event
