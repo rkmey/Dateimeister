@@ -99,9 +99,12 @@ class ImageApp:
         self.source_row, self.source_col = 0, 0
         self.target_row, self.target_col = 0, 0
 
-        self.source_canvas.bind("<Button-1>", self.start_drag)
-        self.target_canvas.bind("<ButtonRelease-1>", self.drop)
-        #self.target_canvas.bind("<B1-Motion>", self.drop)
+        #self.source_canvas.bind("<ButtonPress-1>", self.start_drag)
+        #self.target_canvas.bind("<ButtonRelease-1>", self.drop)
+        #self.target_canvas.bind("<B1-Motion>", self.on_motion)
+
+        self.root.bind("<ButtonPress-1>", self.start_drag)
+        self.root.bind("<ButtonRelease-1>", self.drop)
 
         self.dict_thumbnails = {}
         
@@ -133,7 +136,6 @@ class ImageApp:
                     self.ypos += self.row_height
             self.source_canvas.update()
             self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all"))
-            self.target_canvas.configure(scrollregion=self.target_canvas.bbox("all"))
 
 
     def start_drag(self, event):
@@ -145,7 +147,11 @@ class ImageApp:
                 print("Drag Image event: ", str(event), " Id: ", str(img.get_id()), " bbox: ", str(self.source_canvas.bbox(img.get_id())))
                 break
 
+    def on_motion(self, event):
+        pass
+    
     def drop(self, event):
+        print("Drop")
         if self.dragged_image:
             print("Drop Image: " + str(self.dragged_image.get_image()))
             x, y = self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y)
@@ -156,6 +162,7 @@ class ImageApp:
                 self.target_col = 0
                 self.target_row += 1
             #self.dragged_image = None
+            self.target_canvas.configure(scrollregion=self.target_canvas.bbox("all"))
 
 if __name__ == "__main__":
     root = tk.Tk()
