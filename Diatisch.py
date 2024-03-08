@@ -107,36 +107,19 @@ class ImageApp:
         self.root.bind("<ButtonRelease-1>", self.drop)
 
         self.dict_thumbnails = {}
-        
+        self.list_source_imagefiles = []
+        self.list_target_imagefiles = []
+       
     def load_images(self):
+        self.list_source_imagefiles = []
         directory = filedialog.askdirectory()
         if directory:
             image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
             for img_file in image_files:
                 img_path = os.path.join(directory, img_file)
-                #print("try to show image: " , img_path)
-                img = Image.open(img_path)
-                image_width_orig, image_height_orig = img.size
-                faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
-                print("Image " + img_file + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
-                display_width  = int(image_width_orig * faktor)
-                display_height = int(image_height_orig * faktor)
-                newsize = (display_width, display_height)
-                r_img = img.resize(newsize, Image.Resampling.NEAREST)
-                photo = ImageTk.PhotoImage(r_img)
-                img_id = self.source_canvas.create_image(self.xpos, self.ypos, anchor='nw', image = photo, tags = 'images')
-                i = MyImage(img_path, img_id, photo)
-                self.source_images.append(i)
-                self.xpos += display_width
-                self.source_col += 1
-                if self.source_col >= self.n:
-                    self.source_col = 0
-                    self.source_row += 1
-                    self.xpos = 0
-                    self.ypos += self.row_height
-            self.source_canvas.update()
-            self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all"))
-
+                self.list_source_imagefiles.append(img_path)
+            self.display_images(self.list_source_imagefiles, self.source_images, self.source_canvas)
+        self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
 
     def start_drag(self, event):
         for i, img in enumerate(self.source_images):
@@ -154,15 +137,39 @@ class ImageApp:
         print("Drop")
         if self.dragged_image:
             print("Drop Image: " + str(self.dragged_image.get_image()))
-            x, y = self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y)
-            img = self.target_canvas.create_image(self.target_col * self.image_width, self.target_row * 200, anchor="nw", image=self.dragged_image.get_image())
-            self.target_images.append(img)
-            self.target_col += 1
-            if self.target_col >= self.n:
-                self.target_col = 0
-                self.target_row += 1
-            #self.dragged_image = None
-            self.target_canvas.configure(scrollregion=self.target_canvas.bbox("all"))
+            self.list_target_imagefiles.append(self.dragged_image.get_filename())
+            self.display_images(self.list_target_imagefiles, self.target_images, self.target_canvas)
+
+    def display_images(self, list_imagefiles, list_images, canvas): # display list of images on canvas
+        xpos = 0
+        ypos = 0
+        row  = 0
+        col  = 0
+        canvas.delete("all")
+        for img_path in list_imagefiles:
+            #print("try to show image: " , img_path)
+            img = Image.open(img_path)
+            image_width_orig, image_height_orig = img.size
+            faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
+            print("Image " + img_path + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
+            display_width  = int(image_width_orig * faktor)
+            display_height = int(image_height_orig * faktor)
+            newsize = (display_width, display_height)
+            r_img = img.resize(newsize, Image.Resampling.NEAREST)
+            photo = ImageTk.PhotoImage(r_img)
+            img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
+            i = MyImage(img_path, img_id, photo)
+            list_images.append(i)
+            xpos += display_width
+            col += 1
+            if col >= self.n:
+                col = 0
+                row += 1
+                xpos = 0
+                ypos += self.row_height
+        canvas.update()
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
 
 if __name__ == "__main__":
     root = tk.Tk()
