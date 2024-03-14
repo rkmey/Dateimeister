@@ -24,7 +24,8 @@ class MyImage:
         return self.id
     def get_image(self):
         return self.image
-        
+
+     
 class ImageApp:
     def __init__(self, root, m, n):
         self.root = root
@@ -123,24 +124,24 @@ class ImageApp:
 
     def start_drag(self, event):
         # check where mouse is
-        source_rect = self.get_root_coordinates(self.source_canvas)
-        target_rect = self.get_root_coordinates(self.target_canvas)
+        source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
+        target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         print ("source_canvas: ", str(source_rect))
         print ("target_canvas: ", str(target_rect))
         print ("event: ", " x: ", str(event.x_root), " y: ", str(event.y_root))
         if (self.check_event_in_rect(event, source_rect)):
             print("Event in source_canvas")
+            for i, img in enumerate(self.source_images):
+                image_rect = self.get_root_coordinates_for_image(self.source_canvas, img.get_id())
+                print ("  image_rect: ", str(image_rect))
+                if (self.check_event_in_rect(event, image_rect)):
+                    self.dragged_image = img
+                    print("Drag Image event: ", str(event), " Id: ", str(img.get_id()), " bbox: ", str(self.source_canvas.bbox(img.get_id())))
+                    break
         elif (self.check_event_in_rect(event, target_rect)):
             print("Event in target_canvas")
         else:
             print("Event not in canvas")
-        for i, img in enumerate(self.source_images):
-            if self.source_canvas.bbox(img.get_id()) and \
-            self.source_canvas.bbox(img.get_id())[0] <= event.x <= self.source_canvas.bbox(img.get_id())[2] and \
-            self.source_canvas.bbox(img.get_id())[1] <= event.y <= self.source_canvas.bbox(img.get_id())[3]:
-                self.dragged_image = img
-                print("Drag Image event: ", str(event), " Id: ", str(img.get_id()), " bbox: ", str(self.source_canvas.bbox(img.get_id())))
-                break
 
     def on_motion(self, event):
         pass
@@ -152,12 +153,23 @@ class ImageApp:
             self.list_target_imagefiles.append(self.dragged_image.get_filename())
             self.display_images(self.list_target_imagefiles, self.target_images, self.target_canvas)
 
-    def get_root_coordinates(self, widget):
+    def get_root_coordinates_for_widget(self, widget):
         # return rect of widget-coordinates relative to root window
         x1 = widget.winfo_rootx() 
         x2 = x1 + widget.winfo_width()
         y1 = widget.winfo_rooty()
         y2 = y1 + widget.winfo_height()
+        return [x1, y1, x2, y2]
+
+    def get_root_coordinates_for_image(self, widget, image_id):
+        # return rect of image-coordinates relative to root window
+        x_widget = widget.winfo_rootx()
+        y_widget = widget.winfo_rooty()
+        bbox = widget.bbox(image_id)
+        x1 = bbox[0] + x_widget
+        y1 = bbox[1] + y_widget
+        x2 = bbox[2] + x_widget
+        y2 = bbox[3] + y_widget
         return [x1, y1, x2, y2]
 
     def check_event_in_rect(self, event, rect): # rect has to be qualified relative to root!
