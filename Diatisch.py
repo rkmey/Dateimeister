@@ -10,7 +10,7 @@ class ScrollableCanvas(tk.Canvas):
 
     def on_configure(self, event):
         self.configure(scrollregion=self.bbox("all"))
-        print ("Configure> called")
+        print ("<Configure> called")
 
 class MyImage:
     def __init__(self, filename, id, image):
@@ -110,6 +110,7 @@ class ImageApp:
         self.dict_thumbnails = {}
         self.list_source_imagefiles = []
         self.list_target_imagefiles = []
+        self.source_image_selected = False
        
     def load_images(self):
         self.list_source_imagefiles = []
@@ -136,6 +137,7 @@ class ImageApp:
                 print ("  image_rect: ", str(image_rect))
                 if (self.check_event_in_rect(event, image_rect)):
                     self.dragged_image = img
+                    self.source_image_selected = True # we have selected an Image from source canvas
                     print("Drag Image event: ", str(event), " Id: ", str(img.get_id()), " bbox: ", str(self.source_canvas.bbox(img.get_id())))
                     break
         elif (self.check_event_in_rect(event, target_rect)):
@@ -147,11 +149,20 @@ class ImageApp:
         pass
     
     def drop(self, event):
+        # check if mouse is on target canvas
         print("Drop")
-        if self.dragged_image:
-            print("Drop Image: " + str(self.dragged_image.get_image()))
-            self.list_target_imagefiles.append(self.dragged_image.get_filename())
-            self.display_images(self.list_target_imagefiles, self.target_images, self.target_canvas)
+        target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
+        if (self.check_event_in_rect(event, target_rect)):
+            print("Drop Event in target_canvas")
+            if self.dragged_image:
+                if self.source_image_selected == True:
+                    print("Drop Image: " + str(self.dragged_image.get_image()))
+                    self.list_target_imagefiles.append(self.dragged_image.get_filename())
+                    self.display_images(self.list_target_imagefiles, self.target_images, self.target_canvas)
+                self.source_image_selected = False # do not drop more than once
+                
+        else:
+            print("Drop-Event not in target canvas")
 
     def get_root_coordinates_for_widget(self, widget):
         # return rect of widget-coordinates relative to root window
