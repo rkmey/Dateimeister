@@ -124,17 +124,18 @@ class ImageApp:
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
 
     def start_drag(self, event):
-        # check where mouse is
+        # check where mouse is 
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         print ("source_canvas: ", str(source_rect))
         print ("target_canvas: ", str(target_rect))
         print ("event: ", " x: ", str(event.x_root), " y: ", str(event.y_root))
+        print ("Source canvasx: ", str(self.source_canvas.canvasx(event.x)), "canvasy: ", str(self.source_canvas.canvasy(event.y)))
         if (self.check_event_in_rect(event, source_rect)):
             print("Event in source_canvas")
             for i, img in enumerate(self.source_images):
                 image_rect = self.get_root_coordinates_for_image(self.source_canvas, img.get_id())
-                print ("  image_rect: ", str(image_rect))
+                print ("  Image ID: ", str(img.get_id()), " image_rect: ", str(image_rect))
                 if (self.check_event_in_rect(event, image_rect)):
                     self.dragged_image = img
                     self.source_image_selected = True # we have selected an Image from source canvas
