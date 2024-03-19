@@ -13,17 +13,35 @@ class ScrollableCanvas(tk.Canvas):
         print ("<Configure> called")
 
 class MyImage:
-    def __init__(self, filename, id, image):
+    def __init__(self, filename, id, image, canvas, frameids):
         self.filename = filename
         self.id = id   
         self.image = image
-
+        self.frameids = frameids
+        self.canvas = canvas
+        self.selected = False
+        self.unselect(canvas)
     def get_filename(self):
         return self.filename
     def get_id(self):
         return self.id
     def get_image(self):
         return self.image
+    def select(self, canvas):
+        for frameid in self.frameids:
+            self.canvas.itemconfigure(frameid, state = 'normal')
+        self.selected = True
+    def unselect(self, canvas):
+        for frameid in self.frameids:
+            self.canvas.itemconfigure(frameid, state = 'hidden')
+        self.selected = False
+    def toggle_selection(self, canvas):
+        if self.selected:
+            self.unselect(canvas)
+        else:
+            self.select(canvas)
+    def is_selected(self):
+        return self.selected
 
      
 class ImageApp:
@@ -31,8 +49,8 @@ class ImageApp:
         self.root = root
         self.root.title("Image Canvas")
         # Fenstergröße
-        screen_width  = int(root.winfo_screenwidth() * 1.0)
-        screen_height = int(root.winfo_screenheight() * 1.0)
+        screen_width  = int(root.winfo_screenwidth() * .5) # adjust as needed
+        screen_height = int(root.winfo_screenheight() * .5) # adjust as needed
         print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height))
         v_dim=str(screen_width)+'x'+str(screen_height)
         root.geometry(v_dim)
@@ -92,10 +110,10 @@ class ImageApp:
         self.load_button = tk.Button(root, text="Load Images", command=self.load_images)
         self.load_button.pack()
 
-        self.dragged_image = None
+        self.list_dragged_images = []
 
-        self.source_images = []
-        self.target_images = []
+        self.dict_source_images = {}
+        self.dict_target_images = {}
 
         self.source_row, self.source_col = 0, 0
         self.target_row, self.target_col = 0, 0
@@ -110,7 +128,6 @@ class ImageApp:
         self.dict_thumbnails = {}
         self.list_source_imagefiles = []
         self.list_target_imagefiles = []
-        self.source_image_selected = False
        
     def load_images(self):
         self.list_source_imagefiles = []
@@ -120,7 +137,7 @@ class ImageApp:
             for img_file in image_files:
                 img_path = os.path.join(directory, img_file)
                 self.list_source_imagefiles.append(img_path)
-            self.display_images(self.list_source_imagefiles, self.source_images, self.source_canvas)
+            self.display_images(self.list_source_imagefiles, self.dict_source_images, self.source_canvas)
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
 
     def start_drag(self, event):
@@ -131,16 +148,28 @@ class ImageApp:
         print ("target_canvas: ", str(target_rect))
         print ("event: ", " x: ", str(event.x_root), " y: ", str(event.y_root))
         print ("Source canvasx: ", str(self.source_canvas.canvasx(event.x)), "canvasy: ", str(self.source_canvas.canvasy(event.y)))
-        if (self.check_event_in_rect(event, source_rect)):
+        if (self.check_event_in_rect(event, source_rect)): # select Image(s)
             print("Event in source_canvas")
-            for i, img in enumerate(self.source_images):
-                image_rect = self.get_root_coordinates_for_image(self.source_canvas, img.get_id())
-                print ("  Image ID: ", str(img.get_id()), " image_rect: ", str(image_rect))
-                if (self.check_event_in_rect(event, image_rect)):
-                    self.dragged_image = img
-                    self.source_image_selected = True # we have selected an Image from source canvas
-                    print("Drag Image event: ", str(event), " Id: ", str(img.get_id()), " bbox: ", str(self.source_canvas.bbox(img.get_id())))
-                    break
+            # find image closest to event. For this we have to use the corresponding canvasx / canvasy coordibates instead of original event coordinates
+            if (closest := self.source_canvas.find_closest(self.source_canvas.canvasx(event.x), self.source_canvas.canvasy(event.y))):
+                image_id = closest[0]
+                img      = self.dict_source_images[image_id]
+                print("closest Image has ID: ", image_id, " closest: ", str(closest))
+                if event.state & 0x4: # ctrl-key is pressed : select image and don't unselect all others
+                    img.toggle_selection(self.source_canvas) # toggle selection
+                else: # unselect all and toggle selection for this image
+                    if img.is_selected():
+                        selected = True
+                    else:
+                        selected = False
+                    self.unselect_all(self.dict_source_images, self.source_canvas)
+                    # print("Selected = ", selected)
+                    if selected:
+                        img.unselect(self.source_canvas)
+                    else:
+                        img.select(self.source_canvas)
+            else:
+                print("no closest image")
         elif (self.check_event_in_rect(event, target_rect)):
             print("Event in target_canvas")
         else:
@@ -153,14 +182,29 @@ class ImageApp:
         # check if mouse is on target canvas
         print("Drop")
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
-        if (self.check_event_in_rect(event, target_rect)):
+        source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
+        if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
             print("Drop Event in target_canvas")
-            if self.dragged_image:
-                if self.source_image_selected == True:
-                    print("Drop Image: " + str(self.dragged_image.get_image()))
-                    self.list_target_imagefiles.append(self.dragged_image.get_filename())
-                    self.display_images(self.list_target_imagefiles, self.target_images, self.target_canvas)
-                self.source_image_selected = False # do not drop more than once
+            # fill list of dragged images by checking if selected
+            self.list_dragged_images = []
+            for i in self.dict_source_images:
+                img = self.dict_source_images[i]
+                if img.is_selected():
+                    self.list_dragged_images.append(img)
+            #print("List of dragged images: ", str(self.list_dragged_images))
+            if self.list_dragged_images: #true when not empty
+                for img in self.list_dragged_images:
+                    filename = img.get_filename()
+                    #print("Drop Image: " + filename)
+                    self.list_target_imagefiles.append(filename)
+                    self.display_images(self.list_target_imagefiles, self.dict_target_images, self.target_canvas)
+                    self.list_dragged_images = [] # do not drop more than once
+                
+        elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
+            print("Drop Event in source")
+            if self.list_dragged_images: #true when not empty
+                #print("Release 1 Source: " + str(self.dragged_image.get_image()))
+                self.list_dragged_images = [] # do not drop more than once
                 
         else:
             print("Drop-Event not in target canvas")
@@ -171,17 +215,6 @@ class ImageApp:
         x2 = x1 + widget.winfo_width()
         y1 = widget.winfo_rooty()
         y2 = y1 + widget.winfo_height()
-        return [x1, y1, x2, y2]
-
-    def get_root_coordinates_for_image(self, widget, image_id):
-        # return rect of image-coordinates relative to root window
-        x_widget = widget.winfo_rootx()
-        y_widget = widget.winfo_rooty()
-        bbox = widget.bbox(image_id)
-        x1 = bbox[0] + x_widget
-        y1 = bbox[1] + y_widget
-        x2 = bbox[2] + x_widget
-        y2 = bbox[3] + y_widget
         return [x1, y1, x2, y2]
 
     def check_event_in_rect(self, event, rect): # rect has to be qualified relative to root!
@@ -209,8 +242,21 @@ class ImageApp:
             r_img = img.resize(newsize, Image.Resampling.NEAREST)
             photo = ImageTk.PhotoImage(r_img)
             img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
-            i = MyImage(img_path, img_id, photo)
-            list_images.append(i)
+            # draw rect consisting of 4 dotted lines because create rectagle does not support dotted lines
+            dist_frame = 20
+            north_west = (xpos + dist_frame, ypos + dist_frame)
+            north_east = (xpos + display_width - dist_frame, ypos + dist_frame)
+            south_west = (xpos + dist_frame, ypos + display_height - dist_frame)
+            south_east = (xpos + display_width - dist_frame, ypos + display_height - dist_frame)
+            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+            frameids = (line_north, line_east, line_south, line_west)
+            i = MyImage(img_path, img_id, photo, canvas, frameids)
+            list_images[img_id] = i
+            
+            
             xpos += display_width
             col += 1
             if col >= self.n:
@@ -220,6 +266,19 @@ class ImageApp:
                 ypos += self.row_height
         canvas.update()
         canvas.configure(scrollregion=canvas.bbox("all"))
+        #self.select_all(list_images, canvas)
+
+    def unselect_all(self, dict_images, canvas):
+        for i in dict_images:
+            image = dict_images[i]
+            image.unselect(canvas)
+        #clear list 
+        self.list_dragged_images = []
+    
+    def select_all(self, dict_images, canvas):
+        for i in dict_images:
+            image = dict_images[i]
+            image.select(canvas)
 
 
 if __name__ == "__main__":
