@@ -19,7 +19,7 @@ class MyImage:
         self.image = image
         self.frameids = frameids
         self.canvas = canvas
-        self.selected = False
+        self.selected = 0
         self.unselect(canvas)
     def get_filename(self):
         return self.filename
@@ -27,21 +27,19 @@ class MyImage:
         return self.id
     def get_image(self):
         return self.image
-    def select(self, canvas):
+    def select(self, canvas, ctr):
         for frameid in self.frameids:
             self.canvas.itemconfigure(frameid, state = 'normal')
-        self.selected = True
+        self.selected = ctr
     def unselect(self, canvas):
         for frameid in self.frameids:
             self.canvas.itemconfigure(frameid, state = 'hidden')
-        self.selected = False
-    def toggle_selection(self, canvas):
-        if self.selected:
-            self.unselect(canvas)
-        else:
-            self.select(canvas)
+        self.selected = 0
     def is_selected(self):
-        return self.selected
+        if self.selected > 0:
+            return True
+        else:
+            return False
 
      
 class ImageApp:
@@ -125,9 +123,9 @@ class ImageApp:
         self.root.bind("<ButtonPress-1>", self.start_drag)
         self.root.bind("<ButtonRelease-1>", self.drop)
 
-        self.dict_thumbnails = {}
         self.list_source_imagefiles = []
         self.list_target_imagefiles = []
+        self.select_ctr = 0 # to keep track of sequence of selection in order to drop images to target in order of selection
        
     def load_images(self):
         self.list_source_imagefiles = []
@@ -156,7 +154,7 @@ class ImageApp:
                 img      = self.dict_source_images[image_id]
                 print("closest Image has ID: ", image_id, " closest: ", str(closest))
                 if event.state & 0x4: # ctrl-key is pressed : select image and don't unselect all others
-                    img.toggle_selection(self.source_canvas) # toggle selection
+                    self.toggle_selection(img, self.source_canvas) # toggle selection
                 else: # unselect all and toggle selection for this image
                     if img.is_selected():
                         selected = True
@@ -165,9 +163,9 @@ class ImageApp:
                     self.unselect_all(self.dict_source_images, self.source_canvas)
                     # print("Selected = ", selected)
                     if selected:
-                        img.unselect(self.source_canvas)
+                        self.unselect_image(img, self.source_canvas)
                     else:
-                        img.select(self.source_canvas)
+                        self.select_image(img, self.source_canvas)
             else:
                 print("no closest image")
         elif (self.check_event_in_rect(event, target_rect)):
@@ -193,12 +191,15 @@ class ImageApp:
                     self.list_dragged_images.append(img)
             #print("List of dragged images: ", str(self.list_dragged_images))
             if self.list_dragged_images: #true when not empty
+                self.target_canvas.delete("all")
+                self.list_dragged_images.sort(key=lambda a: int(a.selected))
                 for img in self.list_dragged_images:
                     filename = img.get_filename()
                     #print("Drop Image: " + filename)
                     self.list_target_imagefiles.append(filename)
-                    self.display_images(self.list_target_imagefiles, self.dict_target_images, self.target_canvas)
-                    self.list_dragged_images = [] # do not drop more than once
+                self.display_images(self.list_target_imagefiles, self.dict_target_images, self.target_canvas)
+                self.list_dragged_images = [] # do not drop more than once
+                print("Drag Done.")
                 
         elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
             print("Drop Event in source")
@@ -208,6 +209,35 @@ class ImageApp:
                 
         else:
             print("Drop-Event not in target canvas")
+
+    def unselect_all(self, dict_images, canvas):
+        for i in dict_images:
+            image = dict_images[i]
+            image.unselect(canvas)
+        #clear list 
+        self.list_dragged_images = []
+        #reset counter
+        self.select_ctr = 0
+    
+    def select_all(self, dict_images, canvas):
+        for i in dict_images:
+            image = dict_images[i]
+            self.select_ctr += 1
+            image.select(canvas, self.select_ctr)
+
+    def select_image(self, image, canvas):
+        self.select_ctr += 1
+        image.select(canvas, self.select_ctr)
+
+    def toggle_selection(self, image, canvas):
+        if image.is_selected():
+            image.unselect(canvas)
+        else: 
+            self.select_ctr += 1
+            image.select(canvas, self.select_ctr)
+
+    def unselect_image(self, image, canvas):
+        image.unselect(canvas)
 
     def get_root_coordinates_for_widget(self, widget):
         # return rect of widget-coordinates relative to root window
@@ -235,7 +265,7 @@ class ImageApp:
             img = Image.open(img_path)
             image_width_orig, image_height_orig = img.size
             faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
-            print("Image " + img_path + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
+            #print("Image " + img_path + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
             display_width  = int(image_width_orig * faktor)
             display_height = int(image_height_orig * faktor)
             newsize = (display_width, display_height)
@@ -267,18 +297,6 @@ class ImageApp:
         canvas.update()
         canvas.configure(scrollregion=canvas.bbox("all"))
         #self.select_all(list_images, canvas)
-
-    def unselect_all(self, dict_images, canvas):
-        for i in dict_images:
-            image = dict_images[i]
-            image.unselect(canvas)
-        #clear list 
-        self.list_dragged_images = []
-    
-    def select_all(self, dict_images, canvas):
-        for i in dict_images:
-            image = dict_images[i]
-            image.select(canvas)
 
 
 if __name__ == "__main__":
