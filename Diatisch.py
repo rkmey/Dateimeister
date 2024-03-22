@@ -124,7 +124,7 @@ class ImageApp:
         self.root.bind("<ButtonRelease-1>", self.drop)
 
         self.list_source_imagefiles = []
-        self.list_target_imagefiles = []
+        self.list_target_images = []
         self.select_ctr = 0 # to keep track of sequence of selection in order to drop images to target in order of selection
        
     def load_images(self):
@@ -181,8 +181,12 @@ class ImageApp:
         print("Drop")
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
+        print ("Drop event: ", " x: ", str(event.x_root), " y: ", str(event.y_root))
+        print ("Target canvasx: ", str(self.target_canvas.canvasx(event.x)), "canvasy: ", str(self.target_canvas.canvasy(event.y)))
         if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
             print("Drop Event in target_canvas")
+            for t in self.list_target_images:
+                print("  Target image: ", t.get_filename(), " Id: ", str(t.get_id()))
             # fill list of dragged images by checking if selected
             self.list_dragged_images = []
             for i in self.dict_source_images:
@@ -191,13 +195,23 @@ class ImageApp:
                     self.list_dragged_images.append(img)
             #print("List of dragged images: ", str(self.list_dragged_images))
             if self.list_dragged_images: #true when not empty
-                self.target_canvas.delete("all")
                 self.list_dragged_images.sort(key=lambda a: int(a.selected))
-                for img in self.list_dragged_images:
-                    filename = img.get_filename()
-                    #print("Drop Image: " + filename)
-                    self.list_target_imagefiles.append(filename)
-                self.display_images(self.list_target_imagefiles, self.dict_target_images, self.target_canvas)
+                #find closest image
+                if (closest := self.target_canvas.find_closest(self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y))):
+                    image_id = closest[0]
+                    img      = self.dict_target_images[image_id]
+                    print("closest Target Image has ID: ", image_id, " closest: ", str(closest), " Filename: " + img.get_filename())
+                    for img in self.list_dragged_images:
+                        filename = img.get_filename()
+                        #print("Drop Image: " + filename)
+                        self.list_target_images.append(img)
+                else: # no closest image, append dragged images to existing list
+                    print("No closest Target")
+                    for img in self.list_dragged_images:
+                        filename = img.get_filename()
+                        #print("Drop Image: " + filename)
+                        self.list_target_images.append(img)
+                self.display_image_objects(self.list_target_images, self.dict_target_images, self.target_canvas)
                 self.list_dragged_images = [] # do not drop more than once
                 print("Drag Done.")
                 
@@ -284,6 +298,43 @@ class ImageApp:
             line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
             frameids = (line_north, line_east, line_south, line_west)
             i = MyImage(img_path, img_id, photo, canvas, frameids)
+            list_images[img_id] = i
+            
+            
+            xpos += display_width
+            col += 1
+            if col >= self.n:
+                col = 0
+                row += 1
+                xpos = 0
+                ypos += self.row_height
+        canvas.update()
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        #self.select_all(list_images, canvas)
+
+    def display_image_objects(self, list_obj, list_images, canvas): # display list of images on canvas, use already converted photos in objects, better performance
+        xpos = 0
+        ypos = 0
+        row  = 0
+        col  = 0
+        canvas.delete("all")
+        for obj in list_obj:
+            #print("try to show image: " , obj.get_filename())
+            photo = obj.get_image()
+            display_width, display_height = photo.width(), photo.height()
+            img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
+            # draw rect consisting of 4 dotted lines because create rectagle does not support dotted lines
+            dist_frame = 20
+            north_west = (xpos + dist_frame, ypos + dist_frame)
+            north_east = (xpos + display_width - dist_frame, ypos + dist_frame)
+            south_west = (xpos + dist_frame, ypos + display_height - dist_frame)
+            south_east = (xpos + display_width - dist_frame, ypos + display_height - dist_frame)
+            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+            frameids = (line_north, line_east, line_south, line_west)
+            i = MyImage(obj.get_filename(), img_id, photo, canvas, frameids)
             list_images[img_id] = i
             
             
