@@ -44,7 +44,7 @@ class ImageApp:
         self.root = root
         self.root.title("Image Canvas")
         # Fenstergröße
-        screen_width  = int(root.winfo_screenwidth() * .5) # adjust as needed
+        screen_width  = int(root.winfo_screenwidth() * .75) # adjust as needed
         screen_height = int(root.winfo_screenheight() * .5) # adjust as needed
         print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height))
         v_dim=str(screen_width)+'x'+str(screen_height)
@@ -139,17 +139,17 @@ class ImageApp:
         # check where mouse is 
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
-        print ("source_canvas: ", str(source_rect))
-        print ("target_canvas: ", str(target_rect))
-        print ("event: ", " x: ", str(event.x_root), " y: ", str(event.y_root))
-        print ("Source canvasx: ", str(self.source_canvas.canvasx(event.x)), "canvasy: ", str(self.source_canvas.canvasy(event.y)))
+        #print ("source_canvas: ", str(source_rect))
+        #print ("target_canvas: ", str(target_rect))
+        #print ("event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
+        #print ("Source canvasx: ", str(self.source_canvas.canvasx(event.x)), "canvasy: ", str(self.source_canvas.canvasy(event.y)))
         if (self.check_event_in_rect(event, source_rect)): # select Image(s)
-            print("Event in source_canvas")
+            #print("Event in source_canvas")
             # find image closest to event. For this we have to use the corresponding canvasx / canvasy coordibates instead of original event coordinates
             if (closest := self.source_canvas.find_closest(self.source_canvas.canvasx(event.x), self.source_canvas.canvasy(event.y))):
                 image_id = closest[0]
                 img      = self.dict_source_images[image_id]
-                print("closest Image has ID: ", image_id, " closest: ", str(closest))
+                #print("closest Image has ID: ", image_id, " closest: ", str(closest))
                 if event.state & 0x4: # ctrl-key is pressed : select image and don't unselect all others
                     self.toggle_selection(img, self.source_canvas) # toggle selection
                 else: # unselect all and toggle selection for this image
@@ -164,24 +164,28 @@ class ImageApp:
                     else:
                         self.select_image(img, self.source_canvas)
             else:
-                print("no closest image")
+                #print("no closest image")
+                a=1
         elif (self.check_event_in_rect(event, target_rect)):
-            print("Event in target_canvas")
+            #print("Event in target_canvas")
+            a=1
         else:
-            print("Event not in canvas")
+            #print("Event not in canvas")
+            a=1
 
     def on_motion(self, event):
         pass
     
     def drop(self, event):
         # check if mouse is on target canvas
-        print("Drop")
+        #print("Drop")
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
-        print ("Drop event: ", " x: ", str(event.x_root), " y: ", str(event.y_root))
-        print ("Target canvasx: ", str(self.target_canvas.canvasx(event.x)), "canvasy: ", str(self.target_canvas.canvasy(event.y)))
+        print("Target rect is: ", str(target_rect))
         if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
             print("*** Drop Event in target_canvas")
+            print ("Drop event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
+            print ("Target canvasx: ", str(self.target_canvas.canvasx(event.x)), "canvasy: ", str(self.target_canvas.canvasy(event.y)))
             #for t in self.list_target_images:
             #    print("Before Target image: ", t.get_filename())
             # fill list of dragged images by checking if selected
@@ -195,26 +199,17 @@ class ImageApp:
                 # append dragged images to list_target_images
                 for img in self.list_dragged_images:
                     filename = img.get_filename()
-                    print("  Drop Image: " + filename)
+                    #print("  Drop Image: " + filename)
                     self.list_target_images.append(img)
-                print("Scroll position is: ", str(self.target_canvas.xview()))
-                for i in self.dict_target_images:
-                    tf  = self.dict_target_images[i].get_filename()
-                    print("  Before Dict Id: ", i, " Filename: ", str(tf), " BBOX: ", str(self.target_canvas.bbox(i)))
-                #find closest image
-                self.target_canvas.focus_set()
-                closest = self.target_canvas.find_closest(self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y), start = 0)
-                if closest:
-                    image_id = closest[0]
-                    img_closest      = self.dict_target_images[image_id]
-                    print("closest Target Image has ID: ", image_id, " closest: ", str(closest), " Filename: " + img_closest.get_filename())
-                    print(f"type of item closest to click: {self.target_canvas.type(closest)}")
+                
+                img_closest_id = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
+               
+                if img_closest_id > 0:
+                    img_closest = self.dict_target_images[img_closest_id]
+                    print("closest Target Image has ID: ", img_closest_id, " Filename: " + img_closest.get_filename())
                 else: # no closest image, append dragged images to existing list
                     print("No closest Target")
                 self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
-                for i in self.dict_target_images:
-                    tf  = self.dict_target_images[i].get_filename()
-                    print("  After Dict Id: ", i, " Filename: ", str(tf), " BBOX: ", str(self.target_canvas.bbox(i)))
                 self.list_dragged_images = [] # do not drop more than once
                 #for t in self.list_target_images:
                 #    print("After Target image: ", t.get_filename())
@@ -228,6 +223,30 @@ class ImageApp:
                 
         else:
             print("Drop-Event not in target canvas")
+
+    def find_closest_item(self, event, rect_canvas, canvas, dict_images):
+        id = 0
+        event_x_pos_in_canvas = event.x_root - rect_canvas[0]
+        event_y_pos_in_canvas = event.y_root - rect_canvas[1]
+        print ("event_x_pos_in_canvas is: ", str(event_x_pos_in_canvas), '/', str(event_y_pos_in_canvas))
+        if canvas.bbox("all") is not None:
+            canvas_width  = canvas.bbox("all")[2] - canvas.bbox("all")[0]
+            canvas_height = canvas.bbox("all")[3] - canvas.bbox("all")[1]
+        else:
+            canvas_width  = 0
+            canvas_height = 0
+        current_scroll_x = canvas.xview()[0] * canvas_width
+        current_scroll_y = canvas.yview()[0] * canvas_height
+        print("Scroll position x is: ", str(canvas.xview()), " width is: ", str(canvas_width), " xpos: ", str(current_scroll_x))
+        print("Scroll position y is: ", str(canvas.yview()), " height is: ", str(canvas_height), " ypos: ", str(current_scroll_y))
+        for id in dict_images:
+            tf  = dict_images[id].get_filename()
+            print("Dict Id: ", id, " Filename: ", str(tf), " BBOX: ", str(canvas.bbox(id)))
+            if canvas.bbox(id)[0] - current_scroll_x <= event_x_pos_in_canvas <= canvas.bbox(id)[2] - current_scroll_x and \
+               canvas.bbox(id)[1] - current_scroll_y <= event_y_pos_in_canvas <= canvas.bbox(id)[3] - current_scroll_y:
+                print("Hit!")
+                break
+        return id
 
     def unselect_all(self, dict_images, canvas):
         for i in dict_images:
