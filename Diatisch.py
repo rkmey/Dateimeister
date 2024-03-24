@@ -182,8 +182,8 @@ class ImageApp:
         print ("Target canvasx: ", str(self.target_canvas.canvasx(event.x)), "canvasy: ", str(self.target_canvas.canvasy(event.y)))
         if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
             print("*** Drop Event in target_canvas")
-            for t in self.list_target_images:
-                print("Before Target image: ", t.get_filename())
+            #for t in self.list_target_images:
+            #    print("Before Target image: ", t.get_filename())
             # fill list of dragged images by checking if selected
             self.list_dragged_images = []
             for i in self.dict_source_images:
@@ -196,26 +196,28 @@ class ImageApp:
                 for img in self.list_dragged_images:
                     filename = img.get_filename()
                     print("  Drop Image: " + filename)
-                    #self.list_target_images.append(img.get_filename())
                     self.list_target_images.append(img)
+                print("Scroll position is: ", str(self.target_canvas.xview()))
                 for i in self.dict_target_images:
                     tf  = self.dict_target_images[i].get_filename()
-                    print("  Before Dict Filename: ", str(tf))
+                    print("  Before Dict Id: ", i, " Filename: ", str(tf), " BBOX: ", str(self.target_canvas.bbox(i)))
                 #find closest image
-                if (closest := self.target_canvas.find_closest(self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y))):
+                self.target_canvas.focus_set()
+                closest = self.target_canvas.find_closest(self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y), start = 0)
+                if closest:
                     image_id = closest[0]
                     img_closest      = self.dict_target_images[image_id]
                     print("closest Target Image has ID: ", image_id, " closest: ", str(closest), " Filename: " + img_closest.get_filename())
+                    print(f"type of item closest to click: {self.target_canvas.type(closest)}")
                 else: # no closest image, append dragged images to existing list
                     print("No closest Target")
-                #self.display_images(self.list_target_images, self.dict_target_images, self.target_canvas)
-                self.display_image_objects(self.list_target_images, self.dict_target_images, self.target_canvas)
+                self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
                 for i in self.dict_target_images:
                     tf  = self.dict_target_images[i].get_filename()
-                    print("  After Dict Filename: ", str(tf))
+                    print("  After Dict Id: ", i, " Filename: ", str(tf), " BBOX: ", str(self.target_canvas.bbox(i)))
                 self.list_dragged_images = [] # do not drop more than once
-                for t in self.list_target_images:
-                    print("After Target image: ", t.get_filename())
+                #for t in self.list_target_images:
+                #    print("After Target image: ", t.get_filename())
                 print("Drag Done.")
                 
         elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
@@ -315,7 +317,7 @@ class ImageApp:
         canvas.configure(scrollregion=canvas.bbox("all"))
         #self.select_all(list_images, canvas)
 
-    def display_image_objects(self, list_obj, dict_images, canvas): # display list of images on canvas, use already converted photos in objects, better performance
+    def display_image_objects(self, list_obj, canvas): # display list of images on canvas, use already converted photos in objects, better performance
         xpos = 0
         ypos = 0
         row  = 0
@@ -340,9 +342,7 @@ class ImageApp:
             frameids = (line_north, line_east, line_south, line_west)
             i = MyImage(obj.get_filename(), photo, canvas, frameids)
             dict_images[img_id] = i
-            print("   Insert into dict key: ", str(img_id), " filename: " , i.get_filename())
-            
-            
+            #print("   Insert into dict key: ", str(img_id), " filename: " , i.get_filename())
             xpos += display_width
             col += 1
             if col >= self.n:
@@ -352,7 +352,11 @@ class ImageApp:
                 ypos += self.row_height
         canvas.update()
         canvas.configure(scrollregion=canvas.bbox("all"))
+        #for t in dict_images:
+        #    f = dict_images[t].get_filename() 
+        #    print("    dict_images id: ", str(t), " filename: " , f)
         #self.select_all(list_images, canvas)
+        return dict_images
 
 
 if __name__ == "__main__":
