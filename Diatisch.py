@@ -109,6 +109,7 @@ class ImageApp:
 
         self.dict_source_images = {}
         self.dict_target_images = {}
+        self.dict_id_index = {}
 
         self.source_row, self.source_col = 0, 0
         self.target_row, self.target_col = 0, 0
@@ -182,6 +183,7 @@ class ImageApp:
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
         print("Target rect is: ", str(target_rect))
+        index = 0
         if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
             print("*** Drop Event in target_canvas")
             print ("Drop event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
@@ -195,21 +197,27 @@ class ImageApp:
                 if img.is_selected():
                     self.list_dragged_images.append(img)
             if self.list_dragged_images: #true when not empty
-                self.list_dragged_images.sort(key=lambda a: int(a.selected))
-                # append dragged images to list_target_images
-                for img in self.list_dragged_images:
-                    filename = img.get_filename()
-                    #print("  Drop Image: " + filename)
-                    self.list_target_images.append(img)
                 
-                img_closest_id = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
-               
+                # get id, distances of image under drop event
+                img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
+                
                 if img_closest_id > 0:
                     img_closest = self.dict_target_images[img_closest_id]
-                    print("closest Target Image has ID: ", img_closest_id, " Filename: " + img_closest.get_filename())
+                    index = self.dict_id_index[img_closest_id]
+                    print("closest Target Image has ID: ", img_closest_id, " Index: ", str(index), \
+                      " Filename: " + img_closest.get_filename(), " dist left: ", str(dist_event_left), " dist right: ", str(dist_event_right))
                 else: # no closest image, append dragged images to existing list
                     print("No closest Target")
-                self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
+                    index = 0
+                    
+                # now insert list of dragged images in target list. Index is in dict_id_index
+                self.list_dragged_images.sort(key=lambda a: int(a.selected))
+                # append dragged images to list_target_images
+                if dist_event_left > dist_event_right:
+                    index += 1 # insert BEHIND hit image
+                self.list_target_images[index:index] = self.list_dragged_images
+                # rebuild target canvas, refresh dicts
+                self.dict_target_images, self.dict_id_index = self.display_image_objects(self.list_target_images, self.target_canvas)
                 self.list_dragged_images = [] # do not drop more than once
                 #for t in self.list_target_images:
                 #    print("After Target image: ", t.get_filename())
@@ -225,6 +233,7 @@ class ImageApp:
             print("Drop-Event not in target canvas")
 
     def find_closest_item(self, event, rect_canvas, canvas, dict_images):
+        # this is necessary because tkinter find_closest does not work for drop event, reason unknown
         id = 0
         event_x_pos_in_canvas = event.x_root - rect_canvas[0]
         event_y_pos_in_canvas = event.y_root - rect_canvas[1]
@@ -239,14 +248,26 @@ class ImageApp:
         current_scroll_y = canvas.yview()[0] * canvas_height
         print("Scroll position x is: ", str(canvas.xview()), " width is: ", str(canvas_width), " xpos: ", str(current_scroll_x))
         print("Scroll position y is: ", str(canvas.yview()), " height is: ", str(canvas_height), " ypos: ", str(current_scroll_y))
+        hit = False
+        dist_event_left = 0
+        dist_event_right = 0
         for id in dict_images:
-            tf  = dict_images[id].get_filename()
-            print("Dict Id: ", id, " Filename: ", str(tf), " BBOX: ", str(canvas.bbox(id)))
-            if canvas.bbox(id)[0] - current_scroll_x <= event_x_pos_in_canvas <= canvas.bbox(id)[2] - current_scroll_x and \
-               canvas.bbox(id)[1] - current_scroll_y <= event_y_pos_in_canvas <= canvas.bbox(id)[3] - current_scroll_y:
+            print("Dict Id: ", id, " BBOX: ", str(canvas.bbox(id)))
+            pos_border_left   = canvas.bbox(id)[0] - current_scroll_x
+            pos_border_right  = canvas.bbox(id)[2] - current_scroll_x
+            pos_border_top    = canvas.bbox(id)[1] - current_scroll_y
+            pos_border_bottom = canvas.bbox(id)[3] - current_scroll_y
+            if pos_border_left <= event_x_pos_in_canvas <= pos_border_right and pos_border_top <= event_y_pos_in_canvas <= pos_border_bottom:
                 print("Hit!")
+                hit = True
+                # distance to left / right border of image:
+                dist_event_left  = event_x_pos_in_canvas - pos_border_left
+                dist_event_right = pos_border_right - event_x_pos_in_canvas
                 break
-        return id
+        if not hit:
+            id = 0
+        
+        return id, dist_event_left, dist_event_right
 
     def unselect_all(self, dict_images, canvas):
         for i in dict_images:
@@ -343,6 +364,8 @@ class ImageApp:
         col  = 0
         canvas.delete("all")
         dict_images = {}
+        dict_id_index = {} # for inserting images we have to know which inex in list_obj belongs to id of the image
+        index = 0
         for obj in list_obj:
             #print("try to show image: " , obj.get_filename())
             photo = obj.get_image()
@@ -369,13 +392,15 @@ class ImageApp:
                 row += 1
                 xpos = 0
                 ypos += self.row_height
+            dict_id_index[img_id] = index
+            index += 1
         canvas.update()
         canvas.configure(scrollregion=canvas.bbox("all"))
         #for t in dict_images:
         #    f = dict_images[t].get_filename() 
         #    print("    dict_images id: ", str(t), " filename: " , f)
         #self.select_all(list_images, canvas)
-        return dict_images
+        return dict_images, dict_id_index
 
 
 if __name__ == "__main__":
