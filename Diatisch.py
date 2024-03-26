@@ -146,36 +146,38 @@ class ImageApp:
         #print ("Source canvasx: ", str(self.source_canvas.canvasx(event.x)), "canvasy: ", str(self.source_canvas.canvasy(event.y)))
         if (self.check_event_in_rect(event, source_rect)): # select Image(s)
             #print("Event in source_canvas")
-            # find image closest to event. For this we have to use the corresponding canvasx / canvasy coordibates instead of original event coordinates
-            if (closest := self.source_canvas.find_closest(self.source_canvas.canvasx(event.x), self.source_canvas.canvasy(event.y))):
-                image_id = closest[0]
-                img      = self.dict_source_images[image_id]
-                #print("closest Image has ID: ", image_id, " closest: ", str(closest))
-                if event.state & 0x4: # ctrl-key is pressed : select image and don't unselect all others
-                    self.toggle_selection(img, self.source_canvas) # toggle selection
-                else: # unselect all and toggle selection for this image
-                    if img.is_selected():
-                        selected = True
-                    else:
-                        selected = False
-                    self.unselect_all(self.dict_source_images, self.source_canvas)
-                    # print("Selected = ", selected)
-                    if selected:
-                        self.unselect_image(img, self.source_canvas)
-                    else:
-                        self.select_image(img, self.source_canvas)
-            else:
-                #print("no closest image")
-                a=1
+            self.selection(event, self.source_canvas, self.dict_source_images)
         elif (self.check_event_in_rect(event, target_rect)):
             #print("Event in target_canvas")
-            a=1
+            self.selection(event, self.target_canvas, self.dict_target_images)
         else:
             #print("Event not in canvas")
             a=1
 
     def on_motion(self, event):
         pass
+    
+    def selection(self, event, canvas, dict_images):#select / unselect image(s)rom mouse click
+        if (closest := canvas.find_closest(canvas.canvasx(event.x), canvas.canvasy(event.y))):
+            image_id = closest[0]
+            img      = dict_images[image_id]
+            #print("closest Image has ID: ", image_id, " closest: ", str(closest))
+            if event.state & 0x4: # ctrl-key is pressed : select image and don't unselect all others
+                self.toggle_selection(img, canvas) # toggle selection
+            else: # unselect all and toggle selection for this image
+                if img.is_selected():
+                    selected = True
+                else:
+                    selected = False
+                self.unselect_all(dict_images, canvas)
+                # print("Selected = ", selected)
+                if selected:
+                    self.unselect_image(img, canvas)
+                else:
+                    self.select_image(img, canvas)
+        else:
+            #print("no closest image")
+            a=1
     
     def drop(self, event):
         # check if mouse is on target canvas
