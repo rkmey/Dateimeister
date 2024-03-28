@@ -113,6 +113,7 @@ class ImageApp:
 
         self.source_row, self.source_col = 0, 0
         self.target_row, self.target_col = 0, 0
+        self.drag_started_in = ""
 
         #self.source_canvas.bind("<ButtonPress-1>", self.start_drag)
         #self.target_canvas.bind("<ButtonRelease-1>", self.drop)
@@ -146,13 +147,16 @@ class ImageApp:
         #print ("Source canvasx: ", str(self.source_canvas.canvasx(event.x)), "canvasy: ", str(self.source_canvas.canvasy(event.y)))
         if (self.check_event_in_rect(event, source_rect)): # select Image(s)
             #print("Event in source_canvas")
+            self.drag_started_in = "source"
             self.selection(event, self.source_canvas, self.dict_source_images)
         elif (self.check_event_in_rect(event, target_rect)):
             #print("Event in target_canvas")
+            self.drag_started_in = "target"
             self.selection(event, self.target_canvas, self.dict_target_images)
         else:
             #print("Event not in canvas")
-            a=1
+            self.drag_started_in = ""
+            True
 
     def on_motion(self, event):
         pass
@@ -177,7 +181,7 @@ class ImageApp:
                     self.select_image(img, canvas)
         else:
             #print("no closest image")
-            a=1
+            True
     
     def drop(self, event):
         # check if mouse is on target canvas
@@ -190,40 +194,14 @@ class ImageApp:
             print("*** Drop Event in target_canvas")
             print ("Drop event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
             print ("Target canvasx: ", str(self.target_canvas.canvasx(event.x)), "canvasy: ", str(self.target_canvas.canvasy(event.y)))
-            #for t in self.list_target_images:
-            #    print("Before Target image: ", t.get_filename())
-            # fill list of dragged images by checking if selected
-            self.list_dragged_images = []
-            for i in self.dict_source_images:
-                img = self.dict_source_images[i]
-                if img.is_selected():
-                    self.list_dragged_images.append(img)
-            if self.list_dragged_images: #true when not empty
-                
-                # get id, distances of image under drop event
-                img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
-                
-                if img_closest_id > 0:
-                    img_closest = self.dict_target_images[img_closest_id]
-                    index = self.dict_id_index[img_closest_id]
-                    print("closest Target Image has ID: ", img_closest_id, " Index: ", str(index), \
-                      " Filename: " + img_closest.get_filename(), " dist left: ", str(dist_event_left), " dist right: ", str(dist_event_right))
-                else: # no closest image, append dragged images to existing list
-                    print("No closest Target")
-                    index = 0
-                    
-                # now insert list of dragged images in target list. Index is in dict_id_index
-                self.list_dragged_images.sort(key=lambda a: int(a.selected))
-                # append dragged images to list_target_images
-                if dist_event_left > dist_event_right:
-                    index += 1 # insert BEHIND hit image
-                self.list_target_images[index:index] = self.list_dragged_images
-                # rebuild target canvas, refresh dicts
-                self.dict_target_images, self.dict_id_index = self.display_image_objects(self.list_target_images, self.target_canvas)
-                self.list_dragged_images = [] # do not drop more than once
+            if self.drag_started_in == "source": # drop images from source
                 #for t in self.list_target_images:
-                #    print("After Target image: ", t.get_filename())
+                #    print("Before Target image: ", t.get_filename())
+                # fill list of dragged images by checking if selected
+                self.update_target_canvas(event, self.dict_source_images, target_rect)
                 print("Drag Done.")
+            elif self.drag_started_in == "target": # move images within target
+                True
                 
         elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
             print("Drop Event in source")
@@ -233,6 +211,39 @@ class ImageApp:
                 
         else:
             print("Drop-Event not in target canvas")
+
+    def update_target_canvas(self, event, dict_images, target_rect):
+        self.list_dragged_images = []
+        for i in dict_images:
+            img = dict_images[i]
+            if img.is_selected():
+                self.list_dragged_images.append(img)
+        if self.list_dragged_images: #true when not empty
+            
+            # get id, distances of image under drop event
+            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
+            
+            if img_closest_id > 0:
+                img_closest = self.dict_target_images[img_closest_id]
+                index = self.dict_id_index[img_closest_id]
+                print("closest Target Image has ID: ", img_closest_id, " Index: ", str(index), \
+                  " Filename: " + img_closest.get_filename(), " dist left: ", str(dist_event_left), " dist right: ", str(dist_event_right))
+            else: # no closest image, append dragged images to existing list
+                print("No closest Target")
+                index = 0
+                
+            # now insert list of dragged images in target list. Index is in dict_id_index
+            self.list_dragged_images.sort(key=lambda a: int(a.selected))
+            # append dragged images to list_target_images
+            if dist_event_left > dist_event_right:
+                index += 1 # insert BEHIND hit image
+            self.list_target_images[index:index] = self.list_dragged_images
+            # rebuild target canvas, refresh dicts
+            self.dict_target_images, self.dict_id_index = self.display_image_objects(self.list_target_images, self.target_canvas)
+            self.list_dragged_images = [] # do not drop more than once
+            #for t in self.list_target_images:
+            #    print("After Target image: ", t.get_filename())
+
 
     def find_closest_item(self, event, rect_canvas, canvas, dict_images):
         # this is necessary because tkinter find_closest does not work for drop event, reason unknown
