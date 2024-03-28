@@ -205,20 +205,17 @@ class ImageApp:
                 
         elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
             print("Drop Event in source")
-            if self.list_dragged_images: #true when not empty
-                #print("Release 1 Source: " + str(self.dragged_image.get_image()))
-                self.list_dragged_images = [] # do not drop more than once
                 
         else:
             print("Drop-Event not in target canvas")
 
     def update_target_canvas(self, event, dict_images, target_rect):
-        self.list_dragged_images = []
+        list_dragged_images = []
         for i in dict_images:
             img = dict_images[i]
             if img.is_selected():
-                self.list_dragged_images.append(img)
-        if self.list_dragged_images: #true when not empty
+                list_dragged_images.append(img)
+        if list_dragged_images: #true when not empty
             
             # get id, distances of image under drop event
             img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
@@ -233,14 +230,13 @@ class ImageApp:
                 index = 0
                 
             # now insert list of dragged images in target list. Index is in dict_id_index
-            self.list_dragged_images.sort(key=lambda a: int(a.selected))
+            list_dragged_images.sort(key=lambda a: int(a.selected))
             # append dragged images to list_target_images
             if dist_event_left > dist_event_right:
                 index += 1 # insert BEHIND hit image
-            self.list_target_images[index:index] = self.list_dragged_images
+            self.list_target_images[index:index] = list_dragged_images
             # rebuild target canvas, refresh dicts
             self.dict_target_images, self.dict_id_index = self.display_image_objects(self.list_target_images, self.target_canvas)
-            self.list_dragged_images = [] # do not drop more than once
             #for t in self.list_target_images:
             #    print("After Target image: ", t.get_filename())
 
@@ -287,7 +283,6 @@ class ImageApp:
             image = dict_images[i]
             image.unselect(canvas)
         #clear list 
-        self.list_dragged_images = []
         #reset counter
         self.select_ctr = 0
     
