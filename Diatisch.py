@@ -199,9 +199,10 @@ class ImageApp:
                 #    print("Before Target image: ", t.get_filename())
                 # fill list of dragged images by checking if selected
                 self.update_target_canvas(event, self.dict_source_images, target_rect)
-                print("Drag Done.")
             elif self.drag_started_in == "target": # move images within target
-                True
+                self.update_target_canvas(event, self.dict_target_images, target_rect, "move")
+                
+            print("Drag Done.")
                 
         elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
             print("Drop Event in source")
@@ -209,7 +210,7 @@ class ImageApp:
         else:
             print("Drop-Event not in target canvas")
 
-    def update_target_canvas(self, event, dict_images, target_rect):
+    def update_target_canvas(self, event, dict_images, target_rect, method = None):
         list_dragged_images = []
         for i in dict_images:
             img = dict_images[i]
@@ -235,6 +236,9 @@ class ImageApp:
             if dist_event_left > dist_event_right:
                 index += 1 # insert BEHIND hit image
             self.list_target_images[index:index] = list_dragged_images
+            # if method = move, delete selected images from dict_images as move means insert (already done) and then remove in the original location
+            if method == "move":
+                self.list_target_images[:] = [tup for tup in self.list_target_images if not tup in list_dragged_images]
             # rebuild target canvas, refresh dicts
             self.dict_target_images, self.dict_id_index = self.display_image_objects(self.list_target_images, self.target_canvas)
             #for t in self.list_target_images:
