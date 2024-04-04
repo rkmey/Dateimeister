@@ -168,6 +168,15 @@ class ImageApp:
         pass
     
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
+        # if drag across canvasses unset self.image_clicked because reaction to release will not do this. No further action
+        if (action == action.RELEASE and ((self.drag_started_in == "source" and canvas != self.source_canvas) or (self.drag_started_in == "target" and canvas != self.target_canvas))):
+            self.image_clicked = None
+            print("Across drag, dont select / unselect")
+            return
+        if event.state & 0x4: # ctrl-key is pressed 
+            ctrl = True
+        else:
+            ctrl = False
         if (closest := canvas.find_closest(canvas.canvasx(event.x), canvas.canvasy(event.y))):
             image_id = closest[0]
             img      = dict_images[image_id]
@@ -182,34 +191,31 @@ class ImageApp:
                 else:
                     release_image = img 
                     same = True
-            if event.state & 0x4: # ctrl-key is pressed : select image and don't unselect all others
-                if action == action.PRESS:
-                    self.toggle_selection(img, canvas) # toggle selection
-            else: # unselect all and toggle selection for this image
-                if img.is_selected(): # save state before call to unselect_all
-                    selected = True
-                else:
-                    selected = False
+            if img.is_selected(): # save state before call to unselect_all
+                selected = True
+            else:
+                selected = False
+            if ctrl == False:
                 self.unselect_all(dict_images, canvas)
-                print ("*** Action is: ", str(action), " Selected = ", str(selected), " actual image is: ", str(img), " saved image is: ", str(self.image_clicked))
-                if not selected:
-                    if action == action.PRESS:
+            print ("*** Action is: ", str(action), " Selected = ", str(selected), " actual image is: ", str(img), " saved image is: ", str(self.image_clicked))
+            if not selected:
+                if action == action.PRESS:
+                    self.select_image(img, canvas)
+                    self.image_clicked = None # the subsequent release must not unselect image
+            else: # selected
+                if action == action.PRESS:
+                    self.select_image(img, canvas)
+                    self.image_clicked = img
+                else: # action.RELEASE:
+                # unselect only if actual image is the same as before
+                    if self.image_clicked is None: 
                         self.select_image(img, canvas)
-                        self.image_clicked = None # the subsequent release must not unselect image
-                else: # selected
-                    if action == action.PRESS:
-                        self.select_image(img, canvas)
-                        self.image_clicked = img
-                    else: # action.RELEASE:
-                    # unselect only if actual image is the same as before
-                        if self.image_clicked is None: 
-                            self.select_image(img, canvas)
+                    else:
+                        if same:
+                            self.unselect_image(img, canvas)
                         else:
-                            if same:
-                                self.unselect_image(img, canvas)
-                            else:
-                                self.select_image(self.image_clicked, canvas)
-                        self.image_clicked = None
+                            self.select_image(self.image_clicked, canvas)
+                    self.image_clicked = None
         else:
             #print("no closest image")
             True
