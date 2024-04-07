@@ -174,15 +174,16 @@ class ImageApp:
             print("Across drag, dont select / unselect")
             return
         if event.state & 0x4: # ctrl-key is pressed 
-            ctrl = True
+            ctrl_pressed = True
         else:
-            ctrl = False
+            ctrl_pressed = False
         if (closest := canvas.find_closest(canvas.canvasx(event.x), canvas.canvasy(event.y))):
             image_id = closest[0]
             img      = dict_images[image_id]
             print("closest Image has ID: ", image_id, " closest: ", str(closest))
             # when button1 clicked, set image. On release check if mouse event is on this image. If so unselect else leave selection because this is a drag operation
             release_image = None # this is the image where mouse is released
+            same = False
             if self.image_clicked is not None:
                 if self.image_clicked != img:
                     release_image = img 
@@ -195,9 +196,9 @@ class ImageApp:
                 selected = True
             else:
                 selected = False
-            if ctrl == False:
+            if ctrl_pressed == False:
                 self.unselect_all(dict_images, canvas)
-            print ("*** Action is: ", str(action), " Selected = ", str(selected), " actual image is: ", str(img), " saved image is: ", str(self.image_clicked))
+            print ("*** Action is: ", str(action), " Selected = ", str(selected), " actual image is: ", str(img), " saved image is: ", str(self.image_clicked), " same = ", str(same))
             if not selected:
                 if action == action.PRESS:
                     self.select_image(img, canvas)
@@ -442,6 +443,8 @@ class ImageApp:
             i = MyImage(obj.get_filename(), photo, canvas, frameids)
             dict_images[img_id] = i
             #print("   Insert into dict key: ", str(img_id), " filename: " , i.get_filename())
+            if(obj.is_selected()):
+                i.select(canvas, 1)
             xpos += display_width
             col += 1
             if col >= self.n:
