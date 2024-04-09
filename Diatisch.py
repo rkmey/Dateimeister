@@ -2,6 +2,9 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 from PIL import Image, ImageTk
+import Dateimeister
+from datetime import datetime, timezone
+
 
 from enum import Enum
 class action(Enum):
@@ -124,14 +127,102 @@ class ImageApp:
         #self.source_canvas.bind("<ButtonPress-1>", self.start_drag)
         #self.target_canvas.bind("<ButtonRelease-1>", self.drop)
         #self.target_canvas.bind("<B1-Motion>", self.on_motion)
-
         self.root.bind("<ButtonPress-1>", self.start_drag)
         self.root.bind("<ButtonRelease-1>", self.drop)
+
+        # tooltips, context-menu
+        self.tooltiptext_st = ""
+        self.tooltiptext_tt = ""
+        self.source_canvas.bind("<Button-3>", self.show_context_menu_source) 
+        self.source_canvas.bind('<Motion>', self.tooltip_imagefile_source)    
+        self.target_canvas.bind("<Button-3>", self.show_context_menu_target) 
+        self.target_canvas.bind('<Motion>', self.tooltip_imagefile_target)    
+        #self.target_canvas.bind('<Motion>', lambda event, i = self.target_canvas, j = self.dict_target_images, k = "target": self.tooltip_imagefile(event, i, j, k))    
+        self.st = Dateimeister.ToolTip(self.source_canvas, "no images available", delay=0, follow = True)
+        self.tt = Dateimeister.ToolTip(self.target_canvas, "no images available", delay=0, follow = True)
 
         self.list_source_imagefiles = []
         self.list_target_images = []
         self.select_ctr = 0 # to keep track of sequence of selection in order to drop images to target in order of selection
+        self.event = None
+        # Create the context menues
+        self.context_menu_source = tk.Menu(self.source_canvas, tearoff=0)
+        self.context_menu_source.add_command(label="Show"   , command=self.canvas_image_show)    
+        self.context_menu_target = tk.Menu(self.target_canvas, tearoff=0)
+        self.context_menu_target.add_command(label="Show"   , command=self.canvas_image_show)  
+        self.timestamp = datetime.now() 
+        
        
+    def show_context_menu_source(self, event):
+        # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
+        self.event = event
+        text = "no image available"
+        # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
+        canvas_x = self.source_canvas.canvasx(event.x)
+        canvas_y = self.source_canvas.canvasy(event.y)
+        if (closest := self.source_canvas.find_closest(self.source_canvas.canvasx(event.x), self.source_canvas.canvasy(event.y))):
+            image_id = closest[0]
+            img      = self.dict_source_images[image_id]
+            text     = img.get_filename()
+        self.context_menu_source.entryconfig(1, label = "Show " + text)
+        self.context_menu_source.post(event.x_root, event.y_root)
+    
+    def show_context_menu_target(self, event):
+        # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
+        self.event = event
+        text = "no image available"
+        # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
+        canvas_x = self.target_canvas.canvasx(event.x)
+        canvas_y = self.target_canvas.canvasy(event.y)
+        if (closest := self.target_canvas.find_closest(self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y))):
+            image_id = closest[0]
+            img      = self.dict_target_images[image_id]
+            text     = img.get_filename()
+        self.context_menu_target.entryconfig(1, label = "Show " + text)
+        self.context_menu_target.post(event.x_root, event.y_root)
+
+    def tooltip_imagefile_source(self, event):
+        tsnow = datetime.now()
+        tdiff = abs(tsnow - self.timestamp)
+        if  tdiff.microseconds > 100000:
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            self.timestamp = tsnow
+        else:
+            return
+        # Tooltip
+        text = "no image available"
+        if (closest := self.source_canvas.find_closest(self.source_canvas.canvasx(event.x), self.source_canvas.canvasy(event.y))):
+            image_id = closest[0]
+            img      = self.dict_source_images[image_id]
+            text     = img.get_filename()
+            if text != self.tooltiptext_st:
+                self.st.update(text)
+                self.tooltiptext_st = text
+
+    def tooltip_imagefile_target(self, event):
+        tsnow = datetime.now()
+        tdiff = abs(tsnow - self.timestamp)
+        if  tdiff.microseconds > 100000:
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            self.timestamp = tsnow
+        else:
+            return
+        # Tooltip
+        text = "no image available"
+        if (closest := self.target_canvas.find_closest(self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y))):
+            image_id = closest[0]
+            img      = self.dict_target_images[image_id]
+            text     = img.get_filename()
+            if text != self.tooltiptext_tt:
+                self.tt.update(text)
+                self.tooltiptext_tt = text
+                       
+    def canvas_image_show(self):
+        # placeholder for call full screen display of image
+        print("Context menu show")
+        #self.canvas_show(self.event)
+
+
     def load_images(self):
         self.list_source_imagefiles = []
         directory = filedialog.askdirectory()
@@ -160,7 +251,7 @@ class ImageApp:
             self.drag_started_in = "target"
             self.selection(event, self.target_canvas, self.dict_target_images, action.PRESS)
         else:
-            #print("Event not in canvas")
+            #rint("Event not in canvas")
             self.drag_started_in = ""
             True
 
@@ -180,7 +271,7 @@ class ImageApp:
         if (closest := canvas.find_closest(canvas.canvasx(event.x), canvas.canvasy(event.y))):
             image_id = closest[0]
             img      = dict_images[image_id]
-            print("closest Image has ID: ", image_id, " closest: ", str(closest))
+            print("closest Image has ID: ", image_id, " closest: ", str(closest), " Filename: ", str(img.get_filename()))
             # when button1 clicked, set image. On release check if mouse event is on this image. If so unselect else leave selection because this is a drag operation
             release_image = None # this is the image where mouse is released
             same = False
@@ -198,7 +289,7 @@ class ImageApp:
                 selected = False
             if ctrl_pressed == False:
                 self.unselect_all(dict_images, canvas)
-            print ("*** Action is: ", str(action), " Selected = ", str(selected), " actual image is: ", str(img), " saved image is: ", str(self.image_clicked), " same = ", str(same))
+            print ("*** Action is: ", str(action), " Selected = ", str(selected), " actual image is: ", str(img.get_filename()), " saved image is: ", str(self.image_clicked), " same = ", str(same))
             if not selected:
                 if action == action.PRESS:
                     self.select_image(img, canvas)
@@ -287,8 +378,8 @@ class ImageApp:
                 print("After Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
             # rebuild target canvas, refresh dicts
             self.dict_target_images, self.dict_id_index = self.display_image_objects(self.list_target_images, self.target_canvas)
-            #for t in self.list_target_images:
-            #    print("After Target image: ", t.get_filename())
+            for t in self.dict_target_images:
+                print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
 
 
     def find_closest_item(self, event, rect_canvas, canvas, dict_images):
