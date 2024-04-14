@@ -294,8 +294,8 @@ class ImageApp:
             if ctrl_pressed == False:
                 #print("unselect all: ", str(dict_images))
                 self.unselect_all(dict_images, canvas)
-            print ("*** Action is: ", str(action), " Selected = ", str(selected), " actual image is: ", str(img.get_filename()), \
-              " saved image is: ", str(self.image_clicked), " same = ", str(same), " ctrl_pressed = ", str(ctrl_pressed))
+            print ("***** Action is: "+ str(action)+ ", Selected = "+ str(selected)+ ", actual image is: "+ str(img.get_filename())+ \
+              ", saved image is: " + (self.image_clicked.get_filename() if self.image_clicked is not None else "None") + ", same = "+ str(same)+ ", ctrl_pressed = "+ str(ctrl_pressed))
             if not selected:
                 if action == action.PRESS:
                     self.select_image(img, canvas)
@@ -431,7 +431,7 @@ class ImageApp:
     def unselect_all(self, dict_images, canvas):
         for i in dict_images:
             image = dict_images[i]
-            print("Unselect: ", str(image.get_filename()))
+            #print("Unselect: ", str(image.get_filename()))
             image.unselect(canvas)
         #clear list 
         #reset counter
