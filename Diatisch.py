@@ -126,7 +126,7 @@ class ImageApp:
 
         #self.source_canvas.bind("<ButtonPress-1>", self.start_drag)
         #self.target_canvas.bind("<ButtonRelease-1>", self.drop)
-        #self.target_canvas.bind("<B1-Motion>", self.on_motion)
+        self.target_canvas.bind("<B1-Motion>", self.on_motion)
         self.root.bind("<ButtonPress-1>", self.start_drag)
         self.root.bind("<ButtonRelease-1>", self.drop)
 
@@ -256,7 +256,9 @@ class ImageApp:
             True
 
     def on_motion(self, event):
-        pass
+        if self.drag_started_in == "target":
+            #print("Drag Motion in Target")
+            True
     
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
         # returns True if no further processing required else False (rebuild target-cancvas
@@ -332,7 +334,8 @@ class ImageApp:
             print ("Drop event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
             print ("Target canvasx: ", str(self.target_canvas.canvasx(event.x)), "canvasy: ", str(self.target_canvas.canvasy(event.y)))
             # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
-            canvas_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE)            
+            canvas_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
+            print("canvas_rebuild_required = ", str(canvas_rebuild_required))
             if self.drag_started_in == "source": # drop images from source
                 #for t in self.list_target_images:
                 #    print("Before Target image: ", t.get_filename())
@@ -351,6 +354,7 @@ class ImageApp:
                 
         else:
             print("Drop-Event not in target canvas")
+        self.drag_started_in = ""
 
     def update_target_canvas(self, event, dict_images, target_rect, move = False):
         list_dragged_images = []
