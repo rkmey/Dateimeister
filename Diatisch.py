@@ -28,6 +28,7 @@ class MyImage:
         self.canvas = canvas
         self.selected = 0
         self.unselect(canvas)
+        self.was_selected = False
     def get_filename(self):
         return self.filename
     def get_image(self):
@@ -122,7 +123,6 @@ class ImageApp:
         self.source_row, self.source_col = 0, 0
         self.target_row, self.target_col = 0, 0
         self.drag_started_in = ""
-        self.image_clicked = None # when button1 clicked, set image. On release check if mouse event is on this image. If so unselect elseleave selection because this is a drag operation
 
         #self.source_canvas.bind("<ButtonPress-1>", self.start_drag)
         #self.target_canvas.bind("<ButtonRelease-1>", self.drop)
@@ -151,6 +151,8 @@ class ImageApp:
         self.context_menu_target = tk.Menu(self.target_canvas, tearoff=0)
         self.context_menu_target.add_command(label="Show"   , command=self.canvas_image_show)  
         self.timestamp = datetime.now() 
+        self.image_press = None
+        self.image_release = None
         
        
     def show_context_menu_source(self, event):
@@ -242,14 +244,27 @@ class ImageApp:
         #print ("target_canvas: ", str(target_rect))
         #print ("event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
         #print ("Source canvasx: ", str(self.source_canvas.canvasx(event.x)), "canvasy: ", str(self.source_canvas.canvasy(event.y)))
+        self.image_press = None
         if (self.check_event_in_rect(event, source_rect)): # select Image(s)
             #print("Event in source_canvas")
             self.drag_started_in = "source"
-            self.selection(event, self.source_canvas, self.dict_source_images, action.PRESS)
+            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, source_rect, self.source_canvas, self.dict_source_images)
+            if img_closest_id > 0:
+                self.image_press = self.dict_source_images[img_closest_id]
+                print("image found in source canvas, action = PRESS: ", self.image_press.get_filename())
+                self.selection(event, self.source_canvas, self.dict_source_images, action.PRESS)
+            else: # do nothing
+                print("no image found in source canvas, action = PRESS")
         elif (self.check_event_in_rect(event, target_rect)):
             #print("Event in target_canvas")
             self.drag_started_in = "target"
-            self.selection(event, self.target_canvas, self.dict_target_images, action.PRESS)
+            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
+            if img_closest_id > 0:
+                self.image_press = self.dict_target_images[img_closest_id]
+                print("image found in target canvas, action = PRESS: ", self.image_press.get_filename())
+                self.selection(event, self.target_canvas, self.dict_target_images, action.PRESS)
+            else: # do nothing
+                print("no image found in target canvas, action = PRESS")
         else:
             #rint("Event not in canvas")
             self.drag_started_in = ""
@@ -262,65 +277,73 @@ class ImageApp:
     
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
         # returns True if no further processing required else False (rebuild target-cancvas
-        # if drag across canvasses unset self.image_clicked because reaction to release will not do this. No further action
-        if (action == action.RELEASE and ((self.drag_started_in == "source" and canvas != self.source_canvas) or (self.drag_started_in == "target" and canvas != self.target_canvas))):
-            print("Across drag, dont select / unselect")
-            self.image_clicked = None
-            if self.drag_started_in == "source" and canvas != self.source_canvas:
-                return True # no further action for selct but continue processing of drag from source to target
-            elif self.drag_started_in == "target" and canvas != self.target_canvas: # Drag from target to source, irrelevant, no further processing
-                return False
-            else:
-                return False
+        img = self.image_press
         if event.state & 0x4: # ctrl-key is pressed 
             ctrl_pressed = True
         else:
             ctrl_pressed = False
-        canvas_rebuild_required = False
-        if (closest := canvas.find_closest(canvas.canvasx(event.x), canvas.canvasy(event.y))):
-            image_id = closest[0]
-            img      = dict_images[image_id]
-            print("closest Image has ID: ", image_id, " closest: ", str(closest), " Filename: ", str(img.get_filename()))
-            # when button1 clicked, set image. On release check if mouse event is on this image. If so unselect else leave selection because this is a drag operation
+        canvas_target_rebuild_required = False
+        if self.image_press != self.image_release: # same image
             same = False
-            if self.image_clicked is not None:
-                if self.image_clicked != img:
-                    img = self.image_clicked
-                    same = False
-                else:
-                    same = True
-            if img.is_selected(): # save state before call to unselect_all
-                selected = True
-            else:
-                selected = False
-            if ctrl_pressed == False:
-                #print("unselect all: ", str(dict_images))
-                self.unselect_all(dict_images, canvas)
-            print ("***** Action is: "+ str(action)+ ", Selected = "+ str(selected)+ ", actual image is: "+ str(img.get_filename())+ \
-              ", saved image is: " + (self.image_clicked.get_filename() if self.image_clicked is not None else "None") + ", same = "+ str(same)+ ", ctrl_pressed = "+ str(ctrl_pressed))
-            if not selected:
-                if action == action.PRESS:
-                    self.select_image(img, canvas)
-                    self.image_clicked = None # the subsequent release must not unselect image
-            else: # selected
-                if action == action.PRESS:
-                    self.select_image(img, canvas)
-                    self.image_clicked = img
-                else: # action.RELEASE:
-                # unselect only if actual image is the same as before
-                    if self.image_clicked is None: 
-                        self.select_image(img, canvas)
-                    else:
-                        if same:
-                            self.unselect_image(img, canvas)
-                        else:
-                            self.select_image(img, canvas)
-                            canvas_rebuild_required = True # drop image requires action
-                    self.image_clicked = None
         else:
-            #print("no closest image")
+            same = True
+        if img.is_selected(): # save state before call to unselect_all
+            selected = True
+        else:
+            selected = False
+        if ctrl_pressed == False:
+            #print("unselect all: ", str(dict_images))
+            self.unselect_all(dict_images, canvas)
             True
-        return canvas_rebuild_required
+        print ("***** Action is: "+ str(action)+ ", Selected = "+ str(selected)+ ", actual image is: "+ str(img.get_filename())+ \
+          ", image press is: " + (self.image_press.get_filename() if self.image_press is not None else "None") + ", same = "+ str(same)+ ", ctrl_pressed = "+ str(ctrl_pressed), \
+          ", was_selected = " + str(img.was_selected))
+        if selected:
+            print("Sy")
+            if action == action.PRESS:
+                print("SyP")
+                img.was_selected = True
+                self.select_image(img, canvas) # select because unselect all has unselected this image
+            else: # action.RELEASE:
+            # unselect only if actual image is the same as before
+                print("SyR")
+                if same:
+                    print("SyRSy")
+                    if img.was_selected:
+                        print("SyRSyWy")
+                        self.unselect_image(img, canvas)
+                    else:
+                        print("SyRSyWn")
+                        img.was_selected = True
+                        self.select_image(img, canvas) # select because unselect all has unselected this image
+                else:
+                    print("SyRSn")
+                    self.select_image(img, canvas)
+                    canvas_target_rebuild_required = True # drop image requires action
+
+        else: # not selected
+            print("Sn")
+            if action == action.PRESS:
+                print("SnP")
+                self.select_image(img, canvas)
+                img.was_selected = False
+            else: # action.RELEASE:
+            # unselect only if actual image is the same as before
+                print("SnR")
+                if same:
+                    print("SnRSy")
+                    if img.was_selected:
+                        print("SnRSyWy")
+                        self.unselect_image(img, canvas)
+                    else:
+                        print("SnRSyWn")
+                        img.was_selected = True
+                        self.select_image(img, canvas) # select because unselect all has unselected this image
+                else:
+                    print("SnRSn")
+                    self.select_image(img, canvas)
+                    canvas_target_rebuild_required = True # drop image requires action
+        return canvas_target_rebuild_required
     
     def drop(self, event):
         # check if mouse is on target canvas
@@ -329,28 +352,40 @@ class ImageApp:
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
         #print("Target rect is: ", str(target_rect))
         index = 0
+        self.image_release = None
         if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
             print("*** Drop Event in target_canvas")
             print ("Drop event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
             print ("Target canvasx: ", str(self.target_canvas.canvasx(event.x)), "canvasy: ", str(self.target_canvas.canvasy(event.y)))
+            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
+            if img_closest_id > 0:
+                self.image_release = self.dict_target_images[img_closest_id]
+                print("image found in target canvas, action = RELEASE: ", self.image_release.get_filename())
+            else: # do nothing
+                print("no image found in source canvas, action = RELEASE")
             # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
-            canvas_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
-            print("canvas_rebuild_required = ", str(canvas_rebuild_required))
+            canvas_target_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
+            print("canvas_target_rebuild_required = ", str(canvas_target_rebuild_required))
             if self.drag_started_in == "source": # drop images from source
                 #for t in self.list_target_images:
                 #    print("Before Target image: ", t.get_filename())
                 # fill list of dragged images by checking if selected
                 self.update_target_canvas(event, self.dict_source_images, target_rect)
             elif self.drag_started_in == "target": # move images within target
-                if canvas_rebuild_required:
+                if canvas_target_rebuild_required:
                     self.update_target_canvas(event, self.dict_target_images, target_rect, True)
                 
             print("Drag Done.")
                 
         elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
             print("Drop Event in source")
-            # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
-            self.selection(event, self.source_canvas, self.dict_source_images, action.RELEASE)            
+            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, source_rect, self.source_canvas, self.dict_source_images)
+            if img_closest_id > 0:
+                self.image_release = self.dict_source_images[img_closest_id]
+                print("image found in source canvas, action = RELEASE: ", self.image_release.get_filename())
+                canvas_target_rebuild_required = self.selection(event, self.source_canvas, self.dict_source_images, action.RELEASE)
+            else: # do nothing
+                print("no image found in source canvas, action = PRESS")
                 
         else:
             print("Drop-Event not in target canvas")
@@ -415,7 +450,7 @@ class ImageApp:
         dist_event_left = 0
         dist_event_right = 0
         for id in dict_images:
-            print("Dict Id: ", id, " BBOX: ", str(canvas.bbox(id)))
+            #print("Dict Id: ", id, " BBOX: ", str(canvas.bbox(id)))
             pos_border_left   = canvas.bbox(id)[0] - current_scroll_x
             pos_border_right  = canvas.bbox(id)[2] - current_scroll_x
             pos_border_top    = canvas.bbox(id)[1] - current_scroll_y
