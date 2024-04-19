@@ -361,19 +361,19 @@ class ImageApp:
             if img_closest_id > 0:
                 self.image_release = self.dict_target_images[img_closest_id]
                 print("image found in target canvas, action = RELEASE: ", self.image_release.get_filename())
-            else: # do nothing
-                print("no image found in source canvas, action = RELEASE")
-            # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
-            canvas_target_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
-            print("canvas_target_rebuild_required = ", str(canvas_target_rebuild_required))
             if self.drag_started_in == "source": # drop images from source
                 #for t in self.list_target_images:
                 #    print("Before Target image: ", t.get_filename())
                 # fill list of dragged images by checking if selected
                 self.update_target_canvas(event, self.dict_source_images, target_rect)
             elif self.drag_started_in == "target": # move images within target
+                # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
+                canvas_target_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
+                print("canvas_target_rebuild_required = ", str(canvas_target_rebuild_required))
                 if canvas_target_rebuild_required:
                     self.update_target_canvas(event, self.dict_target_images, target_rect, True)
+            else: # do nothing
+                print("no image found in source canvas, action = RELEASE")
                 
             print("Drag Done.")
                 
