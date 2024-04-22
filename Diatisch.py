@@ -10,6 +10,9 @@ from enum import Enum
 class action(Enum):
     PRESS   = 1
     RELEASE = 2
+class dragposition(Enum):
+    BEFORE  = 1
+    BEHIND  = 2
 
 class ScrollableCanvas(tk.Canvas):
     def __init__(self, master, **kwargs):
@@ -118,7 +121,6 @@ class ImageApp:
 
         self.dict_source_images = {}
         self.dict_target_images = {}
-        self.dict_id_index = {}
 
         self.source_row, self.source_col = 0, 0
         self.target_row, self.target_col = 0, 0
@@ -277,12 +279,14 @@ class ImageApp:
     
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
         # returns True if no further processing required else False (rebuild target-cancvas
+        canvas_target_rebuild_required = False
+        if self.image_press is None: # no selection possible
+            return canvas_target_rebuild_required
         img = self.image_press
         if event.state & 0x4: # ctrl-key is pressed 
             ctrl_pressed = True
         else:
             ctrl_pressed = False
-        canvas_target_rebuild_required = False
         if self.image_press != self.image_release: # same image
             same = False
         else:
@@ -353,7 +357,6 @@ class ImageApp:
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
         #print("Target rect is: ", str(target_rect))
-        index = 0
         self.image_release = None
         if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
             print("*** Drop Event in target_canvas")
@@ -404,31 +407,61 @@ class ImageApp:
             # get id, distances of image under drop event
             img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
             
+            dragpos = dragposition.BEFORE
+            set_dragged_filenames = set() # create an empty set
             if img_closest_id > 0:
                 img_closest = self.dict_target_images[img_closest_id]
-                index = self.dict_id_index[img_closest_id]
-                print("closest Target Image has ID: ", img_closest_id, " Index: ", str(index), \
-                  " Filename: " + img_closest.get_filename(), " dist left: ", str(dist_event_left), " dist right: ", str(dist_event_right))
+                file_at_dragposition = img_closest.get_filename()
+                if dist_event_left > dist_event_right:
+                    dragpos = dragposition.BEHIND # insert BEHIND hit image
+                print("closest Target Image has ID: ", img_closest_id, " Filename: " + file_at_dragposition, \
+                " dist left: ", str(dist_event_left), " dist right: ", str(dist_event_right), " dragposition: ", str(dragpos))
             else: # no closest image, append dragged images to existing list
                 print("No closest Target")
-                index = 0
                 
-            # now insert list of dragged images in target list. Index is in dict_id_index
-            list_dragged_images.sort(key=lambda a: int(a.selected))
-            print("list dragged images: " + str(list_dragged_images))
-            # append dragged images to list_target_images
-            if dist_event_left > dist_event_right:
-                index += 1 # insert BEHIND hit image
-            self.list_target_images[index:index] = list_dragged_images
+            # now insert list of dragged images in target list, before or behind file_at_dragposition
             for i in self.list_target_images:
                 print("Before Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " selected: ", str(i.is_selected()))
-            # if move = True, delete selected images from dict_images as move means insert (already done) and then remove in the original location
-            if move:
-                self.list_target_images[:] = [tup for tup in self.list_target_images if not tup in list_dragged_images]
+            list_dragged_images.sort(key=lambda a: int(a.selected))
+            print("list dragged images: " + str(list_dragged_images))
+            # we need a SET of dragged filenames
+            set_dragged_filenames.clear()
+            for i in list_dragged_images:
+                set_dragged_filenames.add(i.get_filename())
+            # insert dragged images into list_target_images
+            # we iterate over list_target_images
+            #   if filename in list_dragged_images: next(we don't want it twice)
+            #   else if filename = file_at_dragposition
+            #     if dragpos = BEFORE, insert list_dragged_images, insert filename
+            #     else: insert filename, insert list_dragged_images
+            #   else insert filename
+            if self.list_target_images == []:
+                for i in list_dragged_images:
+                    self.list_target_images.append(i)
+            else:
+                list_temp = []
+                for i in self.list_target_images:
+                    thisfile = i.get_filename()
+                    if thisfile ==  file_at_dragposition:
+                        if dragpos == dragposition.BEFORE:
+                            for j in list_dragged_images:
+                                list_temp.append(j)
+                            if thisfile not in set_dragged_filenames:
+                                list_temp.append(i)
+                        else: # dragposition.BEHIND
+                            if thisfile not in set_dragged_filenames:
+                                list_temp.append(i)
+                            for j in list_dragged_images:
+                                list_temp.append(j)
+                    elif thisfile not in set_dragged_filenames: # skip if in set_dragged_filenames
+                        list_temp.append(i)
+                
+                self.list_target_images = list_temp
+            print("list_target_images: ", str(self.list_target_images))
             for i in self.list_target_images:
                 print("After Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
             # rebuild target canvas, refresh dicts
-            self.dict_target_images, self.dict_id_index = self.display_image_objects(self.list_target_images, self.target_canvas)
+            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
             for t in self.dict_target_images:
                 print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
 
@@ -565,8 +598,6 @@ class ImageApp:
         col  = 0
         canvas.delete("all")
         dict_images = {}
-        dict_id_index = {} # for inserting images we have to know which inex in list_obj belongs to id of the image
-        index = 0
         for obj in list_obj:
             #print("try to show image: " , obj.get_filename())
             photo = obj.get_image()
@@ -595,15 +626,13 @@ class ImageApp:
                 row += 1
                 xpos = 0
                 ypos += self.row_height
-            dict_id_index[img_id] = index
-            index += 1
         canvas.update()
         canvas.configure(scrollregion=canvas.bbox("all"))
         #for t in dict_images:
         #    f = dict_images[t].get_filename() 
         #    print("    dict_images id: ", str(t), " filename: " , f)
         #self.select_all(list_images, canvas)
-        return dict_images, dict_id_index
+        return dict_images
 
 
 if __name__ == "__main__":
