@@ -296,7 +296,9 @@ class ImageApp:
             self.unselect_all(dict_images, canvas)
             True
         print ("***** Action is: "+ str(action)+ ", Selected = "+ str(selected)+ ", actual image is: "+ str(img.get_filename())+ \
-          ", image press is: " + (self.image_press.get_filename() if self.image_press is not None else "None") + ", same = "+ str(same)+ ", ctrl_pressed = "+ str(ctrl_pressed), \
+          ", image press is: " + (self.image_press.get_filename() if self.image_press is not None else "None") + \
+          ", image  release: " + (self.image_release.get_filename() if self.image_release is not None else "None") + \
+          ", same = "+ str(same)+ ", ctrl_pressed = "+ str(ctrl_pressed), \
           ", was_selected = " + str(img.was_selected))
         if selected:
             print("Sy")
@@ -413,12 +415,13 @@ class ImageApp:
                 
             # now insert list of dragged images in target list. Index is in dict_id_index
             list_dragged_images.sort(key=lambda a: int(a.selected))
+            print("list dragged images: " + str(list_dragged_images))
             # append dragged images to list_target_images
             if dist_event_left > dist_event_right:
                 index += 1 # insert BEHIND hit image
             self.list_target_images[index:index] = list_dragged_images
             for i in self.list_target_images:
-                print("Before Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
+                print("Before Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " selected: ", str(i.is_selected()))
             # if move = True, delete selected images from dict_images as move means insert (already done) and then remove in the original location
             if move:
                 self.list_target_images[:] = [tup for tup in self.list_target_images if not tup in list_dragged_images]
