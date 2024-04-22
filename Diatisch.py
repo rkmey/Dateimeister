@@ -410,6 +410,7 @@ class ImageApp:
             dragpos = dragposition.BEFORE
             set_dragged_filenames = set() # create an empty set
             if img_closest_id > 0:
+                no_target_image = False
                 img_closest = self.dict_target_images[img_closest_id]
                 file_at_dragposition = img_closest.get_filename()
                 if dist_event_left > dist_event_right:
@@ -418,6 +419,7 @@ class ImageApp:
                 " dist left: ", str(dist_event_left), " dist right: ", str(dist_event_right), " dragposition: ", str(dragpos))
             else: # no closest image, append dragged images to existing list
                 print("No closest Target")
+                no_target_image = True
                 
             # now insert list of dragged images in target list, before or behind file_at_dragposition
             for i in self.list_target_images:
@@ -435,7 +437,7 @@ class ImageApp:
             #     if dragpos = BEFORE, insert list_dragged_images, insert filename
             #     else: insert filename, insert list_dragged_images
             #   else insert filename
-            if self.list_target_images == []:
+            if self.list_target_images == [] or no_target_image: #initial drag from source or drop outside images
                 for i in list_dragged_images:
                     self.list_target_images.append(i)
             else:
