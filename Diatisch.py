@@ -397,13 +397,24 @@ class ImageApp:
         self.drag_started_in = ""
 
     def update_target_canvas(self, event, dict_images, target_rect, move = False):
+        # we want to know if filename of dragged images from source_canvas already exist. If so we don't want to drag them
+        # may be in the future we will allow this but we have to rename them because Diatisch relies on uniqueness of filenames
+        set_target_filenames = set() # create an empty set
+        set_target_filenames.clear()
+        if self.drag_started_in == "source":
+            for i in self.list_target_images:
+                set_target_filenames.add(i.get_filename())
+
         list_dragged_images = []
         for i in dict_images:
             img = dict_images[i]
             if img.is_selected():
-                list_dragged_images.append(img)
+                if img.get_filename() not in set_target_filenames: # skip if already exists
+                    list_dragged_images.append(img)
+                else:
+                    print("Dragged image: ", img.get_filename(), " skipped because it already exists")
         if list_dragged_images: #true when not empty
-            
+
             # get id, distances of image under drop event
             img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
             
@@ -461,6 +472,12 @@ class ImageApp:
                 self.list_target_images = list_temp
             print("list_target_images: ", str(self.list_target_images))
             for i in self.list_target_images:
+                # for convenience we select all fragged images and unselect LL OTHERS
+                thisfile = i.get_filename()
+                if thisfile in set_dragged_filenames: # select
+                    i.select(self.target_canvas, self.select_ctr)
+                else:
+                    i.unselect(self.target_canvas)
                 print("After Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
             # rebuild target canvas, refresh dicts
             self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
