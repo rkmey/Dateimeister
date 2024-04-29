@@ -69,7 +69,7 @@ class ImageApp:
         self.ypos = 0
 
         self.Frame_source = tk.Frame(root)
-        self.Frame_source.place(relx=.01, rely=0.05, relheight=0.9, relwidth=0.48)
+        self.Frame_source.place(relx=.01, rely=0.05, relheight=0.85, relwidth=0.48)
         self.Frame_source.configure(relief='groove')
         self.Frame_source.configure(borderwidth="2")
         self.Frame_source.configure(relief="groove")
@@ -78,7 +78,7 @@ class ImageApp:
         self.Frame_source.configure(highlightcolor="black")
 
         self.Frame_target = tk.Frame(root)
-        self.Frame_target.place(relx=.51, rely=0.05, relheight=0.9, relwidth=0.48)
+        self.Frame_target.place(relx=.51, rely=0.05, relheight=0.85, relwidth=0.48)
         self.Frame_target.configure(relief='groove')
         self.Frame_target.configure(borderwidth="2")
         self.Frame_target.configure(relief="groove")
@@ -86,9 +86,18 @@ class ImageApp:
         self.Frame_target.configure(highlightbackground="#d9d9d9")
         self.Frame_target.configure(highlightcolor="black")
 
+        self.Frame_target_ctl = tk.Frame(root)
+        self.Frame_target_ctl.place(relx=.51, rely=0.90, relheight=0.05, relwidth=0.48)
+        self.Frame_target_ctl.configure(relief='groove')
+        self.Frame_target_ctl.configure(borderwidth="2")
+        self.Frame_target_ctl.configure(relief="groove")
+        self.Frame_target_ctl.configure(background="#d9d9d9")
+        self.Frame_target_ctl.configure(highlightbackground="#d9d9d9")
+        self.Frame_target_ctl.configure(highlightcolor="black")
+
         # canvas source with scrollbars
         self.source_canvas = ScrollableCanvas(self.Frame_source, bg="yellow")
-        self.source_canvas.place(relx=0.01, rely=0.01, relheight=.95, relwidth=.95)
+        self.source_canvas.place(relx=0.01, rely=0.01, relheight=.90, relwidth=.95)
 
         self.V_source = tk.Scrollbar(self.Frame_source, orient = tk.VERTICAL)
         self.V_source.config(command=self.source_canvas.yview)
@@ -102,7 +111,7 @@ class ImageApp:
  
         # canvas target with scrollbars
         self.target_canvas = ScrollableCanvas(self.Frame_target, bg="darkgrey")
-        self.target_canvas.place(relx=0.01, rely=0.01, relheight=.95, relwidth=.95)
+        self.target_canvas.place(relx=0.01, rely=0.01, relheight=.90, relwidth=.95)
 
         self.V_target = tk.Scrollbar(self.Frame_target, orient = tk.VERTICAL)
         self.V_target.config(command=self.target_canvas.yview)
@@ -116,6 +125,8 @@ class ImageApp:
         
         self.load_button = tk.Button(root, text="Load Images", command=self.load_images)
         self.load_button.pack()
+        self.delete_selected_button = tk.Button(self.Frame_target_ctl, text="Delete selected", command=self.delete_selected)
+        self.delete_selected_button.place(relx=.01, rely=0.01, relheight=0.98, relwidth=0.2)
 
         self.list_dragged_images = []
 
@@ -521,6 +532,9 @@ class ImageApp:
             id = 0
         
         return id, dist_event_left, dist_event_right
+
+    def delete_selected(self):
+        print("Delete Selected Pressed")
 
     def unselect_all(self, dict_images, canvas):
         for i in dict_images:
