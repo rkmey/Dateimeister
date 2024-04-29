@@ -86,8 +86,17 @@ class ImageApp:
         self.Frame_target.configure(highlightbackground="#d9d9d9")
         self.Frame_target.configure(highlightcolor="black")
 
+        self.Frame_source_ctl = tk.Frame(root)
+        self.Frame_source_ctl.place(relx=.01, rely=0.92, relheight=0.05, relwidth=0.48)
+        self.Frame_source_ctl.configure(relief='groove')
+        self.Frame_source_ctl.configure(borderwidth="2")
+        self.Frame_source_ctl.configure(relief="groove")
+        self.Frame_source_ctl.configure(background="#d9d9d9")
+        self.Frame_source_ctl.configure(highlightbackground="#d9d9d9")
+        self.Frame_source_ctl.configure(highlightcolor="black")
+
         self.Frame_target_ctl = tk.Frame(root)
-        self.Frame_target_ctl.place(relx=.51, rely=0.90, relheight=0.05, relwidth=0.48)
+        self.Frame_target_ctl.place(relx=.51, rely=0.92, relheight=0.05, relwidth=0.48)
         self.Frame_target_ctl.configure(relief='groove')
         self.Frame_target_ctl.configure(borderwidth="2")
         self.Frame_target_ctl.configure(relief="groove")
@@ -97,7 +106,7 @@ class ImageApp:
 
         # canvas source with scrollbars
         self.source_canvas = ScrollableCanvas(self.Frame_source, bg="yellow")
-        self.source_canvas.place(relx=0.01, rely=0.01, relheight=.90, relwidth=.95)
+        self.source_canvas.place(relx=0.01, rely=0.01, relheight=.92, relwidth=.95)
 
         self.V_source = tk.Scrollbar(self.Frame_source, orient = tk.VERTICAL)
         self.V_source.config(command=self.source_canvas.yview)
@@ -111,7 +120,7 @@ class ImageApp:
  
         # canvas target with scrollbars
         self.target_canvas = ScrollableCanvas(self.Frame_target, bg="darkgrey")
-        self.target_canvas.place(relx=0.01, rely=0.01, relheight=.90, relwidth=.95)
+        self.target_canvas.place(relx=0.01, rely=0.01, relheight=.92, relwidth=.95)
 
         self.V_target = tk.Scrollbar(self.Frame_target, orient = tk.VERTICAL)
         self.V_target.config(command=self.target_canvas.yview)
@@ -123,8 +132,11 @@ class ImageApp:
         self.target_canvas.config(xscrollcommand=self.H_target.set)
         self.H_target.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.98, anchor = tk.SW)
         
-        self.load_button = tk.Button(root, text="Load Images", command=self.load_images)
-        self.load_button.pack()
+        self.load_button = tk.Button(self.Frame_source_ctl, text="Load Images", command=self.load_images)
+        self.load_button.place(relx=.01, rely=0.01, relheight=0.98, relwidth=0.2)
+        self.select_all_button = tk.Button(self.Frame_source_ctl, text="Select all", command=self.select_all_source_images)
+        self.select_all_button.place(relx=.21, rely=0.01, relheight=0.98, relwidth=0.2)
+
         self.delete_selected_button = tk.Button(self.Frame_target_ctl, text="Delete selected", command=self.delete_selected)
         self.delete_selected_button.place(relx=.01, rely=0.01, relheight=0.98, relwidth=0.2)
 
@@ -155,6 +167,7 @@ class ImageApp:
         self.tt = Dateimeister.ToolTip(self.target_canvas, "no images available", delay=0, follow = True)
 
         self.list_source_imagefiles = []
+        self.list_source_images = []
         self.list_target_images = []
         self.select_ctr = 0 # to keep track of sequence of selection in order to drop images to target in order of selection
         self.event = None
@@ -246,7 +259,7 @@ class ImageApp:
             for img_file in image_files:
                 img_path = os.path.join(directory, img_file)
                 self.list_source_imagefiles.append(img_path)
-            self.display_images(self.list_source_imagefiles, self.dict_source_images, self.source_canvas)
+            self.list_source_images = self.display_images(self.list_source_imagefiles, self.dict_source_images, self.source_canvas)
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
 
     def start_drag(self, event):
@@ -533,6 +546,10 @@ class ImageApp:
         
         return id, dist_event_left, dist_event_right
 
+    def select_all_source_images(self):
+        print("select_all_source_images Pressed")
+        self.select_all(self.list_source_images, self.source_canvas)
+
     def delete_selected(self):
         print("Delete Selected Pressed")
 
@@ -541,15 +558,13 @@ class ImageApp:
             image = dict_images[i]
             #print("Unselect: ", str(image.get_filename()))
             image.unselect(canvas)
-        #clear list 
         #reset counter
         self.select_ctr = 0
     
-    def select_all(self, dict_images, canvas):
-        for i in dict_images:
-            image = dict_images[i]
+    def select_all(self, list_images, canvas):
+        for i in list_images:
             self.select_ctr += 1
-            image.select(canvas, self.select_ctr)
+            i.select(canvas, self.select_ctr)
 
     def select_image(self, image, canvas):
         self.select_ctr += 1
@@ -586,6 +601,7 @@ class ImageApp:
         row  = 0
         col  = 0
         canvas.delete("all")
+        list_source_images = []
         for img_path in list_imagefiles:
             #print("try to show image: " , img_path)
             img = Image.open(img_path)
@@ -620,9 +636,10 @@ class ImageApp:
                 row += 1
                 xpos = 0
                 ypos += self.row_height
+            list_source_images.append(i)
         canvas.update()
         canvas.configure(scrollregion=canvas.bbox("all"))
-        #self.select_all(list_images, canvas)
+        return list_source_images
 
     def display_image_objects(self, list_obj, canvas): # display list of images on canvas, use already converted photos in objects, better performance
         xpos = 0
@@ -664,7 +681,6 @@ class ImageApp:
         #for t in dict_images:
         #    f = dict_images[t].get_filename() 
         #    print("    dict_images id: ", str(t), " filename: " , f)
-        #self.select_all(list_images, canvas)
         return dict_images
 
 
