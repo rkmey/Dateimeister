@@ -18,6 +18,7 @@ class ScrollableCanvas(tk.Canvas):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
         self.bind("<Configure>", self.on_configure)
+        self.select_ctr = 0
 
     def on_configure(self, event):
         self.configure(scrollregion=self.bbox("all"))
@@ -32,6 +33,7 @@ class MyImage:
         self.selected = 0
         self.unselect(canvas)
         self.was_selected = False
+        
     def get_filename(self):
         return self.filename
     def get_image(self):
@@ -132,13 +134,25 @@ class ImageApp:
         self.target_canvas.config(xscrollcommand=self.H_target.set)
         self.H_target.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.98, anchor = tk.SW)
         
+        # source control buttons
+        anz_button_source = 5
+        buttonpos_source  = 0.0
+        relwidth_source   = 1 / anz_button_source
         self.load_button = tk.Button(self.Frame_source_ctl, text="Load Images", command=self.load_images)
-        self.load_button.place(relx=.01, rely=0.01, relheight=0.98, relwidth=0.2)
+        self.load_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
+        buttonpos_source += relwidth_source
         self.select_all_button = tk.Button(self.Frame_source_ctl, text="Select all", command=self.select_all_source_images)
-        self.select_all_button.place(relx=.21, rely=0.01, relheight=0.98, relwidth=0.2)
+        self.select_all_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
+        buttonpos_source += relwidth_source
+        self.select_all_button = tk.Button(self.Frame_source_ctl, text="Copy selected", command=self.copy_selected_source_images)
+        self.select_all_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
 
+        # target control buttons
+        anz_button_target = 5
+        buttonpos_target  = 0.0
+        relwidth_target   = 1 / anz_button_source
         self.delete_selected_button = tk.Button(self.Frame_target_ctl, text="Delete selected", command=self.delete_selected)
-        self.delete_selected_button.place(relx=.01, rely=0.01, relheight=0.98, relwidth=0.2)
+        self.delete_selected_button.place(relx=buttonpos_target, rely=0.01, relheight=0.98, relwidth=relwidth_target)
 
         self.list_dragged_images = []
 
@@ -169,7 +183,6 @@ class ImageApp:
         self.list_source_imagefiles = []
         self.list_source_images = []
         self.list_target_images = []
-        self.select_ctr = 0 # to keep track of sequence of selection in order to drop images to target in order of selection
         self.event = None
         # Create the context menues
         self.context_menu_source = tk.Menu(self.source_canvas, tearoff=0)
@@ -375,6 +388,18 @@ class ImageApp:
                     canvas_target_rebuild_required = True # drop image requires action
         return canvas_target_rebuild_required
     
+    def copy_selected_source_images(self): # copy selected images from source to target
+        # find last selected target image, convert into event because we want to use the existing functions for dragging by mouse
+        ii = 0
+        index = -1 # index of selected Image, the last will and shall win
+        for i in self.list_target_images:
+            if i.is_selected():
+                print("copy_selected_source_images, is_selected: ", i.get_filename())
+                index = ii
+            ii += 1
+        print("copy_selected_source_images, index of last selected = ", str(index))
+                
+
     def drop(self, event):
         # check if mouse is on target canvas
         #print("Drop")
@@ -434,7 +459,14 @@ class ImageApp:
             img = dict_images[i]
             if img.is_selected():
                 if img.get_filename() not in set_target_filenames: # skip if already exists
-                    list_dragged_images.append(img)
+                    if self.drag_started_in == "source": # make a copy of the original source image because we need some independent attributes like selected
+                        newcopy = MyImage(img.filename, img.image, self.target_canvas, img.frameids) # make a copy of the original source image because we need some independent attributes like selected 
+                        newcopy.selected = img.selected
+                        t = newcopy
+                    else: # move within target canvas
+                        t = img
+                    list_dragged_images.append(t)
+                    print("appended to list_dragged_images: ", t.get_filename(), " selected: ", str(t.is_selected())) 
                 else:
                     print("Dragged image: ", img.get_filename(), " skipped because it already exists")
         if list_dragged_images: #true when not empty
@@ -499,7 +531,7 @@ class ImageApp:
                 # for convenience we select all fragged images and unselect LL OTHERS
                 thisfile = i.get_filename()
                 if thisfile in set_dragged_filenames: # select
-                    i.select(self.target_canvas, self.select_ctr)
+                    i.select(self.target_canvas, self.target_canvas.select_ctr)
                 else:
                     i.unselect(self.target_canvas)
                 print("After Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
@@ -559,23 +591,23 @@ class ImageApp:
             #print("Unselect: ", str(image.get_filename()))
             image.unselect(canvas)
         #reset counter
-        self.select_ctr = 0
+        canvas.select_ctr = 0
     
     def select_all(self, list_images, canvas):
         for i in list_images:
-            self.select_ctr += 1
-            i.select(canvas, self.select_ctr)
+            canvas.select_ctr += 1
+            i.select(canvas, canvas.select_ctr)
 
     def select_image(self, image, canvas):
-        self.select_ctr += 1
-        image.select(canvas, self.select_ctr)
+        canvas.select_ctr += 1
+        image.select(canvas, canvas.select_ctr)
 
     def toggle_selection(self, image, canvas):
         if image.is_selected():
             image.unselect(canvas)
         else: 
-            self.select_ctr += 1
-            image.select(canvas, self.select_ctr)
+            canvas.select_ctr += 1
+            image.select(canvas, canvas.select_ctr)
 
     def unselect_image(self, image, canvas):
         image.unselect(canvas)
@@ -668,7 +700,7 @@ class ImageApp:
             dict_images[img_id] = i
             #print("   Insert into dict key: ", str(img_id), " filename: " , i.get_filename())
             if(obj.is_selected()):
-                i.select(canvas, 1)
+                i.select(canvas, canvas.select_ctr)
             xpos += display_width
             col += 1
             if col >= self.n:
@@ -676,6 +708,7 @@ class ImageApp:
                 row += 1
                 xpos = 0
                 ypos += self.row_height
+            obj = i
         canvas.update()
         canvas.configure(scrollregion=canvas.bbox("all"))
         #for t in dict_images:
