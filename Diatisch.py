@@ -51,6 +51,8 @@ class MyImage:
             return True
         else:
             return False
+    def set_frameids(self, frameids):
+        self.frameids = frameids
 
      
 class ImageApp:
@@ -463,6 +465,7 @@ class ImageApp:
                         newcopy = MyImage(img.filename, img.image, self.target_canvas, img.frameids) # make a copy of the original source image because we need some independent attributes like selected 
                         newcopy.selected = img.selected
                         t = newcopy
+                        #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
                     else: # move within target canvas
                         t = img
                     list_dragged_images.append(t)
@@ -531,9 +534,10 @@ class ImageApp:
                 # for convenience we select all fragged images and unselect LL OTHERS
                 thisfile = i.get_filename()
                 if thisfile in set_dragged_filenames: # select
-                    i.select(self.target_canvas, self.target_canvas.select_ctr)
+                    self.select_image(i, self.target_canvas)
+                    print("thisfile: ", thisfile, " sected: ", str(i.is_selected()), " select_ctr: ", str(self.target_canvas.select_ctr))
                 else:
-                    i.unselect(self.target_canvas)
+                    self.unselect_image(i, self.target_canvas)
                 print("After Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
             # rebuild target canvas, refresh dicts
             self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
@@ -680,6 +684,46 @@ class ImageApp:
         col  = 0
         canvas.delete("all")
         dict_images = {}
+        for i in list_obj:
+            #print("try to show image: " , i.get_filename())
+            photo = i.get_image()
+            display_width, display_height = photo.width(), photo.height()
+            img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
+            # draw rect consisting of 4 dotted lines because create rectagle does not support dotted lines
+            dist_frame = 20
+            north_west = (xpos + dist_frame, ypos + dist_frame)
+            north_east = (xpos + display_width - dist_frame, ypos + dist_frame)
+            south_west = (xpos + dist_frame, ypos + display_height - dist_frame)
+            south_east = (xpos + display_width - dist_frame, ypos + display_height - dist_frame)
+            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+            frameids = (line_north, line_east, line_south, line_west)
+            i.set_frameids(frameids)
+            dict_images[img_id] = i
+            #print("   Insert into dict key: ", str(img_id), " filename: " , obj.get_filename())
+            xpos += display_width
+            col += 1
+            if col >= self.n:
+                col = 0
+                row += 1
+                xpos = 0
+                ypos += self.row_height
+        canvas.update()
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        #for t in dict_images:
+        #    f = dict_images[t].get_filename() 
+        #    print("    dict_images id: ", str(t), " filename: " , f)
+        return dict_images
+
+    def display_image_objects_old(self, list_obj, canvas): # display list of images on canvas, use already converted photos in objects, better performance
+        xpos = 0
+        ypos = 0
+        row  = 0
+        col  = 0
+        canvas.delete("all")
+        dict_images = {}
         for obj in list_obj:
             #print("try to show image: " , obj.get_filename())
             photo = obj.get_image()
@@ -700,7 +744,7 @@ class ImageApp:
             dict_images[img_id] = i
             #print("   Insert into dict key: ", str(img_id), " filename: " , i.get_filename())
             if(obj.is_selected()):
-                i.select(canvas, canvas.select_ctr)
+                self.select_image(i, canvas)
             xpos += display_width
             col += 1
             if col >= self.n:
