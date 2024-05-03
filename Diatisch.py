@@ -268,13 +268,30 @@ class ImageApp:
 
     def load_images(self):
         self.list_source_imagefiles = []
+        self.list_source_images = []
+        self.dict_source_images = []
         directory = filedialog.askdirectory()
         if directory:
             image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
             for img_file in image_files:
                 img_path = os.path.join(directory, img_file)
                 self.list_source_imagefiles.append(img_path)
-            self.list_source_images = self.display_images(self.list_source_imagefiles, self.dict_source_images, self.source_canvas)
+                # get image
+                img = Image.open(img_path)
+                image_width_orig, image_height_orig = img.size
+                faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
+                #print("Image " + img_path + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
+                display_width  = int(image_width_orig * faktor)
+                display_height = int(image_height_orig * faktor)
+                newsize = (display_width, display_height)
+                r_img = img.resize(newsize, Image.Resampling.NEAREST)
+                photo = ImageTk.PhotoImage(r_img)
+                # insert into self.list_source_images
+                i = MyImage(img_path, photo, self.source_canvas, (0,0,0,0)) # frameids will be updated after insert in source_canvas
+                self.list_source_images.append(i)
+                
+            self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
+            self.unselect_all(self.dict_source_images, self.source_canvas)
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
 
     def start_drag(self, event):
@@ -317,7 +334,7 @@ class ImageApp:
             True
     
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
-        # returns True if no further processing required else False (rebuild target-cancvas
+        # returns True if no further processing required else False (rebuild target-canvas
         canvas_target_rebuild_required = False
         if self.image_press is None: # no selection possible
             return canvas_target_rebuild_required
@@ -631,52 +648,6 @@ class ImageApp:
         else:
             return False
 
-    def display_images(self, list_imagefiles, list_images, canvas): # display list of images on canvas
-        xpos = 0
-        ypos = 0
-        row  = 0
-        col  = 0
-        canvas.delete("all")
-        list_source_images = []
-        for img_path in list_imagefiles:
-            #print("try to show image: " , img_path)
-            img = Image.open(img_path)
-            image_width_orig, image_height_orig = img.size
-            faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
-            #print("Image " + img_path + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
-            display_width  = int(image_width_orig * faktor)
-            display_height = int(image_height_orig * faktor)
-            newsize = (display_width, display_height)
-            r_img = img.resize(newsize, Image.Resampling.NEAREST)
-            photo = ImageTk.PhotoImage(r_img)
-            img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
-            # draw rect consisting of 4 dotted lines because create rectagle does not support dotted lines
-            dist_frame = 20
-            north_west = (xpos + dist_frame, ypos + dist_frame)
-            north_east = (xpos + display_width - dist_frame, ypos + dist_frame)
-            south_west = (xpos + dist_frame, ypos + display_height - dist_frame)
-            south_east = (xpos + display_width - dist_frame, ypos + display_height - dist_frame)
-            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
-            frameids = (line_north, line_east, line_south, line_west)
-            i = MyImage(img_path, photo, canvas, frameids)
-            list_images[img_id] = i
-            
-            
-            xpos += display_width
-            col += 1
-            if col >= self.n:
-                col = 0
-                row += 1
-                xpos = 0
-                ypos += self.row_height
-            list_source_images.append(i)
-        canvas.update()
-        canvas.configure(scrollregion=canvas.bbox("all"))
-        return list_source_images
-
     def display_image_objects(self, list_obj, canvas): # display list of images on canvas, use already converted photos in objects, better performance
         xpos = 0
         ypos = 0
@@ -717,48 +688,6 @@ class ImageApp:
         #    print("    dict_images id: ", str(t), " filename: " , f)
         return dict_images
 
-    def display_image_objects_old(self, list_obj, canvas): # display list of images on canvas, use already converted photos in objects, better performance
-        xpos = 0
-        ypos = 0
-        row  = 0
-        col  = 0
-        canvas.delete("all")
-        dict_images = {}
-        for obj in list_obj:
-            #print("try to show image: " , obj.get_filename())
-            photo = obj.get_image()
-            display_width, display_height = photo.width(), photo.height()
-            img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
-            # draw rect consisting of 4 dotted lines because create rectagle does not support dotted lines
-            dist_frame = 20
-            north_west = (xpos + dist_frame, ypos + dist_frame)
-            north_east = (xpos + display_width - dist_frame, ypos + dist_frame)
-            south_west = (xpos + dist_frame, ypos + display_height - dist_frame)
-            south_east = (xpos + display_width - dist_frame, ypos + display_height - dist_frame)
-            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
-            frameids = (line_north, line_east, line_south, line_west)
-            i = MyImage(obj.get_filename(), photo, canvas, frameids)
-            dict_images[img_id] = i
-            #print("   Insert into dict key: ", str(img_id), " filename: " , i.get_filename())
-            if(obj.is_selected()):
-                self.select_image(i, canvas)
-            xpos += display_width
-            col += 1
-            if col >= self.n:
-                col = 0
-                row += 1
-                xpos = 0
-                ypos += self.row_height
-            obj = i
-        canvas.update()
-        canvas.configure(scrollregion=canvas.bbox("all"))
-        #for t in dict_images:
-        #    f = dict_images[t].get_filename() 
-        #    print("    dict_images id: ", str(t), " filename: " , f)
-        return dict_images
 
 
 if __name__ == "__main__":
