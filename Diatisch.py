@@ -547,19 +547,20 @@ class ImageApp:
                 
                 self.list_target_images = list_temp
             print("list_target_images: ", str(self.list_target_images))
+            # rebuild target canvas, refresh dicts
+            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
+            for t in self.dict_target_images:
+                print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
+            # now select all dragged images
             for i in self.list_target_images:
                 # for convenience we select all fragged images and unselect LL OTHERS
                 thisfile = i.get_filename()
+                print("After Target Image: ", thisfile, " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
                 if thisfile in set_dragged_filenames: # select
                     self.select_image(i, self.target_canvas)
                     print("thisfile: ", thisfile, " sected: ", str(i.is_selected()), " select_ctr: ", str(self.target_canvas.select_ctr))
                 else:
                     self.unselect_image(i, self.target_canvas)
-                print("After Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
-            # rebuild target canvas, refresh dicts
-            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
-            for t in self.dict_target_images:
-                print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
 
 
     def find_closest_item(self, event, rect_canvas, canvas, dict_images):
