@@ -417,6 +417,7 @@ class ImageApp:
                 index = ii
             ii += 1
         print("copy_selected_source_images, index of last selected = ", str(index))
+        self.drag_started_in = "source" # must be set for the following functions
                 
 
     def drop(self, event):
