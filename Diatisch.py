@@ -31,7 +31,6 @@ class MyImage:
         self.frameids = frameids
         self.canvas = canvas
         self.selected = 0
-        self.unselect(canvas)
         self.was_selected = False
         
     def get_filename(self):
@@ -189,11 +188,13 @@ class ImageApp:
         # Create the context menues
         self.context_menu_source = tk.Menu(self.source_canvas, tearoff=0)
         self.context_menu_source.add_command(label="Show"   , command=self.canvas_image_show)    
+        self.context_menu_source.add_command(label="Copy Selected"   , command=self.copy_selected_source_images)    
         self.context_menu_target = tk.Menu(self.target_canvas, tearoff=0)
         self.context_menu_target.add_command(label="Show"   , command=self.canvas_image_show)  
         self.timestamp = datetime.now() 
         self.image_press = None
         self.image_release = None
+        self.dist_frame = 20 # distance of dotted select frame from border in Pixels
         
        
     def show_context_menu_source(self, event):
@@ -207,7 +208,16 @@ class ImageApp:
             image_id = closest[0]
             img      = self.dict_source_images[image_id]
             text     = img.get_filename()
-        self.context_menu_source.entryconfig(1, label = "Show " + text)
+        self.context_menu_source.entryconfig(0, label = "Show " + text)
+        selected = False
+        for i in self.list_source_images:
+            if i.is_selected():
+                selected = True
+                break
+        if selected: # at least one selected
+            self.context_menu_source.entryconfig(1, state = tk.NORMAL)
+        else:
+            self.context_menu_source.entryconfig(1, state = tk.DISABLED)
         self.context_menu_source.post(event.x_root, event.y_root)
     
     def show_context_menu_target(self, event):
@@ -630,12 +640,14 @@ class ImageApp:
     
     def select_all(self, list_images, canvas):
         for i in list_images:
-            canvas.select_ctr += 1
-            i.select(canvas, canvas.select_ctr)
+            if not i.is_selected():
+                canvas.select_ctr += 1
+                i.select(canvas, canvas.select_ctr)
 
     def select_image(self, image, canvas):
-        canvas.select_ctr += 1
-        image.select(canvas, canvas.select_ctr)
+        if not image.is_selected():
+            canvas.select_ctr += 1
+            image.select(canvas, canvas.select_ctr)
 
     def toggle_selection(self, image, canvas):
         if image.is_selected():
@@ -645,7 +657,8 @@ class ImageApp:
             image.select(canvas, canvas.select_ctr)
 
     def unselect_image(self, image, canvas):
-        image.unselect(canvas)
+        if image.is_selected():
+            image.unselect(canvas)
 
     def get_root_coordinates_for_widget(self, widget):
         # return rect of widget-coordinates relative to root window
@@ -672,14 +685,13 @@ class ImageApp:
         for i in list_obj:
             #print("try to show image: " , i.get_filename())
             photo = i.get_image()
-            display_width, display_height = photo.width(), photo.height()
             img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
+            display_width, display_height = photo.width(), photo.height()
             # draw rect consisting of 4 dotted lines because create rectagle does not support dotted lines
-            dist_frame = 20
-            north_west = (xpos + dist_frame, ypos + dist_frame)
-            north_east = (xpos + display_width - dist_frame, ypos + dist_frame)
-            south_west = (xpos + dist_frame, ypos + display_height - dist_frame)
-            south_east = (xpos + display_width - dist_frame, ypos + display_height - dist_frame)
+            north_west = (xpos + self.dist_frame, ypos + self.dist_frame)
+            north_east = (xpos + display_width - self.dist_frame, ypos + self.dist_frame)
+            south_west = (xpos + self.dist_frame, ypos + display_height - self.dist_frame)
+            south_east = (xpos + display_width - self.dist_frame, ypos + display_height - self.dist_frame)
             line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
             line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
             line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
