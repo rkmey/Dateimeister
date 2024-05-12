@@ -1,6 +1,8 @@
 import os
 import tkinter as tk
+from tkinter.constants import *
 from tkinter import filedialog
+from tkinter import messagebox
 from PIL import Image, ImageTk
 import Dateimeister
 from datetime import datetime, timezone
@@ -154,6 +156,26 @@ class ImageApp:
         relwidth_target   = 1 / anz_button_source
         self.delete_selected_button = tk.Button(self.Frame_target_ctl, text="Delete selected", command=self.delete_selected)
         self.delete_selected_button.place(relx=buttonpos_target, rely=0.01, relheight=0.98, relwidth=relwidth_target)
+        buttonpos_target += relwidth_target
+        self.button_undo = tk.Button(self.Frame_target_ctl, text="Undo", command=self.button_undo_h)
+        self.button_undo.place(relx=buttonpos_target, rely=0.01, relheight=0.98, relwidth=relwidth_target)
+        buttonpos_target += relwidth_target
+        self.button_redo = tk.Button(self.Frame_target_ctl, text="Redo", command=self.button_redo_h)
+        self.button_redo.place(relx=buttonpos_target, rely=0.01, relheight=0.98, relwidth=relwidth_target)
+
+        self.button_undo.config(state = tk.DISABLED)
+        self.button_redo.config(state = tk.DISABLED)
+        self.root.bind('<Control-z>', lambda event: self.process_undo(event))
+        self.root.bind('<Control-y>', lambda event: self.process_redo(event))
+
+        # Undo /Redo control
+        self.processid_akt = 0
+        self.processid_high = 0
+        self.processid_incr = 10
+        self.dict_processid_xmlfile = {}
+        # historize initial state
+        self.historize_process()
+        # Undo /Redo control end
 
         self.list_dragged_images = []
 
@@ -713,6 +735,59 @@ class ImageApp:
         #    f = dict_images[t].get_filename() 
         #    print("    dict_images id: ", str(t), " filename: " , f)
         return dict_images
+
+    # Undo /Redo Funktionen
+    def process_undo(self, event):
+        print("ctrl_z pressed.")
+        if self.processid_akt - self.processid_incr >= self.processid_incr:
+            self.processid_akt -= self.processid_incr
+        else:
+            messagebox.showinfo("UNDO", "no further processes which can be undone", parent = self.root)
+            return
+        print (" UNDO Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
+        self.apply_process_id(self.processid_akt)
+        self.endis_buttons()
+
+    def process_redo(self, event):
+        print("ctrl_y pressed.")
+        if self.processid_akt + self.processid_incr <= self.processid_high:
+            self.processid_akt += self.processid_incr
+        else:
+            messagebox.showinfo("REDO", "no further processes which can be redone", parent = self.root)
+            return
+        print (" REDO Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
+        self.apply_process_id(self.processid_akt)
+        self.endis_buttons()
+
+    def endis_buttons(self): # disable / enable buttons depending on processids
+        if self.processid_akt - self.processid_incr >= self.processid_incr:
+            self.button_undo.config(state = NORMAL)
+        else:
+            self.button_undo.config(state = DISABLED)
+        if self.processid_akt + self.processid_incr <= self.processid_high:
+            self.button_redo.config(state = NORMAL)
+        else:
+            self.button_redo.config(state = DISABLED)
+
+
+    def apply_process_id(self, process_id):
+        print("apply_process_id, xml to apply is: ")
+        
+    def historize_process(self):
+        self.processid_high += self.processid_incr
+        self.processid_akt = self.processid_high
+        print ("Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
+
+        self.endis_buttons()
+
+    def button_undo_h(self, event = None):
+        print("Undo pressed")
+        #self.process_undo((0, 0))
+        
+    def button_redo_h(self, event = None):
+        print("Redo pressed")
+        #self.process_redo((0, 0))
+    # Ende undo /redo-Funktionen
 
 
 
