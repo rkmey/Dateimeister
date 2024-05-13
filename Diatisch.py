@@ -168,19 +168,6 @@ class ImageApp:
         self.root.bind('<Control-z>', lambda event: self.process_undo(event))
         self.root.bind('<Control-y>', lambda event: self.process_redo(event))
 
-        # Undo /Redo control
-        self.processid_akt = 0
-        self.processid_high = 0
-        self.processid_incr = 10
-        self.dict_processid_xmlfile = {}
-        # historize initial state
-        self.historize_process()
-        # Undo /Redo control end
-
-        self.list_dragged_images = []
-
-        self.dict_source_images = {}
-        self.dict_target_images = {}
 
         self.source_row, self.source_col = 0, 0
         self.target_row, self.target_col = 0, 0
@@ -203,9 +190,25 @@ class ImageApp:
         self.st = Dateimeister.ToolTip(self.source_canvas, "no images available", delay=0, follow = True)
         self.tt = Dateimeister.ToolTip(self.target_canvas, "no images available", delay=0, follow = True)
 
-        self.list_source_imagefiles = []
+        # temporary storage of dragged images while dragging
+        self.list_dragged_images = []
+
+        # dict and list of source / target images, to be historized
+        self.dict_source_images = {}
+        self.dict_target_images = {}
         self.list_source_images = []
         self.list_target_images = []
+        self.dict_processid_histobj = {} # key processid to be applied value: histobj
+
+        # Undo /Redo control
+        self.processid_akt = 0
+        self.processid_high = 0
+        self.processid_incr = 10
+        self.dict_processid_xmlfile = {}
+        # historize initial state
+        self.historize_process()
+        # Undo /Redo control end
+
         self.event = None
         # Create the context menues
         self.context_menu_source = tk.Menu(self.source_canvas, tearoff=0)
@@ -217,8 +220,7 @@ class ImageApp:
         self.image_press = None
         self.image_release = None
         self.dist_frame = 20 # distance of dotted select frame from border in Pixels
-        
-       
+
     def show_context_menu_source(self, event):
         # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
         self.event = event
@@ -299,7 +301,6 @@ class ImageApp:
 
 
     def load_images(self):
-        self.list_source_imagefiles = []
         self.list_source_images = []
         self.dict_source_images = []
         directory = filedialog.askdirectory()
@@ -307,7 +308,6 @@ class ImageApp:
             image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
             for img_file in image_files:
                 img_path = os.path.join(directory, img_file)
-                self.list_source_imagefiles.append(img_path)
                 # get image
                 img = Image.open(img_path)
                 image_width_orig, image_height_orig = img.size
@@ -325,6 +325,7 @@ class ImageApp:
             self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
             self.unselect_all(self.dict_source_images, self.source_canvas)
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
+        self.historize_process()
 
     def start_drag(self, event):
         # check where mouse is 
@@ -606,6 +607,7 @@ class ImageApp:
                 else:
                     self.unselect_image(i, self.target_canvas)
             self.file_at_dragposition = ""
+            self.historize_process()
 
 
     def find_closest_item(self, event, rect_canvas, canvas, dict_images):
@@ -771,24 +773,58 @@ class ImageApp:
 
 
     def apply_process_id(self, process_id):
-        print("apply_process_id, xml to apply is: ")
+        print("apply_process_id, id to apply is: ", process_id)
+
+        # rebuild list of images
+        list_obj_source = self.dict_processid_histobj[process_id].list_source_images
+        list_obj_target = self.dict_processid_histobj[process_id].list_target_images
+        self.list_source_images = []
+        self.list_target_images = []
+        self.dict_source_images = {}
+        self.dict_target_images = {}
+        for i in list_obj_source:
+            self.list_source_images.append(i)
+        for i in list_obj_target:
+            self.list_target_images.append(i)
+
+        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
+        self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
         
     def historize_process(self):
         self.processid_high += self.processid_incr
         self.processid_akt = self.processid_high
-        print ("Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
+        print (" Processid_akt is now: " + str(self.processid_akt))
+        h = HistObj()
+        for i in self.list_source_images:
+            h.list_source_images.append(i)
+        for i in self.list_target_images:
+            h.list_target_images.append(i)
+        #for i in self.dict_source_images:
+        #    h.dict_source_images[i] = self.dict_source_images[i]
+        #for i in self.dict_target_images:
+        #    h.dict_target_images[i] = self.dict_target_images[i]
 
+        self.dict_processid_histobj[self.processid_akt] = h
         self.endis_buttons()
 
     def button_undo_h(self, event = None):
         print("Undo pressed")
-        #self.process_undo((0, 0))
+        self.process_undo((0, 0))
         
     def button_redo_h(self, event = None):
         print("Redo pressed")
-        #self.process_redo((0, 0))
+        self.process_redo((0, 0))
     # Ende undo /redo-Funktionen
 
+class HistObj:
+    def __init__(self):
+
+        # dict and list of source / target images, to be historized
+        self.dict_source_images = {}
+        self.dict_target_images = {}
+        self.list_source_images = []
+        self.list_target_images = []
+       
 
 
 if __name__ == "__main__":
