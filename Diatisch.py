@@ -786,6 +786,9 @@ class ImageApp:
             self.list_source_images.append(i)
         for i in list_obj_target:
             self.list_target_images.append(i)
+        # restore the select counters for sequence of selection
+        self.source_canvas.select_ctr = self.dict_processid_histobj[process_id].source_select_ctr
+        self.target_canvas.select_ctr = self.dict_processid_histobj[process_id].target_select_ctr
 
         self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
         self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
@@ -803,7 +806,9 @@ class ImageApp:
         #    h.dict_source_images[i] = self.dict_source_images[i]
         #for i in self.dict_target_images:
         #    h.dict_target_images[i] = self.dict_target_images[i]
-
+        
+        h.source_select_ctr = self.source_canvas.select_ctr
+        h.target_select_ctr = self.target_canvas.select_ctr
         self.dict_processid_histobj[self.processid_akt] = h
         self.endis_buttons()
 
@@ -824,7 +829,8 @@ class HistObj:
         self.dict_target_images = {}
         self.list_source_images = []
         self.list_target_images = []
-       
+        self.source_select_ctr = 0
+        self.target_select_ctr = 0
 
 
 if __name__ == "__main__":
