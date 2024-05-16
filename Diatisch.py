@@ -27,10 +27,10 @@ class ScrollableCanvas(tk.Canvas):
         print ("<Configure> called")
 
 class MyImage:
-    def __init__(self, filename, image, canvas, frameids):
+    def __init__(self, filename, image, canvas, tag):
         self.filename = filename
         self.image = image
-        self.frameids = frameids
+        self.tag = tag
         self.canvas = canvas
         self.selected = 0
         self.was_selected = False
@@ -40,22 +40,23 @@ class MyImage:
     def get_image(self):
         return self.image
     def select(self, canvas, ctr):
-        for frameid in self.frameids:
-            self.canvas.itemconfigure(frameid, state = 'normal')
+        print("  find with tag ", self.tag, ": ", str(self.canvas.find_withtag(self.tag)))
+        for i in self.canvas.find_withtag(self.tag):
+            self.canvas.itemconfigure(i, state = 'normal')
         if ctr != -1: # update counter only if ne -1 otherwise just show frame, used in undo/redo
             self.selected = ctr
         
     def unselect(self, canvas):
-        for frameid in self.frameids:
-            self.canvas.itemconfigure(frameid, state = 'hidden')
+        for i in self.canvas.find_withtag(self.tag):
+            self.canvas.itemconfigure(i, state = 'hidden')
         self.selected = 0
     def is_selected(self):
         if self.selected > 0:
             return True
         else:
             return False
-    def set_frameids(self, frameids):
-        self.frameids = frameids
+    def get_tag(self):
+        return self.tag
 
      
 class ImageApp:
@@ -308,7 +309,10 @@ class ImageApp:
         directory = filedialog.askdirectory()
         if directory:
             image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
+            tag_prefix = 'P'
+            tag_no = 0
             for img_file in image_files:
+                tag_no += 1
                 img_path = os.path.join(directory, img_file)
                 # get image
                 img = Image.open(img_path)
@@ -321,7 +325,7 @@ class ImageApp:
                 r_img = img.resize(newsize, Image.Resampling.NEAREST)
                 photo = ImageTk.PhotoImage(r_img)
                 # insert into self.list_source_images
-                i = MyImage(img_path, photo, self.source_canvas, (0,0,0,0)) # frameids will be updated after insert in source_canvas
+                i = MyImage(img_path, photo, self.source_canvas, tag_prefix + str(tag_no))
                 self.list_source_images.append(i)
                 
             self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
@@ -524,7 +528,7 @@ class ImageApp:
             if img.is_selected():
                 if img.get_filename() not in set_target_filenames: # skip if already exists
                     if self.drag_started_in == "source": # make a copy of the original source image because we need some independent attributes like selected
-                        newcopy = MyImage(img.filename, img.image, self.target_canvas, img.frameids) # make a copy of the original source image because we need some independent attributes like selected 
+                        newcopy = MyImage(img.filename, img.image, self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
                         newcopy.selected = img.selected
                         t = newcopy
                         #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
@@ -712,7 +716,8 @@ class ImageApp:
         canvas.delete("all")
         dict_images = {}
         for i in list_obj:
-            #print("try to show image: " , i.get_filename())
+            filename = i.get_filename()
+            #print("try to show image: " , filename)
             photo = i.get_image()
             img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
             display_width, display_height = photo.width(), photo.height()
@@ -721,12 +726,10 @@ class ImageApp:
             north_east = (xpos + display_width - self.dist_frame, ypos + self.dist_frame)
             south_west = (xpos + self.dist_frame, ypos + display_height - self.dist_frame)
             south_east = (xpos + display_width - self.dist_frame, ypos + display_height - self.dist_frame)
-            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
-            frameids = (line_north, line_east, line_south, line_west)
-            i.set_frameids(frameids)
+            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags=i.get_tag())
+            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags=i.get_tag())
+            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags=i.get_tag())
+            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags=i.get_tag())
             dict_images[img_id] = i
             #print("   Insert into dict key: ", str(img_id), " filename: " , obj.get_filename())
             xpos += display_width
@@ -811,13 +814,13 @@ class ImageApp:
         self.source_canvas.select_ctr = self.dict_processid_histobj[process_id].source_select_ctr
         self.target_canvas.select_ctr = self.dict_processid_histobj[process_id].target_select_ctr
         for i in list_obj_source:
-            print("* H SOURCE Filename / select_ctr / selected / frameids: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', str(i.frameids))
+            print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
             if i.is_selected():
                 i.select(self.source_canvas, -1)
             else:
                 i.unselect(self.source_canvas)
         for i in list_obj_target:
-            print("* H TARGET Filename / select_ctr / selected / frameids: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', str(i.frameids))
+            print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
             if i.is_selected():
                 i.select(self.target_canvas, -1)
             else:
@@ -826,12 +829,12 @@ class ImageApp:
     def historize_process(self, canvas_source_rebuild_required, canvas_target_rebuild_required):
         h = HistObj()
         for i in self.list_source_images:
-            #print("* H Filename / select_ctr / selected / frameids: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', str(i.frameids))
-            newcopy = MyImage(i.filename, i.image, i.canvas, i.frameids) # make a copy of the original source image because we need some independent attributes like selected 
+            #print("* H Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
+            newcopy = MyImage(i.filename, i.image, i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_source_images.append(newcopy)
         for i in self.list_target_images:
-            newcopy = MyImage(i.filename, i.image, i.canvas, i.frameids) # make a copy of the original source image because we need some independent attributes like selected 
+            newcopy = MyImage(i.filename, i.image, i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_target_images.append(newcopy)
         #for i in self.dict_source_images:
