@@ -508,7 +508,8 @@ class ImageApp:
                 print("canvas_target_rebuild_required = ", str(canvas_target_rebuild_required))
                 if canvas_target_rebuild_required:
                     self.update_target_canvas(event, self.dict_target_images, target_rect, True)
-                self.historize_process(False, canvas_target_rebuild_required)
+                if  img_closest_id > 0: # no historize if action in target and drop outside images
+                    self.historize_process(False, canvas_target_rebuild_required)
             else: # do nothing
                 print("no image found in source canvas, action = RELEASE")
                 
