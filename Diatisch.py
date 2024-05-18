@@ -217,12 +217,14 @@ class ImageApp:
         self.context_menu_source = tk.Menu(self.source_canvas, tearoff=0)
         self.context_menu_source.add_command(label="Show"   , command=self.canvas_image_show)    
         self.context_menu_source.add_command(label="Copy Selected"   , command=self.copy_selected_source_images)    
+        self.context_menu_source.add_command(label="Copy "   , command=self.copy_single_source_image)    
         self.context_menu_target = tk.Menu(self.target_canvas, tearoff=0)
         self.context_menu_target.add_command(label="Show"   , command=self.canvas_image_show)  
         self.timestamp = datetime.now() 
         self.image_press = None
         self.image_release = None
         self.dist_frame = 20 # distance of dotted select frame from border in Pixels
+        self.single_image_to_copy = None # name of single image selected by menuitem to copy from source to target
 
     def show_context_menu_source(self, event):
         # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
@@ -235,17 +237,19 @@ class ImageApp:
             image_id = closest[0]
             img      = self.dict_source_images[image_id]
             text     = img.get_filename()
-        self.context_menu_source.entryconfig(0, label = "Show " + text)
-        selected = False
-        for i in self.list_source_images:
-            if i.is_selected():
-                selected = True
-                break
-        if selected: # at least one selected
-            self.context_menu_source.entryconfig(1, state = tk.NORMAL)
-        else:
-            self.context_menu_source.entryconfig(1, state = tk.DISABLED)
-        self.context_menu_source.post(event.x_root, event.y_root)
+            self.context_menu_source.entryconfig(0, label = "Show " + text)
+            self.context_menu_source.entryconfig(2, label = "Copy " + text)
+            self.single_image_to_copy = img # will be set to None in update_target_canvas after copying
+            selected = False
+            for i in self.list_source_images:
+                if i.is_selected():
+                    selected = True
+                    break
+            if selected: # at least one selected
+                self.context_menu_source.entryconfig(1, state = tk.NORMAL)
+            else:
+                self.context_menu_source.entryconfig(1, state = tk.DISABLED)
+            self.context_menu_source.post(event.x_root, event.y_root)
     
     def show_context_menu_target(self, event):
         # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
@@ -448,22 +452,34 @@ class ImageApp:
         return canvas_target_rebuild_required
     
     def copy_selected_source_images(self): # copy selected images from source to target
-        # find last selected target image, convert into event because we want to use the existing functions for dragging by mouse
-        ii = 0
-        last_filename = ""
-        index = -1 # index of selected Image, the last will and shall win
-        for i in self.list_target_images:
-            if i.is_selected():
-                last_filename = i.get_filename()
-                print("copy_selected_source_images, is_selected: ", last_filename)
-                index = ii
-            ii += 1
-        print("copy_selected_source_images, index of last selected = ", str(index))
+        # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
-        self.file_at_dragposition = last_filename
+        self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         self.update_target_canvas(None, self.dict_source_images, target_rect)
         self.historize_process(False, True)        
+
+    def copy_single_source_image(self): # copy image under context menuitem select... from source to target
+        # find last selected target image
+        self.drag_started_in = "source" # must be set for the following functions
+        self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
+        target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
+        self.update_target_canvas(None, self.dict_source_images, target_rect)
+        self.historize_process(False, True)        
+
+    def find_last_selected_target_image(self, list_images): # helper function for finding last selected target (as insert point for copy)
+        # find last selected target image
+        ii = 0
+        filename_of_last_selected = ""
+        index = -1 # index of selected Image, the last will and shall win
+        for i in list_images:
+            if i.is_selected():
+                filename_of_last_selected = i.get_filename()
+                print("find selected target images, is_selected: ", filename_of_last_selected)
+                index = ii
+            ii += 1
+        print("find selected target images, index of last selected = ", str(index))
+        return filename_of_last_selected
 
     def drop(self, event):
         # check if mouse is on target canvas
@@ -523,21 +539,39 @@ class ImageApp:
                 set_target_filenames.add(i.get_filename())
 
         list_dragged_images = []
-        for i in dict_images:
-            img = dict_images[i]
-            if img.is_selected():
-                if img.get_filename() not in set_target_filenames: # skip if already exists
-                    if self.drag_started_in == "source": # make a copy of the original source image because we need some independent attributes like selected
-                        newcopy = MyImage(img.filename, img.image, self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
-                        newcopy.selected = img.selected
-                        t = newcopy
-                        #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
-                    else: # move within target canvas
-                        t = img
-                    list_dragged_images.append(t)
-                    print("appended to list_dragged_images: ", t.get_filename(), " selected: ", str(t.is_selected())) 
-                else:
-                    print("Dragged image: ", img.get_filename(), " skipped because it already exists")
+        if self.single_image_to_copy is None:
+            for i in dict_images:
+                img = dict_images[i]
+                if img.is_selected():
+                    if img.get_filename() not in set_target_filenames: # skip if already exists
+                        if self.drag_started_in == "source": # make a copy of the original source image because we need some independent attributes like selected
+                            newcopy = MyImage(img.filename, img.image, self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
+                            newcopy.selected = img.selected
+                            t = newcopy
+                            #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
+                        else: # move within target canvas
+                            t = img
+                        list_dragged_images.append(t)
+                        print("appended to list_dragged_images: ", t.get_filename(), " selected: ", str(t.is_selected())) 
+                    else:
+                        print("Dragged image: ", img.get_filename(), " skipped because it already exists")
+
+        else: # copy just the single image selected from context menu
+            img = self.single_image_to_copy
+            if img.get_filename() not in set_target_filenames: # skip if already exists
+                if self.drag_started_in == "source": # make a copy of the original source image because we need some independent attributes like selected
+                    newcopy = MyImage(img.filename, img.image, self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
+                    newcopy.selected = img.selected
+                    t = newcopy
+                    #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
+                else: # move within target canvas
+                    t = img
+                list_dragged_images.append(t)
+                print("appended to list_dragged_images: ", t.get_filename(), " selected: ", str(t.is_selected())) 
+            else:
+                print("Dragged image: ", img.get_filename(), " skipped because it already exists")
+            self.single_image_to_copy = None # reset because update_target_canvas checks if None
+
         if list_dragged_images: #true when not empty
 
             dragpos = dragposition.BEFORE
@@ -561,7 +595,7 @@ class ImageApp:
                 file_at_dragposition = self.file_at_dragposition
                 if file_at_dragposition == "": # no target image selected, append
                     no_target_image = True
-                    dragpos = dragposition.BEHIND
+                dragpos = dragposition.BEHIND
 
             # now insert list of dragged images in target list, before or behind file_at_dragposition
             for i in self.list_target_images:
@@ -608,7 +642,7 @@ class ImageApp:
                 print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
             # now select all dragged images
             for i in self.list_target_images:
-                # for convenience we select all fragged images and unselect LL OTHERS
+                # for convenience we select all dragged images and unselect all others
                 thisfile = i.get_filename()
                 print("After Target Image: ", thisfile, " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
                 if thisfile in set_dragged_filenames: # select
