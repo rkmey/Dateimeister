@@ -507,7 +507,7 @@ class ImageApp:
                 canvas_target_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
                 print("canvas_target_rebuild_required = ", str(canvas_target_rebuild_required))
                 if canvas_target_rebuild_required:
-                    self.update_target_canvas(event, self.dict_target_images, target_rect, True)
+                    self.update_target_canvas(event, self.dict_target_images, target_rect)
                 if  img_closest_id > 0: # no historize if action in target and drop outside images
                     self.historize_process(False, canvas_target_rebuild_required)
             else: # do nothing
@@ -530,7 +530,7 @@ class ImageApp:
             print("Drop-Event not in target canvas")
         self.drag_started_in = ""
 
-    def update_target_canvas(self, event, dict_images, target_rect, move = False):
+    def update_target_canvas(self, event, dict_images, target_rect):
         # we want to know if filename of dragged images from source_canvas already exist. If so we don't want to drag them
         # may be in the future we will allow this but we have to rename them because Diatisch relies on uniqueness of filenames
         set_target_filenames = set() # create an empty set
@@ -602,7 +602,7 @@ class ImageApp:
             for i in self.list_target_images:
                 print("Before Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " selected: ", str(i.is_selected()))
             list_dragged_images.sort(key=lambda a: int(a.selected))
-            print("list dragged images: " + str(list_dragged_images))
+            #print("list dragged images: " + str(list_dragged_images))
             # we need a SET of dragged filenames
             set_dragged_filenames.clear()
             for i in list_dragged_images:
@@ -636,11 +636,11 @@ class ImageApp:
                         list_temp.append(i)
                 
                 self.list_target_images = list_temp
-            print("list_target_images: ", str(self.list_target_images))
+            #print("list_target_images: ", str(self.list_target_images))
             # rebuild target canvas, refresh dicts
             self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
-            for t in self.dict_target_images:
-                print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
+            #for t in self.dict_target_images:
+            #    print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
             # now select all dragged images
             for i in self.list_target_images:
                 # for convenience we select all dragged images and unselect all others
