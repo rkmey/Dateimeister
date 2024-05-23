@@ -222,6 +222,7 @@ class ImageApp:
         # Undo /Redo control end
 
         self.event = None
+
         # Create the context menues
         self.context_menu_source = tk.Menu(self.source_canvas, tearoff=0)
         self.context_menu_source.add_command(label="Show"   , command=self.canvas_image_show)    
@@ -229,6 +230,9 @@ class ImageApp:
         self.context_menu_source.add_command(label="Copy "   , command=self.copy_single_source_image)    
         self.context_menu_target = tk.Menu(self.target_canvas, tearoff=0)
         self.context_menu_target.add_command(label="Show"   , command=self.canvas_image_show)  
+        self.context_menu_target.add_command(label="Delete Selected"   , command=self.delete_selected_target_images)    
+        self.context_menu_target.add_command(label="Delete "   , command=self.delete_single_target_image)    
+
         self.timestamp = datetime.now() 
         self.image_press = None
         self.image_release = None
@@ -237,7 +241,7 @@ class ImageApp:
         self.single_image_to_delete = None # name of single image selected by menuitem to delete from target
 
     def show_context_menu_source(self, event):
-        # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
+        # event has to be stored because some functions require x, y
         self.event = event
         text = "no image available"
         # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
@@ -262,7 +266,7 @@ class ImageApp:
             self.context_menu_source.post(event.x_root, event.y_root)
     
     def show_context_menu_target(self, event):
-        # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
+        # event has to be stored because some functions require x, y
         self.event = event
         text = "no image available"
         # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
@@ -272,8 +276,19 @@ class ImageApp:
             image_id = closest[0]
             img      = self.dict_target_images[image_id]
             text     = img.get_filename()
-        self.context_menu_target.entryconfig(1, label = "Show " + text)
-        self.context_menu_target.post(event.x_root, event.y_root)
+            self.context_menu_target.entryconfig(0, label = "Show " + text)
+            self.context_menu_target.entryconfig(2, label = "Delete " + text)
+            self.single_image_to_delete = img # will be set to None in delete_target_canvas after delete
+            selected = False
+            for i in self.list_target_images:
+                if i.is_selected():
+                    selected = True
+                    break
+            if selected: # at least one selected
+                self.context_menu_target.entryconfig(1, state = tk.NORMAL)
+            else:
+                self.context_menu_target.entryconfig(1, state = tk.DISABLED)
+            self.context_menu_target.post(event.x_root, event.y_root)
 
     def tooltip_imagefile_source(self, event):
         tsnow = datetime.now()
@@ -461,6 +476,7 @@ class ImageApp:
                     canvas_target_rebuild_required = True # drop image requires action
         return canvas_target_rebuild_required
     
+    # event handlers for context menus
     def copy_selected_source_images(self): # copy selected images from source to target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
@@ -468,13 +484,18 @@ class ImageApp:
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED)
         self.historize_process(False, True)        
-
     def copy_single_source_image(self): # copy image under context menuitem select... from source to target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
         self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SINGLE)
+        self.historize_process(False, True)        
+    def delete_selected_target_images(self): # delete selected images from target
+        self.delete_target_canvas(self.dict_target_images, pt.DELETE_SELECTED)
+        self.historize_process(False, True)        
+    def delete_single_target_image(self): # delete image under context menuitem delete... from target
+        self.delete_target_canvas(self.dict_target_images, pt.DELETE_SINGLE)
         self.historize_process(False, True)        
 
     def find_last_selected_target_image(self, list_images): # helper function for finding last selected target (as insert point for copy)
@@ -545,7 +566,7 @@ class ImageApp:
         # may be in the future we will allow this but we have to rename them because Diatisch relies on uniqueness of filenames
         set_target_filenames = set() # create an empty set
         set_target_filenames.clear()
-        if proctype == pt.DROP_FROM_SOURCE:
+        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED:
             for i in self.list_target_images:
                 set_target_filenames.add(i.get_filename())
 
@@ -669,21 +690,20 @@ class ImageApp:
                     self.unselect_image(i, self.target_canvas)
         self.file_at_dragposition = ""
 
-    def delete_target_canvas(self, event, dict_images, target_rect, proctype):
+    def delete_target_canvas(self, dict_images, proctype):
         # delete 1 single or all selected Images from target_canvas
-        if proctype == pt.DELETE_SINGLE:
-            if self.single_image_to_delete is None:
-                messagebox.showerror(str(proctype), "Internal error single image to delete is None.")
-                return
-        list_temp = [] 
+        self.list_target_images = [] 
         for i in dict_images:
             img = dict_images[i]
             if proctype == pt.DELETE_SELECTED: # we insert all images which are not selected (because we wish to delete all which are selected)
                 if not img.is_selected():
-                    list_temp.append(img)
+                    self.list_target_images.append(img)
             elif proctype == pt.DELETE_SINGLE: # we insert all images which are not image_to_delete (because we wish to delete all which are selected)
+                if self.single_image_to_delete is None:
+                    messagebox.showerror(str(proctype), "Internal error single image to delete is None.")
+                    return
                 if img.get_filename() != self.single_image_to_delete:
-                    list_temp.append(img)
+                    self.list_target_images.append(img)
         # rebuild target canvas, refresh dicts
         self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
 
