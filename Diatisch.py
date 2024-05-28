@@ -302,11 +302,12 @@ class ImageApp:
         text = "no image available"
         if (closest := self.source_canvas.find_closest(self.source_canvas.canvasx(event.x), self.source_canvas.canvasy(event.y))):
             image_id = closest[0]
-            img      = self.dict_source_images[image_id]
-            text     = img.get_filename()
-            if text != self.tooltiptext_st:
-                self.st.update(text)
-                self.tooltiptext_st = text
+            if image_id in self.dict_source_images:
+                img      = self.dict_source_images[image_id]
+                text     = img.get_filename()
+                if text != self.tooltiptext_st:
+                    self.st.update(text)
+                    self.tooltiptext_st = text
 
     def tooltip_imagefile_target(self, event):
         tsnow = datetime.now()
@@ -320,11 +321,12 @@ class ImageApp:
         text = "no image available"
         if (closest := self.target_canvas.find_closest(self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y))):
             image_id = closest[0]
-            img      = self.dict_target_images[image_id]
-            text     = img.get_filename()
-            if text != self.tooltiptext_tt:
-                self.tt.update(text)
-                self.tooltiptext_tt = text
+            if image_id in self.dict_source_images:
+                img      = self.dict_target_images[image_id]
+                text     = img.get_filename()
+                if text != self.tooltiptext_tt:
+                    self.tt.update(text)
+                    self.tooltiptext_tt = text
                        
     def canvas_image_show(self):
         # placeholder for call full screen display of image
@@ -734,7 +736,7 @@ class ImageApp:
             pos_border_top    = canvas.bbox(id)[1] - current_scroll_y
             pos_border_bottom = canvas.bbox(id)[3] - current_scroll_y
             if pos_border_left <= event_x_pos_in_canvas <= pos_border_right and pos_border_top <= event_y_pos_in_canvas <= pos_border_bottom:
-                print("Hit!")
+                #print("Hit!")
                 hit = True
                 # distance to left / right border of image:
                 dist_event_left  = event_x_pos_in_canvas - pos_border_left
