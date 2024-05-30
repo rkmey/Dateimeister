@@ -239,6 +239,7 @@ class ImageApp:
         self.dist_frame = 20 # distance of dotted select frame from border in Pixels
         self.single_image_to_copy   = None # name of single image selected by menuitem to copy from source to target
         self.single_image_to_delete = None # name of single image selected by menuitem to delete from target
+        self.line_width = 5
 
     def show_context_menu_source(self, event):
         # event has to be stored because some functions require x, y
@@ -817,10 +818,10 @@ class ImageApp:
             north_east = (xpos + display_width - self.dist_frame, ypos + self.dist_frame)
             south_west = (xpos + self.dist_frame, ypos + display_height - self.dist_frame)
             south_east = (xpos + display_width - self.dist_frame, ypos + display_height - self.dist_frame)
-            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags=i.get_tag())
-            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags=i.get_tag())
-            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags=i.get_tag())
-            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags=i.get_tag())
+            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", width = self.line_width, tags=i.get_tag())
+            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", width = self.line_width, tags=i.get_tag())
+            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", width = self.line_width, tags=i.get_tag())
+            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", width = self.line_width, tags=i.get_tag())
             dict_images[img_id] = i
             #print("   Insert into dict key: ", str(img_id), " filename: " , obj.get_filename())
             xpos += display_width
