@@ -7,3 +7,5 @@ build/
 dist/
 _make-exe.txt
 Anforderungen.txt
+.vs/
+Dateimeister.pyproj
