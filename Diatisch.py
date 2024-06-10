@@ -49,12 +49,10 @@ class MyImage:
     def get_image(self):
         return self.image
     def select(self, canvas, ctr):
-        print("  find with tag ", self.tag, ": ", str(self.canvas.find_withtag(self.tag)))
+        #print("  find with tag ", self.tag, ": ", str(self.canvas.find_withtag(self.tag)))
         for i in self.canvas.find_withtag(self.tag):
             self.canvas.itemconfigure(i, state = 'normal')
-        if ctr != -1: # update counter only if ne -1 otherwise just show frame, used in undo/redo
-            self.selected = ctr
-        
+        self.selected = ctr
     def unselect(self, canvas):
         for i in self.canvas.find_withtag(self.tag):
             self.canvas.itemconfigure(i, state = 'hidden')
@@ -64,6 +62,9 @@ class MyImage:
             return True
         else:
             return False
+    def select_show(self, canvas): # shows select symbol without changing counter, used in undo/redo
+        for i in self.canvas.find_withtag(self.tag):
+            self.canvas.itemconfigure(i, state = 'normal')
     def get_tag(self):
         return self.tag
 
@@ -908,13 +909,13 @@ class ImageApp:
         for i in list_obj_source:
             print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
             if i.is_selected():
-                i.select(self.source_canvas, -1)
+                i.select_show(self.source_canvas)
             else:
                 i.unselect(self.source_canvas)
         for i in list_obj_target:
             print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
             if i.is_selected():
-                i.select(self.target_canvas, -1)
+                i.select_show(self.target_canvas)
             else:
                 i.unselect(self.target_canvas)
         
