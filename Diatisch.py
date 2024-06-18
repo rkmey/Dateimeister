@@ -655,9 +655,18 @@ class ImageApp:
             #     if dragpos = BEFORE, insert list_dragged_images, insert filename
             #     else: insert filename, insert list_dragged_images
             #   else insert filename
-            if self.list_target_images == [] or no_target_image: #initial drag from source or drop outside images
+            if self.list_target_images == []: #initial drag from source
                 for i in list_dragged_images:
                     self.list_target_images.append(i)
+            elif no_target_image: # drop outside images: start with all images not in list_dragged_images, followed by list_dragged images
+                list_temp = []
+                for i in self.list_target_images:
+                    thisfile = i.get_filename()
+                    if thisfile not in set_dragged_filenames:
+                        list_temp.append(i)
+                for j in list_dragged_images:
+                    list_temp.append(j)
+                self.list_target_images = list_temp    
             else:
                 list_temp = []
                 for i in self.list_target_images:
@@ -773,6 +782,7 @@ class ImageApp:
     def select_image(self, image, canvas):
         if not image.is_selected():
             canvas.select_ctr += 1
+            print ("--- SELECT CALL")
             image.select(canvas, canvas.select_ctr)
 
     def toggle_selection(self, image, canvas):
