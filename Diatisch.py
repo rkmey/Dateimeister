@@ -793,8 +793,7 @@ class ImageApp:
             image.select(canvas, canvas.select_ctr)
 
     def unselect_image(self, image, canvas):
-        if image.is_selected():
-            image.unselect(canvas)
+        image.unselect(canvas)
 
     def get_root_coordinates_for_widget(self, widget):
         # return rect of widget-coordinates relative to root window
