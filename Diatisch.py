@@ -486,15 +486,17 @@ class ImageApp:
         self.drag_started_in = "source" # must be set for the following functions
         self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
-        self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED)
-        self.historize_process(False, True)        
+        changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED)
+        if changed:
+            self.historize_process(False, True)        
     def copy_single_source_image(self): # copy image under context menuitem select... from source to target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
         self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
-        self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SINGLE)
-        self.historize_process(False, True)        
+        changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SINGLE)
+        if changed:
+            self.historize_process(False, True)        
     def delete_selected_target_images(self): # delete selected images from target
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SELECTED)
         self.historize_process(False, True)        
@@ -535,16 +537,17 @@ class ImageApp:
                 #for t in self.list_target_images:
                 #    print("Before Target image: ", t.get_filename())
                 # fill list of dragged images by checking if selected
-                self.update_target_canvas(event, self.dict_source_images, target_rect, pt.DROP_FROM_SOURCE)
-                self.historize_process(False, True)
+                changed = self.update_target_canvas(event, self.dict_source_images, target_rect, pt.DROP_FROM_SOURCE)
+                if changed:
+                    self.historize_process(False, True)
             elif self.drag_started_in == "target": # move images within target
                 # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
                 canvas_target_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
                 print("canvas_target_rebuild_required = ", str(canvas_target_rebuild_required))
                 if canvas_target_rebuild_required:
-                    self.update_target_canvas(event, self.dict_target_images, target_rect, pt.DROP_FROM_TARGET)
-                if  img_closest_id > 0: # no historize if action in target and drop outside images
-                    self.historize_process(False, canvas_target_rebuild_required)
+                    changed = self.update_target_canvas(event, self.dict_target_images, target_rect, pt.DROP_FROM_TARGET)
+                    if  changed: 
+                        self.historize_process(False, canvas_target_rebuild_required)
             else: # do nothing
                 print("no image found in source canvas, action = RELEASE")
                 
@@ -566,6 +569,12 @@ class ImageApp:
         self.drag_started_in = ""
 
     def update_target_canvas(self, event, dict_images, target_rect, proctype):
+        old_list_target_filenames = [] # for checking if list is changed
+        new_list_target_filenames = [] # for checking if list is changed
+        for i in self.list_target_images:
+            old_list_target_filenames.append(i.get_filename()) 
+        changed = False  # init to false
+            
         # we want to know if filename of dragged images from source_canvas already exist. If so we don't want to drag them
         # may be in the future we will allow this but we have to rename them because Diatisch relies on uniqueness of filenames
         set_target_filenames = set() # create an empty set
@@ -616,6 +625,7 @@ class ImageApp:
             self.single_image_to_copy = None # reset because update_target_canvas checks if None
 
         if list_dragged_images:# true when not empty
+            
             dragpos = dragposition.BEFORE
             set_dragged_filenames = set() # create an empty set
             no_target_image = False
@@ -688,20 +698,29 @@ class ImageApp:
                 self.list_target_images = list_temp
             #print("list_target_images: ", str(self.list_target_images))
             # rebuild target canvas, refresh dicts
-            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
-            #for t in self.dict_target_images:
-            #    print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
-            # now select all dragged images
             for i in self.list_target_images:
-                # for convenience we select all dragged images and unselect all others
-                thisfile = i.get_filename()
-                print("After Target Image: ", thisfile, " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
-                if thisfile in set_dragged_filenames: # select
-                    self.select_image(i, self.target_canvas)
-                    print("thisfile: ", thisfile, " sected: ", str(i.is_selected()), " select_ctr: ", str(self.target_canvas.select_ctr))
-                else:
-                    self.unselect_image(i, self.target_canvas)
+                new_list_target_filenames.append(i.get_filename()) 
+            changed = self.lists_equal(new_list_target_filenames, old_list_target_filenames)
+            if changed:
+                self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
+                #for t in self.dict_target_images:
+                #    print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
+                # now select all dragged images
+                for i in self.list_target_images:
+                    # for convenience we select all dragged images and unselect all others
+                    thisfile = i.get_filename()
+                    print("After Target Image: ", thisfile, " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
+                    if thisfile in set_dragged_filenames: # select
+                        self.select_image(i, self.target_canvas)
+                        print("thisfile: ", thisfile, " sected: ", str(i.is_selected()), " select_ctr: ", str(self.target_canvas.select_ctr))
+                    else:
+                        self.unselect_image(i, self.target_canvas)
+            else:
+                print ("list target images has not changed")
+                #print("list old: ", str(old_list_target_filenames))
+                #print("list new: ", str(new_list_target_filenames))
         self.file_at_dragposition = ""
+        return changed # o historization if false
 
     def delete_target_canvas(self, dict_images, proctype):
         # delete 1 single or all selected Images from target_canvas
@@ -720,6 +739,17 @@ class ImageApp:
         # rebuild target canvas, refresh dicts
         self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
 
+    def lists_equal(self, l1, l2):
+        changed = False
+        if len(l1) != len(l2):
+            changed = True
+        else:
+            length = len(l1)
+            for i in range(length):
+                if l1[i] != l2[i]:
+                    changed = True
+                    break
+        return changed
 
     def find_closest_item(self, event, rect_canvas, canvas, dict_images):
         # this is necessary because tkinter find_closest does not work for drop event, reason unknown
@@ -916,13 +946,13 @@ class ImageApp:
         self.source_canvas.select_ctr = self.dict_processid_histobj[process_id].source_select_ctr
         self.target_canvas.select_ctr = self.dict_processid_histobj[process_id].target_select_ctr
         for i in list_obj_source:
-            print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
+            #print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
             if i.is_selected():
                 i.select_show(self.source_canvas)
             else:
                 i.unselect(self.source_canvas)
         for i in list_obj_target:
-            print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
+            #print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
             if i.is_selected():
                 i.select_show(self.target_canvas)
             else:
