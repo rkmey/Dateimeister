@@ -6,6 +6,7 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 import Dateimeister
 from datetime import datetime, timezone
+import hashlib
 
 
 from enum import Enum
@@ -219,6 +220,7 @@ class ImageApp:
         self.processid_high = 0
         self.processid_incr = 10
         self.dict_processid_xmlfile = {}
+        self.list_processids = []
         # historize initial state
         self.historize_process(True, True)
         # Undo /Redo control end
@@ -960,15 +962,26 @@ class ImageApp:
         
     def historize_process(self, canvas_source_rebuild_required, canvas_target_rebuild_required):
         h = HistObj()
+        # for quick compare if lists of two historized states is equal we need the checksums
+        hashsum_source_filenames = hashlib.md5()
+        hashsum_target_filenames = hashlib.md5()
+        hashsum_source_selection = hashlib.md5()
+        hashsum_target_selection = hashlib.md5()
+        str_source_selection = ""
+        str_target_selection = ""
         for i in self.list_source_images:
             #print("* H Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
             newcopy = MyImage(i.filename, i.image, i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_source_images.append(newcopy)
+            hashsum_source_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
+            str_source_selection += str(i.selected)
         for i in self.list_target_images:
             newcopy = MyImage(i.filename, i.image, i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_target_images.append(newcopy)
+            hashsum_target_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
+            str_target_selection += str(i.selected)
         #for i in self.dict_source_images:
         #    h.dict_source_images[i] = self.dict_source_images[i]
         #for i in self.dict_target_images:
@@ -978,6 +991,18 @@ class ImageApp:
         h.target_select_ctr = self.target_canvas.select_ctr
         h.canvas_source_rebuild_required = canvas_source_rebuild_required
         h.canvas_target_rebuild_required = canvas_target_rebuild_required
+        
+        # historize hashsums
+        h.str_hashsum_source_filenames = hashsum_source_filenames.hexdigest()
+        h.str_hashsum_target_filenames = hashsum_target_filenames.hexdigest()
+
+        hashsum_source_selection.update(str_source_selection.encode(encoding = 'UTF-8', errors = 'strict'))
+        h.str_hashsum_source_selection = hashsum_source_selection.hexdigest()
+        hashsum_target_selection.update(str_target_selection.encode(encoding = 'UTF-8', errors = 'strict'))
+        h.str_hashsum_target_selection = hashsum_target_selection.hexdigest()
+        print("Hashsum source Filenames is: ", h.str_hashsum_source_filenames, " Hashsum target Filenames is: ", h.str_hashsum_target_filenames)
+        print("Hashsum source Selection is: ", h.str_hashsum_source_selection, "(", str_source_selection, ")", " Hashsum target Selection is: ", h.str_hashsum_target_selection, "(", str_target_selection, ")")
+        
         self.processid_high += self.processid_incr
         self.processid_akt = self.processid_high
         self.dict_processid_histobj[self.processid_akt] = h
@@ -1005,6 +1030,10 @@ class HistObj:
         self.target_select_ctr = 0
         self.canvas_source_rebuild_required = False
         self.canvas_target_rebuild_required = False
+        self.str_hashsum_source_filenames = ""
+        self.str_hashsum_target_filenames = ""
+        self.str_hashsum_source_selection = ""
+        self.str_hashsum_target_selection = ""
 
 
 if __name__ == "__main__":
