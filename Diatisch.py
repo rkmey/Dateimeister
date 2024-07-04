@@ -221,8 +221,10 @@ class ImageApp:
         self.processid_incr = 10
         self.dict_processid_xmlfile = {}
         self.list_processids = []
+        self.idx_processid = 0
+        self.stack_processids = [] # list
         # historize initial state
-        self.historize_process(True, True)
+        self.historize_process()
         # Undo /Redo control end
 
         self.event = None
@@ -367,7 +369,7 @@ class ImageApp:
             self.unselect_all(self.dict_source_images, self.source_canvas)
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
         print("LOAD ", directory)
-        self.historize_process(True, False)
+        self.historize_process()
 
     def start_drag(self, event):
         # check where mouse is 
@@ -490,7 +492,7 @@ class ImageApp:
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED)
         if changed:
-            self.historize_process(False, True)        
+            self.historize_process()        
     def copy_single_source_image(self): # copy image under context menuitem select... from source to target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
@@ -498,13 +500,13 @@ class ImageApp:
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SINGLE)
         if changed:
-            self.historize_process(False, True)        
+            self.historize_process()        
     def delete_selected_target_images(self): # delete selected images from target
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SELECTED)
-        self.historize_process(False, True)        
+        self.historize_process()        
     def delete_single_target_image(self): # delete image under context menuitem delete... from target
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SINGLE)
-        self.historize_process(False, True)        
+        self.historize_process()        
 
     def find_last_selected_target_image(self, list_images): # helper function for finding last selected target (as insert point for copy)
         # find last selected target image
@@ -541,7 +543,7 @@ class ImageApp:
                 # fill list of dragged images by checking if selected
                 changed = self.update_target_canvas(event, self.dict_source_images, target_rect, pt.DROP_FROM_SOURCE)
                 if changed:
-                    self.historize_process(False, True)
+                    self.historize_process()
             elif self.drag_started_in == "target": # move images within target
                 # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
                 canvas_target_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
@@ -549,7 +551,7 @@ class ImageApp:
                 if canvas_target_rebuild_required:
                     changed = self.update_target_canvas(event, self.dict_target_images, target_rect, pt.DROP_FROM_TARGET)
                     if  changed: 
-                        self.historize_process(False, canvas_target_rebuild_required)
+                        self.historize_process()
             else: # do nothing
                 print("no image found in source canvas, action = RELEASE")
                 
@@ -562,7 +564,7 @@ class ImageApp:
                 self.image_release = self.dict_source_images[img_closest_id]
                 print("image found in source canvas, action = RELEASE: ", self.image_release.get_filename())
                 canvas_target_rebuild_required = self.selection(event, self.source_canvas, self.dict_source_images, action.RELEASE)
-                self.historize_process(False, False)
+                self.historize_process()
             else: # do nothing
                 print("no image found in source canvas, action = PRESS")
                 
@@ -883,84 +885,93 @@ class ImageApp:
     # Undo /Redo Funktionen
     def process_undo(self, event):
         print("ctrl_z pressed.")
-        # we need these attributes BEFORE changing processid_akt
-        canvas_source_rebuild_required = self.dict_processid_histobj[self.processid_akt].canvas_source_rebuild_required
-        canvas_target_rebuild_required = self.dict_processid_histobj[self.processid_akt].canvas_target_rebuild_required
-        if self.processid_akt - self.processid_incr >= self.processid_incr:
-            self.processid_akt -= self.processid_incr
-        else:
+        # if there is a predecessor in list_processids (len > 1):
+        #   move processid_akt from list_processids to undo-stack, then apply new act (predecessor) giving the processids from act and undone
+        num_elements = len(self.list_processids)
+        if num_elements <= 1:
             messagebox.showinfo("UNDO", "no further processes which can be undone", parent = self.root)
-            return
-        print (" UNDO Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
-        # for UNDO we have to check if the current processid required rebuild. If yes going back requires rebuild because the predecessor has different config 
-        self.apply_process_id(self.processid_akt, canvas_source_rebuild_required, canvas_target_rebuild_required)
-        self.endis_buttons()
+        else:
+            processid_undone = self.list_processids[-1] # last element
+            self.stack_processids.append(processid_undone)
+            self.list_processids.pop() # removes last element
+            self.processid_akt = self.list_processids[-1] # "new" last element
+            print (" UNDO Processid_high is: " + str(self.processid_high) + " Processid_akt was: " + str(processid_undone) + " Processid_akt is now: " + str(self.processid_akt))
+            self.apply_process_id(self.processid_akt, processid_undone)
+            self.endis_buttons()
 
     def process_redo(self, event):
         print("ctrl_y pressed.")
-        if self.processid_akt + self.processid_incr <= self.processid_high:
-            self.processid_akt += self.processid_incr
-        else:
+        # if there is an element in stack_processids (len > 1):
+        #   move last processid from stack_processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
+        num_elements = len(self.stack_processids)
+        if num_elements < 1:
             messagebox.showinfo("REDO", "no further processes which can be redone", parent = self.root)
-            return
-        # we need these attributes AFTER changing processid_akt
-        canvas_source_rebuild_required = self.dict_processid_histobj[self.processid_akt].canvas_source_rebuild_required
-        canvas_target_rebuild_required = self.dict_processid_histobj[self.processid_akt].canvas_target_rebuild_required
-        print (" REDO Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
-        # for REDO we use the values after changing processid_akt. For going forward it depends on whether the successor required a change
-        self.apply_process_id(self.processid_akt, canvas_source_rebuild_required, canvas_target_rebuild_required)
-        self.endis_buttons()
+        else:
+            processid_predecessor = self.list_processids[-1] # last element
+            processid_redone = self.stack_processids[-1] # last element
+            self.list_processids.append(processid_redone)
+            self.stack_processids.pop() # removes last element
+            self.processid_akt = self.list_processids[-1] # "new" last element
+            print (" REDO Processid_high is: " + str(self.processid_high) + " Processid_akt was: " + str(processid_predecessor) + " Processid_akt is now: " + str(self.processid_akt))
+            self.apply_process_id(self.processid_akt, processid_predecessor)
+            self.endis_buttons()
 
     def endis_buttons(self): # disable / enable buttons depending on processids
-        if self.processid_akt - self.processid_incr >= self.processid_incr:
+        if len(self.list_processids) > 1:
             self.button_undo.config(state = NORMAL)
         else:
             self.button_undo.config(state = DISABLED)
-        if self.processid_akt + self.processid_incr <= self.processid_high:
+        if len(self.stack_processids) > 0:
             self.button_redo.config(state = NORMAL)
         else:
             self.button_redo.config(state = DISABLED)
 
 
-    def apply_process_id(self, process_id, canvas_source_rebuild_required, canvas_target_rebuild_required):
-        print("apply_process_id, id to apply is: ", process_id)
-
+    def apply_process_id(self, process_id, processid_predecessor):
+        print("apply_process_id, id to apply is: ", str(process_id), " processid was: ", str(processid_predecessor))
+        
         list_obj_source = self.dict_processid_histobj[process_id].list_source_images
         list_obj_target = self.dict_processid_histobj[process_id].list_target_images
-        if canvas_source_rebuild_required:
+        source_new = False
+        target_new = False
+        if self.dict_processid_histobj[process_id].str_hashsum_source_filenames != self.dict_processid_histobj[processid_predecessor].str_hashsum_source_filenames:
             # rebuild list of source images
             self.list_source_images = []
             self.dict_source_images = {}
             for i in list_obj_source:
                 self.list_source_images.append(i)
             self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
+            source_new = True
  
-        if canvas_target_rebuild_required:
+        if self.dict_processid_histobj[process_id].str_hashsum_target_filenames != self.dict_processid_histobj[processid_predecessor].str_hashsum_target_filenames:
             # rebuild list of target images
             self.list_target_images = []
             self.dict_target_images = {}
             for i in list_obj_target:
                 self.list_target_images.append(i)
             self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
+            target_new = True
 
-        # apply selection
         # restore the select counters for sequence of selection
         self.source_canvas.select_ctr = self.dict_processid_histobj[process_id].source_select_ctr
         self.target_canvas.select_ctr = self.dict_processid_histobj[process_id].target_select_ctr
-        for i in list_obj_source:
-            #print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
-            if i.is_selected():
-                i.select_show(self.source_canvas)
-            else:
-                i.unselect(self.source_canvas)
-        for i in list_obj_target:
-            #print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
-            if i.is_selected():
-                i.select_show(self.target_canvas)
-            else:
-                i.unselect(self.target_canvas)
+        # apply selection if canvas has changed or hashsums for selection are not equal
+        if source_new or self.dict_processid_histobj[process_id].str_hashsum_source_selection != self.dict_processid_histobj[processid_predecessor].str_hashsum_source_selection:
+            for i in list_obj_source:
+                #print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
+                if i.is_selected():
+                    i.select_show(self.source_canvas)
+                else:
+                    i.unselect(self.source_canvas)
+        if target_new or self.dict_processid_histobj[process_id].str_hashsum_target_selection != self.dict_processid_histobj[processid_predecessor].str_hashsum_target_selection:
+            for i in list_obj_target:
+                #print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
+                if i.is_selected():
+                    i.select_show(self.target_canvas)
+                else:
+                    i.unselect(self.target_canvas)
         
-    def historize_process(self, canvas_source_rebuild_required, canvas_target_rebuild_required):
+    def historize_process(self):
         h = HistObj()
         # for quick compare if lists of two historized states is equal we need the checksums
         hashsum_source_filenames = hashlib.md5()
@@ -989,8 +1000,6 @@ class ImageApp:
         
         h.source_select_ctr = self.source_canvas.select_ctr
         h.target_select_ctr = self.target_canvas.select_ctr
-        h.canvas_source_rebuild_required = canvas_source_rebuild_required
-        h.canvas_target_rebuild_required = canvas_target_rebuild_required
         
         # historize hashsums
         h.str_hashsum_source_filenames = hashsum_source_filenames.hexdigest()
@@ -1006,6 +1015,8 @@ class ImageApp:
         self.processid_high += self.processid_incr
         self.processid_akt = self.processid_high
         self.dict_processid_histobj[self.processid_akt] = h
+        self.list_processids.append(self.processid_akt)
+        self.idx_processid += 1
         print (" Historize: Processid_akt is now: " + str(self.processid_akt))
         self.endis_buttons()
 
@@ -1028,8 +1039,6 @@ class HistObj:
         self.list_target_images = []
         self.source_select_ctr = 0
         self.target_select_ctr = 0
-        self.canvas_source_rebuild_required = False
-        self.canvas_target_rebuild_required = False
         self.str_hashsum_source_filenames = ""
         self.str_hashsum_target_filenames = ""
         self.str_hashsum_source_selection = ""
