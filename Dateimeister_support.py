@@ -55,6 +55,8 @@ _imagetype = ""
 _processid_akt = 0
 _processid_high = 0
 _processid_incr = 10
+_list_processids = []
+_stack_processids = [] # list
 _tooltiptext = ""
 _use_camera_prefix = True
 _dict_thumbnails = {}
@@ -1218,6 +1220,8 @@ class MyCameraTreeview:
         self.processid_high = 0
         self.processid_incr = 10
         self.dict_processid_xmlfile = {}
+        self.list_processids = []
+        self.stack_processids = [] # list
         # historize initial state
         self.historize_process()
 
@@ -1687,32 +1691,43 @@ class MyCameraTreeview:
     # Undo /Redo Funktionen
     def process_undo(self, event):
         print("ctrl_z pressed.")
-        if self.processid_akt - self.processid_incr >= self.processid_incr:
-            self.processid_akt -= self.processid_incr
-        else:
+        # if there is a predecessor in list_processids (len > 1):
+        #   move processid_akt from list_processids to undo-stack, then apply new act (predecessor) giving the processids from act and undone
+        num_elements = len(self.list_processids)
+        if num_elements <= 1:
             messagebox.showinfo("UNDO", "no further processes which can be undone", parent = self.root)
-            return
-        print (" UNDO Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
-        self.apply_process_id(self.processid_akt)
-        self.endis_buttons()
+        else:
+            processid_undone = self.list_processids[-1] # last element
+            self.stack_processids.append(processid_undone)
+            self.list_processids.pop() # removes last element
+            self.processid_akt = self.list_processids[-1] # "new" last element
+            print (" UNDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
+            self.apply_process_id(self.processid_akt)
+            self.endis_buttons()
 
     def process_redo(self, event):
         print("ctrl_y pressed.")
-        if self.processid_akt + self.processid_incr <= self.processid_high:
-            self.processid_akt += self.processid_incr
-        else:
+        # if there is an element in stack processids (len > 1):
+        #   move last processid from stack processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
+        num_elements = len(self.stack_processids)
+        if num_elements < 1:
             messagebox.showinfo("REDO", "no further processes which can be redone", parent = self.root)
-            return
-        print (" REDO Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
-        self.apply_process_id(self.processid_akt)
-        self.endis_buttons()
+        else:
+            processid_predecessor = self.list_processids[-1] # last element
+            processid_redone = self.stack_processids[-1] # last element
+            self.list_processids.append(processid_redone)
+            self.stack_processids.pop() # removes last element
+            self.processid_akt = self.list_processids[-1] # "new" last element
+            print (" REDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
+            self.apply_process_id(self.processid_akt)
+            self.endis_buttons()
 
     def endis_buttons(self): # disable / enable buttons depending on processids
-        if self.processid_akt - self.processid_incr >= self.processid_incr:
+        if len(self.list_processids) > 1:
             self.button_undo.config(state = NORMAL)
         else:
             self.button_undo.config(state = DISABLED)
-        if self.processid_akt + self.processid_incr <= self.processid_high:
+        if len(self.stack_processids) > 0:
             self.button_redo.config(state = NORMAL)
         else:
             self.button_redo.config(state = DISABLED)
@@ -1785,6 +1800,7 @@ class MyCameraTreeview:
         except:
             print("Error occurred while copying file.")
 
+        self.list_processids.append(self.processid_akt)
         self.endis_buttons()
 
     def button_undo_h(self, event = None):
@@ -2627,6 +2643,7 @@ def close_child_windows(): #closes duplicates, fs-images and exec-windows
 def Press_generate(*args):
     global _dict_firstname_fullname, _dict_duplicates, dict_gen_files, dict_gen_files_delete, _dict_duplicates_sourcefiles, \
         _outdir, _win_duplicates, dict_source_target, dict_relpath, dict_gen_files_delrelpath, dict_source_target_tooold, dict_outdirs, _dict_file_image
+    global _processid_high, _processid_akt, _list_processids, _stack_processids
     if _debug:
         print('Dateimeister_support.B_camera_press')
         for arg in args:
@@ -2638,6 +2655,8 @@ def Press_generate(*args):
     # reset all process-states
     _processid_akt  = 0
     _processid_high = 0
+    _list_processids = []
+    _stack_processids = []
     _button_undo.config(state = DISABLED)    
     _button_redo.config(state = DISABLED)
     
@@ -2970,8 +2989,8 @@ def Button_be_pressed(*args):
     global _canvas_gallery_width_images
     global _canvas_gallery_width_all
     global _lastposition, _dict_file_image
-    global _imagetype, _processid_high, _processid_akt, _processid_akt, _dict_duplicates, \
-        _duplicates, num_images, config_file, _dict_duplicates_sourcefiles, _win_duplicates, dict_source_target, _win_messages
+    global _imagetype, _dict_duplicates, _duplicates, num_images, config_file, _dict_duplicates_sourcefiles, _win_duplicates, dict_source_target, _win_messages
+    global _processid_high, _processid_akt, _list_processids, _stack_processids
 
     if _debug:
         print('Dateimeister_support.Press_be_out')
@@ -2982,6 +3001,8 @@ def Button_be_pressed(*args):
     # reset all process-states
     _processid_akt  = 0
     _processid_high = 0
+    _list_processids = []
+    _stack_processids = []
     _button_undo.config(state = DISABLED)    
     _button_redo.config(state = DISABLED)
     config_file = ""   # after change of imagetype (possibly) has to be selected new by user
@@ -3613,37 +3634,47 @@ def canvas_video_restart():
     
 # Undo /Redo Funktionen
 def process_undo(event):
-    global _processid_akt, _processid_high, _dict_process_image, _processid_incr
+    global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
     print("ctrl_z pressed.")
-    if _processid_akt - _processid_incr >= _processid_incr:
-        _processid_akt -= _processid_incr
+    # if there is a predecessor in list_processids (len > 1):
+    #   move processid_akt from list_processids to undo-stack, then apply new act (predecessor) giving the processids from act and undone
+    num_elements = len(_list_processids)
+    if num_elements <= 1:
+        messagebox.showinfo("UNDO", "no further processes which can be undone")
     else:
-        messagebox.showinfo("UNDO", "no further processes which can be undone", parent = root)
-        return
-    print (" UNDO Processid_high is now: " + str(_processid_high) + " Processid_akt is now: " + str(_processid_akt))
-    apply_process_id(_processid_akt)
-    endis_buttons()
+        processid_undone = _list_processids[-1] # last element
+        _stack_processids.append(processid_undone)
+        _list_processids.pop() # removes last element
+        _processid_akt = _list_processids[-1] # "new" last element
+        print (" UNDO List Processids: " + str(_list_processids) + " REDO Stack Processids: " + str(_stack_processids))
+        apply_process_id(_processid_akt)
+        endis_buttons()
 
 def process_redo(event):
-    global _processid_akt, _processid_high, _dict_process_image, _processid_incr
+    global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
     print("ctrl_y pressed.")
-    if _processid_akt + _processid_incr <= _processid_high:
-        _processid_akt += _processid_incr
+    # if there is an element in stack processids (len > 1):
+    #   move last processid from stack processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
+    num_elements = len(_stack_processids)
+    if num_elements < 1:
+        messagebox.showinfo("REDO", "no further processes which can be redone")
     else:
-        messagebox.showinfo("REDO", "no further processes which can be redone", parent = root)
-        return
-    print (" REDO Processid_high is now: " + str(_processid_high) + " Processid_akt is now: " + str(_processid_akt))
-    apply_process_id(_processid_akt)
-    endis_buttons()
-
+        processid_predecessor = _list_processids[-1] # last element
+        processid_redone = _stack_processids[-1] # last element
+        _list_processids.append(processid_redone)
+        _stack_processids.pop() # removes last element
+        _processid_akt = _list_processids[-1] # "new" last element
+        print (" REDO List Processids: " + str(_list_processids) + " REDO Stack Processids: " + str(_stack_processids))
+        apply_process_id(_processid_akt)
+        endis_buttons()
 
 def endis_buttons(): # disable / enable buttons depending on processids
-    global _processid_akt, _processid_high, _dict_process_image, _processid_incr
-    if _processid_akt - _processid_incr >= _processid_incr:
+    global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
+    if len(_list_processids) > 1:
         _button_undo.config(state = NORMAL)
     else:
         _button_undo.config(state = DISABLED)
-    if _processid_akt + _processid_incr <= _processid_high:
+    if len(_stack_processids) > 0:
         _button_redo.config(state = NORMAL)
     else:
         _button_redo.config(state = DISABLED)
@@ -3660,7 +3691,7 @@ def apply_process_id(process_id):
     write_cmdfile(_imagetype)
     
 def historize_process():
-    global _processid_akt, _processid_high, _dict_process_image, _processid_incr
+    global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
     _processid_high += _processid_incr
     _processid_akt = _processid_high
     print ("Processid_high is now: " + str(_processid_high) + " Processid_akt is now: " + str(_processid_akt))
@@ -3670,6 +3701,7 @@ def historize_process():
         _dict_process_image[_processid_akt].append(thumbnail.getState())
     update_button_state() # refer to function comment
     
+    _list_processids.append(_processid_akt)
     # UNDO / REDO disabeln, wenn Aktion nicht möglich, weil es keine frühere / spätere Bearbeitung gibt
     endis_buttons()
 

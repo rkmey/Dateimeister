@@ -221,7 +221,6 @@ class ImageApp:
         self.processid_incr = 10
         self.dict_processid_xmlfile = {}
         self.list_processids = []
-        self.idx_processid = 0
         self.stack_processids = [] # list
         # historize initial state
         self.historize_process()
@@ -895,14 +894,14 @@ class ImageApp:
             self.stack_processids.append(processid_undone)
             self.list_processids.pop() # removes last element
             self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" UNDO Processid_high is: " + str(self.processid_high) + " Processid_akt was: " + str(processid_undone) + " Processid_akt is now: " + str(self.processid_akt))
+            print (" UNDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
             self.apply_process_id(self.processid_akt, processid_undone)
             self.endis_buttons()
 
     def process_redo(self, event):
         print("ctrl_y pressed.")
-        # if there is an element in stack_processids (len > 1):
-        #   move last processid from stack_processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
+        # if there is an element in stack processids (len > 1):
+        #   move last processid from stack processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
         num_elements = len(self.stack_processids)
         if num_elements < 1:
             messagebox.showinfo("REDO", "no further processes which can be redone", parent = self.root)
@@ -912,7 +911,7 @@ class ImageApp:
             self.list_processids.append(processid_redone)
             self.stack_processids.pop() # removes last element
             self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" REDO Processid_high is: " + str(self.processid_high) + " Processid_akt was: " + str(processid_predecessor) + " Processid_akt is now: " + str(self.processid_akt))
+            print (" REDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
             self.apply_process_id(self.processid_akt, processid_predecessor)
             self.endis_buttons()
 
@@ -1016,7 +1015,6 @@ class ImageApp:
         self.processid_akt = self.processid_high
         self.dict_processid_histobj[self.processid_akt] = h
         self.list_processids.append(self.processid_akt)
-        self.idx_processid += 1
         print (" Historize: Processid_akt is now: " + str(self.processid_akt))
         self.endis_buttons()
 
