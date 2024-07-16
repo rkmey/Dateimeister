@@ -39,6 +39,7 @@ from datetime import datetime, timezone
 import Dateimeister
 import dateimeister_config_xml as DX
 import dateimeister_video as DV
+import Diatisch as DIAT
 #from Dateimeister import ToolTip
 
 _debug = True # False to eliminate debug printing from callback functions.
@@ -2096,7 +2097,8 @@ def init(tk_root,gui):
     # camera menu
     cameramenu = Menu(menubar, tearoff=0)
     cameramenu.add_command(label="Edit Cameras...", command = menu_cameras_edit)
-    menubar.add_cascade(label="Camera", menu=cameramenu)
+    cameramenu.add_command(label="Diatisch", command = menu_diatisch)
+    menubar.add_cascade(label="Tools", menu=cameramenu)
 
     helpmenu = Menu(menubar, tearoff=0)
     helpmenu.add_command(label="Help Index", command=donothing)
@@ -3749,6 +3751,10 @@ def button_duplicates():
 def menu_cameras_edit():
     global _win_camera
     _win_camera = MyCameraTreeview() 
+
+def menu_diatisch():
+    global _win_diatisch
+    _win_diatisch = DIAT.Diatisch() 
 
 def on_window_destroy(self):
     a = 1

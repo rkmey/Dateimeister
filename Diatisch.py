@@ -70,25 +70,28 @@ class MyImage:
         return self.tag
 
      
-class ImageApp:
+class Diatisch:
     line_width = 5
-    def __init__(self, root, m, n):
-        self.root = root
-        self.root.title("Image Canvas")
+    def __init__(self, root = None): # if called from own main root will be initialized there
+        if root is None:
+            self.root = tk.Toplevel()
+        else:
+            self.root = root
+        self.root.title("Diatisch")
         # Fenstergröße
-        screen_width  = int(root.winfo_screenwidth() * .75) # adjust as needed
-        screen_height = int(root.winfo_screenheight() * .5) # adjust as needed
+        screen_width  = int(self.root.winfo_screenwidth() * .75) # adjust as needed
+        screen_height = int(self.root.winfo_screenheight() * .5) # adjust as needed
         print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height))
         v_dim=str(screen_width)+'x'+str(screen_height)
-        root.geometry(v_dim)
+        self.root.geometry(v_dim)
 
-        self.m, self.n = m, n
+        self.m, self.n = 10, 5
         self.image_width = 1500  # Adjust as needed
         self.row_height  = 200
         self.xpos = 0
         self.ypos = 0
 
-        self.Frame_source = tk.Frame(root)
+        self.Frame_source = tk.Frame(self.root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.85, relwidth=0.48)
         self.Frame_source.configure(relief='groove')
         self.Frame_source.configure(borderwidth="2")
@@ -97,7 +100,7 @@ class ImageApp:
         self.Frame_source.configure(highlightbackground="#d9d9d9")
         self.Frame_source.configure(highlightcolor="black")
 
-        self.Frame_target = tk.Frame(root)
+        self.Frame_target = tk.Frame(self.root)
         self.Frame_target.place(relx=.51, rely=0.05, relheight=0.85, relwidth=0.48)
         self.Frame_target.configure(relief='groove')
         self.Frame_target.configure(borderwidth="2")
@@ -106,7 +109,7 @@ class ImageApp:
         self.Frame_target.configure(highlightbackground="#d9d9d9")
         self.Frame_target.configure(highlightcolor="black")
 
-        self.Frame_source_ctl = tk.Frame(root)
+        self.Frame_source_ctl = tk.Frame(self.root)
         self.Frame_source_ctl.place(relx=.01, rely=0.92, relheight=0.05, relwidth=0.48)
         self.Frame_source_ctl.configure(relief='groove')
         self.Frame_source_ctl.configure(borderwidth="2")
@@ -115,7 +118,7 @@ class ImageApp:
         self.Frame_source_ctl.configure(highlightbackground="#d9d9d9")
         self.Frame_source_ctl.configure(highlightcolor="black")
 
-        self.Frame_target_ctl = tk.Frame(root)
+        self.Frame_target_ctl = tk.Frame(self.root)
         self.Frame_target_ctl.place(relx=.51, rely=0.92, relheight=0.05, relwidth=0.48)
         self.Frame_target_ctl.configure(relief='groove')
         self.Frame_target_ctl.configure(borderwidth="2")
@@ -861,10 +864,10 @@ class ImageApp:
             north_east = (xpos + display_width - self.dist_frame, ypos + self.dist_frame)
             south_west = (xpos + self.dist_frame, ypos + display_height - self.dist_frame)
             south_east = (xpos + display_width - self.dist_frame, ypos + display_height - self.dist_frame)
-            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", width = ImageApp.line_width, tags=i.get_tag())
-            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", width = ImageApp.line_width, tags=i.get_tag())
-            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", width = ImageApp.line_width, tags=i.get_tag())
-            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", width = ImageApp.line_width, tags=i.get_tag())
+            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", width = Diatisch.line_width, tags=i.get_tag())
+            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", width = Diatisch.line_width, tags=i.get_tag())
+            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", width = Diatisch.line_width, tags=i.get_tag())
+            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", width = Diatisch.line_width, tags=i.get_tag())
             dict_images[img_id] = i
             #print("   Insert into dict key: ", str(img_id), " filename: " , obj.get_filename())
             xpos += display_width
@@ -1045,5 +1048,5 @@ class HistObj:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = ImageApp(root, m=10, n=5)  # Set m and n as desired
+    app = Diatisch(root)  # Set m and n as desired
     root.mainloop()
