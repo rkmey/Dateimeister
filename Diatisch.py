@@ -958,13 +958,26 @@ class Diatisch:
         self.source_canvas.select_ctr = self.dict_processid_histobj[process_id].source_select_ctr
         self.target_canvas.select_ctr = self.dict_processid_histobj[process_id].target_select_ctr
         # apply selection if canvas has changed or hashsums for selection are not equal
-        if source_new or self.dict_processid_histobj[process_id].str_hashsum_source_selection != self.dict_processid_histobj[processid_predecessor].str_hashsum_source_selection:
+        if source_new:
             for i in list_obj_source:
                 #print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
                 if i.is_selected():
                     i.select_show(self.source_canvas)
                 else:
                     i.unselect(self.source_canvas)
+        else: # just apply selection from predecessor to the restored processid
+            if self.dict_processid_histobj[process_id].str_hashsum_source_selection != self.dict_processid_histobj[processid_predecessor].str_hashsum_source_selection:
+                # list_obj and self.list_source_images have same structure, so we can use an index to access the elements of self.list_source_images
+                ii = 0
+                for i in list_obj_source:
+                    print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
+                    if i.is_selected():
+                        i.select_show(self.source_canvas)
+                        self.list_source_images[ii].select_show(self.source_canvas)
+                    else:
+                        i.unselect(self.source_canvas)
+                        self.list_source_images[ii].unselect(self.source_canvas)
+                    ii += 1
         if target_new or self.dict_processid_histobj[process_id].str_hashsum_target_selection != self.dict_processid_histobj[processid_predecessor].str_hashsum_target_selection:
             for i in list_obj_target:
                 #print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
