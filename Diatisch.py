@@ -751,6 +751,7 @@ class Diatisch:
                 self.select_image(i, self.target_canvas)
             else:
                 self.unselect_image(i, self.target_canvas)
+        self.single_image_to_delete = None
 
     def lists_equal(self, l1, l2):
         changed = False
