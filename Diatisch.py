@@ -740,10 +740,17 @@ class Diatisch:
                 if self.single_image_to_delete is None:
                     messagebox.showerror(str(proctype), "Internal error single image to delete is None.")
                     return
-                if img.get_filename() != self.single_image_to_delete:
+                if img.get_filename() != self.single_image_to_delete.get_filename():
                     self.list_target_images.append(img)
         # rebuild target canvas, refresh dicts
         self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
+        # now select / unselect, remember: display image objects always shows selecttion frame because it is drawn last!
+        for i in self.list_target_images:
+            # we selected all images which were selected before the delete action and unselect the others
+            if i.is_selected(): # select
+                self.select_image(i, self.target_canvas)
+            else:
+                self.unselect_image(i, self.target_canvas)
 
     def lists_equal(self, l1, l2):
         changed = False
