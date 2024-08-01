@@ -49,6 +49,8 @@ class MyImage:
         return self.filename
     def get_image(self):
         return self.image
+    def get_ctr(self):
+        return self.selected
     def select(self, canvas, ctr):
         #print("  find with tag ", self.tag, ": ", str(self.canvas.find_withtag(self.tag)))
         for i in self.canvas.find_withtag(self.tag):
@@ -63,9 +65,6 @@ class MyImage:
             return True
         else:
             return False
-    def select_show(self, canvas): # shows select symbol without changing counter, used in undo/redo
-        for i in self.canvas.find_withtag(self.tag):
-            self.canvas.itemconfigure(i, state = 'normal')
     def get_tag(self):
         return self.tag
 
@@ -972,10 +971,8 @@ class Diatisch:
             for i in list_obj_source:
                 # print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
                 if i.is_selected():
-                    #i.select_show(self.source_canvas)
-                    self.list_source_images[ii].select_show(self.source_canvas)
+                    self.list_source_images[ii].select(self.source_canvas, i.get_ctr())
                 else:
-                    #i.unselect(self.source_canvas)
                     self.list_source_images[ii].unselect(self.source_canvas)
                 ii += 1
         if target_new or self.dict_processid_histobj[process_id].str_hashsum_target_selection != self.dict_processid_histobj[processid_predecessor].str_hashsum_target_selection:
@@ -984,7 +981,7 @@ class Diatisch:
             for i in list_obj_target:
                 #print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
                 if i.is_selected():
-                    self.list_target_images[ii].select_show(self.target_canvas)
+                    self.list_target_images[ii].select(self.target_canvas, i.get_ctr())
                 else:
                     self.list_target_images[ii].unselect(self.target_canvas)
         
