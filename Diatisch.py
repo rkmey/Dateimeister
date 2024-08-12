@@ -71,6 +71,7 @@ class MyImage:
      
 class Diatisch:
     line_width = 5
+    line_color = "red"
     def __init__(self, root = None): # if called from own main root will be initialized there
         if root is None:
             self.root = tk.Toplevel()
@@ -594,7 +595,7 @@ class Diatisch:
                 img = dict_images[i]
                 if img.is_selected():
                     if img.get_filename() not in set_target_filenames: # skip if already exists
-                        newcopy = MyImage(img.filename, img.image, self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
+                        newcopy = MyImage(img.get_filename(), img.get_image(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
                         newcopy.selected = img.selected
                         t = newcopy
                         #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
@@ -619,7 +620,7 @@ class Diatisch:
                 return
             img = self.single_image_to_copy
             if img.get_filename() not in set_target_filenames: # skip if already exists
-                newcopy = MyImage(img.filename, img.image, self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
+                newcopy = MyImage(img.get_filename(), img.get_image(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
                 newcopy.selected = img.selected
                 t = newcopy
                 #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
@@ -871,10 +872,10 @@ class Diatisch:
             north_east = (xpos + display_width - self.dist_frame, ypos + self.dist_frame)
             south_west = (xpos + self.dist_frame, ypos + display_height - self.dist_frame)
             south_east = (xpos + display_width - self.dist_frame, ypos + display_height - self.dist_frame)
-            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = "red", width = Diatisch.line_width, tags=i.get_tag())
-            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = "red", width = Diatisch.line_width, tags=i.get_tag())
-            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = "red", width = Diatisch.line_width, tags=i.get_tag())
-            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = "red", width = Diatisch.line_width, tags=i.get_tag())
+            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = Diatisch.line_color, width = Diatisch.line_width, tags=i.get_tag())
+            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = Diatisch.line_color, width = Diatisch.line_width, tags=i.get_tag())
+            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = Diatisch.line_color, width = Diatisch.line_width, tags=i.get_tag())
+            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = Diatisch.line_color, width = Diatisch.line_width, tags=i.get_tag())
             dict_images[img_id] = i
             #print("   Insert into dict key: ", str(img_id), " filename: " , obj.get_filename())
             xpos += display_width
@@ -904,7 +905,7 @@ class Diatisch:
             self.stack_processids.append(processid_undone)
             self.list_processids.pop() # removes last element
             self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" UNDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
+            print (" UNDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids) + " apply processid: " + str(self.processid_akt))
             self.apply_process_id(self.processid_akt, processid_undone)
             self.endis_buttons()
 
@@ -921,7 +922,7 @@ class Diatisch:
             self.list_processids.append(processid_redone)
             self.stack_processids.pop() # removes last element
             self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" REDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
+            print (" REDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids) + " apply processid: " + str(self.processid_akt))
             self.apply_process_id(self.processid_akt, processid_predecessor)
             self.endis_buttons()
 
@@ -996,13 +997,13 @@ class Diatisch:
         str_target_selection = ""
         for i in self.list_source_images:
             #print("* H Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
-            newcopy = MyImage(i.filename, i.image, i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
+            newcopy = MyImage(i.get_filename(), i.get_image(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_source_images.append(newcopy)
             hashsum_source_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
             str_source_selection += str(i.selected)
         for i in self.list_target_images:
-            newcopy = MyImage(i.filename, i.image, i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
+            newcopy = MyImage(i.get_filename(), i.get_image(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_target_images.append(newcopy)
             hashsum_target_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
