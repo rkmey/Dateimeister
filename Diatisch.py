@@ -37,9 +37,8 @@ class ScrollableCanvas(tk.Canvas):
         print ("<Configure> called")
 
 class MyImage:
-    def __init__(self, filename, image, canvas, tag):
+    def __init__(self, filename, canvas, tag):
         self.filename = filename
-        self.image = image
         self.tag = tag
         self.canvas = canvas
         self.selected = 0
@@ -48,7 +47,7 @@ class MyImage:
     def get_filename(self):
         return self.filename
     def get_image(self):
-        return self.image
+        return Diatisch.dict_filename_images[self.filename]
     def get_ctr(self):
         return self.selected
     def select(self, canvas, ctr):
@@ -72,6 +71,9 @@ class MyImage:
 class Diatisch:
     line_width = 5
     line_color = "red"
+    # 20240813 we want to store images only once per canvas not in every MyImage-object, access is via filename which is stored in MyImage object
+    #  we need dict as a "global" class variable because we want to access it also from methods of MyImage-objects.
+    dict_filename_images = {} # Filename -> MyImage contains all source filenames which is sufficient as target files are a subset of source files
     def __init__(self, root = None): # if called from own main root will be initialized there
         if root is None:
             self.root = tk.Toplevel()
@@ -212,17 +214,16 @@ class Diatisch:
         self.list_dragged_images = []
 
         # dict and list of source / target images, to be historized
-        self.dict_source_images = {}
-        self.dict_target_images = {}
+        self.dict_source_images = {} # ID -> MyImage
+        self.dict_target_images = {} # ID -> MyImage
         self.list_source_images = []
         self.list_target_images = []
-        self.dict_processid_histobj = {} # key processid to be applied value: histobj
 
         # Undo /Redo control
         self.processid_akt = 0
         self.processid_high = 0
         self.processid_incr = 10
-        self.dict_processid_xmlfile = {}
+        self.dict_processid_histobj = {} # key processid to be applied value: histobj
         self.list_processids = []
         self.stack_processids = [] # list
         # historize initial state
@@ -345,6 +346,7 @@ class Diatisch:
     def load_images(self):
         self.list_source_images = []
         self.dict_source_images = []
+        Diatisch.dict_filename_images = {}
         directory = filedialog.askdirectory()
         if directory:
             image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
@@ -352,20 +354,21 @@ class Diatisch:
             tag_no = 0
             for img_file in image_files:
                 tag_no += 1
-                img_path = os.path.join(directory, img_file)
+                filename = os.path.join(directory, img_file)
                 # get image
-                img = Image.open(img_path)
+                img = Image.open(filename)
                 image_width_orig, image_height_orig = img.size
                 faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
-                #print("Image " + img_path + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
+                #print("Image " + filename + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
                 display_width  = int(image_width_orig * faktor)
                 display_height = int(image_height_orig * faktor)
                 newsize = (display_width, display_height)
                 r_img = img.resize(newsize, Image.Resampling.NEAREST)
                 photo = ImageTk.PhotoImage(r_img)
                 # insert into self.list_source_images
-                i = MyImage(img_path, photo, self.source_canvas, tag_prefix + str(tag_no))
+                i = MyImage(filename, self.source_canvas, tag_prefix + str(tag_no))
                 self.list_source_images.append(i)
+                Diatisch.dict_filename_images[filename] = photo
                 
             self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
             self.unselect_all(self.dict_source_images, self.source_canvas)
@@ -595,7 +598,7 @@ class Diatisch:
                 img = dict_images[i]
                 if img.is_selected():
                     if img.get_filename() not in set_target_filenames: # skip if already exists
-                        newcopy = MyImage(img.get_filename(), img.get_image(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
+                        newcopy = MyImage(img.get_filename(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
                         newcopy.selected = img.selected
                         t = newcopy
                         #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
@@ -620,7 +623,7 @@ class Diatisch:
                 return
             img = self.single_image_to_copy
             if img.get_filename() not in set_target_filenames: # skip if already exists
-                newcopy = MyImage(img.get_filename(), img.get_image(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
+                newcopy = MyImage(img.get_filename(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
                 newcopy.selected = img.selected
                 t = newcopy
                 #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
@@ -997,13 +1000,13 @@ class Diatisch:
         str_target_selection = ""
         for i in self.list_source_images:
             #print("* H Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
-            newcopy = MyImage(i.get_filename(), i.get_image(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
+            newcopy = MyImage(i.get_filename(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_source_images.append(newcopy)
             hashsum_source_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
             str_source_selection += str(i.selected)
         for i in self.list_target_images:
-            newcopy = MyImage(i.get_filename(), i.get_image(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
+            newcopy = MyImage(i.get_filename(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_target_images.append(newcopy)
             hashsum_target_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
