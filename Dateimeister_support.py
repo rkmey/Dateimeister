@@ -69,6 +69,16 @@ _dict_file_image = {} # key: Imagefilename, value MyFSImage-Objekt, mit fullscal
 _win_duplicates = None
 _win_messages = None
 
+
+class Dateimeister_support:
+    def __init__(self, root):
+        self.root = root
+        self.root.protocol( 'WM_DELETE_WINDOW' , self.root.destroy)
+        # Creates a toplevel widget.
+        w1 = Dateimeister.Toplevel1(self.root)
+        init(root, w1)
+        self.root.mainloop()
+
 from enum import Enum
 class state(Enum):
     INCLUDE = 1
@@ -1821,17 +1831,12 @@ class MyCameraTreeview:
         #print("*** Deleting Camera-Treeview-Objekt.")
 
 
+
 def main(*args):
     '''Main entry point for the application.'''
     global root
     root = tk.Tk()
-    root.protocol( 'WM_DELETE_WINDOW' , root.destroy)
-    # Creates a toplevel widget.
-    global _top1, _w1
-    _top1 = root
-    _w1 = Dateimeister.Toplevel1(_top1)
-    init(root, _w1)
-    root.mainloop()
+    app = Dateimeister_support(root)
 
 def init(tk_root,gui):
     global w, root, _screen_width, _screen_height, _imagetype, _dict_process_image, _codepage, _language, \
