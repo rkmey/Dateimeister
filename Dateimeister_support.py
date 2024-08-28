@@ -2075,7 +2075,7 @@ class Dateimeister_support:
         # Menubar
         menubar = Menu(self.root)
         filemenu = Menu(menubar, tearoff=0)
-        filemenu.add_command(label="New", command=donothing)
+        filemenu.add_command(label="New", command=self.donothing)
         filemenu.add_command(label="Open config", command=open_config)
         filemenu.add_command(label="Save config", command=save_config)
         filemenu.add_command(label="Save config as...", command=saveas_config)
@@ -2099,8 +2099,8 @@ class Dateimeister_support:
         menubar.add_cascade(label="Tools", menu=cameramenu)
 
         helpmenu = Menu(menubar, tearoff=0)
-        helpmenu.add_command(label="Help Index", command=donothing)
-        helpmenu.add_command(label="About...", command=donothing)
+        helpmenu.add_command(label="Help Index", command=self.donothing)
+        helpmenu.add_command(label="About...", command=self.donothing)
         menubar.add_cascade(label="Help", menu=helpmenu)
 
         self.root.config(menu=menubar)
@@ -2169,6 +2169,9 @@ class Dateimeister_support:
         for ii in indexes:
             combobox_outdir.itemconfig(ii, fg="gray")
         
+    def donothing(self):
+        print("Menuitem not yet implemented")
+    
 def get_camera_xml(): # returns dict with all cameras, types and suffixes
     ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
     cameraname = "Retina Reflex"
@@ -2220,9 +2223,6 @@ def get_camera_xml(): # returns dict with all cameras, types and suffixes
 def timer_end():
     print("Timer has elapsed")
 
-def donothing():
-    print("Menuitem not yet implemented")
-    
 def lb_gen_double(event):
     Button_be_pressed(event)
     
