@@ -70,15 +70,6 @@ _win_duplicates = None
 _win_messages = None
 
 
-class Dateimeister_support:
-    def __init__(self, root):
-        self.root = root
-        self.root.protocol( 'WM_DELETE_WINDOW' , self.root.destroy)
-        # Creates a toplevel widget.
-        w1 = Dateimeister.Toplevel1(self.root)
-        init(root, w1)
-        self.root.mainloop()
-
 from enum import Enum
 class state(Enum):
     INCLUDE = 1
@@ -1832,349 +1823,351 @@ class MyCameraTreeview:
 
 
 
-def main(*args):
-    '''Main entry point for the application.'''
-    global root
-    root = tk.Tk()
-    app = Dateimeister_support(root)
+class Dateimeister_support:
+    def __init__(self, root):
+        self.root = root
+        self.root.protocol( 'WM_DELETE_WINDOW' , self.root.destroy)
+        # Creates a toplevel widget.
+        self.w = Dateimeister.Toplevel1(self.root)
+        self.init()
+        self.root.mainloop()
+        self.codepage = ""
 
-def init(tk_root,gui):
-    global w, root, _screen_width, _screen_height, _imagetype, _dict_process_image, _codepage, _language, \
-       _button_undo, _button_redo, _uncomment, _tooltiptext, _tt, _dict_cameras, _dict_subdirs, \
-        colors, color_noreport, color_lookahead, levels, o_e, o_s, o_camera,\
-        lb_camera, b_button1, b_button2, b_button_outdir, t_text1, l_label1, dict_gen_files, lb_gen, \
-        canvas_gallery, cb_recursive, cb_recursive_var, cb_prefix, cb_prefix_var, cb_addrelpath, cb_addrelpath_var, \
-        thumbnails, images, scroll_canvas_x, gap, context_menu, \
-        _dict_image_lineno, _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
-        cb_newer, cb_newer_var, config_files_xml, recentmenu, config_file, title, label_num, num_images, config_files_subdir, \
-        cmd_files_subdir, _timestamp, delay_default, \
-        button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
-        combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
-        button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, button_call, dict_proctypes, _dict_file_image
-#    print("Init called\n")
-    windll = ctypes.windll.kernel32
-    _codepage = windll.GetUserDefaultUILanguage()
-    _language = locale.windows_locale[ windll.GetUserDefaultUILanguage() ]
-    os.environ["LANGUAGE"]    = _language
-    
-    print("Codepage is: " + str(_codepage) + " language is: " + _language)
-    w = gui
-    root = tk_root
-    
-    inifile = "Dateimeister.ini" 
-    config = configparser.ConfigParser() 
-    config.read(inifile)
-    default_indir  = config["dirs"]["indir"]
-    default_outdir = config["dirs"]["outdir"]
-    datadir = config["dirs"]["datadir"]
-    config_files_subdir = config["dirs"]["config_files_subdir"]
-    cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
-    config_files_xml = config["misc"]["config_files_xml"]
-    
-    # read process_types from ini because depemdent on dateimeister implementation
-    dict_proctypes = config["proc_types"]
-    for t in dict_proctypes:
-        print("Proctype: " + dict_proctypes[t]) 
-    
-    _uncomment = config["misc"]["uncomment"] + " "        
-    templatefile = config["misc"]["templatefile"]
-    #max number of config_file-, indir-, outdir-entries in xml
-    max_configfiles = config["misc"]["max_configfiles"]
-    max_indirs      = config["misc"]["max_indirs"]
-    max_outdirs     = config["misc"]["max_outdirs"]
-    platform = config["misc"]["platform"].upper()
-    if platform != "UNIX" and platform != "WINDOWS":
-        messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + platform)
-        exit()
-    
-    delay_default = 20 #ToDo: Ini
-
-    dict_templates = {}
-    _dict_file_image = {}
-
-
-    # configure some controls
-    o_camera  = w.Entry_camera
-    lb_camera = w.Listbox_camera
-    lb_camera.configure(exportselection=False)
-    b_button1 = w.Button1
-    b_button2 = w.Button2
-    b_button_outdir = w.Button_outdir
-    button_call = w.Button_call
-    button_call.config(command = Press_generate)
-    button_exec = w.Button_exec
-    button_exec.config(command = button_exec_pressed)
-
-    # get all camera information and fill camera-listbox
-    _dict_cameras, _dict_subdirs, _dict_process_image = get_camera_xml()
-
-    t_text1 = w.Text1
-    # set font
-    font_tuple = ("Lucida Console", 10, "normal")
-    t_text1.config(font = font_tuple)
-    t_text1.tag_configure("normal_include", foreground="black", background = "white")
-    t_text1.tag_configure("select_include", foreground="red", background = "white")
-    t_text1.tag_configure("normal_exclude", foreground="lightgrey", background = "darkgrey")
-    t_text1.tag_configure("select_exclude", foreground="red", background = "darkgrey")
-    
-    l_label1 = w.Label1
-    label_num = w.Label_num
-    lb_gen   = w.Listbox_gen
-    _button_include = w.Button_include
-    _button_exclude = w.Button_exclude
-    _button_include.config(state = DISABLED)
-    _button_exclude.config(state = DISABLED)
-    _button_undo = w.Button_undo
-    _button_redo = w.Button_redo
-    _button_undo.config(state = DISABLED)
-    _button_redo.config(state = DISABLED)
-    _button_duplicates = w.Button_duplicates
-    _button_duplicates.config(state = DISABLED)
-    _button_be = w.Button_be
-    _button_be.config(state = DISABLED)
-    button_exec.config(state = DISABLED)
-    button_call.config(state = DISABLED) # generate-Button
-    
-    label_indir  = w.Label_indir
-    label_outdir = w.Label_outdir
-    button_indir_from_list = w.Button_indir_from_list
-    button_outdir_from_list = w.Button_outdir_from_list
-    
-    # Scrollbars
-    V = Scrollbar(w.Frame1)
-    V.place(relx = 1, rely = 0, relheight = .976, relwidth = .01, anchor = tk.NE)
-    V.config(command=t_text1.yview)
-    t_text1.config(yscrollcommand=V.set)  
-    H = Scrollbar(w.Frame1, orient = HORIZONTAL)
-    H.place(relx = 0, rely = 1, relheight = 0.024, relwidth = .99, anchor = tk.SW)
-    H.config(command=t_text1.xview)
-    t_text1.config(xscrollcommand=H.set)  
-    t_text1.configure(wrap="none")
-    
-    cb_recursive = w.Checkbutton1
-    cb_recursive.config(command = state_gen_required)
-    cb_recursive_var = w.cb1_val
-    cb_recursive_var.set(1)
-    
-    cb_prefix = w.Checkbutton_use_camera_name
-    cb_prefix.config(command = state_gen_required)
-    cb_prefix_var = w.cb_prefix_var
-    cb_prefix_var.set(1)
-
-    cb_addrelpath = w.Checkbutton_addrelpath
-    cb_addrelpath.config(command = state_gen_required)
-    cb_addrelpath_var = w.cb_addrelpath_var
-    cb_addrelpath_var.set(0)
-
-    cb_newer = w.Checkbutton_newer
-    cb_newer.config(command = state_gen_required)
-    cb_newer_var = w.cb_newer_var
-    cb_newer_var.set(0)
-
-    cb_num = w.Checkbutton_num
-    cb_num_var = w.cbnum_var
-    cb_num_var.set(1)
-
-    combobox_indir = w.TCombobox_indir
-    combobox_indir_var = w.combobox_indir
-    combobox_indir.configure(exportselection=False)
-    combobox_outdir = w.TCombobox_outdir
-    combobox_outdir_var = w.combobox_outdir
-    combobox_outdir.configure(exportselection=False)
-    
-    # Scrollbars
-    VI = Scrollbar(combobox_indir, orient= VERTICAL)
-    VI.place(relx = 1, rely = 0, relheight = 1, relwidth = .015, anchor = tk.NE)
-    VI.config(command = combobox_indir.yview)
-    combobox_indir.config(yscrollcommand = VI.set)
-    VO = Scrollbar(combobox_outdir, orient= VERTICAL)
-    VO.place(relx = 1, rely = 0, relheight = 1, relwidth = .015, anchor = tk.NE)
-    VO.config(command = combobox_outdir.yview)
-    combobox_outdir.config(yscrollcommand = VO.set)
-    #listbox camera
-    VC = Scrollbar(w.Frame_camera, orient= VERTICAL)
-    VC.place(relx = 1, rely = 0.01, relheight = .96, relwidth = .03, anchor = tk.NE)
-    VC.config(command = lb_camera.yview)
-    lb_camera.config(yscrollcommand = VC.set)
-    
-    canvas_gallery = w.Canvas1
-    # Scrollbars
-    scroll_canvas_x = tk.Scrollbar(root, orient="horizontal", command=xview)
-    #scroll_canvas_x.pack(side=BOTTOM, fill=BOTH)
-    scroll_canvas_x.place(relx = .015, rely = .96, relheight = 0.015, relwidth = .97, anchor = tk.NW)
-    canvas_gallery.config(xscrollcommand = scroll_canvas_x.set, scrollregion=canvas_gallery.bbox("all"))
-
-    # Create the context menu
-    context_menu = tk.Menu(canvas_gallery, tearoff=0)
-    context_menu.add_command(label="Exclude", command=canvas_image_exclude)    
-    context_menu.add_command(label="Show"   , command=canvas_image_show)    
-    context_menu.add_command(label="Restart", command=canvas_video_restart)    
-  
-    # Events
-    # Button 1 single haben wir deaktiviert, weil double immer auch zuerst single auslöst
-    # deshalb exlude und show über Kontext-Menü (rechte Maustaste), Show zusätzlich auch mit Doppelclick
-    #canvas_gallery.bind("<Button-1>", canvas_gallery_exclude)
-    canvas_gallery.bind("<Double-Button-1>", canvas_gallery_show)
-    canvas_gallery.bind('<Return>', canvas_gallery_show)    # show FSImage for selected thumbnail
-    # Pfeitasten fürs scrollen
-    canvas_gallery.bind("<Left>",  lambda event: xview("scroll", -1, "units"))
-    canvas_gallery.bind("<Right>", lambda event: xview("scroll",  1, "units"))
-    canvas_gallery.bind("<Prior>", lambda event: xview("scroll", -1, "page")) # Bind to PageUp
-    canvas_gallery.bind("<Next>",  lambda event: xview("scroll",  1, "page"))  # Bind to PageDown    
-    # Bind the context menu to the canvas widget
-    canvas_gallery.bind("<Button-3>", show_context_menu)    
-    canvas_gallery.bind('<Motion>', tooltip_imagefile)    
-    canvas_gallery.bind('<Button-1>', canvas_button_1)    
-    root.bind("<Configure>", on_window_resize)
-    root.bind("<Destroy>",   on_window_destroy)
-    # strg-z, y
-    canvas_gallery.bind('<Control-z>', lambda event: process_undo(event))
-    canvas_gallery.bind('<Control-y>', lambda event: process_redo(event))
-    canvas_gallery.bind('+', lambda event: delay_decr(event))
-    canvas_gallery.bind('-', lambda event: delay_incr(event))
-    canvas_gallery.bind('0', lambda event: delay_deflt(event))
-    canvas_gallery.bind('<FocusOut>', focus_out)
-    lb_gen.bind('<Double-1>', lb_gen_double)
-    lb_camera.bind('<Double-1>', lb_camera_double)
-
-    t_text1.bind('<Double-1>', text1_double)  # show FSImage for selected line
-    t_text1.bind('<Button-1>', text1_single)  # synchronize zext / gallery
-    t_text1.bind('<Key>', text1_key)
-    # handler for arrow up / down must be called AFTER the Text-class handler or the bind-handler is 1 step ahead
-    t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
-    print("Bindtags: %s " % str(t_text1.bindtags()))
-
-    cb_num.config(command = on_cb_num_toggle)
-    combobox_indir.bind('<Double-1>', combobox_indir_double)
-    combobox_outdir.bind('<Double-1>', combobox_outdir_double)
-    combobox_indir.bind("<<ListboxSelect>>", lambda event: combobox_indir_check_exist(event))
-    combobox_outdir.bind("<<ListboxSelect>>", lambda event: combobox_outdir_check_exist(event))
-    button_indir_from_list.config(command = combobox_indir_double)  
-    button_outdir_from_list.config(command = combobox_outdir_double)  
-    
-    label_indir.config(text = default_indir)
-    label_outdir.config(text = default_outdir)
-    l_label1.config(text = "Messages")
-    label_num.config(text = "0")
-    dict_gen_files = {}
-    dict_gen_files_delete = {}
-    thumbnails = {}
-    images = []
-    _dict_image_lineno = {}
-    gap = 10
-    config_file = ""
-    title = root.title()
-    oldcamera = ""
-
-    
-    # Fenstergröße
-    _screen_width  = int(root.winfo_screenwidth() * 0.9)
-    _screen_height = int(root.winfo_screenheight() * 0.8)
-    print("Bildschirm ist " + str(_screen_width) + " x " + str(_screen_height))
-    width,height=_screen_width,_screen_height
-    v_dim=str(width)+'x'+str(height)
-    root.geometry(v_dim)
-    #my_w.maxsize(300,220)  # (maximum ) width , ( maximum) height
-    #my_w.minsize(250,220)  # (minimum ) width , ( minimum) height
-    root.resizable(False, False)
-    _tt = Dateimeister.ToolTip(canvas_gallery, "no images available", delay=0, follow = True)
-    
-    # Menubar
-    menubar = Menu(root)
-    filemenu = Menu(menubar, tearoff=0)
-    filemenu.add_command(label="New", command=donothing)
-    filemenu.add_command(label="Open config", command=open_config)
-    filemenu.add_command(label="Save config", command=save_config)
-    filemenu.add_command(label="Save config as...", command=saveas_config)
-    filemenu.add_command(label="Apply config", command=apply_config)
-    menubar.add_cascade(label="File", menu=filemenu)
-    recentmenu = Menu(menubar, tearoff=0)
-    filemenu.add_cascade(label="Open Recent", menu=recentmenu)
-    filemenu.add_separator()
-    filemenu.add_command(label="Exit", command=root.quit)
-    filemenu.entryconfig(0, state=DISABLED)
-    filemenu.entryconfig(1, state=DISABLED) # open after Browse / Edit, we need indir and type
-    filemenu.entryconfig(2, state=DISABLED)
-    filemenu.entryconfig(3, state=DISABLED)
-    filemenu.entryconfig(4, state=DISABLED)
-    filemenu.entryconfig(5, state=DISABLED)
-    
-    # camera menu
-    cameramenu = Menu(menubar, tearoff=0)
-    cameramenu.add_command(label="Edit Cameras...", command = menu_cameras_edit)
-    cameramenu.add_command(label="Diatisch", command = menu_diatisch)
-    menubar.add_cascade(label="Tools", menu=cameramenu)
-
-    helpmenu = Menu(menubar, tearoff=0)
-    helpmenu.add_command(label="Help Index", command=donothing)
-    helpmenu.add_command(label="About...", command=donothing)
-    menubar.add_cascade(label="Help", menu=helpmenu)
-
-    root.config(menu=menubar)
-    
-    _timestamp = datetime.now()
-    
-    # fill in combobox
-    result = DX.get_indirs(config_files_xml)
-    dict_filename_usedate = {}
-    for tfile in result:
-        #print("infile: " + tfile)
-        attribute = result[tfile]
-        searchattr = 'usedate'
-        for attribut in attribute:
-            #print("  " + attribut + " = " + attribute[attribut])
-            if attribut == searchattr:
-                dict_filename_usedate[tfile] = attribute[searchattr]
+    def init(self):
+        global _screen_width, _screen_height, _imagetype, _dict_process_image, \
+           _button_undo, _button_redo, _uncomment, _tooltiptext, _tt, _dict_cameras, _dict_subdirs, \
+            colors, color_noreport, color_lookahead, levels, o_e, o_s, o_camera,\
+            lb_camera, b_button1, b_button2, b_button_outdir, t_text1, l_label1, dict_gen_files, lb_gen, \
+            canvas_gallery, cb_recursive, cb_recursive_var, cb_prefix, cb_prefix_var, cb_addrelpath, cb_addrelpath_var, \
+            thumbnails, images, scroll_canvas_x, gap, context_menu, \
+            _dict_image_lineno, _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
+            cb_newer, cb_newer_var, config_files_xml, recentmenu, config_file, title, label_num, num_images, config_files_subdir, \
+            cmd_files_subdir, _timestamp, delay_default, \
+            button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
+            combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
+            button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, button_call, dict_proctypes, _dict_file_image
+    #    print("Init called\n")
+        windll = ctypes.windll.kernel32
+        self.codepage = windll.GetUserDefaultUILanguage()
+        self.language = locale.windows_locale[ windll.GetUserDefaultUILanguage() ]
+        os.environ["LANGUAGE"]    = self.language
         
-    # descending by usedate
-    sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
-    # make list
-    ii = 0
-    indexes = []
-    for tfile in sorted_d:
-        combobox_indir.insert(END, tfile)
-        if not os.path.isdir(tfile):
-            #print("INDIR: " + tfile + " INDEX: " + str(ii))
-            indexes.append(ii) # list of indizes to grey out because dir does not exist
-        ii += 1
-    if ii > 0:
-        combobox_indir.select_set(0)
-        button_indir_from_list.config(state = NORMAL)
-    else: 
-        button_indir_from_list.config(state = DISABLED)
-    for ii in indexes:
-        combobox_indir.itemconfig(ii, fg="gray")
-
-    # fill out combobox
-    result = DX.get_outdirs(config_files_xml)
-    dict_filename_usedate = {}
-    for tfile in result:
-        #print("infile: " + tfile)
-        attribute = result[tfile]
-        searchattr = 'usedate'
-        for attribut in attribute:
-            #print("  " + attribut + " = " + attribute[attribut])
-            if attribut == searchattr:
-                dict_filename_usedate[tfile] = attribute[searchattr]
+        print("Codepage is: " + str(self.codepage) + " language is: " + self.language)
         
-    # descending by usedate
-    sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
-    # make list
-    ii = 0
-    indexes = []
-    for tfile in sorted_d:
-        combobox_outdir.insert(END, tfile)
-        if not os.path.isdir(tfile):
-            print("OUTDIR: " + tfile + " INDEX: " + str(ii))
-            indexes.append(ii) # list of indizes to disable because dir does not exist
-        ii += 1
-    if ii > 0:
-        combobox_outdir.select_set(0)
-        button_outdir_from_list.config(state = NORMAL)
-    else: 
-        button_outdir_from_list.config(state = DISABLED)
-    for ii in indexes:
-        combobox_outdir.itemconfig(ii, fg="gray")
+        inifile = "Dateimeister.ini" 
+        config = configparser.ConfigParser() 
+        config.read(inifile)
+        default_indir  = config["dirs"]["indir"]
+        default_outdir = config["dirs"]["outdir"]
+        datadir = config["dirs"]["datadir"]
+        config_files_subdir = config["dirs"]["config_files_subdir"]
+        cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
+        config_files_xml = config["misc"]["config_files_xml"]
+        
+        # read process_types from ini because depemdent on dateimeister implementation
+        dict_proctypes = config["proc_types"]
+        for t in dict_proctypes:
+            print("Proctype: " + dict_proctypes[t]) 
+        
+        _uncomment = config["misc"]["uncomment"] + " "        
+        templatefile = config["misc"]["templatefile"]
+        #max number of config_file-, indir-, outdir-entries in xml
+        max_configfiles = config["misc"]["max_configfiles"]
+        max_indirs      = config["misc"]["max_indirs"]
+        max_outdirs     = config["misc"]["max_outdirs"]
+        platform = config["misc"]["platform"].upper()
+        if platform != "UNIX" and platform != "WINDOWS":
+            messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + platform)
+            exit()
+        
+        delay_default = 20 #ToDo: Ini
+
+        dict_templates = {}
+        _dict_file_image = {}
+
+
+        # configure some controls
+        o_camera  = self.w.Entry_camera
+        lb_camera = self.w.Listbox_camera
+        lb_camera.configure(exportselection=False)
+        b_button1 = self.w.Button1
+        b_button2 = self.w.Button2
+        b_button_outdir = self.w.Button_outdir
+        button_call = self.w.Button_call
+        button_call.config(command = Press_generate)
+        button_exec = self.w.Button_exec
+        button_exec.config(command = button_exec_pressed)
+
+        # get all camera information and fill camera-listbox
+        _dict_cameras, _dict_subdirs, _dict_process_image = get_camera_xml()
+
+        t_text1 = self.w.Text1
+        # set font
+        font_tuple = ("Lucida Console", 10, "normal")
+        t_text1.config(font = font_tuple)
+        t_text1.tag_configure("normal_include", foreground="black", background = "white")
+        t_text1.tag_configure("select_include", foreground="red", background = "white")
+        t_text1.tag_configure("normal_exclude", foreground="lightgrey", background = "darkgrey")
+        t_text1.tag_configure("select_exclude", foreground="red", background = "darkgrey")
+        
+        l_label1 = self.w.Label1
+        label_num = self.w.Label_num
+        lb_gen   = self.w.Listbox_gen
+        _button_include = self.w.Button_include
+        _button_exclude = self.w.Button_exclude
+        _button_include.config(state = DISABLED)
+        _button_exclude.config(state = DISABLED)
+        _button_undo = self.w.Button_undo
+        _button_redo = self.w.Button_redo
+        _button_undo.config(state = DISABLED)
+        _button_redo.config(state = DISABLED)
+        _button_duplicates = self.w.Button_duplicates
+        _button_duplicates.config(state = DISABLED)
+        _button_be = self.w.Button_be
+        _button_be.config(state = DISABLED)
+        button_exec.config(state = DISABLED)
+        button_call.config(state = DISABLED) # generate-Button
+        
+        label_indir  = self.w.Label_indir
+        label_outdir = self.w.Label_outdir
+        button_indir_from_list = self.w.Button_indir_from_list
+        button_outdir_from_list = self.w.Button_outdir_from_list
+        
+        # Scrollbars
+        V = Scrollbar(self.w.Frame1)
+        V.place(relx = 1, rely = 0, relheight = .976, relwidth = .01, anchor = tk.NE)
+        V.config(command=t_text1.yview)
+        t_text1.config(yscrollcommand=V.set)  
+        H = Scrollbar(self.w.Frame1, orient = HORIZONTAL)
+        H.place(relx = 0, rely = 1, relheight = 0.024, relwidth = .99, anchor = tk.SW)
+        H.config(command=t_text1.xview)
+        t_text1.config(xscrollcommand=H.set)  
+        t_text1.configure(wrap="none")
+        
+        cb_recursive = self.w.Checkbutton1
+        cb_recursive.config(command = state_gen_required)
+        cb_recursive_var = self.w.cb1_val
+        cb_recursive_var.set(1)
+        
+        cb_prefix = self.w.Checkbutton_use_camera_name
+        cb_prefix.config(command = state_gen_required)
+        cb_prefix_var = self.w.cb_prefix_var
+        cb_prefix_var.set(1)
+
+        cb_addrelpath = self.w.Checkbutton_addrelpath
+        cb_addrelpath.config(command = state_gen_required)
+        cb_addrelpath_var = self.w.cb_addrelpath_var
+        cb_addrelpath_var.set(0)
+
+        cb_newer = self.w.Checkbutton_newer
+        cb_newer.config(command = state_gen_required)
+        cb_newer_var = self.w.cb_newer_var
+        cb_newer_var.set(0)
+
+        cb_num = self.w.Checkbutton_num
+        cb_num_var = self.w.cbnum_var
+        cb_num_var.set(1)
+
+        combobox_indir = self.w.TCombobox_indir
+        combobox_indir_var = self.w.combobox_indir
+        combobox_indir.configure(exportselection=False)
+        combobox_outdir = self.w.TCombobox_outdir
+        combobox_outdir_var = self.w.combobox_outdir
+        combobox_outdir.configure(exportselection=False)
+        
+        # Scrollbars
+        VI = Scrollbar(combobox_indir, orient= VERTICAL)
+        VI.place(relx = 1, rely = 0, relheight = 1, relwidth = .015, anchor = tk.NE)
+        VI.config(command = combobox_indir.yview)
+        combobox_indir.config(yscrollcommand = VI.set)
+        VO = Scrollbar(combobox_outdir, orient= VERTICAL)
+        VO.place(relx = 1, rely = 0, relheight = 1, relwidth = .015, anchor = tk.NE)
+        VO.config(command = combobox_outdir.yview)
+        combobox_outdir.config(yscrollcommand = VO.set)
+        #listbox camera
+        VC = Scrollbar(self.w.Frame_camera, orient= VERTICAL)
+        VC.place(relx = 1, rely = 0.01, relheight = .96, relwidth = .03, anchor = tk.NE)
+        VC.config(command = lb_camera.yview)
+        lb_camera.config(yscrollcommand = VC.set)
+        
+        canvas_gallery = self.w.Canvas1
+        # Scrollbars
+        scroll_canvas_x = tk.Scrollbar(self.root, orient="horizontal", command=xview)
+        #scroll_canvas_x.pack(side=BOTTOM, fill=BOTH)
+        scroll_canvas_x.place(relx = .015, rely = .96, relheight = 0.015, relwidth = .97, anchor = tk.NW)
+        canvas_gallery.config(xscrollcommand = scroll_canvas_x.set, scrollregion=canvas_gallery.bbox("all"))
+
+        # Create the context menu
+        context_menu = tk.Menu(canvas_gallery, tearoff=0)
+        context_menu.add_command(label="Exclude", command=canvas_image_exclude)    
+        context_menu.add_command(label="Show"   , command=canvas_image_show)    
+        context_menu.add_command(label="Restart", command=canvas_video_restart)    
+      
+        # Events
+        # Button 1 single haben wir deaktiviert, weil double immer auch zuerst single auslöst
+        # deshalb exlude und show über Kontext-Menü (rechte Maustaste), Show zusätzlich auch mit Doppelclick
+        #canvas_gallery.bind("<Button-1>", canvas_gallery_exclude)
+        canvas_gallery.bind("<Double-Button-1>", canvas_gallery_show)
+        canvas_gallery.bind('<Return>', canvas_gallery_show)    # show FSImage for selected thumbnail
+        # Pfeitasten fürs scrollen
+        canvas_gallery.bind("<Left>",  lambda event: xview("scroll", -1, "units"))
+        canvas_gallery.bind("<Right>", lambda event: xview("scroll",  1, "units"))
+        canvas_gallery.bind("<Prior>", lambda event: xview("scroll", -1, "page")) # Bind to PageUp
+        canvas_gallery.bind("<Next>",  lambda event: xview("scroll",  1, "page"))  # Bind to PageDown    
+        # Bind the context menu to the canvas widget
+        canvas_gallery.bind("<Button-3>", show_context_menu)    
+        canvas_gallery.bind('<Motion>', tooltip_imagefile)    
+        canvas_gallery.bind('<Button-1>', canvas_button_1)    
+        self.root.bind("<Configure>", on_window_resize)
+        self.root.bind("<Destroy>",   on_window_destroy)
+        # strg-z, y
+        canvas_gallery.bind('<Control-z>', lambda event: process_undo(event))
+        canvas_gallery.bind('<Control-y>', lambda event: process_redo(event))
+        canvas_gallery.bind('+', lambda event: delay_decr(event))
+        canvas_gallery.bind('-', lambda event: delay_incr(event))
+        canvas_gallery.bind('0', lambda event: delay_deflt(event))
+        canvas_gallery.bind('<FocusOut>', focus_out)
+        lb_gen.bind('<Double-1>', lb_gen_double)
+        lb_camera.bind('<Double-1>', lb_camera_double)
+
+        t_text1.bind('<Double-1>', text1_double)  # show FSImage for selected line
+        t_text1.bind('<Button-1>', text1_single)  # synchronize zext / gallery
+        t_text1.bind('<Key>', text1_key)
+        # handler for arrow up / down must be called AFTER the Text-class handler or the bind-handler is 1 step ahead
+        t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
+        print("Bindtags: %s " % str(t_text1.bindtags()))
+
+        cb_num.config(command = on_cb_num_toggle)
+        combobox_indir.bind('<Double-1>', combobox_indir_double)
+        combobox_outdir.bind('<Double-1>', combobox_outdir_double)
+        combobox_indir.bind("<<ListboxSelect>>", lambda event: combobox_indir_check_exist(event))
+        combobox_outdir.bind("<<ListboxSelect>>", lambda event: combobox_outdir_check_exist(event))
+        button_indir_from_list.config(command = combobox_indir_double)  
+        button_outdir_from_list.config(command = combobox_outdir_double)  
+        
+        label_indir.config(text = default_indir)
+        label_outdir.config(text = default_outdir)
+        l_label1.config(text = "Messages")
+        label_num.config(text = "0")
+        dict_gen_files = {}
+        dict_gen_files_delete = {}
+        thumbnails = {}
+        images = []
+        _dict_image_lineno = {}
+        gap = 10
+        config_file = ""
+        title = self.root.title()
+        oldcamera = ""
+
+        
+        # Fenstergröße
+        _screen_width  = int(self.root.winfo_screenwidth() * 0.9)
+        _screen_height = int(self.root.winfo_screenheight() * 0.8)
+        print("Bildschirm ist " + str(_screen_width) + " x " + str(_screen_height))
+        width,height=_screen_width,_screen_height
+        v_dim=str(width)+'x'+str(height)
+        self.root.geometry(v_dim)
+        #my_w.maxsize(300,220)  # (maximum ) width , ( maximum) height
+        #my_w.minsize(250,220)  # (minimum ) width , ( minimum) height
+        self.root.resizable(False, False)
+        _tt = Dateimeister.ToolTip(canvas_gallery, "no images available", delay=0, follow = True)
+        
+        # Menubar
+        menubar = Menu(self.root)
+        filemenu = Menu(menubar, tearoff=0)
+        filemenu.add_command(label="New", command=donothing)
+        filemenu.add_command(label="Open config", command=open_config)
+        filemenu.add_command(label="Save config", command=save_config)
+        filemenu.add_command(label="Save config as...", command=saveas_config)
+        filemenu.add_command(label="Apply config", command=apply_config)
+        menubar.add_cascade(label="File", menu=filemenu)
+        recentmenu = Menu(menubar, tearoff=0)
+        filemenu.add_cascade(label="Open Recent", menu=recentmenu)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=self.root.quit)
+        filemenu.entryconfig(0, state=DISABLED)
+        filemenu.entryconfig(1, state=DISABLED) # open after Browse / Edit, we need indir and type
+        filemenu.entryconfig(2, state=DISABLED)
+        filemenu.entryconfig(3, state=DISABLED)
+        filemenu.entryconfig(4, state=DISABLED)
+        filemenu.entryconfig(5, state=DISABLED)
+        
+        # camera menu
+        cameramenu = Menu(menubar, tearoff=0)
+        cameramenu.add_command(label="Edit Cameras...", command = menu_cameras_edit)
+        cameramenu.add_command(label="Diatisch", command = menu_diatisch)
+        menubar.add_cascade(label="Tools", menu=cameramenu)
+
+        helpmenu = Menu(menubar, tearoff=0)
+        helpmenu.add_command(label="Help Index", command=donothing)
+        helpmenu.add_command(label="About...", command=donothing)
+        menubar.add_cascade(label="Help", menu=helpmenu)
+
+        self.root.config(menu=menubar)
+        
+        _timestamp = datetime.now()
+        
+        # fill in combobox
+        result = DX.get_indirs(config_files_xml)
+        dict_filename_usedate = {}
+        for tfile in result:
+            #print("infile: " + tfile)
+            attribute = result[tfile]
+            searchattr = 'usedate'
+            for attribut in attribute:
+                #print("  " + attribut + " = " + attribute[attribut])
+                if attribut == searchattr:
+                    dict_filename_usedate[tfile] = attribute[searchattr]
+            
+        # descending by usedate
+        sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
+        # make list
+        ii = 0
+        indexes = []
+        for tfile in sorted_d:
+            combobox_indir.insert(END, tfile)
+            if not os.path.isdir(tfile):
+                #print("INDIR: " + tfile + " INDEX: " + str(ii))
+                indexes.append(ii) # list of indizes to grey out because dir does not exist
+            ii += 1
+        if ii > 0:
+            combobox_indir.select_set(0)
+            button_indir_from_list.config(state = NORMAL)
+        else: 
+            button_indir_from_list.config(state = DISABLED)
+        for ii in indexes:
+            combobox_indir.itemconfig(ii, fg="gray")
+
+        # fill out combobox
+        result = DX.get_outdirs(config_files_xml)
+        dict_filename_usedate = {}
+        for tfile in result:
+            #print("infile: " + tfile)
+            attribute = result[tfile]
+            searchattr = 'usedate'
+            for attribut in attribute:
+                #print("  " + attribut + " = " + attribute[attribut])
+                if attribut == searchattr:
+                    dict_filename_usedate[tfile] = attribute[searchattr]
+            
+        # descending by usedate
+        sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
+        # make list
+        ii = 0
+        indexes = []
+        for tfile in sorted_d:
+            combobox_outdir.insert(END, tfile)
+            if not os.path.isdir(tfile):
+                print("OUTDIR: " + tfile + " INDEX: " + str(ii))
+                indexes.append(ii) # list of indizes to disable because dir does not exist
+            ii += 1
+        if ii > 0:
+            combobox_outdir.select_set(0)
+            button_outdir_from_list.config(state = NORMAL)
+        else: 
+            button_outdir_from_list.config(state = DISABLED)
+        for ii in indexes:
+            combobox_outdir.itemconfig(ii, fg="gray")
         
 def get_camera_xml(): # returns dict with all cameras, types and suffixes
     ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
@@ -3961,6 +3954,12 @@ def dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, tar
                 a = 1
                 #print("D: " + os.path.join(root, dir))
     return dict_result, dict_result_all, dict_result_tooold
+
+def main(*args):
+    '''Main entry point for the application.'''
+    global root
+    root = tk.Tk()
+    app = Dateimeister_support(root)
 
  
 
