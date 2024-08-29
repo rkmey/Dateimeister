@@ -1830,8 +1830,9 @@ class Dateimeister_support:
         # Creates a toplevel widget.
         self.w = Dateimeister.Toplevel1(self.root)
         self.init()
-        self.root.mainloop()
         self.codepage = ""
+        self.config_file = ""
+        self.root.mainloop()
 
     def init(self):
         global _screen_width, _screen_height, _imagetype, _dict_process_image, \
@@ -1841,7 +1842,7 @@ class Dateimeister_support:
             canvas_gallery, cb_recursive, cb_recursive_var, cb_prefix, cb_prefix_var, cb_addrelpath, cb_addrelpath_var, \
             thumbnails, images, scroll_canvas_x, gap, context_menu, \
             _dict_image_lineno, _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
-            cb_newer, cb_newer_var, config_files_xml, recentmenu, config_file, title, label_num, num_images, config_files_subdir, \
+            cb_newer, cb_newer_var, config_files_xml, recentmenu, title, label_num, num_images, config_files_subdir, \
             cmd_files_subdir, _timestamp, delay_default, \
             button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
             combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
@@ -1925,6 +1926,7 @@ class Dateimeister_support:
         _button_duplicates.config(state = DISABLED)
         _button_be = self.w.Button_be
         _button_be.config(state = DISABLED)
+        _button_be.config(command = self.Button_be_pressed)
         button_exec.config(state = DISABLED)
         button_call.config(state = DISABLED) # generate-Button
         
@@ -2027,8 +2029,8 @@ class Dateimeister_support:
         canvas_gallery.bind('-', lambda event: delay_incr(event))
         canvas_gallery.bind('0', lambda event: delay_deflt(event))
         canvas_gallery.bind('<FocusOut>', focus_out)
-        lb_gen.bind('<Double-1>', lb_gen_double)
-        lb_camera.bind('<Double-1>', lb_camera_double)
+        lb_gen.bind('<Double-1>', self.lb_gen_double)
+        lb_camera.bind('<Double-1>', self.lb_camera_double)
 
         t_text1.bind('<Double-1>', text1_double)  # show FSImage for selected line
         t_text1.bind('<Button-1>', text1_single)  # synchronize zext / gallery
@@ -2038,12 +2040,12 @@ class Dateimeister_support:
         print("Bindtags: %s " % str(t_text1.bindtags()))
 
         cb_num.config(command = on_cb_num_toggle)
-        combobox_indir.bind('<Double-1>', combobox_indir_double)
-        combobox_outdir.bind('<Double-1>', combobox_outdir_double)
-        combobox_indir.bind("<<ListboxSelect>>", lambda event: combobox_indir_check_exist(event))
-        combobox_outdir.bind("<<ListboxSelect>>", lambda event: combobox_outdir_check_exist(event))
-        button_indir_from_list.config(command = combobox_indir_double)  
-        button_outdir_from_list.config(command = combobox_outdir_double)  
+        combobox_indir.bind('<Double-1>', self.combobox_indir_double)
+        combobox_outdir.bind('<Double-1>', self.combobox_outdir_double)
+        combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
+        combobox_outdir.bind("<<ListboxSelect>>", lambda event: self.combobox_outdir_check_exist(event))
+        button_indir_from_list.config(command = self.combobox_indir_double)  
+        button_outdir_from_list.config(command = self.combobox_outdir_double)  
         
         label_indir.config(text = default_indir)
         label_outdir.config(text = default_outdir)
@@ -2055,7 +2057,6 @@ class Dateimeister_support:
         images = []
         _dict_image_lineno = {}
         gap = 10
-        config_file = ""
         title = self.root.title()
         oldcamera = ""
 
@@ -2076,10 +2077,10 @@ class Dateimeister_support:
         menubar = Menu(self.root)
         filemenu = Menu(menubar, tearoff=0)
         filemenu.add_command(label="New", command=self.donothing)
-        filemenu.add_command(label="Open config", command=open_config)
-        filemenu.add_command(label="Save config", command=save_config)
-        filemenu.add_command(label="Save config as...", command=saveas_config)
-        filemenu.add_command(label="Apply config", command=apply_config)
+        filemenu.add_command(label="Open config", command=self.open_config)
+        filemenu.add_command(label="Save config", command=self.save_config)
+        filemenu.add_command(label="Save config as...", command=self.saveas_config)
+        filemenu.add_command(label="Apply config", command=self.apply_config)
         menubar.add_cascade(label="File", menu=filemenu)
         recentmenu = Menu(menubar, tearoff=0)
         filemenu.add_cascade(label="Open Recent", menu=recentmenu)
@@ -2172,266 +2173,487 @@ class Dateimeister_support:
     def donothing(self):
         print("Menuitem not yet implemented")
     
-def get_camera_xml(): # returns dict with all cameras, types and suffixes
-    ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-    cameraname = "Retina Reflex"
-    ctype      = "JPEG"
-    suffix     = "JPG"
-    rc = DX.new_camera_type_suffix(config_files_xml, cameraname, ctype, suffix, ts) 
-    suffix     = "JPEG"
-    rc = DX.new_camera_type_suffix(config_files_xml, cameraname, ctype, suffix, ts) 
-    ctype      = "VIDEO"
-    suffix     = "MOV"
-    rc = DX.new_camera_type_suffix(config_files_xml, cameraname, ctype, suffix, ts) 
-    # dateimeister_config_xml.py returns suffixes as list we need them as a comma separated string
-    dict_cameras = {}
-    dict_cameras = DX.get_cameras_types_suffixes(config_files_xml)
-    #print("Cameras: " + str(dict_cameras))
-    dict_t = {}
-    for camera in dict_cameras:
-        dict_t[camera] = {}
-        type_num = 0
-        for type in dict_cameras[camera]:
-            type_num += 1
-            suffixes = ", ".join(dict_cameras[camera][type])
-            dict_t[camera][type] = suffixes
-            print("Camera: " + camera + " Type: " + type + " Suffixes: " + suffixes)
-            if len(suffixes) == 0:
-                messagebox.showerror("INIT", "Camera " + camera + " type " + type + " no suffix defined")
-                exit()
-        if type_num == 0:
-            messagebox.showerror("INIT", "Camera " + camera + " no type defined")
-            exit()
+    def timer_end(self):
+        print("Timer has elapsed")
 
-    dict_subdirs = {}
-    dict_subdirs = DX.get_subdirs(config_files_xml)
-    for imagetype in dict_subdirs:
-        print("Subdir {:s}, {:s}".format(imagetype, dict_subdirs[imagetype]))
+    def lb_gen_double(self, event):
+        self.Button_be_pressed(event)
     
-    dict_process_image = {}
-    dict_process_image = DX.get_process_image(config_files_xml)
-    for t in dict_process_image:
-        print("Process Image  {:s}, {:s}".format(t, dict_process_image[t]))
+    def lb_camera_double(self, event):
+        B_camera_press(event)
+
+    def combobox_indir_double(self, event = None):
+        selected_indices = combobox_indir.curselection()
+        indir = ",".join([combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
+        label_indir.config(text = indir)
+
+    def combobox_outdir_double(self, event = None):
+        selected_indices = combobox_outdir.curselection()
+        outdir = ",".join([combobox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
+        label_outdir.config(text = outdir)
+
+    def combobox_indir_check_exist(self, event):
+        index = combobox_indir.curselection()[0]
+        indir = combobox_indir.get(index) # because listbox has single selection
+        print("current selection is: " + indir + " INDEX: " + str(index))
+        if not os.path.isdir(indir):
+            combobox_indir.selection_clear(index) # dont select, MessageBox
+            messagebox.showerror("showerror", "Indir: " + indir + " does not exist, choose another one")
     
-    lb_camera.delete(0, END)
-    for key in dict_t:
-        lb_camera.insert(END, key)
-    lb_camera.selection_set(END)
-
-    return dict_t, dict_subdirs, dict_process_image
-
-def timer_end():
-    print("Timer has elapsed")
-
-def lb_gen_double(event):
-    Button_be_pressed(event)
-    
-def lb_camera_double(event):
-    B_camera_press(event)
-
-def combobox_indir_double(event = None):
-    selected_indices = combobox_indir.curselection()
-    indir = ",".join([combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
-    label_indir.config(text = indir)
-
-def combobox_outdir_double(event = None):
-    selected_indices = combobox_outdir.curselection()
-    outdir = ",".join([combobox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
-    label_outdir.config(text = outdir)
-
-def combobox_indir_check_exist(event):
-    index = combobox_indir.curselection()[0]
-    indir = combobox_indir.get(index) # because listbox has single selection
-    print("current selection is: " + indir + " INDEX: " + str(index))
-    if not os.path.isdir(indir):
-        combobox_indir.selection_clear(index) # dont select, MessageBox
-        messagebox.showerror("showerror", "Indir: " + indir + " does not exist, choose another one")
-    
-def combobox_outdir_check_exist(event):
-    index = combobox_outdir.curselection()[0]
-    outdir = combobox_outdir.get(index) # because listbox has single selection
-    print("current selection is: " + outdir + " INDEX: " + str(index))
-    if not os.path.isdir(outdir):
-        combobox_outdir.selection_clear(index) # dont select, MessageBox
-        messagebox.showerror("showerror", "outdir: " + outdir + " does not exist, choose another one")
-    
-def open_config():
-    global config_file
-    # get config_files for indir / type
-    
-    endung = 'xml'
-    config_file = fd.askopenfilename(initialdir = os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
-    filemenu.entryconfig(4, state=NORMAL)
-    root.title(title + ' ' + config_file)
-    filemenu.entryconfig(2, state=NORMAL)
-
-def apply_config():
-    tree = ET.parse(config_file)
-    root = tree.getroot()
-    time = root.attrib['time']
-    print(time)    
-    for thumbnail in root.findall('thumbnail'):
-        #print (thumbnail.attrib['filename'])   
-        image = thumbnail.find('image').text
-        mystate = thumbnail.find('state').text
-        #print(image)
-        #print(mystate)
-        # apply config
-        if image in _dict_thumbnails[_imagetype]:
-            if _dict_thumbnails[_imagetype][image] in thumbnails[_imagetype]:
-                if mystate == "state.INCLUDE":
-                    _dict_thumbnails[_imagetype][image].setState(state.INCLUDE, None, False)
-                else:
-                    _dict_thumbnails[_imagetype][image].setState(state.EXCLUDE, None, False)
-            else:
-                print("thumbnail for " + _imagetype + " file " + image + " not found")
-                print(thumbnails)
-        else:
-            print("Imagefile: " + image + " not found in _dict thumdnails of type " + _imagetype)
-    historize_process()
-    write_cmdfile(_imagetype)
-
-
-def save_config(): # Config-xml speichern
-    print("Config File is: " + config_file)
-    if config_file != "":
-        write_config(config_file)
-        # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
-        update_config_xml(config_file)
-    else:
-        saveas_config()
-
-def saveas_config(): # Config-xml unter neuem Namen sichern
-    global config_file
-    endung = 'xml'
-    config_file = fd.asksaveasfilename(initialdir = os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
-    if (len(config_file) > 0):
-        match = re.search(rf".*?{endung}$", config_file)
-        if match:
-            filename = config_file
-        else:
-            filename = config_file + '.' + endung
-            config_file = filename
-        write_config(filename)
-        # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
-        update_config_xml(config_file)
+    def combobox_outdir_check_exist(self, event):
+        index = combobox_outdir.curselection()[0]
+        outdir = combobox_outdir.get(index) # because listbox has single selection
+        print("current selection is: " + outdir + " INDEX: " + str(index))
+        if not os.path.isdir(outdir):
+            combobox_outdir.selection_clear(index) # dont select, MessageBox
+            messagebox.showerror("showerror", "outdir: " + outdir + " does not exist, choose another one")
         
-        root.title(title + ' ' + config_file)
-        filemenu.entryconfig(2, state=NORMAL) # Save
-        filemenu.entryconfig(3, state=NORMAL) # Save As
-        filemenu.entryconfig(4, state=NORMAL) # Apply config
+    def open_config(self):
+        # get config_files for indir / type
+        
+        endung = 'xml'
+        self.config_file = fd.askopenfilename(initialdir = os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
+        filemenu.entryconfig(4, state=NORMAL)
+        root.title(title + ' ' + self.config_file)
+        filemenu.entryconfig(2, state=NORMAL)
 
-def update_config_xml(config_file): # Config-xml unter neuem Namen sichern und update
-    # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
-    ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-    indir = label_indir.cget('text')
-    # lower and slash instead of backslash
-    indir = re.sub(r'\\', '/', indir).lower()
-    my_config_file = re.sub(r'\\', '/', config_file).lower()
-    #print("*** new config_file: " + my_config_file)
+    def apply_config(self):
+        tree = ET.parse(self.config_file)
+        root = tree.getroot()
+        time = root.attrib['time']
+        print(time)    
+        for thumbnail in root.findall('thumbnail'):
+            #print (thumbnail.attrib['filename'])   
+            image = thumbnail.find('image').text
+            mystate = thumbnail.find('state').text
+            #print(image)
+            #print(mystate)
+            # apply config
+            if image in _dict_thumbnails[_imagetype]:
+                if _dict_thumbnails[_imagetype][image] in thumbnails[_imagetype]:
+                    if mystate == "state.INCLUDE":
+                        _dict_thumbnails[_imagetype][image].setState(state.INCLUDE, None, False)
+                    else:
+                        _dict_thumbnails[_imagetype][image].setState(state.EXCLUDE, None, False)
+                else:
+                    print("thumbnail for " + _imagetype + " file " + image + " not found")
+                    print(thumbnails)
+            else:
+                print("Imagefile: " + image + " not found in _dict thumdnails of type " + _imagetype)
+        historize_process()
+        write_cmdfile(_imagetype)
 
-    result, sorted_d = get_dict_of_config_files(indir, _imagetype)
-    if my_config_file not in result: # this is a new file, so we have to clean up the xml entries in order to stay within max_configfiles
-        # delete oldest files until max_configfiles - 1 is reached (because a new one will be created)
-        #get dict descending by usedate and result with all attributes
-        # in the first pass delete all Entries where file does not exist,afterwards delete entries for existing files if necessary
-        # delete only if new config-file does not exist
-        for loop in range(1, 3):
-            result, sorted_d = get_dict_of_config_files(indir, _imagetype) # we have to do this because list of config_files is changed between loops
-            list_cfgfiles = []
-            for t_cfg in sorted_d:
-                list_cfgfiles.append(t_cfg)
-            num_to_delete = len(list_cfgfiles) - int(max_configfiles) + 1
-            if num_to_delete > 0:
-                #print(str(list_cfgfiles))
-                ii = 0
-                for t in reversed(list_cfgfiles): # now the oldest are on top
-                    if ii < num_to_delete:
-                        if loop == 1: # in the first pass only delete entries for not existing files
-                            if not os.path.isfile(t):
+
+    def save_config(self): # Config-xml speichern
+        print("Config File is: " + self.config_file)
+        if self.config_file != "":
+            self.write_config(self.config_file)
+            # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
+            self.update_config_xml(self.config_file)
+        else:
+            saveas_config()
+
+    def saveas_config(self): # Config-xml unter neuem Namen sichern
+        endung = 'xml'
+        self.config_file = fd.asksaveasfilename(initialdir = os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
+        if (len(self.config_file) > 0):
+            match = re.search(rf".*?{endung}$", self.config_file)
+            if match:
+                filename = self.config_file
+            else:
+                filename = self.config_file + '.' + endung
+                self.config_file = filename
+            self.write_config(filename)
+            # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
+            self.update_config_xml(self.config_file)
+            
+            root.title(title + ' ' + self.config_file)
+            filemenu.entryconfig(2, state=NORMAL) # Save
+            filemenu.entryconfig(3, state=NORMAL) # Save As
+            filemenu.entryconfig(4, state=NORMAL) # Apply config
+
+    def update_config_xml(self, config_file): # Config-xml unter neuem Namen sichern und update
+        # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        indir = label_indir.cget('text')
+        # lower and slash instead of backslash
+        indir = re.sub(r'\\', '/', indir).lower()
+        my_config_file = re.sub(r'\\', '/', self.config_file).lower()
+        #print("*** new config_file: " + my_config_file)
+
+        result, sorted_d = self.get_dict_of_config_files(indir, _imagetype)
+        if my_config_file not in result: # this is a new file, so we have to clean up the xml entries in order to stay within max_configfiles
+            # delete oldest files until max_configfiles - 1 is reached (because a new one will be created)
+            #get dict descending by usedate and result with all attributes
+            # in the first pass delete all Entries where file does not exist,afterwards delete entries for existing files if necessary
+            # delete only if new config-file does not exist
+            for loop in range(1, 3):
+                result, sorted_d = self.get_dict_of_config_files(indir, _imagetype) # we have to do this because list of config_files is changed between loops
+                list_cfgfiles = []
+                for t_cfg in sorted_d:
+                    list_cfgfiles.append(t_cfg)
+                num_to_delete = len(list_cfgfiles) - int(max_configfiles) + 1
+                if num_to_delete > 0:
+                    #print(str(list_cfgfiles))
+                    ii = 0
+                    for t in reversed(list_cfgfiles): # now the oldest are on top
+                        if ii < num_to_delete:
+                            if loop == 1: # in the first pass only delete entries for not existing files
+                                if not os.path.isfile(t):
+                                    DX.delete_cfgfile(config_files_xml, indir, _imagetype, t)
+                                    ii += 1
+                            else: # delete also existing files if necessary
                                 DX.delete_cfgfile(config_files_xml, indir, _imagetype, t)
                                 ii += 1
-                        else: # delete also existing files if necessary
-                            DX.delete_cfgfile(config_files_xml, indir, _imagetype, t)
-                            ii += 1
-                    else:
-                        break
-    # now create new entry for my_config_file
-    DX.new_cfgfile(config_files_xml, indir, _imagetype, my_config_file, ts, num_images)
-    # update usedate in config_files_xml
-    DX.update_cfgfile(config_files_xml, indir, _imagetype, my_config_file, ts, num_images)
-    # finally update the recent files menu
-    update_recent_menu(indir, _imagetype)
+                        else:
+                            break
+        # now create new entry for my_config_file
+        DX.new_cfgfile(config_files_xml, indir, _imagetype, my_config_file, ts, num_images)
+        # update usedate in config_files_xml
+        DX.update_cfgfile(config_files_xml, indir, _imagetype, my_config_file, ts, num_images)
+        # finally update the recent files menu
+        self.update_recent_menu(indir, _imagetype)
 
-def update_recent_menu(indir, imagetype):
-    # descending by usedate
-    result, sorted_d = get_dict_of_config_files(indir, imagetype)
-    #print("get_dict_of_config_files: " + str(sorted_d))
-    
-    recentmenu.delete(0, "end")
-    ii = 0
-    for item in sorted_d:
-        usedate      = result[item]['usedate']
-        mynum_images = result[item]['num_images']
-        labeltext = item + ' (usedate: ' + usedate + ' ,images: ' + mynum_images + ')'
-        recentmenu.add_command(label=labeltext, command = lambda item=item: recent_config(item))
-        print("  config_file: " + labeltext)
-        if not os.path.isfile(item):
-            recentmenu.entryconfig(ii, state = DISABLED)
-        ii += 1
-    if ii == 0:
-        filemenu.entryconfig(5, state=DISABLED)
+    def Button_be_pressed(self, *args):
+        global _canvas_gallery_width_visible
+        global _canvas_gallery_width_images
+        global _canvas_gallery_width_all
+        global _lastposition, _dict_file_image
+        global _imagetype, _dict_duplicates, _duplicates, num_images, _dict_duplicates_sourcefiles, _win_duplicates, dict_source_target, _win_messages
+        global _processid_high, _processid_akt, _list_processids, _stack_processids
 
+        if _debug:
+            print('Dateimeister_support.Press_be_out')
+            for arg in args:
+                print ('    another arg:', arg)
+            sys.stdout.flush()
 
-def write_config(filename): # Config-xml unter neuem Namen sichern
-    file1 = open(filename, "w")
-    
-    s = '<?xml version="1.0" encoding="iso-8859-1"?>' + "\n"
-    file1.write(s)
-    ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-
-    s = '<thumbnails time="' + ts + '">' + "\n"
-    file1.write(s)
-    for thumbnail in thumbnails[_imagetype]:
-        s = "    <thumbnail filename=\"" + thumbnail.getFile() + "\">\n"
-        file1.write(s)
-        s = "        <image>" + str(thumbnail.getFile()) + "</image>\n"
-        file1.write(s)
-        s = "        <state>" + str(thumbnail.getState()) + "</state>\n"
-        file1.write(s)
-        s = "    </thumbnail>\n"
-        file1.write(s)
-    s = '</thumbnails>' + "\n"
-    file1.write(s)
-    # Closing file
-    file1.close()
-    
-def get_dict_of_config_files(pindir, imagetype): # returns dict sorted by usedate asc
-    # lower and slash instead of backslash
-    indir = re.sub(r'\\', '/', pindir).lower()
-    result = DX.get_cfgfiles(config_files_xml, indir, imagetype)
-    dict_filename_usedate = {}
-    for cfg_file in result:
-        print("config_file: " + cfg_file)
-        attribute = result[cfg_file]
-        searchattr = 'usedate'
-        for attribut in attribute:
-            print("  " + attribut + " = " + attribute[attribut])
-            if attribut == searchattr:
-                dict_filename_usedate[cfg_file] = attribute[searchattr]
+        # reset all process-states
+        _processid_akt  = 0
+        _processid_high = 0
+        _list_processids = []
+        _stack_processids = []
+        _button_undo.config(state = DISABLED)    
+        _button_redo.config(state = DISABLED)
+        self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
+        root.title(title)
         
-    # descending by usedate
-    sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
-    return result, sorted_d
+        clear_text(t_text1)
+        canvas_gallery.delete("all")
+
+        if not lb_gen.curselection() == ():
+            selected_indices = lb_gen.curselection()
+        else:
+            messagebox.showerror("showerror", "no Imagetype selected")
+            lb_gen.focus_set()
+            return None
+        thistype = ",".join([lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
+        #print("dict_gen_files: ", str(dict_gen_files))
+        filename = dict_gen_files[thistype]
+        imagetype = thistype
+        _imagetype = imagetype # auch in globaler Variable festhalten, da wir das an vielen Stellen brauchen
+        subdir = _dict_subdirs[imagetype]
+        stop_all_players() # should not continue running 
+        # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
+        if imagetype in thumbnails:
+            thumbnails[imagetype].clear() # damit werden implizit jetzt alle Bilder gelöscht
+        else:
+            thumbnails[imagetype] = []
+        
+        # cleanup
+        close_child_windows()
+        
+        l_label1.config(text = "Output from Dateimeister : " + filename)
+        _dict_image_lineno[imagetype] = {} # in Python muss das sein, sonst gehts in der nächsten Ebene nicht
+        lineno = 0
+        #print(str(dict_source_target))
+        for this_sourcefile in dict_source_target[imagetype]:
+            this_targetfile = dict_source_target[imagetype][this_sourcefile]
+            lineno += 1
+            source_without_dir = re.sub(re.escape(label_indir.cget('text')), '', this_sourcefile)
+            source_without_dir = re.sub(r'^[\\\/]', '', source_without_dir)
+            target_without_dir = re.sub(re.escape(label_outdir.cget('text')), '', this_targetfile)
+            target_without_dir = re.sub(r'[\\\/]', '/', target_without_dir) # replace all backslashes by slash
+            my_subdir = subdir
+            my_subdir = re.sub(r'[\\\/]', '/', my_subdir) # replace all backslashes by slash
+            target_without_dir = re.sub(re.escape(my_subdir), '', target_without_dir) # replace subdir
+            target_without_dir = re.sub(r'^[\\\/]+', '', target_without_dir) # replace first slash
+            text_w = 80
+            #thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = source_without_dir, target = target_without_dir)
+            thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = this_sourcefile, target = this_targetfile)
+            insert_text(t_text1, thisline)
+            _dict_image_lineno[imagetype][this_sourcefile] = lineno
+        
+        # wir suchen in der cmd-Datei die Endung für jedes Imagefile. Damit suchen wir in _dict_process_image nach einem Eintrag
+        # wenn JPEG, dann verarbeiten wir die Zeile und verwenden das mutmaßliche JPEG_Bild in der Gallerie. Wenn use_jpeg gefunden wird
+        # suchen wir nach einem passenden JPEG. Falls die Endung im dict nicht gefunden wird, verwenden wir ebenfalls use_jpeg. Später
+        # können hier passende RAW-DLLs aufgerufen werden, z.b. mit Name der DLL in der Ini-Datei
+        canvas_height = canvas_gallery.winfo_height()
+        canvas_width  = canvas_gallery.winfo_width()
+        _canvas_gallery_width_visible = canvas_gallery.winfo_width() # Fensterbreite
+        _lastposition = 0
+        _dict_thumbnails[imagetype] = {}
+        _dict_thumbnails_lineno[imagetype] = {}
+        num_images = 0
+        for file in dict_source_target[imagetype]:
+            num_images += 1
+            this_targetfile = dict_source_target[imagetype][file]
+            # wir brauchen die Endung der Datei und den Vornamen
+            regpattern = r'[\/\\]([^\/\\."]+)\.([^\/\\."]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
+            match = re.search(regpattern, file)
+            if match:
+                firstname  = match.group(1)
+                lastname   = match.group(2).upper()
+                #print("firstname / lastname = " + firstname + " / " + lastname)
+            else: 
+                print("unable to find firstname, lastname for: " + file)
+            # wir brauchen die Methode aus der ini-Datei, mit der wir das Bild verarbeiten sollen
+            process_type = _dict_process_image[lastname].upper()
+            #print("Process Type is: " + process_type)
+            player = None # only for video
+            if (process_type == "JPEG"):
+                showfile = file # Image-file to show in Canvas
+            elif process_type == "USE_JPEG":
+                if firstname.upper() in _dict_firstname_fullname:
+                    showfile = _dict_firstname_fullname[firstname.upper()][-1]
+                    #print ("*** JPEG found for " + file + " using " + showfile)
+                else:
+                    showfile = "none"
+                    print ("*** No JPEG found for " + file + " using " + showfile)
+                    process_type = "none" # rectangle instead
+            elif process_type == 'VIDEO':
+                print("try to create new videoplayer...")
+                # create new videoplayer
+                player   = DV.VideoPlayer(root, file, canvas_gallery, canvas_width, canvas_height, _lastposition)
+                image_width, image_height, pimg = player.get_pimg()
+                showfile = file
+            else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
+                showfile = "none"
+            if file in _dict_duplicates_sourcefiles: # for storing in Thumbnail
+                duplicate = 'j'
+            else:
+                duplicate = 'n'
+            #print ("Process-type, file" , process_type, ' ', file)
+            this_lineno = _dict_image_lineno[imagetype][file]
+            # distance from border for text-boxes
+            dist_text  = 10
+            # distance from border for image-frame
+            dist_frame = 20
+            if  process_type != "none": 
+                if process_type != 'VIDEO': # we have to convert image to photoimage
+                    img  = Image.open(showfile)
+                    image_width_orig, image_height_orig = img.size
+                    faktor = canvas_height / image_height_orig
+                    newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
+                    r_img = img.resize(newsize, Image.Resampling.NEAREST)
+                    image_width, image_height = r_img.size
+                    #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
+                    #   + " factor is " + str(faktor))
+                    pimg = ImageTk.PhotoImage(r_img)
+                # an den Thumbnails führen wir einige Attribute, außerdem sorgt die Liste dafür, dass der Garbage-Kollektor das Bild nicht löscht.
+                # indem wir es in eine Liste einfügen, bleibt der Referenz-Count > 0
+                id = canvas_gallery.create_image(_lastposition, 0, anchor='nw',image = pimg, tags = 'images')
+                text_id = canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
+                rect_id = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id), outline="blue", fill = "white", tag = 'rect')
+                text_id_num = canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
+                rect_id_num = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
+                # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
+                north_west = (_lastposition + dist_frame, dist_frame)
+                north_east = (_lastposition + image_width - dist_frame, dist_frame)
+                south_west = (_lastposition + dist_frame, image_height - dist_frame)
+                south_east = (_lastposition + image_width - dist_frame, image_height - dist_frame)
+                line_north = canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_east  = canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_south = canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_west  = canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+                frameids = (line_north, line_east, line_south, line_west)
+                
+                if player is not None:
+                    player.setId(id)
+                myimage = MyThumbnail(pimg, _lastposition, _lastposition + image_width, file, showfile, id, \
+                    text_id, rect_id, frameids, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
+                if file in dict_source_target_tooold[imagetype]: #start with state.exclude
+                    myimage.setState(state.EXCLUDE, None, False)
+                    myimage.set_tooold(True)
+                    canvas_gallery.itemconfig(text_id, text="EXC OVW")
+                thumbnails[imagetype].append(myimage)
+                _dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
+                _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
+                _lastposition += image_width + gap 
+                if myimage.getDuplicate() == 'j':
+                    text_id_dup = canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                    rect_id_dup = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
+                #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(_dict_image_lineno[imagetype][file]))
+                if process_type != 'VIDEO':
+                    img.close()
+            else: # wir haben kein Bild, ein Rechteck einfügen
+                image_height = canvas_height
+                image_width  = int(canvas_height * 4 / 3)
+                id = canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + image_width, canvas_height, fill="blue", tags = 'images')
+                text_id = canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
+                rect_id = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id), outline="blue", fill = "white")
+                text_id_num = canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
+                rect_id_num = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
+                # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
+                north_west = (_lastposition + dist_frame, dist_frame)
+                north_east = (_lastposition + image_width - dist_frame, dist_frame)
+                south_west = (_lastposition + dist_frame, image_height - dist_frame)
+                south_east = (_lastposition + image_width - dist_frame, image_height - dist_frame)
+                line_north = canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_east  = canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_south = canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_west  = canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+                frameids = (line_north, line_east, line_south, line_west)
+                myimage = MyThumbnail(0, _lastposition, _lastposition + image_width, file, showfile, id, \
+                    text_id, rect_id, frameids, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
+                if file in dict_source_target_tooold[imagetype]: #start with state.exclude
+                    myimage.setState(state.EXCLUDE, None, False)
+                    myimage.set_tooold(True)
+                    canvas_gallery.itemconfig(text_id, text="EXC OVW")
+                thumbnails[imagetype].append(myimage)
+                _dict_thumbnails[imagetype][file] = myimage
+                _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
+                _lastposition += image_width + gap 
+                if myimage.getDuplicate() == 'j':
+                    text_id_dup = canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                    rect_id_dup =canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
+                #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(_dict_image_lineno[imagetype][file]))
+        canvas_gallery.tag_raise("dup_rect")
+        canvas_gallery.tag_raise("dup_text")
+        canvas_gallery.tag_raise("rect")
+        canvas_gallery.tag_raise("text")
+        canvas_gallery.tag_raise("line")
+        canvas_gallery.tag_raise("rect_numbers")
+        canvas_gallery.tag_raise("numbers")
+        #canvas_gallery.tag_raise("imageframe")
+        # the frame for selected image
+        # gap haben wir einmal zuviel (fürs letzte) gezählt
+        _lastposition -= gap
+        #print ("Canvas_gallery sichtbare Breite : " + str(_canvas_gallery_width_visible))
+        # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
+        if len(thumbnails[imagetype]) > 0: 
+            thumbnail = thumbnails[imagetype][-1]
+            rect_len = _canvas_gallery_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + gap)
+            canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + rect_len, canvas_height, fill="yellow")
+            canvas_gallery.config(scrollregion = canvas_gallery.bbox('all')) 
+            _canvas_gallery_width_images = canvas_gallery.bbox('images')[2]
+            _canvas_gallery_width_all    = canvas_gallery.bbox('all')[2]
+            #print ("Canvas_gallery totale Breite(Images): " + str(_canvas_gallery_width_images) + " totale Breite(All): " + str(_canvas_gallery_width_all) \
+            #    + " visible: " + str(_canvas_gallery_width_visible) + " lastposition: " + str(_lastposition))
+        
+        # Pfeiltasten für Scrollen einrichten
+        canvas_gallery.focus_set()
+        _button_include.config(state = NORMAL)
+        _button_exclude.config(state = NORMAL)
+        #print(_dict_duplicates)
+        historize_process()
+        if len(thumbnails[imagetype]) > 0:
+            filemenu.entryconfig(1, state=NORMAL)
+            filemenu.entryconfig(3, state=NORMAL)
+        
+        else: # if no images available we dont need config files
+            filemenu.entryconfig(1, state=DISABLED)
+            filemenu.entryconfig(2, state=DISABLED)
+            filemenu.entryconfig(3, state=DISABLED)
+            filemenu.entryconfig(4, state=DISABLED)
+        _duplicates = False
+        
+        for mytarget in _dict_duplicates[imagetype]:
+            #print("Duplcate Key: " + mytarget) 
+            mylist = _dict_duplicates[imagetype][mytarget]
+            if len(mylist) > 1: # es gibt 1...n Duplicates
+                _duplicates = True
+                break
+        
+        if num_images > 0: # config makes no sense for zero images
+            filemenu.entryconfig(5, state=NORMAL)
+            # get the config-files for indir / type:
+            indir = label_indir.cget('text')
+                
+            # finally update recent menu
+            self.update_recent_menu(indir, imagetype)
+        
+        if _duplicates:
+            _button_duplicates.config(state = NORMAL)
+        else:
+            _button_duplicates.config(state = DISABLED)
+        
+        label_num.config(text = str(num_images))
+        button_exec.config(state = NORMAL)
+        write_cmdfile(imagetype)
+        if _win_messages is not None: # stop MyMessagesWindow-Objekt
+            _win_messages.close_handler()
+            _win_messages = None
+        canvas_gallery.xview('moveto', 0)
+
+    def update_recent_menu(self, indir, imagetype):
+        # descending by usedate
+        result, sorted_d = self.get_dict_of_config_files(indir, imagetype)
+        #print("get_dict_of_config_files: " + str(sorted_d))
+        
+        recentmenu.delete(0, "end")
+        ii = 0
+        for item in sorted_d:
+            usedate      = result[item]['usedate']
+            mynum_images = result[item]['num_images']
+            labeltext = item + ' (usedate: ' + usedate + ' ,images: ' + mynum_images + ')'
+            recentmenu.add_command(label=labeltext, command = lambda item=item: self.recent_config(item))
+            print("  config_file: " + labeltext)
+            if not os.path.isfile(item):
+                recentmenu.entryconfig(ii, state = DISABLED)
+            ii += 1
+        if ii == 0:
+            filemenu.entryconfig(5, state=DISABLED)
 
 
-def recent_config(item):
-    global config_file
-    print("** Menuitem selected: " + item)
-    config_file = item
-    filemenu.entryconfig(4, state=NORMAL)
-    root.title(title + ' ' + config_file)
-    filemenu.entryconfig(2, state=NORMAL)
+    def write_config(self, filename): # Config-xml unter neuem Namen sichern
+        file1 = open(filename, "w")
+        
+        s = '<?xml version="1.0" encoding="iso-8859-1"?>' + "\n"
+        file1.write(s)
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+
+        s = '<thumbnails time="' + ts + '">' + "\n"
+        file1.write(s)
+        for thumbnail in thumbnails[_imagetype]:
+            s = "    <thumbnail filename=\"" + thumbnail.getFile() + "\">\n"
+            file1.write(s)
+            s = "        <image>" + str(thumbnail.getFile()) + "</image>\n"
+            file1.write(s)
+            s = "        <state>" + str(thumbnail.getState()) + "</state>\n"
+            file1.write(s)
+            s = "    </thumbnail>\n"
+            file1.write(s)
+        s = '</thumbnails>' + "\n"
+        file1.write(s)
+        # Closing file
+        file1.close()
+        
+    def get_dict_of_config_files(self, pindir, imagetype): # returns dict sorted by usedate asc
+        # lower and slash instead of backslash
+        indir = re.sub(r'\\', '/', pindir).lower()
+        result = DX.get_cfgfiles(config_files_xml, indir, imagetype)
+        dict_filename_usedate = {}
+        for cfg_file in result:
+            print("config_file: " + cfg_file)
+            attribute = result[cfg_file]
+            searchattr = 'usedate'
+            for attribut in attribute:
+                print("  " + attribut + " = " + attribute[attribut])
+                if attribut == searchattr:
+                    dict_filename_usedate[cfg_file] = attribute[searchattr]
+            
+        # descending by usedate
+        sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
+        return result, sorted_d
+
+
+    def recent_config(self, item):
+        print("** Menuitem selected: " + item)
+        self.config_file = item
+        filemenu.entryconfig(4, state=NORMAL)
+        root.title(title + ' ' + self.config_file)
+        filemenu.entryconfig(2, state=NORMAL)
     
 
 def tooltip_imagefile(event):
@@ -2517,11 +2739,11 @@ def B_camera_press(*args):
         sys.stdout.flush()
     # get selected indices
     selected_indices = lb_camera.curselection()
-    thiscamera = ",".join([lb_camera.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
+    thiscamera = ",".join([lb_camera.get(i) for i in selected_indices]) # because we have a single choice listbox
     print ("Kamera ist " + thiscamera)
     clear_textbox(o_camera)
     insert_text(o_camera, thiscamera)
-    _button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
+    _button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
     button_call.config(state = NORMAL)
     if thiscamera != oldcamera:
         _button_undo.config(state = DISABLED)    
@@ -2983,278 +3205,6 @@ def write_cmdfile(imagetype):
     for ii in l:
        thiscmdfile.write(ii + '\n') 
     thiscmdfile.close()
-
-def Button_be_pressed(*args):
-    global _canvas_gallery_width_visible
-    global _canvas_gallery_width_images
-    global _canvas_gallery_width_all
-    global _lastposition, _dict_file_image
-    global _imagetype, _dict_duplicates, _duplicates, num_images, config_file, _dict_duplicates_sourcefiles, _win_duplicates, dict_source_target, _win_messages
-    global _processid_high, _processid_akt, _list_processids, _stack_processids
-
-    if _debug:
-        print('Dateimeister_support.Press_be_out')
-        for arg in args:
-            print ('    another arg:', arg)
-        sys.stdout.flush()
-
-    # reset all process-states
-    _processid_akt  = 0
-    _processid_high = 0
-    _list_processids = []
-    _stack_processids = []
-    _button_undo.config(state = DISABLED)    
-    _button_redo.config(state = DISABLED)
-    config_file = ""   # after change of imagetype (possibly) has to be selected new by user
-    root.title(title)
-    
-    clear_text(t_text1)
-    canvas_gallery.delete("all")
-
-    if not lb_gen.curselection() == ():
-        selected_indices = lb_gen.curselection()
-    else:
-        messagebox.showerror("showerror", "no Imagetype selected")
-        lb_gen.focus_set()
-        return None
-    thistype = ",".join([lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
-    #print("dict_gen_files: ", str(dict_gen_files))
-    filename = dict_gen_files[thistype]
-    imagetype = thistype
-    _imagetype = imagetype # auch in globaler Variable festhalten, da wir das an vielen Stellen brauchen
-    subdir = _dict_subdirs[imagetype]
-    stop_all_players() # should not continue running 
-    # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
-    if imagetype in thumbnails:
-        thumbnails[imagetype].clear() # damit werden implizit jetzt alle Bilder gelöscht
-    else:
-        thumbnails[imagetype] = []
-    
-    # cleanup
-    close_child_windows()
-    
-    l_label1.config(text = "Output from Dateimeister : " + filename)
-    _dict_image_lineno[imagetype] = {} # in Python muss das sein, sonst gehts in der nächsten Ebene nicht
-    lineno = 0
-    #print(str(dict_source_target))
-    for this_sourcefile in dict_source_target[imagetype]:
-        this_targetfile = dict_source_target[imagetype][this_sourcefile]
-        lineno += 1
-        source_without_dir = re.sub(re.escape(label_indir.cget('text')), '', this_sourcefile)
-        source_without_dir = re.sub(r'^[\\\/]', '', source_without_dir)
-        target_without_dir = re.sub(re.escape(label_outdir.cget('text')), '', this_targetfile)
-        target_without_dir = re.sub(r'[\\\/]', '/', target_without_dir) # replace all backslashes by slash
-        my_subdir = subdir
-        my_subdir = re.sub(r'[\\\/]', '/', my_subdir) # replace all backslashes by slash
-        target_without_dir = re.sub(re.escape(my_subdir), '', target_without_dir) # replace subdir
-        target_without_dir = re.sub(r'^[\\\/]+', '', target_without_dir) # replace first slash
-        text_w = 80
-        #thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = source_without_dir, target = target_without_dir)
-        thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = this_sourcefile, target = this_targetfile)
-        insert_text(t_text1, thisline)
-        _dict_image_lineno[imagetype][this_sourcefile] = lineno
-    
-    # wir suchen in der cmd-Datei die Endung für jedes Imagefile. Damit suchen wir in _dict_process_image nach einem Eintrag
-    # wenn JPEG, dann verarbeiten wir die Zeile und verwenden das mutmaßliche JPEG_Bild in der Gallerie. Wenn use_jpeg gefunden wird
-    # suchen wir nach einem passenden JPEG. Falls die Endung im dict nicht gefunden wird, verwenden wir ebenfalls use_jpeg. Später
-    # können hier passende RAW-DLLs aufgerufen werden, z.b. mit Name der DLL in der Ini-Datei
-    canvas_height = canvas_gallery.winfo_height()
-    canvas_width  = canvas_gallery.winfo_width()
-    _canvas_gallery_width_visible = canvas_gallery.winfo_width() # Fensterbreite
-    _lastposition = 0
-    _dict_thumbnails[imagetype] = {}
-    _dict_thumbnails_lineno[imagetype] = {}
-    num_images = 0
-    for file in dict_source_target[imagetype]:
-        num_images += 1
-        this_targetfile = dict_source_target[imagetype][file]
-        # wir brauchen die Endung der Datei und den Vornamen
-        regpattern = r'[\/\\]([^\/\\."]+)\.([^\/\\."]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
-        match = re.search(regpattern, file)
-        if match:
-            firstname  = match.group(1)
-            lastname   = match.group(2).upper()
-            #print("firstname / lastname = " + firstname + " / " + lastname)
-        else: 
-            print("unable to find firstname, lastname for: " + file)
-        # wir brauchen die Methode aus der ini-Datei, mit der wir das Bild verarbeiten sollen
-        process_type = _dict_process_image[lastname].upper()
-        #print("Process Type is: " + process_type)
-        player = None # only for video
-        if (process_type == "JPEG"):
-            showfile = file # Image-file to show in Canvas
-        elif process_type == "USE_JPEG":
-            if firstname.upper() in _dict_firstname_fullname:
-                showfile = _dict_firstname_fullname[firstname.upper()][-1]
-                #print ("*** JPEG found for " + file + " using " + showfile)
-            else:
-                showfile = "none"
-                print ("*** No JPEG found for " + file + " using " + showfile)
-                process_type = "none" # rectangle instead
-        elif process_type == 'VIDEO':
-            print("try to create new videoplayer...")
-            # create new videoplayer
-            player   = DV.VideoPlayer(root, file, canvas_gallery, canvas_width, canvas_height, _lastposition)
-            image_width, image_height, pimg = player.get_pimg()
-            showfile = file
-        else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
-            showfile = "none"
-        if file in _dict_duplicates_sourcefiles: # for storing in Thumbnail
-            duplicate = 'j'
-        else:
-            duplicate = 'n'
-        #print ("Process-type, file" , process_type, ' ', file)
-        this_lineno = _dict_image_lineno[imagetype][file]
-        # distance from border for text-boxes
-        dist_text  = 10
-        # distance from border for image-frame
-        dist_frame = 20
-        if  process_type != "none": 
-            if process_type != 'VIDEO': # we have to convert image to photoimage
-                img  = Image.open(showfile)
-                image_width_orig, image_height_orig = img.size
-                faktor = canvas_height / image_height_orig
-                newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
-                r_img = img.resize(newsize, Image.Resampling.NEAREST)
-                image_width, image_height = r_img.size
-                #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
-                #   + " factor is " + str(faktor))
-                pimg = ImageTk.PhotoImage(r_img)
-            # an den Thumbnails führen wir einige Attribute, außerdem sorgt die Liste dafür, dass der Garbage-Kollektor das Bild nicht löscht.
-            # indem wir es in eine Liste einfügen, bleibt der Referenz-Count > 0
-            id = canvas_gallery.create_image(_lastposition, 0, anchor='nw',image = pimg, tags = 'images')
-            text_id = canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
-            rect_id = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id), outline="blue", fill = "white", tag = 'rect')
-            text_id_num = canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
-            rect_id_num = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
-            # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
-            north_west = (_lastposition + dist_frame, dist_frame)
-            north_east = (_lastposition + image_width - dist_frame, dist_frame)
-            south_west = (_lastposition + dist_frame, image_height - dist_frame)
-            south_east = (_lastposition + image_width - dist_frame, image_height - dist_frame)
-            line_north = canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_east  = canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_south = canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_west  = canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
-            frameids = (line_north, line_east, line_south, line_west)
-            
-            if player is not None:
-                player.setId(id)
-            myimage = MyThumbnail(pimg, _lastposition, _lastposition + image_width, file, showfile, id, \
-                text_id, rect_id, frameids, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
-            if file in dict_source_target_tooold[imagetype]: #start with state.exclude
-                myimage.setState(state.EXCLUDE, None, False)
-                myimage.set_tooold(True)
-                canvas_gallery.itemconfig(text_id, text="EXC OVW")
-            thumbnails[imagetype].append(myimage)
-            _dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
-            _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
-            _lastposition += image_width + gap 
-            if myimage.getDuplicate() == 'j':
-                text_id_dup = canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
-                rect_id_dup = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
-            #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(_dict_image_lineno[imagetype][file]))
-            if process_type != 'VIDEO':
-                img.close()
-        else: # wir haben kein Bild, ein Rechteck einfügen
-            image_height = canvas_height
-            image_width  = int(canvas_height * 4 / 3)
-            id = canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + image_width, canvas_height, fill="blue", tags = 'images')
-            text_id = canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
-            rect_id = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id), outline="blue", fill = "white")
-            text_id_num = canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
-            rect_id_num = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
-            # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
-            north_west = (_lastposition + dist_frame, dist_frame)
-            north_east = (_lastposition + image_width - dist_frame, dist_frame)
-            south_west = (_lastposition + dist_frame, image_height - dist_frame)
-            south_east = (_lastposition + image_width - dist_frame, image_height - dist_frame)
-            line_north = canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_east  = canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_south = canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-            line_west  = canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
-            frameids = (line_north, line_east, line_south, line_west)
-            myimage = MyThumbnail(0, _lastposition, _lastposition + image_width, file, showfile, id, \
-                text_id, rect_id, frameids, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
-            if file in dict_source_target_tooold[imagetype]: #start with state.exclude
-                myimage.setState(state.EXCLUDE, None, False)
-                myimage.set_tooold(True)
-                canvas_gallery.itemconfig(text_id, text="EXC OVW")
-            thumbnails[imagetype].append(myimage)
-            _dict_thumbnails[imagetype][file] = myimage
-            _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
-            _lastposition += image_width + gap 
-            if myimage.getDuplicate() == 'j':
-                text_id_dup = canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
-                rect_id_dup =canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
-            #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(_dict_image_lineno[imagetype][file]))
-    canvas_gallery.tag_raise("dup_rect")
-    canvas_gallery.tag_raise("dup_text")
-    canvas_gallery.tag_raise("rect")
-    canvas_gallery.tag_raise("text")
-    canvas_gallery.tag_raise("line")
-    canvas_gallery.tag_raise("rect_numbers")
-    canvas_gallery.tag_raise("numbers")
-    #canvas_gallery.tag_raise("imageframe")
-    # the frame for selected image
-    # gap haben wir einmal zuviel (fürs letzte) gezählt
-    _lastposition -= gap
-    #print ("Canvas_gallery sichtbare Breite : " + str(_canvas_gallery_width_visible))
-    # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
-    if len(thumbnails[imagetype]) > 0: 
-        thumbnail = thumbnails[imagetype][-1]
-        rect_len = _canvas_gallery_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + gap)
-        canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + rect_len, canvas_height, fill="yellow")
-        canvas_gallery.config(scrollregion = canvas_gallery.bbox('all')) 
-        _canvas_gallery_width_images = canvas_gallery.bbox('images')[2]
-        _canvas_gallery_width_all    = canvas_gallery.bbox('all')[2]
-        #print ("Canvas_gallery totale Breite(Images): " + str(_canvas_gallery_width_images) + " totale Breite(All): " + str(_canvas_gallery_width_all) \
-        #    + " visible: " + str(_canvas_gallery_width_visible) + " lastposition: " + str(_lastposition))
-    
-    # Pfeiltasten für Scrollen einrichten
-    canvas_gallery.focus_set()
-    _button_include.config(state = NORMAL)
-    _button_exclude.config(state = NORMAL)
-    #print(_dict_duplicates)
-    historize_process()
-    if len(thumbnails[imagetype]) > 0:
-        filemenu.entryconfig(1, state=NORMAL)
-        filemenu.entryconfig(3, state=NORMAL)
-    
-    else: # if no images available we dont need config files
-        filemenu.entryconfig(1, state=DISABLED)
-        filemenu.entryconfig(2, state=DISABLED)
-        filemenu.entryconfig(3, state=DISABLED)
-        filemenu.entryconfig(4, state=DISABLED)
-    _duplicates = False
-    
-    for mytarget in _dict_duplicates[imagetype]:
-        #print("Duplcate Key: " + mytarget) 
-        mylist = _dict_duplicates[imagetype][mytarget]
-        if len(mylist) > 1: # es gibt 1...n Duplicates
-            _duplicates = True
-            break
-    
-    if num_images > 0: # config makes no sense for zero images
-        filemenu.entryconfig(5, state=NORMAL)
-        # get the config-files for indir / type:
-        indir = label_indir.cget('text')
-            
-        # finally update recent menu
-        update_recent_menu(indir, imagetype)
-    
-    if _duplicates:
-        _button_duplicates.config(state = NORMAL)
-    else:
-        _button_duplicates.config(state = DISABLED)
-    
-    label_num.config(text = str(num_images))
-    button_exec.config(state = NORMAL)
-    write_cmdfile(imagetype)
-    if _win_messages is not None: # stop MyMessagesWindow-Objekt
-        _win_messages.close_handler()
-        _win_messages = None
-    canvas_gallery.xview('moveto', 0)
 
 def get_thumbnail_by_position(canvas_x, canvas_y):
     index = -1
@@ -3954,6 +3904,55 @@ def dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, tar
                 a = 1
                 #print("D: " + os.path.join(root, dir))
     return dict_result, dict_result_all, dict_result_tooold
+
+def get_camera_xml(): # returns dict with all cameras, types and suffixes - global function, used by several application classes
+    ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+    cameraname = "Retina Reflex"
+    ctype      = "JPEG"
+    suffix     = "JPG"
+    rc = DX.new_camera_type_suffix(config_files_xml, cameraname, ctype, suffix, ts) 
+    suffix     = "JPEG"
+    rc = DX.new_camera_type_suffix(config_files_xml, cameraname, ctype, suffix, ts) 
+    ctype      = "VIDEO"
+    suffix     = "MOV"
+    rc = DX.new_camera_type_suffix(config_files_xml, cameraname, ctype, suffix, ts) 
+    # dateimeister_config_xml.py returns suffixes as list we need them as a comma separated string
+    dict_cameras = {}
+    dict_cameras = DX.get_cameras_types_suffixes(config_files_xml)
+    #print("Cameras: " + str(dict_cameras))
+    dict_t = {}
+    for camera in dict_cameras:
+        dict_t[camera] = {}
+        type_num = 0
+        for type in dict_cameras[camera]:
+            type_num += 1
+            suffixes = ", ".join(dict_cameras[camera][type])
+            dict_t[camera][type] = suffixes
+            print("Camera: " + camera + " Type: " + type + " Suffixes: " + suffixes)
+            if len(suffixes) == 0:
+                messagebox.showerror("INIT", "Camera " + camera + " type " + type + " no suffix defined")
+                exit()
+        if type_num == 0:
+            messagebox.showerror("INIT", "Camera " + camera + " no type defined")
+            exit()
+
+    dict_subdirs = {}
+    dict_subdirs = DX.get_subdirs(config_files_xml)
+    for imagetype in dict_subdirs:
+        print("Subdir {:s}, {:s}".format(imagetype, dict_subdirs[imagetype]))
+    
+    dict_process_image = {}
+    dict_process_image = DX.get_process_image(config_files_xml)
+    for t in dict_process_image:
+        print("Process Image  {:s}, {:s}".format(t, dict_process_image[t]))
+    
+    lb_camera.delete(0, END)
+    for key in dict_t:
+        lb_camera.insert(END, key)
+    lb_camera.selection_set(END)
+
+    return dict_t, dict_subdirs, dict_process_image
+
 
 def main(*args):
     '''Main entry point for the application.'''

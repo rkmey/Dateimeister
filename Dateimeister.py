@@ -230,7 +230,6 @@ class Toplevel1:
         self.Button_be.configure(activebackground="beige")
         self.Button_be.configure(activeforeground="black")
         self.Button_be.configure(background="#d9d9d9")
-        self.Button_be.configure(command=Dateimeister_support.Button_be_pressed)
         self.Button_be.configure(compound='left')
         self.Button_be.configure(disabledforeground="#a3a3a3")
         self.Button_be.configure(font="-family {Segoe UI} -size 9")

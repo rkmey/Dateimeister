@@ -1,0 +1,20 @@
+Functions converted to methods of class dateimeister_support:
+
+init
+donothing
+timer_end
+lb_gen_double
+lb_camera_double
+combobox_indir_double
+combobox_outdir_double
+open_config
+apply_config
+save_config
+saveas_config
+update_config_xml
+Button_be_pressed
+update_recent_menu
+write_config
+get_dict_of_config_files
+recent_config
+
