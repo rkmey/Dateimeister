@@ -17,4 +17,6 @@ update_recent_menu
 write_config
 get_dict_of_config_files
 recent_config
-
+tooltip_imagefile
+focus_out
+on_window_resize

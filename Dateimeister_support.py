@@ -58,7 +58,6 @@ _processid_high = 0
 _processid_incr = 10
 _list_processids = []
 _stack_processids = [] # list
-_tooltiptext = ""
 _use_camera_prefix = True
 _dict_thumbnails = {}
 _dict_thumbnails_lineno = {}
@@ -1832,18 +1831,21 @@ class Dateimeister_support:
         self.init()
         self.codepage = ""
         self.config_file = ""
+        self.tooltiptext = ""
+        self.timestamp = datetime.now()
+
         self.root.mainloop()
 
     def init(self):
         global _screen_width, _screen_height, _imagetype, _dict_process_image, \
-           _button_undo, _button_redo, _uncomment, _tooltiptext, _tt, _dict_cameras, _dict_subdirs, \
+           _button_undo, _button_redo, _uncomment, _dict_cameras, _dict_subdirs, \
             colors, color_noreport, color_lookahead, levels, o_e, o_s, o_camera,\
             lb_camera, b_button1, b_button2, b_button_outdir, t_text1, l_label1, dict_gen_files, lb_gen, \
             canvas_gallery, cb_recursive, cb_recursive_var, cb_prefix, cb_prefix_var, cb_addrelpath, cb_addrelpath_var, \
             thumbnails, images, scroll_canvas_x, gap, context_menu, \
             _dict_image_lineno, _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
             cb_newer, cb_newer_var, config_files_xml, recentmenu, title, label_num, num_images, config_files_subdir, \
-            cmd_files_subdir, _timestamp, delay_default, \
+            cmd_files_subdir, delay_default, \
             button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
             combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
             button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, button_call, dict_proctypes, _dict_file_image
@@ -2018,9 +2020,9 @@ class Dateimeister_support:
         canvas_gallery.bind("<Next>",  lambda event: xview("scroll",  1, "page"))  # Bind to PageDown    
         # Bind the context menu to the canvas widget
         canvas_gallery.bind("<Button-3>", show_context_menu)    
-        canvas_gallery.bind('<Motion>', tooltip_imagefile)    
+        canvas_gallery.bind('<Motion>', self.tooltip_imagefile)    
         canvas_gallery.bind('<Button-1>', canvas_button_1)    
-        self.root.bind("<Configure>", on_window_resize)
+        self.root.bind("<Configure>", self.on_window_resize)
         self.root.bind("<Destroy>",   on_window_destroy)
         # strg-z, y
         canvas_gallery.bind('<Control-z>', lambda event: process_undo(event))
@@ -2028,7 +2030,7 @@ class Dateimeister_support:
         canvas_gallery.bind('+', lambda event: delay_decr(event))
         canvas_gallery.bind('-', lambda event: delay_incr(event))
         canvas_gallery.bind('0', lambda event: delay_deflt(event))
-        canvas_gallery.bind('<FocusOut>', focus_out)
+        canvas_gallery.bind('<FocusOut>', self.focus_out)
         lb_gen.bind('<Double-1>', self.lb_gen_double)
         lb_camera.bind('<Double-1>', self.lb_camera_double)
 
@@ -2071,7 +2073,7 @@ class Dateimeister_support:
         #my_w.maxsize(300,220)  # (maximum ) width , ( maximum) height
         #my_w.minsize(250,220)  # (minimum ) width , ( minimum) height
         self.root.resizable(False, False)
-        _tt = Dateimeister.ToolTip(canvas_gallery, "no images available", delay=0, follow = True)
+        self.tt = Dateimeister.ToolTip(canvas_gallery, "no images available", delay=0, follow = True)
         
         # Menubar
         menubar = Menu(self.root)
@@ -2105,8 +2107,6 @@ class Dateimeister_support:
         menubar.add_cascade(label="Help", menu=helpmenu)
 
         self.root.config(menu=menubar)
-        
-        _timestamp = datetime.now()
         
         # fill in combobox
         result = DX.get_indirs(config_files_xml)
@@ -2656,56 +2656,55 @@ class Dateimeister_support:
         filemenu.entryconfig(2, state=NORMAL)
     
 
-def tooltip_imagefile(event):
-    global _tt, _tooltiptext, _timestamp
-    tsnow = datetime.now()
-    tdiff = abs(tsnow - _timestamp)
-    #print("*** Timer has finished, microsecons is: ", tdiff.microseconds)
-    if  tdiff.microseconds > 100000:
-        #print("Timer has finished, microsecons is: ", tdiff.microseconds)
-        _timestamp = tsnow
-    else:
-        return
-    # Tooltip
-    #x, y = canvas_gallery.winfo_pointerxy()
-    text = "no image available"
-    if len(thumbnails) > 0:
-        canvas_x = canvas_gallery.canvasx(event.x)
-        canvas_y = canvas_gallery.canvasy(event.y)
-        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
-        if thumbnail is not None:
-            text = thumbnail.getFile()
-            #print("Image clicked: " + text)
-        if text != _tooltiptext:
-            _tt.update(text)
-            _tooltiptext = text
-            stop_all_players()
-            # if file is video, play video
+    def tooltip_imagefile(self, event):
+        tsnow = datetime.now()
+        tdiff = abs(tsnow - self.timestamp)
+        #print("*** Timer has finished, microsecons is: ", tdiff.microseconds)
+        if  tdiff.microseconds > 100000:
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            self.timestamp = tsnow
+        else:
+            return
+        # Tooltip
+        #x, y = canvas_gallery.winfo_pointerxy()
+        text = "no image available"
+        if len(thumbnails) > 0:
+            canvas_x = canvas_gallery.canvasx(event.x)
+            canvas_y = canvas_gallery.canvasy(event.y)
+            thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
             if thumbnail is not None:
-                player = thumbnail.getPlayer()
-                if player is not None: # this is a video
-                    player.pstart()
-                    player.setDelay(delay_default)
-                    fps   = player.getFPS()
-                    fc    = player.getFrameCount()
-                    delay = player.getDelay()
-                    frames_per_second = 1000 / delay
-                    duration_in_seconds = fc / frames_per_second
-                    #print ("FPS is: ", fps, " Total Num of Frames is: ", fc, " Delay is: ", delay, " calc duration is: " + str(duration_in_seconds))
-                    context_menu.entryconfig(2, state="normal")
-                else:
-                    context_menu.entryconfig(2, state="disabled")
+                text = thumbnail.getFile()
+                #print("Image clicked: " + text)
+            if text != self.tooltiptext:
+                self.tt.update(text)
+                self.tooltiptext = text
+                stop_all_players()
+                # if file is video, play video
+                if thumbnail is not None:
+                    player = thumbnail.getPlayer()
+                    if player is not None: # this is a video
+                        player.pstart()
+                        player.setDelay(delay_default)
+                        fps   = player.getFPS()
+                        fc    = player.getFrameCount()
+                        delay = player.getDelay()
+                        frames_per_second = 1000 / delay
+                        duration_in_seconds = fc / frames_per_second
+                        #print ("FPS is: ", fps, " Total Num of Frames is: ", fc, " Delay is: ", delay, " calc duration is: " + str(duration_in_seconds))
+                        context_menu.entryconfig(2, state="normal")
+                    else:
+                        context_menu.entryconfig(2, state="disabled")
 
-def focus_out(event):
-    #print("***lost Focus")
-    a = 0
-    #stop_all_players()
-    
+    def focus_out(self, event):
+        #print("***lost Focus")
+        a = 0
+        #stop_all_players()
+        
 
-def on_window_resize(event): # das funktioniert nicht rihtig. Die übergebenen Zahlen sind falsch und der Handler wird unglaublich oft aufgerufen
-    width = event.width
-    height = event.height
-    #print("Window resized to width: " + str(width) + " height: " + str(height))
+    def on_window_resize(self, event): # das funktioniert nicht rihtig. Die übergebenen Zahlen sind falsch und der Handler wird unglaublich oft aufgerufen
+        width = event.width
+        height = event.height
+        #print("Window resized to width: " + str(width) + " height: " + str(height))
 
 def Press_indir(*args):
     if _debug:
