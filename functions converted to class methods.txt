@@ -20,3 +20,9 @@ recent_config
 tooltip_imagefile
 focus_out
 on_window_resize
+Press_indir
+Press_outdir
+Press_generate
+B_camera_press
+state_gen_required
+new_dir_in_xml

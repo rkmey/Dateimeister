@@ -1683,7 +1683,7 @@ class MyCameraTreeview:
         # cleanup: close all child windows of main except this one because nothing can be changed which affects camera window
         global _dict_cameras, _dict_subdirs, _dict_process_image
         close_child_windows()
-        state_gen_required()
+        self.state_gen_required()
         _dict_cameras, _dict_subdirs, _dict_process_image = get_camera_xml()
         #print("update_main_window dict_camera: " + str(_dict_cameras))
 
@@ -1840,15 +1840,15 @@ class Dateimeister_support:
         global _screen_width, _screen_height, _imagetype, _dict_process_image, \
            _button_undo, _button_redo, _uncomment, _dict_cameras, _dict_subdirs, \
             colors, color_noreport, color_lookahead, levels, o_e, o_s, o_camera,\
-            lb_camera, b_button1, b_button2, b_button_outdir, t_text1, l_label1, dict_gen_files, lb_gen, \
+            lb_camera, b_button1, t_text1, l_label1, dict_gen_files, lb_gen, \
             canvas_gallery, cb_recursive, cb_recursive_var, cb_prefix, cb_prefix_var, cb_addrelpath, cb_addrelpath_var, \
             thumbnails, images, scroll_canvas_x, gap, context_menu, \
             _dict_image_lineno, _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
             cb_newer, cb_newer_var, config_files_xml, recentmenu, title, label_num, num_images, config_files_subdir, \
             cmd_files_subdir, delay_default, \
             button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
-            combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, label_indir, label_outdir, \
-            button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, button_call, dict_proctypes, _dict_file_image
+            combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, \
+            button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, dict_proctypes, _dict_file_image
     #    print("Init called\n")
         windll = ctypes.windll.kernel32
         self.codepage = windll.GetUserDefaultUILanguage()
@@ -1894,10 +1894,14 @@ class Dateimeister_support:
         lb_camera = self.w.Listbox_camera
         lb_camera.configure(exportselection=False)
         b_button1 = self.w.Button1
-        b_button2 = self.w.Button2
-        b_button_outdir = self.w.Button_outdir
-        button_call = self.w.Button_call
-        button_call.config(command = Press_generate)
+        self.b_button2 = self.w.Button2
+        self.b_button2.config(command=self.B_camera_press)
+        self.b_button_indir = self.w.Button1
+        self.b_button_indir.config(command=self.Press_indir)
+        self.b_button_outdir = self.w.Button_outdir
+        self.b_button_outdir.config(command=self.Press_outdir)
+        self.button_call = self.w.Button_call
+        self.button_call.config(command = self.Press_generate)
         button_exec = self.w.Button_exec
         button_exec.config(command = button_exec_pressed)
 
@@ -1930,10 +1934,10 @@ class Dateimeister_support:
         _button_be.config(state = DISABLED)
         _button_be.config(command = self.Button_be_pressed)
         button_exec.config(state = DISABLED)
-        button_call.config(state = DISABLED) # generate-Button
+        self.button_call.config(state = DISABLED) # generate-Button
         
-        label_indir  = self.w.Label_indir
-        label_outdir = self.w.Label_outdir
+        self.label_indir  = self.w.Label_indir
+        self.label_outdir = self.w.Label_outdir
         button_indir_from_list = self.w.Button_indir_from_list
         button_outdir_from_list = self.w.Button_outdir_from_list
         
@@ -1949,22 +1953,22 @@ class Dateimeister_support:
         t_text1.configure(wrap="none")
         
         cb_recursive = self.w.Checkbutton1
-        cb_recursive.config(command = state_gen_required)
+        cb_recursive.config(command = self.state_gen_required)
         cb_recursive_var = self.w.cb1_val
         cb_recursive_var.set(1)
         
         cb_prefix = self.w.Checkbutton_use_camera_name
-        cb_prefix.config(command = state_gen_required)
+        cb_prefix.config(command = self.state_gen_required)
         cb_prefix_var = self.w.cb_prefix_var
         cb_prefix_var.set(1)
 
         cb_addrelpath = self.w.Checkbutton_addrelpath
-        cb_addrelpath.config(command = state_gen_required)
+        cb_addrelpath.config(command = self.state_gen_required)
         cb_addrelpath_var = self.w.cb_addrelpath_var
         cb_addrelpath_var.set(0)
 
         cb_newer = self.w.Checkbutton_newer
-        cb_newer.config(command = state_gen_required)
+        cb_newer.config(command = self.state_gen_required)
         cb_newer_var = self.w.cb_newer_var
         cb_newer_var.set(0)
 
@@ -2049,8 +2053,8 @@ class Dateimeister_support:
         button_indir_from_list.config(command = self.combobox_indir_double)  
         button_outdir_from_list.config(command = self.combobox_outdir_double)  
         
-        label_indir.config(text = default_indir)
-        label_outdir.config(text = default_outdir)
+        self.label_indir.config(text = default_indir)
+        self.label_outdir.config(text = default_outdir)
         l_label1.config(text = "Messages")
         label_num.config(text = "0")
         dict_gen_files = {}
@@ -2180,17 +2184,17 @@ class Dateimeister_support:
         self.Button_be_pressed(event)
     
     def lb_camera_double(self, event):
-        B_camera_press(event)
+        self.B_camera_press(event)
 
     def combobox_indir_double(self, event = None):
         selected_indices = combobox_indir.curselection()
         indir = ",".join([combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
-        label_indir.config(text = indir)
+        self.label_indir.config(text = indir)
 
     def combobox_outdir_double(self, event = None):
         selected_indices = combobox_outdir.curselection()
         outdir = ",".join([combobox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
-        label_outdir.config(text = outdir)
+        self.label_outdir.config(text = outdir)
 
     def combobox_indir_check_exist(self, event):
         index = combobox_indir.curselection()[0]
@@ -2275,7 +2279,7 @@ class Dateimeister_support:
     def update_config_xml(self, config_file): # Config-xml unter neuem Namen sichern und update
         # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-        indir = label_indir.cget('text')
+        indir = self.label_indir.cget('text')
         # lower and slash instead of backslash
         indir = re.sub(r'\\', '/', indir).lower()
         my_config_file = re.sub(r'\\', '/', self.config_file).lower()
@@ -2370,9 +2374,9 @@ class Dateimeister_support:
         for this_sourcefile in dict_source_target[imagetype]:
             this_targetfile = dict_source_target[imagetype][this_sourcefile]
             lineno += 1
-            source_without_dir = re.sub(re.escape(label_indir.cget('text')), '', this_sourcefile)
+            source_without_dir = re.sub(re.escape(self.label_indir.cget('text')), '', this_sourcefile)
             source_without_dir = re.sub(r'^[\\\/]', '', source_without_dir)
-            target_without_dir = re.sub(re.escape(label_outdir.cget('text')), '', this_targetfile)
+            target_without_dir = re.sub(re.escape(self.label_outdir.cget('text')), '', this_targetfile)
             target_without_dir = re.sub(r'[\\\/]', '/', target_without_dir) # replace all backslashes by slash
             my_subdir = subdir
             my_subdir = re.sub(r'[\\\/]', '/', my_subdir) # replace all backslashes by slash
@@ -2568,7 +2572,7 @@ class Dateimeister_support:
         if num_images > 0: # config makes no sense for zero images
             filemenu.entryconfig(5, state=NORMAL)
             # get the config-files for indir / type:
-            indir = label_indir.cget('text')
+            indir = self.label_indir.cget('text')
                 
             # finally update recent menu
             self.update_recent_menu(indir, imagetype)
@@ -2706,45 +2710,277 @@ class Dateimeister_support:
         height = event.height
         #print("Window resized to width: " + str(width) + " height: " + str(height))
 
-def Press_indir(*args):
-    if _debug:
-        print('Dateimeister_support.Press_indir')
-        for arg in args:
-            print ('    another arg:', arg)
-        sys.stdout.flush()
-    indir = fd.askdirectory() 
-    print ("indir %s" % indir)
-    #clear_textbox(combobox_indir)
-    label_indir.config(text = indir)
+    def Press_indir(self, *args):
+        if _debug:
+            print('Dateimeister_support.Press_indir')
+            for arg in args:
+                print ('    another arg:', arg)
+            sys.stdout.flush()
+        indir = fd.askdirectory() 
+        print ("indir %s" % indir)
+        #clear_textbox(combobox_indir)
+        self.label_indir.config(text = indir)
 
-def Press_outdir(*args):
-    if _debug:
-        print('Dateimeister_support.Press_outdir')
-        for arg in args:
-            print ('    another arg:', arg)
-        sys.stdout.flush()
-    #outdir = fd.askopenindir() 
-    outdir = fd.askdirectory() 
-    print ("outdir %s" % outdir)
-    #clear_textbox(combobox_outdir)
-    label_outdir.config(text = outdir)
+    def Press_outdir(self, *args):
+        if _debug:
+            print('Dateimeister_support.Press_outdir')
+            for arg in args:
+                print ('    another arg:', arg)
+            sys.stdout.flush()
+        #outdir = fd.askopenindir() 
+        outdir = fd.askdirectory() 
+        print ("outdir %s" % outdir)
+        #clear_textbox(combobox_outdir)
+        self.label_outdir.config(text = outdir)
 
-def B_camera_press(*args):
-    global oldcamera
-    if _debug:
-        print('Dateimeister_support.B_camera_press')
-        for arg in args:
-            print ('    another arg:', arg)
-        sys.stdout.flush()
-    # get selected indices
-    selected_indices = lb_camera.curselection()
-    thiscamera = ",".join([lb_camera.get(i) for i in selected_indices]) # because we have a single choice listbox
-    print ("Kamera ist " + thiscamera)
-    clear_textbox(o_camera)
-    insert_text(o_camera, thiscamera)
-    _button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
-    button_call.config(state = NORMAL)
-    if thiscamera != oldcamera:
+    def B_camera_press(self, *args):
+        global oldcamera
+        if _debug:
+            print('Dateimeister_support.B_camera_press')
+            for arg in args:
+                print ('    another arg:', arg)
+            sys.stdout.flush()
+        # get selected indices
+        selected_indices = lb_camera.curselection()
+        thiscamera = ",".join([lb_camera.get(i) for i in selected_indices]) # because we have a single choice listbox
+        print ("Kamera ist " + thiscamera)
+        clear_textbox(o_camera)
+        insert_text(o_camera, thiscamera)
+        _button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
+        self.button_call.config(state = NORMAL)
+        if thiscamera != oldcamera:
+            _button_undo.config(state = DISABLED)    
+            _button_redo.config(state = DISABLED)
+            clear_text(t_text1)
+            canvas_gallery.delete("all")
+            filemenu.entryconfig(1, state=DISABLED)
+            _button_exclude.config(state = DISABLED)
+            _button_include.config(state = DISABLED)
+            button_exec.config(state = DISABLED)
+            _button_duplicates.config(state = DISABLED)
+            label_num.config(text = "0")
+            clear_textbox(lb_gen)
+            oldcamera = thiscamera
+            if _imagetype in thumbnails:
+                print("try to delete thumbnails...")
+                thumbnails[_imagetype].clear()
+            if _imagetype in _dict_thumbnails:
+                print("try to delete dict_thumbnails...")
+                _dict_thumbnails[_imagetype] = {}
+
+    def Press_generate(self, *args):
+        global _dict_firstname_fullname, _dict_duplicates, dict_gen_files, dict_gen_files_delete, _dict_duplicates_sourcefiles, \
+            _outdir, _win_duplicates, dict_source_target, dict_relpath, dict_gen_files_delrelpath, dict_source_target_tooold, dict_outdirs, _dict_file_image
+        global _processid_high, _processid_akt, _list_processids, _stack_processids
+        if _debug:
+            print('Dateimeister_support.B_camera_press')
+            for arg in args:
+                print ('    another arg:', arg)
+            sys.stdout.flush()
+        
+        # cleanup
+        close_child_windows()
+        # reset all process-states
+        _processid_akt  = 0
+        _processid_high = 0
+        _list_processids = []
+        _stack_processids = []
+        _button_undo.config(state = DISABLED)    
+        _button_redo.config(state = DISABLED)
+        
+        clear_text(t_text1)
+        canvas_gallery.delete("all")
+
+        # get indir, outdir, camera
+        indir  = self.label_indir.cget('text')
+        outdir = self.label_outdir.cget('text')
+        thiscamera = o_camera.get();
+        if not indir:
+            messagebox.showerror("showerror", "kein Indir ausgewählt")
+            b_button1.focus_set()
+            return None
+        if not outdir:
+            messagebox.showerror("showerror", "kein outdir ausgewählt")
+            self.b_button_outdir.focus_set()
+            return None
+        if not thiscamera:
+            messagebox.showerror("showerror", "keine Kamera ausgewählt")
+            self.b_button2.focus_set()
+            return None
+        if cb_recursive_var.get():
+            recursive = "j"
+        else:
+            recursive = "n"
+        if cb_prefix_var.get():
+            _use_camera_prefix = True
+        else:
+            _use_camera_prefix = False
+        if cb_addrelpath_var.get():
+            addrelpath  = "j"
+        else:
+            addrelpath  = "n"
+        print ("INDIR is  " + indir)
+        
+        # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
+        # Just correct it and run generate again
+        get_templates() # read them into dict_templates (global)
+        
+        clear_text(t_text1)
+        clear_textbox(lb_gen)
+
+        _dict_duplicates = {}
+        owndir = os.getcwd()
+        dict_gen_files = {}
+        dict_gen_files_delete = {}
+        dict_source_target = {}
+        dict_source_target_jpeg = {}
+        dict_source_target_tooold = {}
+        dict_relpath = {}
+        dict_gen_files_delrelpath = {}
+        _dict_firstname_fullname = {}
+        dict_outdirs = {}
+
+        # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+
+        this_i = re.sub(r'\\', '/', indir).lower()
+        # delete indir-entries from xml if number gt than max from ini, oldest first
+        self.new_dir_in_xml('indir', max_indirs, this_i, ts)
+
+        this_o = re.sub(r'\\', '/', outdir).lower()
+        # delete outdir-entries from xml if number gt than max from ini, oldest first
+        self.new_dir_in_xml('outdir', max_outdirs, this_o, ts)
+
+        for dateityp in _dict_cameras[thiscamera]:
+            # cleanup
+            # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
+            if dateityp in thumbnails:
+                thumbnails[dateityp].clear() # damit werden implizit jetzt alle Bilder gelöscht
+            else:
+                thumbnails[dateityp] = []
+
+            subdir = _dict_subdirs[dateityp]
+            thisoutdir = outdir + "/" + subdir
+            _outdir = thisoutdir # for setting title of duplicate-window
+            dict_outdirs[dateityp] = thisoutdir
+            endung= _dict_cameras[thiscamera][dateityp]
+            if _use_camera_prefix:
+                target_prefix = thiscamera + '_'
+            else:
+                target_prefix = ''
+            dict_source_target[dateityp] = {}
+            dict_relpath[dateityp] = {}
+            dict_source_target[dateityp], dict_source_target_jpeg[dateityp], dict_source_target_tooold[dateityp] = \
+              dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, target_prefix, dict_relpath[dateityp])
+            dict_relpath[dateityp] = dict(reversed(list(dict_relpath[dateityp].items())))
+            for ii in dict_relpath[dateityp]:
+                print(" > ", ii, " files: ", dict_relpath[dateityp][ii])
+            num_files = 0
+            for thisfile in dict_source_target[dateityp]:
+                #print("IN: " + thisfile + " OUT: " + dict_source_target[dateityp][thisfile])
+                num_files += 1
+            print(dateityp + " F NUM: " + str(num_files))
+            # save name for cmdfile
+            cmd_file_name = "_copy_" + dateityp + '.cmd'
+            cmd_file_full = os.path.join(datadir, cmd_files_subdir, cmd_file_name)
+            # generierte Dateien in dict festhalten
+            dict_gen_files[dateityp] = cmd_file_full
+            #print("dict_gen_files[dateityp]: ", str(dict_gen_files[dateityp]), " datadir is: ", datadir)
+
+            # save name for delete files
+            # important: subdir MUST NOT start with a slash!
+            cmd_file_name_delete = "_delete_" + dateityp + '.cmd'
+            cmd_file_full_delete = os.path.join(datadir, cmd_files_subdir, cmd_file_name_delete)
+            # generierte Dateien in dict festhalten
+            dict_gen_files_delete[dateityp] = cmd_file_full_delete
+            #print("dict_gen_files_delete[dateityp]: ", str(dict_gen_files_delete[dateityp]))
+
+            # save name for delrelpath files
+            cmd_file_name_delrelpath = "_delrelpath_" + dateityp + '.cmd'
+            cmd_file_full_delrelpath = os.path.join(datadir, cmd_files_subdir, cmd_file_name_delrelpath)
+            # generierte Dateien in dict festhalten
+            dict_gen_files_delrelpath[dateityp] = cmd_file_full_delrelpath
+            #print("dict_gen_files_delrelpath[dateityp]: ", str(dict_gen_files_delrelpath[dateityp]))
+
+            _dict_duplicates[dateityp] = {}
+            print ("OUTDIR is " + thisoutdir + " ENDUNG is " + endung)
+            #print ("OUTFILE is " + os.environ["OUTFILE"])
+            # wenn die Endung wegen mehrerer Möglichkeiten (jpeg, jpg) mehr al 1 Eintrag hat, nehmen wir den letzten
+            #print("'(.*?)\.({:s})' 'PIC_{:s}_$1.$2'".format(dateityp, thiscamera))
+            clear_text(t_text1)
+            # wir tragen die Dubletten ein       
+            lineno = 0
+            for this_sourcefile in dict_source_target[dateityp]:
+                lineno += 1
+                #print(line)
+                dupl_target_file = dict_source_target[dateityp][this_sourcefile].upper() #for duplicate target  check ignore case
+                if dupl_target_file not in _dict_duplicates[dateityp]:
+                    _dict_duplicates[dateityp][dupl_target_file] = []
+                _dict_duplicates[dateityp][dupl_target_file].append(this_sourcefile) # Duplicates  
+            # remove singles from  _dict_duplicates, we use a copy because we must not delete entries during iteration
+            # create _dict_duplicates_sourcefiles , key = sourcefile, value = targetfile
+            _dict_duplicates_sourcefiles[dateityp] = {}
+            dict_h = {}
+            dict_h = copy.deepcopy(_dict_duplicates[dateityp])
+            for mytarget in dict_h:
+                #print("Duplcate Key: " + mytarget) 
+                mylist = dict_h[mytarget]
+                if len(mylist) == 1: # only 1 file
+                    del _dict_duplicates[dateityp][mytarget]
+                    #print("nodupl: ", str(mylist))
+                else:
+                    for mysource in mylist:
+                        _dict_duplicates_sourcefiles[mysource] = mytarget
+            #print("_dict_duplicates: " + str(_dict_duplicates[dateityp])) 
+
+            # alle Dateien aus der gerade verarbeiteten cmd-Datei tragen wir in _dict_firstname_fullname ein, wenn type = JPEG
+        regpattern = r'[\/\\]([^\/\\.]+)\.([^\/\\.]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
+        regpattern_source = r'"([^"]+)"' # Sourcefile
+        target_file = ""
+        source_file = ""
+        #print("JPEGs: " + str(dict_source_target_jpeg["JPEG"]))
+        for this_sourcefile in dict_source_target_jpeg["JPEG"]:
+            lineno += 1
+            b_match = False
+            match = re.search(regpattern, this_sourcefile)
+            if match:
+                firstname = match.group(1)
+                lastname  = match.group(2).upper()
+                #print("GENERATE: firstname / lastname = " + firstname + " / " + lastname)
+                b_match = True
+            else: 
+                #print("GENERATE unable to find firstname, lastname in: " + line)
+                a = 1
+            if (b_match == True):
+                # Show error if no process_type available
+                if lastname.upper() not in _dict_process_image:
+                    messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for: " + lastname)
+                    exit()
+                process_type = _dict_process_image[lastname].upper()
+                if (process_type == "JPEG"):
+                    if firstname.upper() not in _dict_firstname_fullname:
+                        _dict_firstname_fullname[firstname.upper()] = []
+                    _dict_firstname_fullname[firstname.upper()].append(this_sourcefile) # es kann ja in den ganzen Verzeichnissen mehrere jpegs mit demselben Vornamen geben  
+
+        l_label1.config(text = "Output from Dateimeister")
+                
+        # die generierten Dateien in die Listbox eintragen
+        for key in dict_gen_files:
+            lb_gen.insert(END, key)
+        lb_gen.select_set(0)
+        if lb_gen.size() > 0:
+            _button_be.config(state = NORMAL)
+        filemenu.entryconfig(1, state=DISABLED)
+        _button_exclude.config(state = DISABLED)
+        _button_include.config(state = DISABLED)
+        button_exec.config(state = DISABLED)
+        _button_duplicates.config(state = DISABLED)
+        label_num.config(text = "0")
+        os.chdir(owndir)
+        write_cmdfiles()
+    
+    def state_gen_required(self):
+        _button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
         _button_undo.config(state = DISABLED)    
         _button_redo.config(state = DISABLED)
         clear_text(t_text1)
@@ -2754,9 +2990,9 @@ def B_camera_press(*args):
         _button_include.config(state = DISABLED)
         button_exec.config(state = DISABLED)
         _button_duplicates.config(state = DISABLED)
+        #button_call.config(state = DISABLED)
         label_num.config(text = "0")
         clear_textbox(lb_gen)
-        oldcamera = thiscamera
         if _imagetype in thumbnails:
             print("try to delete thumbnails...")
             thumbnails[_imagetype].clear()
@@ -2764,60 +3000,52 @@ def B_camera_press(*args):
             print("try to delete dict_thumbnails...")
             _dict_thumbnails[_imagetype] = {}
 
-def state_gen_required():
-    _button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
-    _button_undo.config(state = DISABLED)    
-    _button_redo.config(state = DISABLED)
-    clear_text(t_text1)
-    canvas_gallery.delete("all")
-    filemenu.entryconfig(1, state=DISABLED)
-    _button_exclude.config(state = DISABLED)
-    _button_include.config(state = DISABLED)
-    button_exec.config(state = DISABLED)
-    _button_duplicates.config(state = DISABLED)
-    #button_call.config(state = DISABLED)
-    label_num.config(text = "0")
-    clear_textbox(lb_gen)
-    if _imagetype in thumbnails:
-        print("try to delete thumbnails...")
-        thumbnails[_imagetype].clear()
-    if _imagetype in _dict_thumbnails:
-        print("try to delete dict_thumbnails...")
-        _dict_thumbnails[_imagetype] = {}
-
-def new_dir_in_xml(dirtype, max_dirs, dir_chosen, ts):
-    do_del = True
-    if dirtype == 'indir':
-        d = DX.get_indirs(config_files_xml)
-        if dir_chosen in d:
-            do_del = False # existing dir, no cleanup
-    elif dirtype == 'outdir':
-        d = DX.get_outdirs(config_files_xml)
-        if dir_chosen in d:
-            do_del = False # existing dir, no cleanup
-    # delete dir-entrie(s) from config_files_xml only if a new one has been selected
-    print("do_del: " + str(do_del) + " dir_chosen: " + dir_chosen)
-    if do_del: # 2 pass: in the first we delete entries with not existing dir, in the second existing dirs (if necessary)
-        for loop in range(1,3): # 3 is excluded
-            if dirtype == 'indir':
-                d = DX.get_indirs(config_files_xml)
-            elif dirtype == 'outdir':
-                d = DX.get_outdirs(config_files_xml)
-            # sort descending by usedate
-            dict_dir_usedate = {}
-            for ii in d:
-                dict_dir_usedate[ii] = d[ii]['usedate'] # dir -> usedate
-            sorted_d = dict( sorted(dict_dir_usedate.items(), key=operator.itemgetter(1), reverse=True))
-            list_dirs = []
-            for tdir in sorted_d:
-                list_dirs.append(tdir)
-            num_to_delete = len(list_dirs) - int(max_dirs) + 1 # +1 for we will make a new dir later. already deleted dirs are no more in DX.get_dirs 
-            if loop == 1:
-                # delete only not existing dirs
-                if num_to_delete > 0:
-                    ii = 0
-                    for t in reversed(list_dirs): # now the oldest are on top
-                        if not os.path.isdir(t):
+    def new_dir_in_xml(self, dirtype, max_dirs, dir_chosen, ts):
+        do_del = True
+        if dirtype == 'indir':
+            d = DX.get_indirs(config_files_xml)
+            if dir_chosen in d:
+                do_del = False # existing dir, no cleanup
+        elif dirtype == 'outdir':
+            d = DX.get_outdirs(config_files_xml)
+            if dir_chosen in d:
+                do_del = False # existing dir, no cleanup
+        # delete dir-entrie(s) from config_files_xml only if a new one has been selected
+        print("do_del: " + str(do_del) + " dir_chosen: " + dir_chosen)
+        if do_del: # 2 pass: in the first we delete entries with not existing dir, in the second existing dirs (if necessary)
+            for loop in range(1,3): # 3 is excluded
+                if dirtype == 'indir':
+                    d = DX.get_indirs(config_files_xml)
+                elif dirtype == 'outdir':
+                    d = DX.get_outdirs(config_files_xml)
+                # sort descending by usedate
+                dict_dir_usedate = {}
+                for ii in d:
+                    dict_dir_usedate[ii] = d[ii]['usedate'] # dir -> usedate
+                sorted_d = dict( sorted(dict_dir_usedate.items(), key=operator.itemgetter(1), reverse=True))
+                list_dirs = []
+                for tdir in sorted_d:
+                    list_dirs.append(tdir)
+                num_to_delete = len(list_dirs) - int(max_dirs) + 1 # +1 for we will make a new dir later. already deleted dirs are no more in DX.get_dirs 
+                if loop == 1:
+                    # delete only not existing dirs
+                    if num_to_delete > 0:
+                        ii = 0
+                        for t in reversed(list_dirs): # now the oldest are on top
+                            if not os.path.isdir(t):
+                                if ii < num_to_delete:
+                                    if dirtype == 'indir':
+                                        DX.delete_indir(config_files_xml, t)
+                                    elif dirtype == 'outdir':
+                                        DX.delete_outdir(config_files_xml, t)
+                                    ii += 1
+                                else:
+                                    break
+                elif loop == 2:
+                    # delete existing dirs if necessary
+                    if num_to_delete > 0:
+                        ii = 0
+                        for t in reversed(list_dirs): # now the oldest are on top
                             if ii < num_to_delete:
                                 if dirtype == 'indir':
                                     DX.delete_indir(config_files_xml, t)
@@ -2826,24 +3054,11 @@ def new_dir_in_xml(dirtype, max_dirs, dir_chosen, ts):
                                 ii += 1
                             else:
                                 break
-            elif loop == 2:
-                # delete existing dirs if necessary
-                if num_to_delete > 0:
-                    ii = 0
-                    for t in reversed(list_dirs): # now the oldest are on top
-                        if ii < num_to_delete:
-                            if dirtype == 'indir':
-                                DX.delete_indir(config_files_xml, t)
-                            elif dirtype == 'outdir':
-                                DX.delete_outdir(config_files_xml, t)
-                            ii += 1
-                        else:
-                            break
-    # will add xml node if not existing or update usedate if existing
-    if dirtype == 'indir':
-        DX.new_indir (config_files_xml, dir_chosen, "", "", ts, 0)
-    if dirtype == 'outdir':
-        DX.new_outdir(config_files_xml, dir_chosen, ts)
+        # will add xml node if not existing or update usedate if existing
+        if dirtype == 'indir':
+            DX.new_indir (config_files_xml, dir_chosen, "", "", ts, 0)
+        if dirtype == 'outdir':
+            DX.new_outdir(config_files_xml, dir_chosen, ts)
 
 def close_child_windows(): #closes duplicates, fs-images and exec-windows    
     global _win_duplicates, _dict_file_image, _win_messages
@@ -2861,217 +3076,6 @@ def close_child_windows(): #closes duplicates, fs-images and exec-windows
         _win_messages.close_handler()
         _win_messages = None
 
-def Press_generate(*args):
-    global _dict_firstname_fullname, _dict_duplicates, dict_gen_files, dict_gen_files_delete, _dict_duplicates_sourcefiles, \
-        _outdir, _win_duplicates, dict_source_target, dict_relpath, dict_gen_files_delrelpath, dict_source_target_tooold, dict_outdirs, _dict_file_image
-    global _processid_high, _processid_akt, _list_processids, _stack_processids
-    if _debug:
-        print('Dateimeister_support.B_camera_press')
-        for arg in args:
-            print ('    another arg:', arg)
-        sys.stdout.flush()
-    
-    # cleanup
-    close_child_windows()
-    # reset all process-states
-    _processid_akt  = 0
-    _processid_high = 0
-    _list_processids = []
-    _stack_processids = []
-    _button_undo.config(state = DISABLED)    
-    _button_redo.config(state = DISABLED)
-    
-    clear_text(t_text1)
-    canvas_gallery.delete("all")
-
-    # get indir, outdir, camera
-    indir  = label_indir.cget('text')
-    outdir = label_outdir.cget('text')
-    thiscamera = o_camera.get();
-    if not indir:
-        messagebox.showerror("showerror", "kein Indir ausgewählt")
-        b_button1.focus_set()
-        return None
-    if not outdir:
-        messagebox.showerror("showerror", "kein outdir ausgewählt")
-        b_button_outdir.focus_set()
-        return None
-    if not thiscamera:
-        messagebox.showerror("showerror", "keine Kamera ausgewählt")
-        b_button2.focus_set()
-        return None
-    if cb_recursive_var.get():
-        recursive = "j"
-    else:
-        recursive = "n"
-    if cb_prefix_var.get():
-        _use_camera_prefix = True
-    else:
-        _use_camera_prefix = False
-    if cb_addrelpath_var.get():
-        addrelpath  = "j"
-    else:
-        addrelpath  = "n"
-    print ("INDIR is  " + indir)
-    
-    # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
-    # Just correct it and run generate again
-    get_templates() # read them into dict_templates (global)
-    
-    clear_text(t_text1)
-    clear_textbox(lb_gen)
-
-    _dict_duplicates = {}
-    owndir = os.getcwd()
-    dict_gen_files = {}
-    dict_gen_files_delete = {}
-    dict_source_target = {}
-    dict_source_target_jpeg = {}
-    dict_source_target_tooold = {}
-    dict_relpath = {}
-    dict_gen_files_delrelpath = {}
-    _dict_firstname_fullname = {}
-    dict_outdirs = {}
-
-    # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
-    ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-
-    this_i = re.sub(r'\\', '/', indir).lower()
-    # delete indir-entries from xml if number gt than max from ini, oldest first
-    new_dir_in_xml('indir', max_indirs, this_i, ts)
-
-    this_o = re.sub(r'\\', '/', outdir).lower()
-    # delete outdir-entries from xml if number gt than max from ini, oldest first
-    new_dir_in_xml('outdir', max_outdirs, this_o, ts)
-
-    for dateityp in _dict_cameras[thiscamera]:
-        # cleanup
-        # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
-        if dateityp in thumbnails:
-            thumbnails[dateityp].clear() # damit werden implizit jetzt alle Bilder gelöscht
-        else:
-            thumbnails[dateityp] = []
-
-        subdir = _dict_subdirs[dateityp]
-        thisoutdir = outdir + "/" + subdir
-        _outdir = thisoutdir # for setting title of duplicate-window
-        dict_outdirs[dateityp] = thisoutdir
-        endung= _dict_cameras[thiscamera][dateityp]
-        if _use_camera_prefix:
-            target_prefix = thiscamera + '_'
-        else:
-            target_prefix = ''
-        dict_source_target[dateityp] = {}
-        dict_relpath[dateityp] = {}
-        dict_source_target[dateityp], dict_source_target_jpeg[dateityp], dict_source_target_tooold[dateityp] = \
-          dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, target_prefix, dict_relpath[dateityp])
-        dict_relpath[dateityp] = dict(reversed(list(dict_relpath[dateityp].items())))
-        for ii in dict_relpath[dateityp]:
-            print(" > ", ii, " files: ", dict_relpath[dateityp][ii])
-        num_files = 0
-        for thisfile in dict_source_target[dateityp]:
-            #print("IN: " + thisfile + " OUT: " + dict_source_target[dateityp][thisfile])
-            num_files += 1
-        print(dateityp + " F NUM: " + str(num_files))
-        # save name for cmdfile
-        cmd_file_name = "_copy_" + dateityp + '.cmd'
-        cmd_file_full = os.path.join(datadir, cmd_files_subdir, cmd_file_name)
-        # generierte Dateien in dict festhalten
-        dict_gen_files[dateityp] = cmd_file_full
-        #print("dict_gen_files[dateityp]: ", str(dict_gen_files[dateityp]), " datadir is: ", datadir)
-
-        # save name for delete files
-        # important: subdir MUST NOT start with a slash!
-        cmd_file_name_delete = "_delete_" + dateityp + '.cmd'
-        cmd_file_full_delete = os.path.join(datadir, cmd_files_subdir, cmd_file_name_delete)
-        # generierte Dateien in dict festhalten
-        dict_gen_files_delete[dateityp] = cmd_file_full_delete
-        #print("dict_gen_files_delete[dateityp]: ", str(dict_gen_files_delete[dateityp]))
-
-        # save name for delrelpath files
-        cmd_file_name_delrelpath = "_delrelpath_" + dateityp + '.cmd'
-        cmd_file_full_delrelpath = os.path.join(datadir, cmd_files_subdir, cmd_file_name_delrelpath)
-        # generierte Dateien in dict festhalten
-        dict_gen_files_delrelpath[dateityp] = cmd_file_full_delrelpath
-        #print("dict_gen_files_delrelpath[dateityp]: ", str(dict_gen_files_delrelpath[dateityp]))
-
-        _dict_duplicates[dateityp] = {}
-        print ("OUTDIR is " + thisoutdir + " ENDUNG is " + endung)
-        #print ("OUTFILE is " + os.environ["OUTFILE"])
-        # wenn die Endung wegen mehrerer Möglichkeiten (jpeg, jpg) mehr al 1 Eintrag hat, nehmen wir den letzten
-        #print("'(.*?)\.({:s})' 'PIC_{:s}_$1.$2'".format(dateityp, thiscamera))
-        clear_text(t_text1)
-        # wir tragen die Dubletten ein       
-        lineno = 0
-        for this_sourcefile in dict_source_target[dateityp]:
-            lineno += 1
-            #print(line)
-            dupl_target_file = dict_source_target[dateityp][this_sourcefile].upper() #for duplicate target  check ignore case
-            if dupl_target_file not in _dict_duplicates[dateityp]:
-                _dict_duplicates[dateityp][dupl_target_file] = []
-            _dict_duplicates[dateityp][dupl_target_file].append(this_sourcefile) # Duplicates  
-        # remove singles from  _dict_duplicates, we use a copy because we must not delete entries during iteration
-        # create _dict_duplicates_sourcefiles , key = sourcefile, value = targetfile
-        _dict_duplicates_sourcefiles[dateityp] = {}
-        dict_h = {}
-        dict_h = copy.deepcopy(_dict_duplicates[dateityp])
-        for mytarget in dict_h:
-            #print("Duplcate Key: " + mytarget) 
-            mylist = dict_h[mytarget]
-            if len(mylist) == 1: # only 1 file
-                del _dict_duplicates[dateityp][mytarget]
-                #print("nodupl: ", str(mylist))
-            else:
-                for mysource in mylist:
-                    _dict_duplicates_sourcefiles[mysource] = mytarget
-        #print("_dict_duplicates: " + str(_dict_duplicates[dateityp])) 
-
-        # alle Dateien aus der gerade verarbeiteten cmd-Datei tragen wir in _dict_firstname_fullname ein, wenn type = JPEG
-    regpattern = r'[\/\\]([^\/\\.]+)\.([^\/\\.]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
-    regpattern_source = r'"([^"]+)"' # Sourcefile
-    target_file = ""
-    source_file = ""
-    #print("JPEGs: " + str(dict_source_target_jpeg["JPEG"]))
-    for this_sourcefile in dict_source_target_jpeg["JPEG"]:
-        lineno += 1
-        b_match = False
-        match = re.search(regpattern, this_sourcefile)
-        if match:
-            firstname = match.group(1)
-            lastname  = match.group(2).upper()
-            #print("GENERATE: firstname / lastname = " + firstname + " / " + lastname)
-            b_match = True
-        else: 
-            #print("GENERATE unable to find firstname, lastname in: " + line)
-            a = 1
-        if (b_match == True):
-            # Show error if no process_type available
-            if lastname.upper() not in _dict_process_image:
-                messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for: " + lastname)
-                exit()
-            process_type = _dict_process_image[lastname].upper()
-            if (process_type == "JPEG"):
-                if firstname.upper() not in _dict_firstname_fullname:
-                    _dict_firstname_fullname[firstname.upper()] = []
-                _dict_firstname_fullname[firstname.upper()].append(this_sourcefile) # es kann ja in den ganzen Verzeichnissen mehrere jpegs mit demselben Vornamen geben  
-
-    l_label1.config(text = "Output from Dateimeister")
-            
-    # die generierten Dateien in die Listbox eintragen
-    for key in dict_gen_files:
-        lb_gen.insert(END, key)
-    lb_gen.select_set(0)
-    if lb_gen.size() > 0:
-        _button_be.config(state = NORMAL)
-    filemenu.entryconfig(1, state=DISABLED)
-    _button_exclude.config(state = DISABLED)
-    _button_include.config(state = DISABLED)
-    button_exec.config(state = DISABLED)
-    _button_duplicates.config(state = DISABLED)
-    label_num.config(text = "0")
-    os.chdir(owndir)
-    write_cmdfiles()
-    
 def get_templates():
     global dict_templates
     dict_templates = {}
