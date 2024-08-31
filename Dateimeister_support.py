@@ -1682,8 +1682,7 @@ class MyCameraTreeview:
     def update_main_window(self):
         # cleanup: close all child windows of main except this one because nothing can be changed which affects camera window
         global _dict_cameras, _dict_subdirs, _dict_process_image
-        close_child_windows()
-        self.state_gen_required()
+        #self.state_gen_required()
         _dict_cameras, _dict_subdirs, _dict_process_image = get_camera_xml()
         #print("update_main_window dict_camera: " + str(_dict_cameras))
 
