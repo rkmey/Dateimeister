@@ -26,3 +26,7 @@ Press_generate
 B_camera_press
 state_gen_required
 new_dir_in_xml
+close_child_windows
+get_templates
+button_exec_pressed
+write_cmdfiles

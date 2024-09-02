@@ -239,7 +239,7 @@ class MyThumbnail:
             self.player.pstop()
             del self.player
         width = self.end -self.start 
-        print("*** Deleting MyThumbnail-Objekt. " + self.file + " lineno in cmdfile " + str(self.lineno))
+        #print("*** Deleting MyThumbnail-Objekt. " + self.file + " lineno in cmdfile " + str(self.lineno))
 
 # hier speichern wir die full-size-Bilder
 class MyFSImage:
@@ -1902,7 +1902,7 @@ class Dateimeister_support:
         self.button_call = self.w.Button_call
         self.button_call.config(command = self.Press_generate)
         button_exec = self.w.Button_exec
-        button_exec.config(command = button_exec_pressed)
+        button_exec.config(command = self.button_exec_pressed)
 
         # get all camera information and fill camera-listbox
         _dict_cameras, _dict_subdirs, _dict_process_image = get_camera_xml()
@@ -2364,7 +2364,7 @@ class Dateimeister_support:
             thumbnails[imagetype] = []
         
         # cleanup
-        close_child_windows()
+        self.close_child_windows()
         
         l_label1.config(text = "Output from Dateimeister : " + filename)
         _dict_image_lineno[imagetype] = {} # in Python muss das sein, sonst gehts in der nächsten Ebene nicht
@@ -2778,7 +2778,7 @@ class Dateimeister_support:
             sys.stdout.flush()
         
         # cleanup
-        close_child_windows()
+        self.close_child_windows()
         # reset all process-states
         _processid_akt  = 0
         _processid_high = 0
@@ -2822,7 +2822,7 @@ class Dateimeister_support:
         
         # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
         # Just correct it and run generate again
-        get_templates() # read them into dict_templates (global)
+        self.get_templates() # read them into dict_templates (global)
         
         clear_text(t_text1)
         clear_textbox(lb_gen)
@@ -2976,7 +2976,7 @@ class Dateimeister_support:
         _button_duplicates.config(state = DISABLED)
         label_num.config(text = "0")
         os.chdir(owndir)
-        write_cmdfiles()
+        self.write_cmdfiles()
     
     def state_gen_required(self):
         _button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
@@ -3059,174 +3059,53 @@ class Dateimeister_support:
         if dirtype == 'outdir':
             DX.new_outdir(config_files_xml, dir_chosen, ts)
 
-def close_child_windows(): #closes duplicates, fs-images and exec-windows    
-    global _win_duplicates, _dict_file_image, _win_messages
-    # cleanup
-    stop_all_players() # should not continue running 
-    if _win_duplicates is not None: # stop MyDuplicates-Objekt
-        _win_duplicates.close_handler()
-        _win_duplicates = None
-    # delete all fsimage by close-call
-    for t in _dict_file_image:
-        u = _dict_file_image[t]
-        u.close_handler_external()
-    _dict_file_image = {}
-    if _win_messages is not None: # stop MyMessagesWindow-Objekt
-        _win_messages.close_handler()
-        _win_messages = None
+    def close_child_windows(self): #closes duplicates, fs-images and exec-windows    
+        global _win_duplicates, _dict_file_image, _win_messages
+        # cleanup
+        stop_all_players() # should not continue running 
+        if _win_duplicates is not None: # stop MyDuplicates-Objekt
+            _win_duplicates.close_handler()
+            _win_duplicates = None
+        # delete all fsimage by close-call
+        for t in _dict_file_image:
+            u = _dict_file_image[t]
+            u.close_handler_external()
+        _dict_file_image = {}
+        if _win_messages is not None: # stop MyMessagesWindow-Objekt
+            _win_messages.close_handler()
+            _win_messages = None
 
-def get_templates():
-    global dict_templates
-    dict_templates = {}
-    try:
-        file = open(templatefile)
-    except FileNotFoundError:
-        print("File does not exist: " + templatefile)
-    templates = file.read().replace('\n', '<<<NL>>>')
-    #print(templates)
-    regpattern = r'\[([^\]]+)\](.*?)\[/\1\]'
-    list_t = re.findall(regpattern, templates)
-    for ii in list_t:
-        templatename = ii[0].upper()
-        template     = ii[1]
-        #print("templatename: " + templatename)
-        #print(template)
-        dict_templates[templatename] = template
-    
-    templates = re.sub(r'<<<NL>>>', '\n', templates)
-    #print(templates)
+    def get_templates(self):
+        global dict_templates
+        dict_templates = {}
+        try:
+            file = open(templatefile)
+        except FileNotFoundError:
+            print("File does not exist: " + templatefile)
+        templates = file.read().replace('\n', '<<<NL>>>')
+        #print(templates)
+        regpattern = r'\[([^\]]+)\](.*?)\[/\1\]'
+        list_t = re.findall(regpattern, templates)
+        for ii in list_t:
+            templatename = ii[0].upper()
+            template     = ii[1]
+            #print("templatename: " + templatename)
+            #print(template)
+            dict_templates[templatename] = template
         
-def button_exec_pressed():
-    global _win_messages
-    if _win_messages is not None: # stop MyMessagesWindow-Objekt
-        _win_messages.close_handler()
-        _win_messages = None
-    _win_messages = MyMessagesWindow(_imagetype, dict_gen_files[_imagetype], dict_gen_files_delete[_imagetype], dict_gen_files_delrelpath[_imagetype]) 
+        templates = re.sub(r'<<<NL>>>', '\n', templates)
+        #print(templates)
+            
+    def button_exec_pressed(self):
+        global _win_messages
+        if _win_messages is not None: # stop MyMessagesWindow-Objekt
+            _win_messages.close_handler()
+            _win_messages = None
+        _win_messages = MyMessagesWindow(_imagetype, dict_gen_files[_imagetype], dict_gen_files_delete[_imagetype], dict_gen_files_delrelpath[_imagetype]) 
 
-def write_cmdfiles():
-    for imagetype in dict_source_target:
-        write_cmdfile(imagetype)
-
-def write_cmdfile(imagetype):
-    ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-    template_copy       = dict_templates["COPY"]
-    template_delete     = dict_templates["DELETE"]
-    template_delrelpath = dict_templates["DELRELPATH"]
-    template_empty      = dict_templates["EMPTY"]
-    header = _uncomment + ' generated by dateimeister ' + ts + '\n'
-    # copy files
-    cmd_file_full = dict_gen_files[imagetype] # filename was already built by generate()
-    thiscmdfile = open(cmd_file_full, 'w')
-    thiscmdfile.write(header) 
-    dict_files = dict_source_target[imagetype]
-    for sourcefile in dict_files:
-        comment = ""
-        do_include = False
-        #print(imagetype + ', ' + sourcefile)
-        if imagetype in _dict_thumbnails and sourcefile in _dict_thumbnails[imagetype]:
-            thumbnail = _dict_thumbnails[imagetype][sourcefile]
-            if thumbnail.getState() == state.EXCLUDE:
-                comment = _uncomment
-            else: # we have to incluse this file even if it is too old
-                do_include = True
-        # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
-        if do_include == False:
-            if imagetype in dict_source_target_tooold and sourcefile in dict_source_target_tooold[imagetype]:
-                comment = _uncomment 
-        targetfile = dict_files[sourcefile]
-        if platform == "WINDOWS":
-            targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
-        elif platform == "UNIX":
-            targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
-        str_ret = template_copy
-        str_ret = str_ret.replace('<source>', sourcefile)
-        str_ret = str_ret.replace('<target>', targetfile)
-        str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
-        thiscmdfile.write(comment + str_ret + '\n')
-    thiscmdfile.close()
-
-    # delete files
-    cmd_file_full = dict_gen_files_delete[imagetype] # filename was already built by generate()
-    thiscmdfile = open(cmd_file_full, 'w')
-    thiscmdfile.write(header) 
-    dict_files = dict_source_target[imagetype]
-    for sourcefile in dict_files:
-        comment = ""
-        do_include = False
-        #print(imagetype + ', ' + sourcefile)
-        if imagetype in _dict_thumbnails and sourcefile in _dict_thumbnails[imagetype]:
-            thumbnail = _dict_thumbnails[imagetype][sourcefile]
-            if thumbnail.getState() == state.EXCLUDE:
-                comment = _uncomment
-            else: # we have to incluse this file even if it is too old
-                do_include = True
-        # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
-        if do_include == False:
-            if imagetype in dict_source_target_tooold and sourcefile in dict_source_target_tooold[imagetype]:
-                comment = _uncomment 
-        targetfile = dict_files[sourcefile]
-        if platform == "WINDOWS":
-            targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
-        elif platform == "UNIX":
-            targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
-        str_ret = template_delete
-        str_ret = str_ret.replace('<source>', sourcefile)
-        str_ret = str_ret.replace('<target>', targetfile)
-        str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
-        thiscmdfile.write(comment + str_ret + '\n')
-    thiscmdfile.close()
-    
-    # delrelpath files : remove addrelpath-generated files, but only if empty
-    cmd_file_full = dict_gen_files_delrelpath[imagetype] # filename was already built by generate()
-    thiscmdfile = open(cmd_file_full, 'w')
-    thiscmdfile.write(header)
-    outdir = dict_outdirs[imagetype]
-    # for cmd we need backslash, for Unix slash
-    if platform == "WINDOWS":
-        outdir = re.sub(r'/', '\\\\', outdir) # replace / by \
-    elif platform == "UNIX":
-        outdir = re.sub(r'\\', '/', outdir) # replace \ by /
-    stroutfile = "@set OUTDIR=" + outdir + '\n'
-    thiscmdfile.write(stroutfile) 
-    for relpath in dict_relpath[imagetype]:
-        comment = ""
-        str_ret = template_delrelpath
-        if platform == "WINDOWS":
-            str_ret = str_ret.replace('<trenner>', '\\')
-            relpath = re.sub(r'/', '\\\\', relpath) # replace / by \
-        elif platform == "UNIX":
-            str_ret = str_ret.replace('<trenner>', '/')
-            relpath = re.sub(r'\\', '/', relpath) # replace \ by /
-        str_ret = str_ret.replace('<relpath>', relpath)
-        str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
-        thiscmdfile.write(comment + str_ret + '\n')
-    # add the script
-    str_ret = template_empty
-    str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
-    l = str_ret.split('\n')
-    for ii in l:
-       thiscmdfile.write(ii + '\n') 
-    thiscmdfile.close()
-
-def get_thumbnail_by_position(canvas_x, canvas_y):
-    index = -1
-    found = False
-    if _imagetype != "":
-        for thumbnail in thumbnails[_imagetype]:
-            start = thumbnail.getStart()
-            end   = thumbnail.getEnd()
-            if (canvas_x >= start and canvas_x <= end):
-                index = thumbnails[_imagetype].index(thumbnail)
-                #print("retrieved " + thumbnail.getFile() + " Index: " + str(index))
-                found = True
-                break
-        if not found:
-            thumbnail = None
-            index = None
-    else:
-        thumbnail = None
-        index = None
-    return (thumbnail, index)
+    def write_cmdfiles(self):
+        for imagetype in dict_source_target:
+            write_cmdfile(imagetype)
 
 def canvas_gallery_show(event):
     #print('bbox', canvas_gallery.bbox('images'))
@@ -3712,18 +3591,6 @@ def on_window_destroy(self):
     #root.instance.destroy()
     #root.withdraw()
 
-def stop_all_players():
-    # stop all video players
-    if _imagetype is not None and _imagetype != "":
-        for imagetype in _dict_subdirs:
-            if imagetype in thumbnails:
-                for t in thumbnails[_imagetype]: # stop all running players
-                    thisplayer = t.getPlayer()
-                    if thisplayer is not None:
-                        if thisplayer.getRun(): # running
-                            thisplayer.pstop()
-                            #print ("Stop player for: " + t.getFile() + " playertype: " + imagetype)
- 
 def on_cb_num_toggle():
     if cb_num_var.get():
         canvas_gallery.itemconfigure("rect_numbers", state="normal")
@@ -3907,7 +3774,9 @@ def dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, tar
                 #print("D: " + os.path.join(root, dir))
     return dict_result, dict_result_all, dict_result_tooold
 
-def get_camera_xml(): # returns dict with all cameras, types and suffixes - global function, used by several application classes
+# #############################################################
+# global functions, used by several application classes
+def get_camera_xml(): # returns dict with all cameras, types and suffixes
     ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
     cameraname = "Retina Reflex"
     ctype      = "JPEG"
@@ -3954,6 +3823,140 @@ def get_camera_xml(): # returns dict with all cameras, types and suffixes - glob
     lb_camera.selection_set(END)
 
     return dict_t, dict_subdirs, dict_process_image
+
+def stop_all_players():
+    # stop all video players
+    if _imagetype is not None and _imagetype != "":
+        for imagetype in _dict_subdirs:
+            if imagetype in thumbnails:
+                for t in thumbnails[_imagetype]: # stop all running players
+                    thisplayer = t.getPlayer()
+                    if thisplayer is not None:
+                        if thisplayer.getRun(): # running
+                            thisplayer.pstop()
+                            #print ("Stop player for: " + t.getFile() + " playertype: " + imagetype)
+ 
+
+def write_cmdfile(imagetype):
+    ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+    template_copy       = dict_templates["COPY"]
+    template_delete     = dict_templates["DELETE"]
+    template_delrelpath = dict_templates["DELRELPATH"]
+    template_empty      = dict_templates["EMPTY"]
+    header = _uncomment + ' generated by dateimeister ' + ts + '\n'
+    # copy files
+    cmd_file_full = dict_gen_files[imagetype] # filename was already built by generate()
+    thiscmdfile = open(cmd_file_full, 'w')
+    thiscmdfile.write(header) 
+    dict_files = dict_source_target[imagetype]
+    for sourcefile in dict_files:
+        comment = ""
+        do_include = False
+        #print(imagetype + ', ' + sourcefile)
+        if imagetype in _dict_thumbnails and sourcefile in _dict_thumbnails[imagetype]:
+            thumbnail = _dict_thumbnails[imagetype][sourcefile]
+            if thumbnail.getState() == state.EXCLUDE:
+                comment = _uncomment
+            else: # we have to incluse this file even if it is too old
+                do_include = True
+        # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
+        if do_include == False:
+            if imagetype in dict_source_target_tooold and sourcefile in dict_source_target_tooold[imagetype]:
+                comment = _uncomment 
+        targetfile = dict_files[sourcefile]
+        if platform == "WINDOWS":
+            targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
+        elif platform == "UNIX":
+            targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
+        str_ret = template_copy
+        str_ret = str_ret.replace('<source>', sourcefile)
+        str_ret = str_ret.replace('<target>', targetfile)
+        str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
+        thiscmdfile.write(comment + str_ret + '\n')
+    thiscmdfile.close()
+
+    # delete files
+    cmd_file_full = dict_gen_files_delete[imagetype] # filename was already built by generate()
+    thiscmdfile = open(cmd_file_full, 'w')
+    thiscmdfile.write(header) 
+    dict_files = dict_source_target[imagetype]
+    for sourcefile in dict_files:
+        comment = ""
+        do_include = False
+        #print(imagetype + ', ' + sourcefile)
+        if imagetype in _dict_thumbnails and sourcefile in _dict_thumbnails[imagetype]:
+            thumbnail = _dict_thumbnails[imagetype][sourcefile]
+            if thumbnail.getState() == state.EXCLUDE:
+                comment = _uncomment
+            else: # we have to incluse this file even if it is too old
+                do_include = True
+        # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
+        if do_include == False:
+            if imagetype in dict_source_target_tooold and sourcefile in dict_source_target_tooold[imagetype]:
+                comment = _uncomment 
+        targetfile = dict_files[sourcefile]
+        if platform == "WINDOWS":
+            targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
+        elif platform == "UNIX":
+            targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
+        str_ret = template_delete
+        str_ret = str_ret.replace('<source>', sourcefile)
+        str_ret = str_ret.replace('<target>', targetfile)
+        str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
+        thiscmdfile.write(comment + str_ret + '\n')
+    thiscmdfile.close()
+    
+    # delrelpath files : remove addrelpath-generated files, but only if empty
+    cmd_file_full = dict_gen_files_delrelpath[imagetype] # filename was already built by generate()
+    thiscmdfile = open(cmd_file_full, 'w')
+    thiscmdfile.write(header)
+    outdir = dict_outdirs[imagetype]
+    # for cmd we need backslash, for Unix slash
+    if platform == "WINDOWS":
+        outdir = re.sub(r'/', '\\\\', outdir) # replace / by \
+    elif platform == "UNIX":
+        outdir = re.sub(r'\\', '/', outdir) # replace \ by /
+    stroutfile = "@set OUTDIR=" + outdir + '\n'
+    thiscmdfile.write(stroutfile) 
+    for relpath in dict_relpath[imagetype]:
+        comment = ""
+        str_ret = template_delrelpath
+        if platform == "WINDOWS":
+            str_ret = str_ret.replace('<trenner>', '\\')
+            relpath = re.sub(r'/', '\\\\', relpath) # replace / by \
+        elif platform == "UNIX":
+            str_ret = str_ret.replace('<trenner>', '/')
+            relpath = re.sub(r'\\', '/', relpath) # replace \ by /
+        str_ret = str_ret.replace('<relpath>', relpath)
+        str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
+        thiscmdfile.write(comment + str_ret + '\n')
+    # add the script
+    str_ret = template_empty
+    str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
+    l = str_ret.split('\n')
+    for ii in l:
+       thiscmdfile.write(ii + '\n') 
+    thiscmdfile.close()
+
+def get_thumbnail_by_position(canvas_x, canvas_y):
+    index = -1
+    found = False
+    if _imagetype != "":
+        for thumbnail in thumbnails[_imagetype]:
+            start = thumbnail.getStart()
+            end   = thumbnail.getEnd()
+            if (canvas_x >= start and canvas_x <= end):
+                index = thumbnails[_imagetype].index(thumbnail)
+                #print("retrieved " + thumbnail.getFile() + " Index: " + str(index))
+                found = True
+                break
+        if not found:
+            thumbnail = None
+            index = None
+    else:
+        thumbnail = None
+        index = None
+    return (thumbnail, index)
 
 
 def main(*args):
