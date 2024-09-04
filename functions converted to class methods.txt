@@ -30,3 +30,8 @@ close_child_windows
 get_templates
 button_exec_pressed
 write_cmdfiles
+canvas_gallery_show
+canvas_image_show
+delay_decr
+delay_incr
+delay_deflt

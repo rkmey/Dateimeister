@@ -2007,15 +2007,15 @@ class Dateimeister_support:
         # Create the context menu
         context_menu = tk.Menu(canvas_gallery, tearoff=0)
         context_menu.add_command(label="Exclude", command=canvas_image_exclude)    
-        context_menu.add_command(label="Show"   , command=canvas_image_show)    
+        context_menu.add_command(label="Show"   , command=self.canvas_image_show)    
         context_menu.add_command(label="Restart", command=canvas_video_restart)    
       
         # Events
         # Button 1 single haben wir deaktiviert, weil double immer auch zuerst single auslöst
         # deshalb exlude und show über Kontext-Menü (rechte Maustaste), Show zusätzlich auch mit Doppelclick
         #canvas_gallery.bind("<Button-1>", canvas_gallery_exclude)
-        canvas_gallery.bind("<Double-Button-1>", canvas_gallery_show)
-        canvas_gallery.bind('<Return>', canvas_gallery_show)    # show FSImage for selected thumbnail
+        canvas_gallery.bind("<Double-Button-1>", self.canvas_gallery_show)
+        canvas_gallery.bind('<Return>', self.canvas_gallery_show)    # show FSImage for selected thumbnail
         # Pfeitasten fürs scrollen
         canvas_gallery.bind("<Left>",  lambda event: xview("scroll", -1, "units"))
         canvas_gallery.bind("<Right>", lambda event: xview("scroll",  1, "units"))
@@ -2030,9 +2030,9 @@ class Dateimeister_support:
         # strg-z, y
         canvas_gallery.bind('<Control-z>', lambda event: process_undo(event))
         canvas_gallery.bind('<Control-y>', lambda event: process_redo(event))
-        canvas_gallery.bind('+', lambda event: delay_decr(event))
-        canvas_gallery.bind('-', lambda event: delay_incr(event))
-        canvas_gallery.bind('0', lambda event: delay_deflt(event))
+        canvas_gallery.bind('+', lambda event: self.delay_decr(event))
+        canvas_gallery.bind('-', lambda event: self.delay_incr(event))
+        canvas_gallery.bind('0', lambda event: self.delay_deflt(event))
         canvas_gallery.bind('<FocusOut>', self.focus_out)
         lb_gen.bind('<Double-1>', self.lb_gen_double)
         lb_camera.bind('<Double-1>', self.lb_camera_double)
@@ -3107,55 +3107,59 @@ class Dateimeister_support:
         for imagetype in dict_source_target:
             write_cmdfile(imagetype)
 
-def canvas_gallery_show(event):
-    #print('bbox', canvas_gallery.bbox('images'))
-    canvas_gallery.focus_set()
+    def canvas_gallery_show(self, event):
+        #print('bbox', canvas_gallery.bbox('images'))
+        canvas_gallery.focus_set()
 
-    canvas_x = canvas_gallery.canvasx(event.x)
-    canvas_y = canvas_gallery.canvasy(event.y)
-    thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
-    if thumbnail is not None:
-        item_id = thumbnail.getId()
-        display_image(thumbnail)
-        print("Text sroll to lineno: ", str(thumbnail.getLineno()))
-        thumbnail.scrollTextToLineno()
+        canvas_x = canvas_gallery.canvasx(event.x)
+        canvas_y = canvas_gallery.canvasy(event.y)
+        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        if thumbnail is not None:
+            item_id = thumbnail.getId()
+            display_image(thumbnail)
+            print("Text sroll to lineno: ", str(thumbnail.getLineno()))
+            thumbnail.scrollTextToLineno()
 
-def delay_decr(event): # speed +
-    canvas_gallery.focus_set()
-    delta = -5
-    canvas_x = canvas_gallery.canvasx(event.x)
-    canvas_y = canvas_gallery.canvasy(event.y)
-    thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
-    if thumbnail is not None:
-        player = thumbnail.getPlayer()
-        if player is not None: # a video
-            delay = player.getDelay()
-            if delay + delta > 5:
-                player.setDelay(delay + delta)
+    def canvas_image_show(self):
+        print("Context menu show")
+        self.canvas_gallery_show(_event)
 
-def delay_incr(event): # speed -
-    canvas_gallery.focus_set()
-    delta = 5
-    canvas_x = canvas_gallery.canvasx(event.x)
-    canvas_y = canvas_gallery.canvasy(event.y)
-    thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
-    if thumbnail is not None:
-        player = thumbnail.getPlayer()
-        if player is not None: # a video
-            delay = player.getDelay()
-            if delay + delta < 200:
-                player.setDelay(delay + delta)
+    def delay_decr(self, event): # speed +
+        canvas_gallery.focus_set()
+        delta = -5
+        canvas_x = canvas_gallery.canvasx(event.x)
+        canvas_y = canvas_gallery.canvasy(event.y)
+        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        if thumbnail is not None:
+            player = thumbnail.getPlayer()
+            if player is not None: # a video
+                delay = player.getDelay()
+                if delay + delta > 5:
+                    player.setDelay(delay + delta)
 
-def delay_deflt(event): # speed normal
-    canvas_gallery.focus_set()
-    canvas_x = canvas_gallery.canvasx(event.x)
-    canvas_y = canvas_gallery.canvasy(event.y)
-    thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
-    if thumbnail is not None:
-        player = thumbnail.getPlayer()
-        if player is not None: # a video
-            delay = player.getDelay()
-            player.setDelay(delay_default)
+    def delay_incr(self, event): # speed -
+        canvas_gallery.focus_set()
+        delta = 5
+        canvas_x = canvas_gallery.canvasx(event.x)
+        canvas_y = canvas_gallery.canvasy(event.y)
+        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        if thumbnail is not None:
+            player = thumbnail.getPlayer()
+            if player is not None: # a video
+                delay = player.getDelay()
+                if delay + delta < 200:
+                    player.setDelay(delay + delta)
+
+    def delay_deflt(self, event): # speed normal
+        canvas_gallery.focus_set()
+        canvas_x = canvas_gallery.canvasx(event.x)
+        canvas_y = canvas_gallery.canvasy(event.y)
+        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        if thumbnail is not None:
+            player = thumbnail.getPlayer()
+            if player is not None: # a video
+                delay = player.getDelay()
+                player.setDelay(delay_default)
 
 def xview(*args):
     #print (*args)
@@ -3445,10 +3449,6 @@ def Button_include_all(*args):
 def canvas_image_exclude():
     print("Context menu exlude")
     canvas_gallery_exclude(_event)
-
-def canvas_image_show():
-    print("Context menu show")
-    canvas_gallery_show(_event)
 
 def canvas_video_restart():
     print("Context menu restart")
