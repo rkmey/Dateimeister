@@ -875,7 +875,7 @@ class MyDuplicates:
         # aktuelle position der Scrollbar
         scrollposition = self.H_I.get()[0]
         
-        print("scroll_position_H_I: " + str(canvas_x) + " scroll_position Scrollbar: " + str(scrollposition))
+        #print("scroll_position_H_I: " + str(canvas_x) + " scroll_position Scrollbar: " + str(scrollposition))
         # wenn wir die Pfeiltasten betätigen, wollen wir auf den Anfang des nächsten (vorherigen) Bildes scrollen.
         # wenn das aktuelle Bild nur teilweise zusehen ist, scrollen wir bei Linkstaste auf den Bildbeginn
         if len(args) == 3 and args[2] == "units":
@@ -1999,7 +1999,7 @@ class Dateimeister_support:
         
         canvas_gallery = self.w.Canvas1
         # Scrollbars
-        scroll_canvas_x = tk.Scrollbar(self.root, orient="horizontal", command=xview)
+        scroll_canvas_x = tk.Scrollbar(self.root, orient="horizontal", command=self.xview)
         #scroll_canvas_x.pack(side=BOTTOM, fill=BOTH)
         scroll_canvas_x.place(relx = .015, rely = .96, relheight = 0.015, relwidth = .97, anchor = tk.NW)
         canvas_gallery.config(xscrollcommand = scroll_canvas_x.set, scrollregion=canvas_gallery.bbox("all"))
@@ -2017,10 +2017,10 @@ class Dateimeister_support:
         canvas_gallery.bind("<Double-Button-1>", self.canvas_gallery_show)
         canvas_gallery.bind('<Return>', self.canvas_gallery_show)    # show FSImage for selected thumbnail
         # Pfeitasten fürs scrollen
-        canvas_gallery.bind("<Left>",  lambda event: xview("scroll", -1, "units"))
-        canvas_gallery.bind("<Right>", lambda event: xview("scroll",  1, "units"))
-        canvas_gallery.bind("<Prior>", lambda event: xview("scroll", -1, "page")) # Bind to PageUp
-        canvas_gallery.bind("<Next>",  lambda event: xview("scroll",  1, "page"))  # Bind to PageDown    
+        canvas_gallery.bind("<Left>",  lambda event: self.xview("scroll", -1, "units"))
+        canvas_gallery.bind("<Right>", lambda event: self.xview("scroll",  1, "units"))
+        canvas_gallery.bind("<Prior>", lambda event: self.xview("scroll", -1, "page")) # Bind to PageUp
+        canvas_gallery.bind("<Next>",  lambda event: self.xview("scroll",  1, "page"))  # Bind to PageDown    
         # Bind the context menu to the canvas widget
         canvas_gallery.bind("<Button-3>", show_context_menu)    
         canvas_gallery.bind('<Motion>', self.tooltip_imagefile)    
@@ -2037,9 +2037,9 @@ class Dateimeister_support:
         lb_gen.bind('<Double-1>', self.lb_gen_double)
         lb_camera.bind('<Double-1>', self.lb_camera_double)
 
-        t_text1.bind('<Double-1>', text1_double)  # show FSImage for selected line
-        t_text1.bind('<Button-1>', text1_single)  # synchronize zext / gallery
-        t_text1.bind('<Key>', text1_key)
+        t_text1.bind('<Double-1>', self.text1_double)  # show FSImage for selected line
+        t_text1.bind('<Button-1>', self.text1_single)  # synchronize zext / gallery
+        t_text1.bind('<Key>', self.text1_key)
         # handler for arrow up / down must be called AFTER the Text-class handler or the bind-handler is 1 step ahead
         t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
         print("Bindtags: %s " % str(t_text1.bindtags()))
@@ -3161,42 +3161,131 @@ class Dateimeister_support:
                 delay = player.getDelay()
                 player.setDelay(delay_default)
 
-def xview(*args):
-    #print (*args)
-    global _canvas_gallery_width_visible
-    global _canvas_gallery_width_images
-    global _canvas_gallery_width_all
-    s1 = 0.0
-    s2 = 1.0
-    scrolldelta = 0
-    width_scrollbar = scroll_canvas_x.winfo_width()
-    canvas_x = int(canvas_gallery.canvasx(0))
-    canvas_y = int(canvas_gallery.canvasy(0))
-    #print ("Scroll totale Breite(Images): " + str(_canvas_gallery_width_images) + " totale Breite(All): " + str(_canvas_gallery_width_all) \
-    #    + " visible: " + str(_canvas_gallery_width_visible)  + " canvas_x: " + str(canvas_x))
-    slider_width = int((_canvas_gallery_width_visible / _canvas_gallery_width_all) * width_scrollbar)
-    # aktuelle Scroll-Position des Canvas
-    # aktuelle position der Scrollbar
-    scrollposition = scroll_canvas_x.get()[0]
-    
-    # wenn wir die Pfeiltasten betätigen, wollen wir auf den Anfang des nächsten (vorherigen) Bildes scrollen.
-    # wenn das aktuelle Bild nur teilweise zusehen ist, scrollen wir bei Linkstaste auf den Bildbeginn
-    if len(args) == 3 and args[2] == "units":
-        # den scrollbetrag auf die Größe des Bildes am linken Rand setzen
-        thumbnail, index = get_thumbnail_by_position(canvas_x + 11, canvas_y)
-        if thumbnail is not None:
-            if int(args[1]) > 0:
-                scrolldelta = (thumbnail.getEnd() - canvas_x + gap)
-            else:
-                if canvas_x - thumbnail.getStart() > 10: # Bild links abgeschnitten, an den Anfang scrollen
-                    scrolldelta = (thumbnail.getStart() - canvas_x) # ist dann negativ, was wir ja wollen
-                    #print("Bild links abgeschnitten, weil canvas_x = " + str(canvas_x) + " und Bildstart = " + str(thumbnail.getStart()))
-                else: #Bild ist vollständig zu sehen, also zurück zum nächsten
-                    if index > 0: # es gibt einen Vorgänger
-                        scrolldelta = (thumbnails[_imagetype][index - 1].getStart()) - canvas_x
-                        #print("Vorgänger ist: " + thumbnails[_imagetype][index - 1].getFile() + " Start: " + str(thumbnails[_imagetype][index - 1].getStart())\
-                        #    + " canvas_x is: " + str(canvas_x) + " scrolldelta is: " + str(scrolldelta))
-            
+    def xview(self, *args):
+        #print (*args)
+        global _canvas_gallery_width_visible
+        global _canvas_gallery_width_images
+        global _canvas_gallery_width_all
+        s1 = 0.0
+        s2 = 1.0
+        scrolldelta = 0
+        width_scrollbar = scroll_canvas_x.winfo_width()
+        canvas_x = int(canvas_gallery.canvasx(0))
+        canvas_y = int(canvas_gallery.canvasy(0))
+        #print ("Scroll totale Breite(Images): " + str(_canvas_gallery_width_images) + " totale Breite(All): " + str(_canvas_gallery_width_all) \
+        #    + " visible: " + str(_canvas_gallery_width_visible)  + " canvas_x: " + str(canvas_x))
+        slider_width = int((_canvas_gallery_width_visible / _canvas_gallery_width_all) * width_scrollbar)
+        # aktuelle Scroll-Position des Canvas
+        # aktuelle position der Scrollbar
+        scrollposition = scroll_canvas_x.get()[0]
+        
+        # wenn wir die Pfeiltasten betätigen, wollen wir auf den Anfang des nächsten (vorherigen) Bildes scrollen.
+        # wenn das aktuelle Bild nur teilweise zusehen ist, scrollen wir bei Linkstaste auf den Bildbeginn
+        if len(args) == 3 and args[2] == "units":
+            # den scrollbetrag auf die Größe des Bildes am linken Rand setzen
+            thumbnail, index = get_thumbnail_by_position(canvas_x + 11, canvas_y)
+            if thumbnail is not None:
+                if int(args[1]) > 0:
+                    scrolldelta = (thumbnail.getEnd() - canvas_x + gap)
+                else:
+                    if canvas_x - thumbnail.getStart() > 10: # Bild links abgeschnitten, an den Anfang scrollen
+                        scrolldelta = (thumbnail.getStart() - canvas_x) # ist dann negativ, was wir ja wollen
+                        #print("Bild links abgeschnitten, weil canvas_x = " + str(canvas_x) + " und Bildstart = " + str(thumbnail.getStart()))
+                    else: #Bild ist vollständig zu sehen, also zurück zum nächsten
+                        if index > 0: # es gibt einen Vorgänger
+                            scrolldelta = (thumbnails[_imagetype][index - 1].getStart()) - canvas_x
+                            #print("Vorgänger ist: " + thumbnails[_imagetype][index - 1].getFile() + " Start: " + str(thumbnails[_imagetype][index - 1].getStart())\
+                            #    + " canvas_x is: " + str(canvas_x) + " scrolldelta is: " + str(scrolldelta))
+                
+                new_canvas_x = canvas_x + scrolldelta
+                # nach links scrollen machr keinen Sinn, wenn wir schon ganz links stehen, analog rechts
+                if (int(args[1]) < 0 and canvas_x <= 0) or (int(args[1]) > 0 and new_canvas_x >= _canvas_gallery_width_images):
+                   return
+                s2 = new_canvas_x / _canvas_gallery_width_all
+                s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
+                #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
+            scroll_canvas_x.set(s1, s2)
+            canvas_gallery.xview('moveto', s2)
+        elif len(args) == 3 and args[2] == "page":
+            #print("Args: ", str(args))
+            # wenn wir eine Seite nach rechts scrollen sollen, soll das Bild, das jetzt ganz oder teilweise am rechten Bildrand zu sehen ist, am linken Bildrand erscheinen
+            # wenn wir 1 Seite nach links scrollen sollen, soll der Vorgänger des Bildes vollständig am rechten Bildrand sichtbar sein. Wenn das dazu führt,
+            # das das Bild am linken Bildrand abgeschnitten ist, scrollen wir auf dessen Anfang
+            thumbnail_last = thumbnails[_imagetype][-1]
+            if int(args[1]) > 0: # scroll right
+                # get thumbnail at left border
+                posx = canvas_x
+                dothumbnail = True
+                while dothumbnail: #while because canvas_x could be on gap
+                    thumbnail_current, index_current = get_thumbnail_by_position(posx, canvas_y)
+                    if thumbnail_current is None:
+                        posx += gap
+                        #print("current retry...")
+                    else: #found
+                        dothumbnail = False
+                # get thumbnail at right border
+                posx = canvas_x + _canvas_gallery_width_visible # start
+                dothumbnail = True
+                while dothumbnail:
+                    thumbnail, index = get_thumbnail_by_position(posx, canvas_y)
+                    if thumbnail is not None:
+                        # we have to check, if whole canvas is filled by a very wide image (panorama), in which case we scroll by width of canvas
+                        if thumbnail == thumbnail_current:
+                            scrolldelta = _canvas_gallery_width_visible
+                        else:
+                            tfile = thumbnail.getFile()
+                            #print("Image at right: " + tfile + " last: " + thumbnail_last.getFile() + " last-end: " + str(thumbnail_last.getEnd()))
+                            scrolldelta = min(thumbnail.getStart() - canvas_x, thumbnail_last.getStart() - canvas_x)
+                            dothumbnail = False
+                    else: # no thumbnail, we check if there are no more images at right
+                        #print("scrolling right, end of last image: " + str(thumbnail_last.getFile()) + " " + str(thumbnail_last.getEnd()) + \
+                        #  " End of canvas: " + str(canvas_x + _canvas_gallery_width_visible))
+                        if canvas_x + _canvas_gallery_width_visible >= thumbnail_last.getEnd(): # no image at right position of canvas, do nothing
+                            #print("*** reached the end of scrolling right, end of last image: " + str(thumbnail_last.getFile()) + " " + str(thumbnail_last.getEnd()) + " End of canvas: " + str(canvas_x + _canvas_gallery_width_visible))
+                            dothumbnail = False
+                            return
+                        else: #could be gap, so look at position - gap
+                            posx -= gap
+                #print("Scroll right 1 page, scrolldelta: " + str(scrolldelta))
+                        
+            else: # scroll left
+                posx = canvas_x
+                dothumbnail = True
+                while dothumbnail: #while because canvas_x could be on gap
+                    thumbnail_current, index_current = get_thumbnail_by_position(posx, canvas_y)
+                    if thumbnail_current is None:
+                        posx += gap
+                        #print("current retry...")
+                    else: #found
+                        dothumbnail = False
+                targetposition = max(thumbnail_current.getEnd() - _canvas_gallery_width_visible, 0) # scroll to the target which is width_visible ahead of position of left
+                posx = targetposition
+                dothumbnail = True
+                while dothumbnail: #while because targetposition could be on gap
+                    thumbnail_target, index_target = get_thumbnail_by_position(posx, canvas_y)
+                    if thumbnail_target is None:
+                        posx += gap
+                        #print("target retry...")
+                    else: #found
+                        dothumbnail = False
+                tfile = thumbnail_target.getFile()
+                cfile = thumbnail_current.getFile()
+                #print("Target for scroll left: " + tfile + " position: " + str(targetposition) + " current at left border: " + cfile + " start: " + str(thumbnail_current.getStart()))
+                # we have to check, if whole canvas is filled by a very wide image (panorama), in which case we scroll by width of canvas
+                if thumbnail_target == thumbnail_current:
+                    scrolldelta = -_canvas_gallery_width_visible
+                else:
+                    # if leftmost visible would completely disappear by scroll left, target is nect thumbnail
+                    a = targetposition - thumbnail_target.getStart() # actual scrollamount, we need the thumbnail acual at left side of cnvas
+                    #b = canvas_x - thumbnail_current.getStart()
+                    b = thumbnail_current.getEnd() - canvas_x # visible pixels
+                    if b < a: # current would disappear by scrolling, so take the next image
+                        if index_target + 1 < len(thumbnails[_imagetype]):
+                            thumbnail_target = thumbnails[_imagetype][index_target + 1]
+                            #print("*** thumbnail_current would disappear after scroll left")
+                    scrolldelta = (thumbnail_target.getStart() - canvas_x)
+                #print("Scroll left 1 page, scrolldelta: " + str(scrolldelta))
+
             new_canvas_x = canvas_x + scrolldelta
             # nach links scrollen machr keinen Sinn, wenn wir schon ganz links stehen, analog rechts
             if (int(args[1]) < 0 and canvas_x <= 0) or (int(args[1]) > 0 and new_canvas_x >= _canvas_gallery_width_images):
@@ -3204,168 +3293,79 @@ def xview(*args):
             s2 = new_canvas_x / _canvas_gallery_width_all
             s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
             #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
-        scroll_canvas_x.set(s1, s2)
-        canvas_gallery.xview('moveto', s2)
-    elif len(args) == 3 and args[2] == "page":
-        #print("Args: ", str(args))
-        # wenn wir eine Seite nach rechts scrollen sollen, soll das Bild, das jetzt ganz oder teilweise am rechten Bildrand zu sehen ist, am linken Bildrand erscheinen
-        # wenn wir 1 Seite nach links scrollen sollen, soll der Vorgänger des Bildes vollständig am rechten Bildrand sichtbar sein. Wenn das dazu führt,
-        # das das Bild am linken Bildrand abgeschnitten ist, scrollen wir auf dessen Anfang
-        thumbnail_last = thumbnails[_imagetype][-1]
-        if int(args[1]) > 0: # scroll right
-            # get thumbnail at left border
-            posx = canvas_x
-            dothumbnail = True
-            while dothumbnail: #while because canvas_x could be on gap
-                thumbnail_current, index_current = get_thumbnail_by_position(posx, canvas_y)
-                if thumbnail_current is None:
-                    posx += gap
-                    #print("current retry...")
-                else: #found
-                    dothumbnail = False
-            # get thumbnail at right border
-            posx = canvas_x + _canvas_gallery_width_visible # start
-            dothumbnail = True
-            while dothumbnail:
-                thumbnail, index = get_thumbnail_by_position(posx, canvas_y)
-                if thumbnail is not None:
-                    # we have to check, if whole canvas is filled by a very wide image (panorama), in which case we scroll by width of canvas
-                    if thumbnail == thumbnail_current:
-                        scrolldelta = _canvas_gallery_width_visible
-                    else:
-                        tfile = thumbnail.getFile()
-                        #print("Image at right: " + tfile + " last: " + thumbnail_last.getFile() + " last-end: " + str(thumbnail_last.getEnd()))
-                        scrolldelta = min(thumbnail.getStart() - canvas_x, thumbnail_last.getStart() - canvas_x)
-                        dothumbnail = False
-                else: # no thumbnail, we check if there are no more images at right
-                    #print("scrolling right, end of last image: " + str(thumbnail_last.getFile()) + " " + str(thumbnail_last.getEnd()) + \
-                    #  " End of canvas: " + str(canvas_x + _canvas_gallery_width_visible))
-                    if canvas_x + _canvas_gallery_width_visible >= thumbnail_last.getEnd(): # no image at right position of canvas, do nothing
-                        #print("*** reached the end of scrolling right, end of last image: " + str(thumbnail_last.getFile()) + " " + str(thumbnail_last.getEnd()) + " End of canvas: " + str(canvas_x + _canvas_gallery_width_visible))
-                        dothumbnail = False
-                        return
-                    else: #could be gap, so look at position - gap
-                        posx -= gap
-            #print("Scroll right 1 page, scrolldelta: " + str(scrolldelta))
-                    
-        else: # scroll left
-            posx = canvas_x
-            dothumbnail = True
-            while dothumbnail: #while because canvas_x could be on gap
-                thumbnail_current, index_current = get_thumbnail_by_position(posx, canvas_y)
-                if thumbnail_current is None:
-                    posx += gap
-                    #print("current retry...")
-                else: #found
-                    dothumbnail = False
-            targetposition = max(thumbnail_current.getEnd() - _canvas_gallery_width_visible, 0) # scroll to the target which is width_visible ahead of position of left
-            posx = targetposition
-            dothumbnail = True
-            while dothumbnail: #while because targetposition could be on gap
-                thumbnail_target, index_target = get_thumbnail_by_position(posx, canvas_y)
-                if thumbnail_target is None:
-                    posx += gap
-                    #print("target retry...")
-                else: #found
-                    dothumbnail = False
-            tfile = thumbnail_target.getFile()
-            cfile = thumbnail_current.getFile()
-            #print("Target for scroll left: " + tfile + " position: " + str(targetposition) + " current at left border: " + cfile + " start: " + str(thumbnail_current.getStart()))
-            # we have to check, if whole canvas is filled by a very wide image (panorama), in which case we scroll by width of canvas
-            if thumbnail_target == thumbnail_current:
-                scrolldelta = -_canvas_gallery_width_visible
-            else:
-                # if leftmost visible would completely disappear by scroll left, target is nect thumbnail
-                a = targetposition - thumbnail_target.getStart() # actual scrollamount, we need the thumbnail acual at left side of cnvas
-                #b = canvas_x - thumbnail_current.getStart()
-                b = thumbnail_current.getEnd() - canvas_x # visible pixels
-                if b < a: # current would disappear by scrolling, so take the next image
-                    if index_target + 1 < len(thumbnails[_imagetype]):
-                        thumbnail_target = thumbnails[_imagetype][index_target + 1]
-                        #print("*** thumbnail_current would disappear after scroll left")
-                scrolldelta = (thumbnail_target.getStart() - canvas_x)
-            #print("Scroll left 1 page, scrolldelta: " + str(scrolldelta))
+            scroll_canvas_x.set(s1, s2)
+            canvas_gallery.xview('moveto', s2)
+        else:
+            #if (1 == 0):
+                #return
+            canvas_gallery.xview(*args)
 
-        new_canvas_x = canvas_x + scrolldelta
-        # nach links scrollen machr keinen Sinn, wenn wir schon ganz links stehen, analog rechts
-        if (int(args[1]) < 0 and canvas_x <= 0) or (int(args[1]) > 0 and new_canvas_x >= _canvas_gallery_width_images):
-           return
-        s2 = new_canvas_x / _canvas_gallery_width_all
-        s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
-        #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
-        scroll_canvas_x.set(s1, s2)
-        canvas_gallery.xview('moveto', s2)
-    else:
-        #if (1 == 0):
-            #return
-        canvas_gallery.xview(*args)
-
-def text1_single(event): # synchronize text / gallery
-    (row, col) = t_text1.index(tk.CURRENT).split(".")
-    print(row, col)
-    if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
-        thumbnail = _dict_thumbnails_lineno[_imagetype][row]
-        scrollToImage(thumbnail)
-        thumbnail.scrollTextToLineno() # select this line
-
-    # we dont need the following code anymore because we have a method to scroll canvas to the lineno associated with thumbnail
-    # but here we have a usefull code to get the text line after mouse click
-    lstart = "%d.0" % int(row)
-    lend   = "%d.0 lineend" % int(row)
-    # tindex = "%d.0, %d.0 lineend" % (lineno, lineno + 1)
-    line    = t_text1.get(lstart, lend)
-    regpattern = r'[\/\\]([^\/\\.]+)\.([^\/\\.]+)' 
-    #print(t_text1.index(f"@{event.x},{event.y}"), t_text1.index("current"), line)
-    
-def text1_double(event): # synchronize text / gallery and display FSImage 
-    (row, col) = t_text1.index(tk.CURRENT).split(".")
-    print(row, col)
-    if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
-        thumbnail = _dict_thumbnails_lineno[_imagetype][row]
-        if thumbnail is not None:
-            scrollToImage(thumbnail)
-            thumbnail.scrollTextToLineno() # select this line
-            display_image(thumbnail)
-    return("break")  # should stop event processing but doesn't  
-
-def text1_key(event): # called for every keyboard input
-    (row, col) = t_text1.index(tk.INSERT).split(".")
-    #print("Event x: ", event.x, " Event y: ",event.y)
-    #print("Event is " + str(event))
-    print("Key pressed: ")
-    print(event.char, event.keysym, event.keycode)
-    print(row, col)
-    if event.keysym == 'Up' or event.keysym == 'Down':
+    def text1_single(self, event): # synchronize text / gallery
+        (row, col) = t_text1.index(tk.CURRENT).split(".")
+        print(row, col)
         if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
             thumbnail = _dict_thumbnails_lineno[_imagetype][row]
-            scrollToImage(thumbnail)
+            self.scrollToImage(thumbnail)
             thumbnail.scrollTextToLineno() # select this line
-    t_text1.mark_set(tk.INSERT, "%d.%d" % (int(row), 0))
+
+        # we dont need the following code anymore because we have a method to scroll canvas to the lineno associated with thumbnail
+        # but here we have a usefull code to get the text line after mouse click
+        lstart = "%d.0" % int(row)
+        lend   = "%d.0 lineend" % int(row)
+        # tindex = "%d.0, %d.0 lineend" % (lineno, lineno + 1)
+        line    = t_text1.get(lstart, lend)
+        regpattern = r'[\/\\]([^\/\\.]+)\.([^\/\\.]+)' 
+        #print(t_text1.index(f"@{event.x},{event.y}"), t_text1.index("current"), line)
+        
+    def text1_double(self, event): # synchronize text / gallery and display FSImage 
+        (row, col) = t_text1.index(tk.CURRENT).split(".")
+        print(row, col)
+        if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
+            thumbnail = _dict_thumbnails_lineno[_imagetype][row]
+            if thumbnail is not None:
+                self.scrollToImage(thumbnail)
+                thumbnail.scrollTextToLineno() # select this line
+                display_image(thumbnail)
+        return("break")  # should stop event processing but doesn't  
+
+    def text1_key(self, event): # called for every keyboard input
+        (row, col) = t_text1.index(tk.INSERT).split(".")
+        #print("Event x: ", event.x, " Event y: ",event.y)
+        #print("Event is " + str(event))
+        print("Key pressed: ")
+        print(event.char, event.keysym, event.keycode)
+        print(row, col)
+        if event.keysym == 'Up' or event.keysym == 'Down':
+            if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
+                thumbnail = _dict_thumbnails_lineno[_imagetype][row]
+                self.scrollToImage(thumbnail)
+                thumbnail.scrollTextToLineno() # select this line
+        t_text1.mark_set(tk.INSERT, "%d.%d" % (int(row), 0))
 
 
-def scrollToImage(thumbnail): # scroll to start-position of thumbnail identified by filename
-    global _canvas_gallery_width_visible
-    global _canvas_gallery_width_images
-    global _canvas_gallery_width_all
-    s1 = 0.0
-    s2 = 1.0
-    width_scrollbar = scroll_canvas_x.winfo_width()
-    slider_width = int((_canvas_gallery_width_visible / _canvas_gallery_width_all) * width_scrollbar)
-    # aktuelle Scroll-Position des Canvas
-    canvas_x = canvas_gallery.canvasx(0)
-    canvas_y = canvas_gallery.canvasy(0)
-    # aktuelle position der Scrollbar
-    scrollposition = scroll_canvas_x.get()[0]
-    
-    # den scrollbetrag auf die Größe des Bildes am linken Rand setzen
-    if thumbnail is not None:
-        scrolldelta = (thumbnail.getEnd() - canvas_x + gap)
-        new_canvas_x = thumbnail.getStart()
-        s2 = new_canvas_x / _canvas_gallery_width_all
-        s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
-        #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
-    scroll_canvas_x.set(s1, s2)
-    canvas_gallery.xview('moveto', s2)
+    def scrollToImage(self, thumbnail): # scroll to start-position of thumbnail identified by filename
+        global _canvas_gallery_width_visible
+        global _canvas_gallery_width_images
+        global _canvas_gallery_width_all
+        s1 = 0.0
+        s2 = 1.0
+        width_scrollbar = scroll_canvas_x.winfo_width()
+        slider_width = int((_canvas_gallery_width_visible / _canvas_gallery_width_all) * width_scrollbar)
+        # aktuelle Scroll-Position des Canvas
+        canvas_x = canvas_gallery.canvasx(0)
+        canvas_y = canvas_gallery.canvasy(0)
+        # aktuelle position der Scrollbar
+        scrollposition = scroll_canvas_x.get()[0]
+        
+        # den scrollbetrag auf die Größe des Bildes am linken Rand setzen
+        if thumbnail is not None:
+            scrolldelta = (thumbnail.getEnd() - canvas_x + gap)
+            new_canvas_x = thumbnail.getStart()
+            s2 = new_canvas_x / _canvas_gallery_width_all
+            s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
+            #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
+        scroll_canvas_x.set(s1, s2)
+        canvas_gallery.xview('moveto', s2)
 
 def display_image(thumbnail):
     global _dict_file_image

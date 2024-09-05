@@ -35,3 +35,8 @@ canvas_image_show
 delay_decr
 delay_incr
 delay_deflt
+xview
+text1_single
+text1_double
+text1_key
+scrollToImage
