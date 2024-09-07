@@ -40,3 +40,11 @@ text1_single
 text1_double
 text1_key
 scrollToImage
+display_image
+show_context_menu
+canvas_button_1
+canvas_gallery_exclude
+Button_exclude_all
+Button_include_all
+canvas_image_exclude
+canvas_video_restart

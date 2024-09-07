@@ -1903,6 +1903,10 @@ class Dateimeister_support:
         self.button_call.config(command = self.Press_generate)
         button_exec = self.w.Button_exec
         button_exec.config(command = self.button_exec_pressed)
+        self.Button_exclude = self.w.Button_exclude
+        self.Button_exclude.config(command=self.Button_exclude_all)
+        self.Button_include = self.w.Button_include
+        self.Button_include.config(command=self.Button_include_all)
 
         # get all camera information and fill camera-listbox
         _dict_cameras, _dict_subdirs, _dict_process_image = get_camera_xml()
@@ -2006,9 +2010,9 @@ class Dateimeister_support:
 
         # Create the context menu
         context_menu = tk.Menu(canvas_gallery, tearoff=0)
-        context_menu.add_command(label="Exclude", command=canvas_image_exclude)    
+        context_menu.add_command(label="Exclude", command=self.canvas_image_exclude)    
         context_menu.add_command(label="Show"   , command=self.canvas_image_show)    
-        context_menu.add_command(label="Restart", command=canvas_video_restart)    
+        context_menu.add_command(label="Restart", command=self.canvas_video_restart)    
       
         # Events
         # Button 1 single haben wir deaktiviert, weil double immer auch zuerst single auslöst
@@ -2022,9 +2026,9 @@ class Dateimeister_support:
         canvas_gallery.bind("<Prior>", lambda event: self.xview("scroll", -1, "page")) # Bind to PageUp
         canvas_gallery.bind("<Next>",  lambda event: self.xview("scroll",  1, "page"))  # Bind to PageDown    
         # Bind the context menu to the canvas widget
-        canvas_gallery.bind("<Button-3>", show_context_menu)    
+        canvas_gallery.bind("<Button-3>", self.show_context_menu)    
         canvas_gallery.bind('<Motion>', self.tooltip_imagefile)    
-        canvas_gallery.bind('<Button-1>', canvas_button_1)    
+        canvas_gallery.bind('<Button-1>', self.canvas_button_1)    
         self.root.bind("<Configure>", self.on_window_resize)
         self.root.bind("<Destroy>",   on_window_destroy)
         # strg-z, y
@@ -3116,7 +3120,7 @@ class Dateimeister_support:
         thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             item_id = thumbnail.getId()
-            display_image(thumbnail)
+            self.display_image(thumbnail)
             print("Text sroll to lineno: ", str(thumbnail.getLineno()))
             thumbnail.scrollTextToLineno()
 
@@ -3325,7 +3329,7 @@ class Dateimeister_support:
             if thumbnail is not None:
                 self.scrollToImage(thumbnail)
                 thumbnail.scrollTextToLineno() # select this line
-                display_image(thumbnail)
+                self.display_image(thumbnail)
         return("break")  # should stop event processing but doesn't  
 
     def text1_key(self, event): # called for every keyboard input
@@ -3367,102 +3371,102 @@ class Dateimeister_support:
         scroll_canvas_x.set(s1, s2)
         canvas_gallery.xview('moveto', s2)
 
-def display_image(thumbnail):
-    global _dict_file_image
-    file = thumbnail.getShowfile()
-    # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
-    if file in _dict_file_image:
-        print ("FSImage exists for file: " + file)
-        fs_image = _dict_file_image[file]
-        player = fs_image.getPlayer()
-        if player is not None: # this is a video
-            print ("FSImage restart file: " + file)
-            player.restart()
-            fs_image.setPlaystatus('play') # Status, Buttontext
-    else: # ein neues Objekt anlegen und in _dict_file_image eintragen
-        if file != 'none':
-            print ("FSImage does not exist for file: " + file)
-            fs_image = MyFSImage(file, thumbnail, _dict_file_image)
-            _dict_file_image[file] = fs_image
+    def display_image(self, thumbnail):
+        global _dict_file_image
+        file = thumbnail.getShowfile()
+        # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
+        if file in _dict_file_image:
+            print ("FSImage exists for file: " + file)
+            fs_image = _dict_file_image[file]
+            player = fs_image.getPlayer()
+            if player is not None: # this is a video
+                print ("FSImage restart file: " + file)
+                player.restart()
+                fs_image.setPlaystatus('play') # Status, Buttontext
+        else: # ein neues Objekt anlegen und in _dict_file_image eintragen
+            if file != 'none':
+                print ("FSImage does not exist for file: " + file)
+                fs_image = MyFSImage(file, thumbnail, _dict_file_image)
+                _dict_file_image[file] = fs_image
 
-def show_context_menu(event):
-    global context_men, _event
-    # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
-    _event = event
-    # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
-    canvas_x = canvas_gallery.canvasx(event.x)
-    canvas_y = canvas_gallery.canvasy(event.y)
-    thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
-    if thumbnail is not None:
-        if thumbnail.getImage() == 0:
-            print(" No Image availabl for " + thumbnail.getFile())
-            context_menu.entryconfig(1, state="disabled")
-        else:
-            context_menu.entryconfig(1, state="normal")
-        if thumbnail.getState() == state.INCLUDE:
-            context_menu.entryconfig(0, label = "Exclude " + thumbnail.getFile())
-        else:
-            context_menu.entryconfig(0, label = "Include " + thumbnail.getFile())
-    context_menu.entryconfig(1, label = "Show " + thumbnail.getFile())
-    context_menu.post(event.x_root, event.y_root)
+    def show_context_menu(self, event):
+        global context_men, _event
+        # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
+        _event = event
+        # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
+        canvas_x = canvas_gallery.canvasx(event.x)
+        canvas_y = canvas_gallery.canvasy(event.y)
+        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        if thumbnail is not None:
+            if thumbnail.getImage() == 0:
+                print(" No Image availabl for " + thumbnail.getFile())
+                context_menu.entryconfig(1, state="disabled")
+            else:
+                context_menu.entryconfig(1, state="normal")
+            if thumbnail.getState() == state.INCLUDE:
+                context_menu.entryconfig(0, label = "Exclude " + thumbnail.getFile())
+            else:
+                context_menu.entryconfig(0, label = "Include " + thumbnail.getFile())
+        context_menu.entryconfig(1, label = "Show " + thumbnail.getFile())
+        context_menu.post(event.x_root, event.y_root)
 
-def canvas_button_1(event):  # we need an event to set focus to canvas in order for the arrow keys to work and we scroll text box
-    canvas_gallery.focus_set()
-    canvas_x = canvas_gallery.canvasx(event.x)
-    canvas_y = canvas_gallery.canvasy(event.y)
-    thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
-    if thumbnail is not None:
-        item_id = thumbnail.getId()
-        print("Text sroll to lineno: ", str(thumbnail.getLineno()))
-        thumbnail.scrollTextToLineno()
+    def canvas_button_1(self, event):  # we need an event to set focus to canvas in order for the arrow keys to work and we scroll text box
+        canvas_gallery.focus_set()
+        canvas_x = canvas_gallery.canvasx(event.x)
+        canvas_y = canvas_gallery.canvasy(event.y)
+        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        if thumbnail is not None:
+            item_id = thumbnail.getId()
+            print("Text sroll to lineno: ", str(thumbnail.getLineno()))
+            thumbnail.scrollTextToLineno()
 
-def canvas_gallery_exclude(event):
-    #print('bbox', canvas_gallery.bbox('images'))
-    canvas_gallery.focus_set()
+    def canvas_gallery_exclude(self, event):
+        #print('bbox', canvas_gallery.bbox('images'))
+        canvas_gallery.focus_set()
 
-    canvas_x = canvas_gallery.canvasx(event.x)
-    canvas_y = canvas_gallery.canvasy(event.y)
-    thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
-    if thumbnail is not None:
-        linenew = ""
-        #print("State is: " + str(thumbnail.getState()))
-        if thumbnail.getState() == state.INCLUDE:
-            thumbnail.setState(state.EXCLUDE)
-        else: # toggle to not exclude, delete Item
-            thumbnail.setState(state.INCLUDE)
-    historize_process()
-    
-def Button_exclude_all(*args):
-    for thumbnail in thumbnails[_imagetype]:
-        if thumbnail.getState() == state.INCLUDE:
-            thumbnail.setState(state.EXCLUDE, None, False)
-    historize_process()
-    write_cmdfile(_imagetype)
-            
-def Button_include_all(*args):
-    for thumbnail in thumbnails[_imagetype]:
-        if thumbnail.getState() == state.EXCLUDE:
-            thumbnail.setState(state.INCLUDE, None, False)
-    historize_process()
-    write_cmdfile(_imagetype)
- 
-def canvas_image_exclude():
-    print("Context menu exlude")
-    canvas_gallery_exclude(_event)
+        canvas_x = canvas_gallery.canvasx(event.x)
+        canvas_y = canvas_gallery.canvasy(event.y)
+        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        if thumbnail is not None:
+            linenew = ""
+            #print("State is: " + str(thumbnail.getState()))
+            if thumbnail.getState() == state.INCLUDE:
+                thumbnail.setState(state.EXCLUDE)
+            else: # toggle to not exclude, delete Item
+                thumbnail.setState(state.INCLUDE)
+        historize_process()
+        
+    def Button_exclude_all(self, *args):
+        for thumbnail in thumbnails[_imagetype]:
+            if thumbnail.getState() == state.INCLUDE:
+                thumbnail.setState(state.EXCLUDE, None, False)
+        historize_process()
+        write_cmdfile(_imagetype)
+                
+    def Button_include_all(self, *args):
+        for thumbnail in thumbnails[_imagetype]:
+            if thumbnail.getState() == state.EXCLUDE:
+                thumbnail.setState(state.INCLUDE, None, False)
+        historize_process()
+        write_cmdfile(_imagetype)
+     
+    def canvas_image_exclude(self): # used for exclude and include
+        print("Context menu exlude")
+        self.canvas_gallery_exclude(_event)
 
-def canvas_video_restart():
-    print("Context menu restart")
-    canvas_gallery.focus_set()
+    def canvas_video_restart(self):
+        print("Context menu restart")
+        canvas_gallery.focus_set()
 
-    canvas_x = canvas_gallery.canvasx(_event.x)
-    canvas_y = canvas_gallery.canvasy(_event.y)
-    thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
-    if thumbnail is not None:
-        player = thumbnail.getPlayer()
-        if player is not None: # this is a video
-            player.restart()
-            
-    
+        canvas_x = canvas_gallery.canvasx(_event.x)
+        canvas_y = canvas_gallery.canvasy(_event.y)
+        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        if thumbnail is not None:
+            player = thumbnail.getPlayer()
+            if player is not None: # this is a video
+                player.restart()
+                
+        
 # Undo /Redo Funktionen
 def process_undo(event):
     global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
