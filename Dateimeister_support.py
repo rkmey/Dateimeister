@@ -245,7 +245,8 @@ class MyThumbnail:
 class MyFSImage:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, file, thumbnail, dict_caller): # close_handler has to delete self from the dict main or duplicate
+    def __init__(self, file, thumbnail, dict_caller, pmain): # close_handler has to delete self from the dict main or duplicate
+        self.main = pmain
         self.thumbnail = thumbnail
         self.player = None
         if thumbnail.getPlayer() is None: # still image
@@ -379,7 +380,7 @@ class MyFSImage:
             self.thumbnail.setState(state.INCLUDE)
             self.w2.Button_exclude.config(text = "Exclude")
             self.w2.Label_status.config(text = "Included")
-        historize_process()
+        self.main.historize_process()
 
     def exclude_call(self, state): # react to request from outside
         print("MyFSImage.Exclude called, State = " + str(state))
@@ -479,8 +480,9 @@ class MyFSImage:
 class MyDuplicates:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self):
+    def __init__(self, pmain):
         self.player = None
+        self.main = pmain
         self.thumbnails_duplicates = {}
         self.dict_thumbnails_duplicates = {}
         # register at thumbnail, so it can call us for reacting to state
@@ -566,7 +568,7 @@ class MyDuplicates:
                 thumbnail.setState(state.EXCLUDE, self)
             else: # toggle to not exclude, delete Item
                 thumbnail.setState(state.INCLUDE, self)
-            historize_process()
+            self.main.historize_process()
 
     def canvas_image_show(self):
         print("Context menu show")
@@ -595,7 +597,7 @@ class MyDuplicates:
                 fs_image.setPlaystatus('play') # Status, Buttontext
         else: # ein neues Objekt anlegen und in _dict_file_image eintragen
             print ("FSImage does not exist for file: " + file)
-            fs_image = MyFSImage(file, thumbnail, self.dict_file_image)
+            fs_image = MyFSImage(file, thumbnail, self.dict_file_image, self.main)
             self.dict_file_image[file] = fs_image
 
     def canvas_video_restart(self):
@@ -1931,6 +1933,8 @@ class Dateimeister_support:
         _button_redo = self.w.Button_redo
         _button_undo.config(state = DISABLED)
         _button_redo.config(state = DISABLED)
+        _button_undo.configure(command=self.button_undo)
+        _button_redo.configure(command=self.button_redo)
         _button_duplicates = self.w.Button_duplicates
         _button_duplicates.config(state = DISABLED)
         _button_be = self.w.Button_be
@@ -1938,6 +1942,7 @@ class Dateimeister_support:
         _button_be.config(command = self.Button_be_pressed)
         button_exec.config(state = DISABLED)
         self.button_call.config(state = DISABLED) # generate-Button
+        _button_duplicates.configure(command=self.button_duplicates)
         
         self.label_indir  = self.w.Label_indir
         self.label_outdir = self.w.Label_outdir
@@ -2030,10 +2035,10 @@ class Dateimeister_support:
         canvas_gallery.bind('<Motion>', self.tooltip_imagefile)    
         canvas_gallery.bind('<Button-1>', self.canvas_button_1)    
         self.root.bind("<Configure>", self.on_window_resize)
-        self.root.bind("<Destroy>",   on_window_destroy)
+        self.root.bind("<Destroy>",   self.on_window_destroy)
         # strg-z, y
-        canvas_gallery.bind('<Control-z>', lambda event: process_undo(event))
-        canvas_gallery.bind('<Control-y>', lambda event: process_redo(event))
+        canvas_gallery.bind('<Control-z>', lambda event: self.process_undo(event))
+        canvas_gallery.bind('<Control-y>', lambda event: self.process_redo(event))
         canvas_gallery.bind('+', lambda event: self.delay_decr(event))
         canvas_gallery.bind('-', lambda event: self.delay_incr(event))
         canvas_gallery.bind('0', lambda event: self.delay_deflt(event))
@@ -2048,7 +2053,7 @@ class Dateimeister_support:
         t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
         print("Bindtags: %s " % str(t_text1.bindtags()))
 
-        cb_num.config(command = on_cb_num_toggle)
+        cb_num.config(command = self.on_cb_num_toggle)
         combobox_indir.bind('<Double-1>', self.combobox_indir_double)
         combobox_outdir.bind('<Double-1>', self.combobox_outdir_double)
         combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
@@ -2104,8 +2109,8 @@ class Dateimeister_support:
         
         # camera menu
         cameramenu = Menu(menubar, tearoff=0)
-        cameramenu.add_command(label="Edit Cameras...", command = menu_cameras_edit)
-        cameramenu.add_command(label="Diatisch", command = menu_diatisch)
+        cameramenu.add_command(label="Edit Cameras...", command = self.menu_cameras_edit)
+        cameramenu.add_command(label="Diatisch", command = self.menu_diatisch)
         menubar.add_cascade(label="Tools", menu=cameramenu)
 
         helpmenu = Menu(menubar, tearoff=0)
@@ -2247,7 +2252,7 @@ class Dateimeister_support:
                     print(thumbnails)
             else:
                 print("Imagefile: " + image + " not found in _dict thumdnails of type " + _imagetype)
-        historize_process()
+        self.historize_process()
         write_cmdfile(_imagetype)
 
 
@@ -2345,7 +2350,7 @@ class Dateimeister_support:
         self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
         root.title(title)
         
-        clear_text(t_text1)
+        self.clear_text(t_text1)
         canvas_gallery.delete("all")
 
         if not lb_gen.curselection() == ():
@@ -2388,7 +2393,7 @@ class Dateimeister_support:
             text_w = 80
             #thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = source_without_dir, target = target_without_dir)
             thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = this_sourcefile, target = this_targetfile)
-            insert_text(t_text1, thisline)
+            self.insert_text(t_text1, thisline)
             _dict_image_lineno[imagetype][this_sourcefile] = lineno
         
         # wir suchen in der cmd-Datei die Endung für jedes Imagefile. Damit suchen wir in _dict_process_image nach einem Eintrag
@@ -2553,7 +2558,7 @@ class Dateimeister_support:
         _button_include.config(state = NORMAL)
         _button_exclude.config(state = NORMAL)
         #print(_dict_duplicates)
-        historize_process()
+        self.historize_process()
         if len(thumbnails[imagetype]) > 0:
             filemenu.entryconfig(1, state=NORMAL)
             filemenu.entryconfig(3, state=NORMAL)
@@ -2678,7 +2683,7 @@ class Dateimeister_support:
         if len(thumbnails) > 0:
             canvas_x = canvas_gallery.canvasx(event.x)
             canvas_y = canvas_gallery.canvasy(event.y)
-            thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+            thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
             if thumbnail is not None:
                 text = thumbnail.getFile()
                 #print("Image clicked: " + text)
@@ -2721,7 +2726,7 @@ class Dateimeister_support:
             sys.stdout.flush()
         indir = fd.askdirectory() 
         print ("indir %s" % indir)
-        #clear_textbox(combobox_indir)
+        #self.clear_textbox(combobox_indir)
         self.label_indir.config(text = indir)
 
     def Press_outdir(self, *args):
@@ -2733,7 +2738,7 @@ class Dateimeister_support:
         #outdir = fd.askopenindir() 
         outdir = fd.askdirectory() 
         print ("outdir %s" % outdir)
-        #clear_textbox(combobox_outdir)
+        #self.clear_textbox(combobox_outdir)
         self.label_outdir.config(text = outdir)
 
     def B_camera_press(self, *args):
@@ -2747,14 +2752,14 @@ class Dateimeister_support:
         selected_indices = lb_camera.curselection()
         thiscamera = ",".join([lb_camera.get(i) for i in selected_indices]) # because we have a single choice listbox
         print ("Kamera ist " + thiscamera)
-        clear_textbox(o_camera)
-        insert_text(o_camera, thiscamera)
+        self.clear_textbox(o_camera)
+        self.insert_text(o_camera, thiscamera)
         _button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
         self.button_call.config(state = NORMAL)
         if thiscamera != oldcamera:
             _button_undo.config(state = DISABLED)    
             _button_redo.config(state = DISABLED)
-            clear_text(t_text1)
+            self.clear_text(t_text1)
             canvas_gallery.delete("all")
             filemenu.entryconfig(1, state=DISABLED)
             _button_exclude.config(state = DISABLED)
@@ -2762,7 +2767,7 @@ class Dateimeister_support:
             button_exec.config(state = DISABLED)
             _button_duplicates.config(state = DISABLED)
             label_num.config(text = "0")
-            clear_textbox(lb_gen)
+            self.clear_textbox(lb_gen)
             oldcamera = thiscamera
             if _imagetype in thumbnails:
                 print("try to delete thumbnails...")
@@ -2791,7 +2796,7 @@ class Dateimeister_support:
         _button_undo.config(state = DISABLED)    
         _button_redo.config(state = DISABLED)
         
-        clear_text(t_text1)
+        self.clear_text(t_text1)
         canvas_gallery.delete("all")
 
         # get indir, outdir, camera
@@ -2828,8 +2833,8 @@ class Dateimeister_support:
         # Just correct it and run generate again
         self.get_templates() # read them into dict_templates (global)
         
-        clear_text(t_text1)
-        clear_textbox(lb_gen)
+        self.clear_text(t_text1)
+        self.clear_textbox(lb_gen)
 
         _dict_duplicates = {}
         owndir = os.getcwd()
@@ -2910,7 +2915,7 @@ class Dateimeister_support:
             #print ("OUTFILE is " + os.environ["OUTFILE"])
             # wenn die Endung wegen mehrerer Möglichkeiten (jpeg, jpg) mehr al 1 Eintrag hat, nehmen wir den letzten
             #print("'(.*?)\.({:s})' 'PIC_{:s}_$1.$2'".format(dateityp, thiscamera))
-            clear_text(t_text1)
+            self.clear_text(t_text1)
             # wir tragen die Dubletten ein       
             lineno = 0
             for this_sourcefile in dict_source_target[dateityp]:
@@ -2986,7 +2991,7 @@ class Dateimeister_support:
         _button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
         _button_undo.config(state = DISABLED)    
         _button_redo.config(state = DISABLED)
-        clear_text(t_text1)
+        self.clear_text(t_text1)
         canvas_gallery.delete("all")
         filemenu.entryconfig(1, state=DISABLED)
         _button_exclude.config(state = DISABLED)
@@ -2995,7 +3000,7 @@ class Dateimeister_support:
         _button_duplicates.config(state = DISABLED)
         #button_call.config(state = DISABLED)
         label_num.config(text = "0")
-        clear_textbox(lb_gen)
+        self.clear_textbox(lb_gen)
         if _imagetype in thumbnails:
             print("try to delete thumbnails...")
             thumbnails[_imagetype].clear()
@@ -3117,7 +3122,7 @@ class Dateimeister_support:
 
         canvas_x = canvas_gallery.canvasx(event.x)
         canvas_y = canvas_gallery.canvasy(event.y)
-        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             item_id = thumbnail.getId()
             self.display_image(thumbnail)
@@ -3133,7 +3138,7 @@ class Dateimeister_support:
         delta = -5
         canvas_x = canvas_gallery.canvasx(event.x)
         canvas_y = canvas_gallery.canvasy(event.y)
-        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             player = thumbnail.getPlayer()
             if player is not None: # a video
@@ -3146,7 +3151,7 @@ class Dateimeister_support:
         delta = 5
         canvas_x = canvas_gallery.canvasx(event.x)
         canvas_y = canvas_gallery.canvasy(event.y)
-        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             player = thumbnail.getPlayer()
             if player is not None: # a video
@@ -3158,7 +3163,7 @@ class Dateimeister_support:
         canvas_gallery.focus_set()
         canvas_x = canvas_gallery.canvasx(event.x)
         canvas_y = canvas_gallery.canvasy(event.y)
-        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             player = thumbnail.getPlayer()
             if player is not None: # a video
@@ -3187,7 +3192,7 @@ class Dateimeister_support:
         # wenn das aktuelle Bild nur teilweise zusehen ist, scrollen wir bei Linkstaste auf den Bildbeginn
         if len(args) == 3 and args[2] == "units":
             # den scrollbetrag auf die Größe des Bildes am linken Rand setzen
-            thumbnail, index = get_thumbnail_by_position(canvas_x + 11, canvas_y)
+            thumbnail, index = self.get_thumbnail_by_position(canvas_x + 11, canvas_y)
             if thumbnail is not None:
                 if int(args[1]) > 0:
                     scrolldelta = (thumbnail.getEnd() - canvas_x + gap)
@@ -3221,7 +3226,7 @@ class Dateimeister_support:
                 posx = canvas_x
                 dothumbnail = True
                 while dothumbnail: #while because canvas_x could be on gap
-                    thumbnail_current, index_current = get_thumbnail_by_position(posx, canvas_y)
+                    thumbnail_current, index_current = self.get_thumbnail_by_position(posx, canvas_y)
                     if thumbnail_current is None:
                         posx += gap
                         #print("current retry...")
@@ -3231,7 +3236,7 @@ class Dateimeister_support:
                 posx = canvas_x + _canvas_gallery_width_visible # start
                 dothumbnail = True
                 while dothumbnail:
-                    thumbnail, index = get_thumbnail_by_position(posx, canvas_y)
+                    thumbnail, index = self.get_thumbnail_by_position(posx, canvas_y)
                     if thumbnail is not None:
                         # we have to check, if whole canvas is filled by a very wide image (panorama), in which case we scroll by width of canvas
                         if thumbnail == thumbnail_current:
@@ -3256,7 +3261,7 @@ class Dateimeister_support:
                 posx = canvas_x
                 dothumbnail = True
                 while dothumbnail: #while because canvas_x could be on gap
-                    thumbnail_current, index_current = get_thumbnail_by_position(posx, canvas_y)
+                    thumbnail_current, index_current = self.get_thumbnail_by_position(posx, canvas_y)
                     if thumbnail_current is None:
                         posx += gap
                         #print("current retry...")
@@ -3266,7 +3271,7 @@ class Dateimeister_support:
                 posx = targetposition
                 dothumbnail = True
                 while dothumbnail: #while because targetposition could be on gap
-                    thumbnail_target, index_target = get_thumbnail_by_position(posx, canvas_y)
+                    thumbnail_target, index_target = self.get_thumbnail_by_position(posx, canvas_y)
                     if thumbnail_target is None:
                         posx += gap
                         #print("target retry...")
@@ -3386,7 +3391,7 @@ class Dateimeister_support:
         else: # ein neues Objekt anlegen und in _dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file)
-                fs_image = MyFSImage(file, thumbnail, _dict_file_image)
+                fs_image = MyFSImage(file, thumbnail, _dict_file_image, self)
                 _dict_file_image[file] = fs_image
 
     def show_context_menu(self, event):
@@ -3396,7 +3401,7 @@ class Dateimeister_support:
         # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
         canvas_x = canvas_gallery.canvasx(event.x)
         canvas_y = canvas_gallery.canvasy(event.y)
-        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             if thumbnail.getImage() == 0:
                 print(" No Image availabl for " + thumbnail.getFile())
@@ -3414,7 +3419,7 @@ class Dateimeister_support:
         canvas_gallery.focus_set()
         canvas_x = canvas_gallery.canvasx(event.x)
         canvas_y = canvas_gallery.canvasy(event.y)
-        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             item_id = thumbnail.getId()
             print("Text sroll to lineno: ", str(thumbnail.getLineno()))
@@ -3426,7 +3431,7 @@ class Dateimeister_support:
 
         canvas_x = canvas_gallery.canvasx(event.x)
         canvas_y = canvas_gallery.canvasy(event.y)
-        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             linenew = ""
             #print("State is: " + str(thumbnail.getState()))
@@ -3434,20 +3439,20 @@ class Dateimeister_support:
                 thumbnail.setState(state.EXCLUDE)
             else: # toggle to not exclude, delete Item
                 thumbnail.setState(state.INCLUDE)
-        historize_process()
+        self.historize_process()
         
     def Button_exclude_all(self, *args):
         for thumbnail in thumbnails[_imagetype]:
             if thumbnail.getState() == state.INCLUDE:
                 thumbnail.setState(state.EXCLUDE, None, False)
-        historize_process()
+        self.historize_process()
         write_cmdfile(_imagetype)
                 
     def Button_include_all(self, *args):
         for thumbnail in thumbnails[_imagetype]:
             if thumbnail.getState() == state.EXCLUDE:
                 thumbnail.setState(state.INCLUDE, None, False)
-        historize_process()
+        self.historize_process()
         write_cmdfile(_imagetype)
      
     def canvas_image_exclude(self): # used for exclude and include
@@ -3460,162 +3465,180 @@ class Dateimeister_support:
 
         canvas_x = canvas_gallery.canvasx(_event.x)
         canvas_y = canvas_gallery.canvasy(_event.y)
-        thumbnail, index = get_thumbnail_by_position(canvas_x, canvas_y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             player = thumbnail.getPlayer()
             if player is not None: # this is a video
                 player.restart()
                 
         
-# Undo /Redo Funktionen
-def process_undo(event):
-    global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
-    print("ctrl_z pressed.")
-    # if there is a predecessor in list_processids (len > 1):
-    #   move processid_akt from list_processids to undo-stack, then apply new act (predecessor) giving the processids from act and undone
-    num_elements = len(_list_processids)
-    if num_elements <= 1:
-        messagebox.showinfo("UNDO", "no further processes which can be undone")
-    else:
-        processid_undone = _list_processids[-1] # last element
-        _stack_processids.append(processid_undone)
-        _list_processids.pop() # removes last element
-        _processid_akt = _list_processids[-1] # "new" last element
-        print (" UNDO List Processids: " + str(_list_processids) + " REDO Stack Processids: " + str(_stack_processids))
-        apply_process_id(_processid_akt)
-        endis_buttons()
+    # Undo /Redo Funktionen
+    def process_undo(self, event):
+        global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
+        print("ctrl_z pressed.")
+        # if there is a predecessor in list_processids (len > 1):
+        #   move processid_akt from list_processids to undo-stack, then apply new act (predecessor) giving the processids from act and undone
+        num_elements = len(_list_processids)
+        if num_elements <= 1:
+            messagebox.showinfo("UNDO", "no further processes which can be undone")
+        else:
+            processid_undone = _list_processids[-1] # last element
+            _stack_processids.append(processid_undone)
+            _list_processids.pop() # removes last element
+            _processid_akt = _list_processids[-1] # "new" last element
+            print (" UNDO List Processids: " + str(_list_processids) + " REDO Stack Processids: " + str(_stack_processids))
+            self.apply_process_id(_processid_akt)
+            self.endis_buttons()
 
-def process_redo(event):
-    global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
-    print("ctrl_y pressed.")
-    # if there is an element in stack processids (len > 1):
-    #   move last processid from stack processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
-    num_elements = len(_stack_processids)
-    if num_elements < 1:
-        messagebox.showinfo("REDO", "no further processes which can be redone")
-    else:
-        processid_predecessor = _list_processids[-1] # last element
-        processid_redone = _stack_processids[-1] # last element
-        _list_processids.append(processid_redone)
-        _stack_processids.pop() # removes last element
-        _processid_akt = _list_processids[-1] # "new" last element
-        print (" REDO List Processids: " + str(_list_processids) + " REDO Stack Processids: " + str(_stack_processids))
-        apply_process_id(_processid_akt)
-        endis_buttons()
+    def process_redo(self, event):
+        global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
+        print("ctrl_y pressed.")
+        # if there is an element in stack processids (len > 1):
+        #   move last processid from stack processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
+        num_elements = len(_stack_processids)
+        if num_elements < 1:
+            messagebox.showinfo("REDO", "no further processes which can be redone")
+        else:
+            processid_predecessor = _list_processids[-1] # last element
+            processid_redone = _stack_processids[-1] # last element
+            _list_processids.append(processid_redone)
+            _stack_processids.pop() # removes last element
+            _processid_akt = _list_processids[-1] # "new" last element
+            print (" REDO List Processids: " + str(_list_processids) + " REDO Stack Processids: " + str(_stack_processids))
+            self.apply_process_id(_processid_akt)
+            self.endis_buttons()
 
-def endis_buttons(): # disable / enable buttons depending on processids
-    global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
-    if len(_list_processids) > 1:
-        _button_undo.config(state = NORMAL)
-    else:
-        _button_undo.config(state = DISABLED)
-    if len(_stack_processids) > 0:
-        _button_redo.config(state = NORMAL)
-    else:
-        _button_redo.config(state = DISABLED)
+    def endis_buttons(self): # disable / enable buttons depending on processids
+        global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
+        if len(_list_processids) > 1:
+            _button_undo.config(state = NORMAL)
+        else:
+            _button_undo.config(state = DISABLED)
+        if len(_stack_processids) > 0:
+            _button_redo.config(state = NORMAL)
+        else:
+            _button_redo.config(state = DISABLED)
 
-def apply_process_id(process_id):
-    # set thumbnail-states according actual processid
-    global _processid_akt, _processid_high, _processid_incr
-    i = 0
-    for thumbnail in thumbnails[_imagetype]:
-        #_dict_process_image[_processid_akt].append(thumbnail.setState(_dict_process_image[process_id][i]))
-        thumbnail.setState(_dict_process_image[process_id][i], None, False)
-        i += 1
-    update_button_state()
-    write_cmdfile(_imagetype)
-    
-def historize_process():
-    global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
-    _processid_high += _processid_incr
-    _processid_akt = _processid_high
-    print ("Processid_high is now: " + str(_processid_high) + " Processid_akt is now: " + str(_processid_akt))
-    # wir bilden jetzt zu der aktuellen processid eine Liste der states der thumbnails
-    _dict_process_image[_processid_akt] = []
-    for thumbnail in thumbnails[_imagetype]:
-        _dict_process_image[_processid_akt].append(thumbnail.getState())
-    update_button_state() # refer to function comment
-    
-    _list_processids.append(_processid_akt)
-    # UNDO / REDO disabeln, wenn Aktion nicht möglich, weil es keine frühere / spätere Bearbeitung gibt
-    endis_buttons()
+    def apply_process_id(self, process_id):
+        # set thumbnail-states according actual processid
+        global _processid_akt, _processid_high, _processid_incr
+        i = 0
+        for thumbnail in thumbnails[_imagetype]:
+            #_dict_process_image[_processid_akt].append(thumbnail.setState(_dict_process_image[process_id][i]))
+            thumbnail.setState(_dict_process_image[process_id][i], None, False)
+            i += 1
+        self.update_button_state()
+        write_cmdfile(_imagetype)
+        
+    def historize_process(self):
+        global _processid_akt, _processid_high, _dict_process_image, _processid_incr, _list_processids, _stack_processids
+        _processid_high += _processid_incr
+        _processid_akt = _processid_high
+        print ("Processid_high is now: " + str(_processid_high) + " Processid_akt is now: " + str(_processid_akt))
+        # wir bilden jetzt zu der aktuellen processid eine Liste der states der thumbnails
+        _dict_process_image[_processid_akt] = []
+        for thumbnail in thumbnails[_imagetype]:
+            _dict_process_image[_processid_akt].append(thumbnail.getState())
+        self.update_button_state() # refer to function comment
+        
+        _list_processids.append(_processid_akt)
+        # UNDO / REDO disabeln, wenn Aktion nicht möglich, weil es keine frühere / spätere Bearbeitung gibt
+        self.endis_buttons()
 
-def update_button_state(): # enabled / disabled include / Exclude buttons
+    def update_button_state(self): # enabled / disabled include / Exclude buttons
 
-    #wir ermitteln, ob alle include oder exlude haben. In diesem Falls
-    # disabeln wir exclude / Include All, was ja keinen Sinn hat und ggf.
-    # die Historie unötig aufbläht
-    count_states = 0
-    count_exclude = 0
-    count_include = 0
-    for thumbnail in thumbnails[_imagetype]:
-        if thumbnail.getState() == state.EXCLUDE:
-            count_exclude += 1
-        if thumbnail.getState() == state.INCLUDE:
-            count_include += 1
-        count_states += 1
-    if count_exclude == count_states:
-        _button_exclude.config(state = DISABLED)
-    else:
-        _button_exclude.config(state = NORMAL)
-    if count_include == count_states:
-        _button_include.config(state = DISABLED)
-    else:
-        _button_include.config(state = NORMAL)
+        #wir ermitteln, ob alle include oder exlude haben. In diesem Falls
+        # disabeln wir exclude / Include All, was ja keinen Sinn hat und ggf.
+        # die Historie unötig aufbläht
+        count_states = 0
+        count_exclude = 0
+        count_include = 0
+        for thumbnail in thumbnails[_imagetype]:
+            if thumbnail.getState() == state.EXCLUDE:
+                count_exclude += 1
+            if thumbnail.getState() == state.INCLUDE:
+                count_include += 1
+            count_states += 1
+        if count_exclude == count_states:
+            _button_exclude.config(state = DISABLED)
+        else:
+            _button_exclude.config(state = NORMAL)
+        if count_include == count_states:
+            _button_include.config(state = DISABLED)
+        else:
+            _button_include.config(state = NORMAL)
 
-def button_undo():
-    process_undo((0, 0))
-    
-def button_redo():
-    process_redo((0, 0))
-# Ende undo / redo-Funktionen
+    def button_undo(self):
+        self.process_undo((0, 0))
+        
+    def button_redo(self):
+        self.process_redo((0, 0))
+    # Ende undo / redo-Funktionen
 
-def button_duplicates():
-    global _win_duplicates
-    for mytarget in _dict_duplicates[_imagetype]:
-        #print("Duplcate Key: " + mytarget) 
-        mylist = _dict_duplicates[_imagetype][mytarget]
-        if len(mylist) > 1: # es gibt 1...n Duplicates
-            print("Duplcate Key: " + mytarget)
-            for mysource in mylist:
-                print("   " + mysource)
-    _win_duplicates = MyDuplicates() 
-   
-def menu_cameras_edit():
-    global _win_camera
-    _win_camera = MyCameraTreeview() 
+    def button_duplicates(self):
+        global _win_duplicates
+        for mytarget in _dict_duplicates[_imagetype]:
+            #print("Duplcate Key: " + mytarget) 
+            mylist = _dict_duplicates[_imagetype][mytarget]
+            if len(mylist) > 1: # es gibt 1...n Duplicates
+                print("Duplcate Key: " + mytarget)
+                for mysource in mylist:
+                    print("   " + mysource)
+        _win_duplicates = MyDuplicates(self) 
+       
+    def menu_cameras_edit(self):
+        global _win_camera
+        _win_camera = MyCameraTreeview() 
 
-def menu_diatisch():
-    global _win_diatisch
-    _win_diatisch = DIAT.Diatisch() 
+    def menu_diatisch(self):
+        global _win_diatisch
+        _win_diatisch = DIAT.Diatisch() 
 
-def on_window_destroy(self):
-    a = 1
-    #print ("Destroy called.")
-    #root.instance.destroy()
-    #root.withdraw()
+    def on_window_destroy(self, a):
+        a = 1
+        #print ("Destroy called.")
+        #root.instance.destroy()
+        #root.withdraw()
 
-def on_cb_num_toggle():
-    if cb_num_var.get():
-        canvas_gallery.itemconfigure("rect_numbers", state="normal")
-        canvas_gallery.itemconfigure("numbers", state="normal")
-    else:
-        canvas_gallery.itemconfigure("rect_numbers", state="hidden")
-        canvas_gallery.itemconfigure("numbers", state="hidden")
+    def on_cb_num_toggle(self):
+        if cb_num_var.get():
+            canvas_gallery.itemconfigure("rect_numbers", state="normal")
+            canvas_gallery.itemconfigure("numbers", state="normal")
+        else:
+            canvas_gallery.itemconfigure("rect_numbers", state="hidden")
+            canvas_gallery.itemconfigure("numbers", state="hidden")
 
 
-def clear_textbox(o):
-    o.delete(0, 'end')
-    
-def clear_text(o):
-    o.delete(1.0, 'end')
+    def clear_textbox(self, o):
+        o.delete(0, 'end')
+        
+    def clear_text(self, o):
+        o.delete(1.0, 'end')
 
-def insert_text(o, str):
-    o.insert('end', str)
+    def insert_text(self, o, str):
+        o.insert('end', str)
 
-if __name__ == '__main__':
-    Dateimeister.start_up()
-    
+    def get_thumbnail_by_position(self, canvas_x, canvas_y):
+        index = -1
+        found = False
+        if _imagetype != "":
+            for thumbnail in thumbnails[_imagetype]:
+                start = thumbnail.getStart()
+                end   = thumbnail.getEnd()
+                if (canvas_x >= start and canvas_x <= end):
+                    index = thumbnails[_imagetype].index(thumbnail)
+                    #print("retrieved " + thumbnail.getFile() + " Index: " + str(index))
+                    found = True
+                    break
+            if not found:
+                thumbnail = None
+                index = None
+        else:
+            thumbnail = None
+            index = None
+        return (thumbnail, index)
+
+
 def dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, target_prefix, dict_relpath):
     # List all files and directories in the specified path, returns list
     #print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
@@ -3942,28 +3965,7 @@ def write_cmdfile(imagetype):
        thiscmdfile.write(ii + '\n') 
     thiscmdfile.close()
 
-def get_thumbnail_by_position(canvas_x, canvas_y):
-    index = -1
-    found = False
-    if _imagetype != "":
-        for thumbnail in thumbnails[_imagetype]:
-            start = thumbnail.getStart()
-            end   = thumbnail.getEnd()
-            if (canvas_x >= start and canvas_x <= end):
-                index = thumbnails[_imagetype].index(thumbnail)
-                #print("retrieved " + thumbnail.getFile() + " Index: " + str(index))
-                found = True
-                break
-        if not found:
-            thumbnail = None
-            index = None
-    else:
-        thumbnail = None
-        index = None
-    return (thumbnail, index)
-
-
-def main(*args):
+if __name__ == '__main__':
     '''Main entry point for the application.'''
     global root
     root = tk.Tk()
