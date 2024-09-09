@@ -63,5 +63,10 @@ on_window_destroy
 on_cb_num_toggle
 clear_textbox
 clear_text
+insert_text
+get_thumbnail_by_position
+get_camera_xml
+stop_all_players
+write_cmdfile
 
 
