@@ -48,11 +48,8 @@ _index_of_leftmost = -1
 _canvas_gallery_width_visible = 0
 _canvas_gallery_width_images = 0
 _canvas_gallery_width_all = 0
-_screen_width = 0
-_screen_height = 0
 _image = 0
 _dict_firstname_fullname = {}
-_imagetype = ""
 _processid_akt = 0
 _processid_high = 0
 _processid_incr = 10
@@ -72,6 +69,12 @@ from enum import Enum
 class state(Enum):
     INCLUDE = 1
     EXCLUDE = 2
+    
+class Globals:
+    imagetype = ""
+    screen_width = 0
+    screen_height = 0
+    uncomment = ""
 
 class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
@@ -149,7 +152,7 @@ class MyThumbnail:
             self.canvas.itemconfigure(self.state_id_rect, state='hidden')
             if self.text is not None:
                 linenew = line
-                linenew = re.sub(rf"{_uncomment}", '', linenew)
+                linenew = re.sub(rf"{Globals.uncomment}", '', linenew)
                 self.text.delete(lstart, lend) # without delete / insert highlighttag does not work. Bug in Python?
                 self.text.insert(lstart, line)
                 self.text.tag_add("include", lstart, lend) # normal foreground
@@ -159,7 +162,7 @@ class MyThumbnail:
             self.canvas.itemconfigure(self.state_id_rect, state='normal')
             if self.text is not None:
                 linenew = line
-                linenew = re.sub(r"^", f"{_uncomment}", linenew)
+                linenew = re.sub(r"^", f"{Globals.uncomment}", linenew)
                 self.text.delete(lstart, lend) # without delete / insert highlighttag does not work. Bug in Python?
                 self.text.insert(lstart, line)
                 self.text.tag_add("exclude", lstart, lend) # exclude foreground(grey)
@@ -175,7 +178,7 @@ class MyThumbnail:
                 self.dupl.exclude_call(self, state) # synchronisiert das Duplicate, falls vorhanden
                 #print("Duplicate Exclude-Call")
         if state_changed and do_save:
-            self.main.write_cmdfile(_imagetype)
+            self.main.write_cmdfile(Globals.imagetype)
             print ("setState: SAVE requested")
     def getState(self):
         return self.state   
@@ -187,7 +190,7 @@ class MyThumbnail:
         self.lineno = lineno 
         
     def scrollTextToLineno(self): # reset all lines to "unselect", keep exclude / include Info, hide frame
-        for t in thumbnails[_imagetype]:
+        for t in Globals.thumbnails[Globals.imagetype]:
             lineno = t.getLineno()
             lstart = "%d.0" % (lineno)
             lend   = "%d.0 lineend" % (lineno)
@@ -278,7 +281,7 @@ class MyFSImage:
         self.root2.protocol("WM_DELETE_WINDOW", self.close_handler)
 
         self.root2.title(file)
-        width,height=_screen_width,_screen_height
+        width,height=Globals.screen_width,Globals.screen_height
         v_dim=str(width)+'x'+str(height)
         self.root2.geometry(v_dim)
         self.root2.resizable(False, False)
@@ -494,7 +497,7 @@ class MyDuplicates:
         self.w3.Button_dupl.config(command = self.dupl_handler)
         self.root3.protocol("WM_DELETE_WINDOW", self.close_handler)
 
-        width,height=_screen_width,_screen_height
+        width,height=Globals.screen_width,Globals.screen_height
         v_dim=str(width)+'x'+str(height)
         self.root3.geometry(v_dim)
         self.root3.resizable(False, False)
@@ -519,7 +522,7 @@ class MyDuplicates:
         self.V_L.pack(side=RIGHT, fill=BOTH)
         self.w3.Listbox_dupl.config(yscrollcommand = self.V_L.set) 
         self.w3.Listbox_dupl.bind('<Double-1>', self.lb_double)
-        for key in _dict_duplicates[_imagetype]:
+        for key in _dict_duplicates[Globals.imagetype]:
             self.w3.Listbox_dupl.insert(END, key)
         self.w3.Listbox_dupl.select_set(0)
 
@@ -629,8 +632,8 @@ class MyDuplicates:
                 self.context_menu.entryconfig(0, label = "Exclude " + thumbnail.getFile())
             else:
                 self.context_menu.entryconfig(0, label = "Include " + thumbnail.getFile())
-        self.context_menu.entryconfig(1, label = "Show " + thumbnail.getFile())
-        self.context_menu.post(event.x_root, event.y_root)
+            self.context_menu.entryconfig(1, label = "Show " + thumbnail.getFile())
+            self.context_menu.post(event.x_root, event.y_root)
     
     def tooltip_imagefile(self, event):
         tsnow = datetime.now()
@@ -644,7 +647,7 @@ class MyDuplicates:
         #x, y = canvas.winfo_pointerxy()
         text = "no image available"
         # canvas is drawn before the thumbnails are created, so check existence and length
-        if _imagetype in self.thumbnails_duplicates and len(self.thumbnails_duplicates[_imagetype]) > 0:
+        if Globals.imagetype in self.thumbnails_duplicates and len(self.thumbnails_duplicates[Globals.imagetype]) > 0:
             canvas_x = self.f.canvasx(event.x)
             canvas_y = self.f.canvasy(event.y)
             thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
@@ -741,8 +744,8 @@ class MyDuplicates:
     def stop_all_players(self):
         # stop all video players
         _button_duplicates.config(state = DISABLED)
-        if _imagetype in self.thumbnails_duplicates:
-            for t in self.thumbnails_duplicates[_imagetype]: # stop all running players
+        if Globals.imagetype in self.thumbnails_duplicates:
+            for t in self.thumbnails_duplicates[Globals.imagetype]: # stop all running players
                 thisplayer = t.getPlayer()
                 if thisplayer is not None:
                     if thisplayer.getRun(): # running
@@ -752,9 +755,9 @@ class MyDuplicates:
     def display_duplicate(self, target_file):
         self.main.stop_all_players() # should not continue running 
         self.f.delete('all')
-        self.thumbnails_duplicates[_imagetype] = []
-        self.dict_thumbnails_duplicates[_imagetype] = {}
-        list_duplicate_sourcefiles = _dict_duplicates[_imagetype][target_file]
+        self.thumbnails_duplicates[Globals.imagetype] = []
+        self.dict_thumbnails_duplicates[Globals.imagetype] = {}
+        list_duplicate_sourcefiles = _dict_duplicates[Globals.imagetype][target_file]
         self.lastposition = 0
         self.num_images = 0
         # distance from border for text-boxes
@@ -764,7 +767,7 @@ class MyDuplicates:
         height_scrollbar = self.H_I.winfo_height()
 
         for source_file in list_duplicate_sourcefiles:
-            thumbnail = _dict_thumbnails[_imagetype][source_file]
+            thumbnail = _dict_thumbnails[Globals.imagetype][source_file]
             showfile = thumbnail.getShowfile()
             state = thumbnail.getState() # we want to use the current state and copy it to the duplicate-thumbnail
             if showfile != 'none':
@@ -809,10 +812,10 @@ class MyDuplicates:
                     player.setId(id)
                 # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
                 myimage = MyThumbnail(pimg, self.main, self.lastposition, self.lastposition + image_width, showfile, showfile, id, \
-                    text_id, rect_id, frameids, _dict_image_lineno[_imagetype][showfile], player, 'j', self.f, None, None, thumbnail)
-                self.thumbnails_duplicates[_imagetype].append(myimage)
+                    text_id, rect_id, frameids, _dict_image_lineno[Globals.imagetype][showfile], player, 'j', self.f, None, None, thumbnail)
+                self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 myimage.setState(state)
-                self.dict_thumbnails_duplicates[_imagetype][showfile] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
+                self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
                 self.lastposition += image_width + gap 
             else: # wir haben kein Bild, ein Rechteck einfügen
                 image_height = canvas_height
@@ -833,9 +836,9 @@ class MyDuplicates:
                 self.f.tag_raise("text")
                 #self.f.tag_raise("imageframe")
                 myimage = MyThumbnail(0, self.main, self.lastposition, self.lastposition + image_width, showfile, showfile, id, \
-                    text_id, rect_id, frameids, _dict_image_lineno[_imagetype][file], player, 'j', self.f, None, None, thumbnail)
-                self.thumbnails_duplicates[_imagetype].append(myimage)
-                self.dict_thumbnails_duplicates[_imagetype][showfile] = myimage
+                    text_id, rect_id, frameids, _dict_image_lineno[Globals.imagetype][file], player, 'j', self.f, None, None, thumbnail)
+                self.thumbnails_duplicates[Globals.imagetype].append(myimage)
+                self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage
                 self.lastposition += image_width + gap 
             self.num_images += 1
             # register at parent-thumbnail, so it can call us for reacting to state
@@ -845,8 +848,8 @@ class MyDuplicates:
         # gap haben wir einmal zuviel (fürs letzte) gezählt
         self.lastposition -= gap
         # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
-        if len(self.thumbnails_duplicates[_imagetype]) > 0: 
-            thumbnail = self.thumbnails_duplicates[_imagetype][-1]
+        if len(self.thumbnails_duplicates[Globals.imagetype]) > 0: 
+            thumbnail = self.thumbnails_duplicates[Globals.imagetype][-1]
             rect_len = self.canvas_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + gap)
             self.f.create_rectangle(self.lastposition, 0, self.lastposition + rect_len, canvas_height, fill="yellow")
             self.f.config(scrollregion = self.f.bbox('all')) 
@@ -891,8 +894,8 @@ class MyDuplicates:
                         #print("Bild links abgeschnitten, weil canvas_x = " + str(canvas_x) + " und Bildstart = " + str(thumbnail.getStart()))
                     else: #Bild ist vollständig zu sehen, also zurück zum nächsten
                         if index > 0: # es gibt einen Vorgänger
-                            scrolldelta = (self.thumbnails_duplicates[_imagetype][index - 1].getStart()) - canvas_x
-                            #print("Vorgänger ist: " + thumbnails[_imagetype][index - 1].getFile() + " Start: " + str(thumbnails[_imagetype][index - 1].getStart())\
+                            scrolldelta = (self.thumbnails_duplicates[Globals.imagetype][index - 1].getStart()) - canvas_x
+                            #print("Vorgänger ist: " + Globals.thumbnails[Globals.imagetype][index - 1].getFile() + " Start: " + str(Globals.thumbnails[Globals.imagetype][index - 1].getStart())\
                             #    + " canvas_x is: " + str(canvas_x) + " scrolldelta is: " + str(scrolldelta))
                 
                 new_canvas_x = canvas_x + scrolldelta
@@ -912,11 +915,11 @@ class MyDuplicates:
     def get_thumbnail_by_position(self, canvas_x, canvas_y):
         index = -1
         found = False
-        for thumbnail in self.thumbnails_duplicates[_imagetype]:
+        for thumbnail in self.thumbnails_duplicates[Globals.imagetype]:
             start = thumbnail.getStart()
             end   = thumbnail.getEnd()
             if (canvas_x >= start and canvas_x <= end):
-                index = self.thumbnails_duplicates[_imagetype].index(thumbnail)
+                index = self.thumbnails_duplicates[Globals.imagetype].index(thumbnail)
                 #print("retrieved " + thumbnail.getFile() + " Index: " + str(index))
                 found = True
                 break
@@ -933,8 +936,9 @@ class MyDuplicates:
 class MyMessagesWindow:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, imagetype, copyscript = None, deletescript = None, delrelpathscript = None):
+    def __init__(self, pmain, imagetype, copyscript = None, deletescript = None, delrelpathscript = None):
         self.root = tk.Toplevel()
+        self.main = pmain
         self.w = Dateimeister.Toplevel_messages(self.root)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
@@ -942,7 +946,7 @@ class MyMessagesWindow:
         self.deletescript = deletescript
         self.delrelpathscript = delrelpathscript
         self.root.title(imagetype)
-        width,height=_screen_width,_screen_height
+        width,height=Globals.screen_width,Globals.screen_height
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
         self.root.resizable(True, True)
@@ -1094,7 +1098,7 @@ class MyCameraTreeview:
             self.root.title(cameraname)
         else:
             self.root.title("Cameras")
-        width,height=_screen_width,_screen_height
+        width,height=Globals.screen_width,Globals.screen_height
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
         self.root.resizable(True, True)
@@ -1789,12 +1793,7 @@ class Dateimeister_support:
         self.root.mainloop()
 
     def init(self):
-        global _screen_width, _screen_height, _imagetype, \
-           _button_undo, _button_redo, _uncomment, \
-            colors, color_noreport, color_lookahead, levels, o_e, o_s, o_camera,\
-            lb_camera, b_button1, t_text1, l_label1, dict_gen_files, lb_gen, \
-            canvas_gallery, cb_recursive, cb_recursive_var, cb_prefix, cb_prefix_var, cb_addrelpath, cb_addrelpath_var, \
-            thumbnails, images, scroll_canvas_x, gap, context_menu, \
+        global gap, context_menu, \
             _dict_image_lineno, _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
             cb_newer, cb_newer_var, config_files_xml, recentmenu, title, label_num, num_images, config_files_subdir, \
             cmd_files_subdir, delay_default, \
@@ -1824,7 +1823,7 @@ class Dateimeister_support:
         for t in self.dict_proctypes:
             print("Proctype: " + self.dict_proctypes[t]) 
         
-        _uncomment = config["misc"]["uncomment"] + " "        
+        Globals.uncomment = config["misc"]["uncomment"] + " "        
         templatefile = config["misc"]["templatefile"]
         #max number of config_file-, indir-, outdir-entries in xml
         max_configfiles = config["misc"]["max_configfiles"]
@@ -1842,10 +1841,10 @@ class Dateimeister_support:
 
 
         # configure some controls
-        o_camera  = self.w.Entry_camera
-        lb_camera = self.w.Listbox_camera
-        lb_camera.configure(exportselection=False)
-        b_button1 = self.w.Button1
+        self.o_camera  = self.w.Entry_camera
+        self.lb_camera = self.w.Listbox_camera
+        self.lb_camera.configure(exportselection=False)
+        self.b_button1 = self.w.Button1
         self.b_button2 = self.w.Button2
         self.b_button2.config(command=self.B_camera_press)
         self.b_button_indir = self.w.Button1
@@ -1865,28 +1864,28 @@ class Dateimeister_support:
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
         #print("self.dict_process_image is: " + str(self.dict_process_image))
 
-        t_text1 = self.w.Text1
+        self.t_text1 = self.w.Text1
         # set font
         font_tuple = ("Lucida Console", 10, "normal")
-        t_text1.config(font = font_tuple)
-        t_text1.tag_configure("normal_include", foreground="black", background = "white")
-        t_text1.tag_configure("select_include", foreground="red", background = "white")
-        t_text1.tag_configure("normal_exclude", foreground="lightgrey", background = "darkgrey")
-        t_text1.tag_configure("select_exclude", foreground="red", background = "darkgrey")
+        self.t_text1.config(font = font_tuple)
+        self.t_text1.tag_configure("normal_include", foreground="black", background = "white")
+        self.t_text1.tag_configure("select_include", foreground="red", background = "white")
+        self.t_text1.tag_configure("normal_exclude", foreground="lightgrey", background = "darkgrey")
+        self.t_text1.tag_configure("select_exclude", foreground="red", background = "darkgrey")
         
-        l_label1 = self.w.Label1
+        self.l_label1 = self.w.Label1
         label_num = self.w.Label_num
-        lb_gen   = self.w.Listbox_gen
+        self.lb_gen   = self.w.Listbox_gen
         _button_include = self.w.Button_include
         _button_exclude = self.w.Button_exclude
         _button_include.config(state = DISABLED)
         _button_exclude.config(state = DISABLED)
-        _button_undo = self.w.Button_undo
-        _button_redo = self.w.Button_redo
-        _button_undo.config(state = DISABLED)
-        _button_redo.config(state = DISABLED)
-        _button_undo.configure(command=self.button_undo)
-        _button_redo.configure(command=self.button_redo)
+        self.button_undo = self.w.Button_undo
+        self.button_redo = self.w.Button_redo
+        self.button_undo.config(state = DISABLED)
+        self.button_redo.config(state = DISABLED)
+        self.button_undo.configure(command=self.button_undo_pressed)
+        self.button_redo.configure(command=self.button_redo_pressed)
         _button_duplicates = self.w.Button_duplicates
         _button_duplicates.config(state = DISABLED)
         _button_be = self.w.Button_be
@@ -1904,28 +1903,28 @@ class Dateimeister_support:
         # Scrollbars
         V = Scrollbar(self.w.Frame1)
         V.place(relx = 1, rely = 0, relheight = .976, relwidth = .01, anchor = tk.NE)
-        V.config(command=t_text1.yview)
-        t_text1.config(yscrollcommand=V.set)  
+        V.config(command=self.t_text1.yview)
+        self.t_text1.config(yscrollcommand=V.set)  
         H = Scrollbar(self.w.Frame1, orient = HORIZONTAL)
         H.place(relx = 0, rely = 1, relheight = 0.024, relwidth = .99, anchor = tk.SW)
-        H.config(command=t_text1.xview)
-        t_text1.config(xscrollcommand=H.set)  
-        t_text1.configure(wrap="none")
+        H.config(command=self.t_text1.xview)
+        self.t_text1.config(xscrollcommand=H.set)  
+        self.t_text1.configure(wrap="none")
         
-        cb_recursive = self.w.Checkbutton1
-        cb_recursive.config(command = self.state_gen_required)
-        cb_recursive_var = self.w.cb1_val
-        cb_recursive_var.set(1)
+        self.cb_recursive = self.w.Checkbutton1
+        self.cb_recursive.config(command = self.state_gen_required)
+        self.cb_recursive_var = self.w.cb1_val
+        self.cb_recursive_var.set(1)
         
-        cb_prefix = self.w.Checkbutton_use_camera_name
-        cb_prefix.config(command = self.state_gen_required)
-        cb_prefix_var = self.w.cb_prefix_var
-        cb_prefix_var.set(1)
+        self.cb_prefix = self.w.Checkbutton_use_camera_name
+        self.cb_prefix.config(command = self.state_gen_required)
+        self.cb_prefix_var = self.w.cb_prefix_var
+        self.cb_prefix_var.set(1)
 
-        cb_addrelpath = self.w.Checkbutton_addrelpath
-        cb_addrelpath.config(command = self.state_gen_required)
-        cb_addrelpath_var = self.w.cb_addrelpath_var
-        cb_addrelpath_var.set(0)
+        self.cb_addrelpath = self.w.Checkbutton_addrelpath
+        self.cb_addrelpath.config(command = self.state_gen_required)
+        self.cb_addrelpath_var = self.w.cb_addrelpath_var
+        self.cb_addrelpath_var.set(0)
 
         cb_newer = self.w.Checkbutton_newer
         cb_newer.config(command = self.state_gen_required)
@@ -1955,18 +1954,18 @@ class Dateimeister_support:
         #listbox camera
         VC = Scrollbar(self.w.Frame_camera, orient= VERTICAL)
         VC.place(relx = 1, rely = 0.01, relheight = .96, relwidth = .03, anchor = tk.NE)
-        VC.config(command = lb_camera.yview)
-        lb_camera.config(yscrollcommand = VC.set)
+        VC.config(command = self.lb_camera.yview)
+        self.lb_camera.config(yscrollcommand = VC.set)
         
-        canvas_gallery = self.w.Canvas1
+        self.canvas_gallery = self.w.Canvas1
         # Scrollbars
-        scroll_canvas_x = tk.Scrollbar(self.root, orient="horizontal", command=self.xview)
-        #scroll_canvas_x.pack(side=BOTTOM, fill=BOTH)
-        scroll_canvas_x.place(relx = .015, rely = .96, relheight = 0.015, relwidth = .97, anchor = tk.NW)
-        canvas_gallery.config(xscrollcommand = scroll_canvas_x.set, scrollregion=canvas_gallery.bbox("all"))
+        self.scroll_canvas_x = tk.Scrollbar(self.root, orient="horizontal", command=self.xview)
+        #self.scroll_canvas_x.pack(side=BOTTOM, fill=BOTH)
+        self.scroll_canvas_x.place(relx = .015, rely = .96, relheight = 0.015, relwidth = .97, anchor = tk.NW)
+        self.canvas_gallery.config(xscrollcommand = self.scroll_canvas_x.set, scrollregion=self.canvas_gallery.bbox("all"))
 
         # Create the context menu
-        context_menu = tk.Menu(canvas_gallery, tearoff=0)
+        context_menu = tk.Menu(self.canvas_gallery, tearoff=0)
         context_menu.add_command(label="Exclude", command=self.canvas_image_exclude)    
         context_menu.add_command(label="Show"   , command=self.canvas_image_show)    
         context_menu.add_command(label="Restart", command=self.canvas_video_restart)    
@@ -1974,36 +1973,36 @@ class Dateimeister_support:
         # Events
         # Button 1 single haben wir deaktiviert, weil double immer auch zuerst single auslöst
         # deshalb exlude und show über Kontext-Menü (rechte Maustaste), Show zusätzlich auch mit Doppelclick
-        #canvas_gallery.bind("<Button-1>", canvas_gallery_exclude)
-        canvas_gallery.bind("<Double-Button-1>", self.canvas_gallery_show)
-        canvas_gallery.bind('<Return>', self.canvas_gallery_show)    # show FSImage for selected thumbnail
+        #self.canvas_gallery.bind("<Button-1>", canvas_gallery_exclude)
+        self.canvas_gallery.bind("<Double-Button-1>", self.canvas_gallery_show)
+        self.canvas_gallery.bind('<Return>', self.canvas_gallery_show)    # show FSImage for selected thumbnail
         # Pfeitasten fürs scrollen
-        canvas_gallery.bind("<Left>",  lambda event: self.xview("scroll", -1, "units"))
-        canvas_gallery.bind("<Right>", lambda event: self.xview("scroll",  1, "units"))
-        canvas_gallery.bind("<Prior>", lambda event: self.xview("scroll", -1, "page")) # Bind to PageUp
-        canvas_gallery.bind("<Next>",  lambda event: self.xview("scroll",  1, "page"))  # Bind to PageDown    
+        self.canvas_gallery.bind("<Left>",  lambda event: self.xview("scroll", -1, "units"))
+        self.canvas_gallery.bind("<Right>", lambda event: self.xview("scroll",  1, "units"))
+        self.canvas_gallery.bind("<Prior>", lambda event: self.xview("scroll", -1, "page")) # Bind to PageUp
+        self.canvas_gallery.bind("<Next>",  lambda event: self.xview("scroll",  1, "page"))  # Bind to PageDown    
         # Bind the context menu to the canvas widget
-        canvas_gallery.bind("<Button-3>", self.show_context_menu)    
-        canvas_gallery.bind('<Motion>', self.tooltip_imagefile)    
-        canvas_gallery.bind('<Button-1>', self.canvas_button_1)    
+        self.canvas_gallery.bind("<Button-3>", self.show_context_menu)    
+        self.canvas_gallery.bind('<Motion>', self.tooltip_imagefile)    
+        self.canvas_gallery.bind('<Button-1>', self.canvas_button_1)    
         self.root.bind("<Configure>", self.on_window_resize)
         self.root.bind("<Destroy>",   self.on_window_destroy)
         # strg-z, y
-        canvas_gallery.bind('<Control-z>', lambda event: self.process_undo(event))
-        canvas_gallery.bind('<Control-y>', lambda event: self.process_redo(event))
-        canvas_gallery.bind('+', lambda event: self.delay_decr(event))
-        canvas_gallery.bind('-', lambda event: self.delay_incr(event))
-        canvas_gallery.bind('0', lambda event: self.delay_deflt(event))
-        canvas_gallery.bind('<FocusOut>', self.focus_out)
-        lb_gen.bind('<Double-1>', self.lb_gen_double)
-        lb_camera.bind('<Double-1>', self.lb_camera_double)
+        self.canvas_gallery.bind('<Control-z>', lambda event: self.process_undo(event))
+        self.canvas_gallery.bind('<Control-y>', lambda event: self.process_redo(event))
+        self.canvas_gallery.bind('+', lambda event: self.delay_decr(event))
+        self.canvas_gallery.bind('-', lambda event: self.delay_incr(event))
+        self.canvas_gallery.bind('0', lambda event: self.delay_deflt(event))
+        self.canvas_gallery.bind('<FocusOut>', self.focus_out)
+        self.lb_gen.bind('<Double-1>', self.lb_gen_double)
+        self.lb_camera.bind('<Double-1>', self.lb_camera_double)
 
-        t_text1.bind('<Double-1>', self.text1_double)  # show FSImage for selected line
-        t_text1.bind('<Button-1>', self.text1_single)  # synchronize zext / gallery
-        t_text1.bind('<Key>', self.text1_key)
+        self.t_text1.bind('<Double-1>', self.text1_double)  # show FSImage for selected line
+        self.t_text1.bind('<Button-1>', self.text1_single)  # synchronize zext / gallery
+        self.t_text1.bind('<Key>', self.text1_key)
         # handler for arrow up / down must be called AFTER the Text-class handler or the bind-handler is 1 step ahead
-        t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
-        print("Bindtags: %s " % str(t_text1.bindtags()))
+        self.t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
+        print("Bindtags: %s " % str(self.t_text1.bindtags()))
 
         cb_num.config(command = self.on_cb_num_toggle)
         combobox_indir.bind('<Double-1>', self.combobox_indir_double)
@@ -2015,11 +2014,11 @@ class Dateimeister_support:
         
         self.label_indir.config(text = default_indir)
         self.label_outdir.config(text = default_outdir)
-        l_label1.config(text = "Messages")
+        self.l_label1.config(text = "Messages")
         label_num.config(text = "0")
-        dict_gen_files = {}
+        self.dict_gen_files = {}
         dict_gen_files_delete = {}
-        thumbnails = {}
+        Globals.thumbnails = {}
         images = []
         _dict_image_lineno = {}
         gap = 10
@@ -2028,16 +2027,16 @@ class Dateimeister_support:
 
         
         # Fenstergröße
-        _screen_width  = int(self.root.winfo_screenwidth() * 0.9)
-        _screen_height = int(self.root.winfo_screenheight() * 0.8)
-        print("Bildschirm ist " + str(_screen_width) + " x " + str(_screen_height))
-        width,height=_screen_width,_screen_height
+        Globals.screen_width  = int(self.root.winfo_screenwidth() * 0.9)
+        Globals.screen_height = int(self.root.winfo_screenheight() * 0.8)
+        print("Bildschirm ist " + str(Globals.screen_width) + " x " + str(Globals.screen_height))
+        width,height=Globals.screen_width,Globals.screen_height
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
         #my_w.maxsize(300,220)  # (maximum ) width , ( maximum) height
         #my_w.minsize(250,220)  # (minimum ) width , ( minimum) height
         self.root.resizable(False, False)
-        self.tt = Dateimeister.ToolTip(canvas_gallery, "no images available", delay=0, follow = True)
+        self.tt = Dateimeister.ToolTip(self.canvas_gallery, "no images available", delay=0, follow = True)
         
         # Menubar
         menubar = Menu(self.root)
@@ -2193,19 +2192,19 @@ class Dateimeister_support:
             #print(image)
             #print(mystate)
             # apply config
-            if image in _dict_thumbnails[_imagetype]:
-                if _dict_thumbnails[_imagetype][image] in thumbnails[_imagetype]:
+            if image in _dict_thumbnails[Globals.imagetype]:
+                if _dict_thumbnails[Globals.imagetype][image] in Globals.thumbnails[Globals.imagetype]:
                     if mystate == "state.INCLUDE":
-                        _dict_thumbnails[_imagetype][image].setState(state.INCLUDE, None, False)
+                        _dict_thumbnails[Globals.imagetype][image].setState(state.INCLUDE, None, False)
                     else:
-                        _dict_thumbnails[_imagetype][image].setState(state.EXCLUDE, None, False)
+                        _dict_thumbnails[Globals.imagetype][image].setState(state.EXCLUDE, None, False)
                 else:
-                    print("thumbnail for " + _imagetype + " file " + image + " not found")
-                    print(thumbnails)
+                    print("thumbnail for " + Globals.imagetype + " file " + image + " not found")
+                    print(Globals.thumbnails)
             else:
-                print("Imagefile: " + image + " not found in _dict thumdnails of type " + _imagetype)
+                print("Imagefile: " + image + " not found in _dict thumdnails of type " + Globals.imagetype)
         self.historize_process()
-        self.write_cmdfile(_imagetype)
+        self.write_cmdfile(Globals.imagetype)
 
 
     def save_config(self): # Config-xml speichern
@@ -2245,14 +2244,14 @@ class Dateimeister_support:
         my_config_file = re.sub(r'\\', '/', self.config_file).lower()
         #print("*** new config_file: " + my_config_file)
 
-        result, sorted_d = self.get_dict_of_config_files(indir, _imagetype)
+        result, sorted_d = self.get_dict_of_config_files(indir, Globals.imagetype)
         if my_config_file not in result: # this is a new file, so we have to clean up the xml entries in order to stay within max_configfiles
             # delete oldest files until max_configfiles - 1 is reached (because a new one will be created)
             #get dict descending by usedate and result with all attributes
             # in the first pass delete all Entries where file does not exist,afterwards delete entries for existing files if necessary
             # delete only if new config-file does not exist
             for loop in range(1, 3):
-                result, sorted_d = self.get_dict_of_config_files(indir, _imagetype) # we have to do this because list of config_files is changed between loops
+                result, sorted_d = self.get_dict_of_config_files(indir, Globals.imagetype) # we have to do this because list of config_files is changed between loops
                 list_cfgfiles = []
                 for t_cfg in sorted_d:
                     list_cfgfiles.append(t_cfg)
@@ -2264,19 +2263,19 @@ class Dateimeister_support:
                         if ii < num_to_delete:
                             if loop == 1: # in the first pass only delete entries for not existing files
                                 if not os.path.isfile(t):
-                                    DX.delete_cfgfile(config_files_xml, indir, _imagetype, t)
+                                    DX.delete_cfgfile(config_files_xml, indir, Globals.imagetype, t)
                                     ii += 1
                             else: # delete also existing files if necessary
-                                DX.delete_cfgfile(config_files_xml, indir, _imagetype, t)
+                                DX.delete_cfgfile(config_files_xml, indir, Globals.imagetype, t)
                                 ii += 1
                         else:
                             break
         # now create new entry for my_config_file
-        DX.new_cfgfile(config_files_xml, indir, _imagetype, my_config_file, ts, num_images)
+        DX.new_cfgfile(config_files_xml, indir, Globals.imagetype, my_config_file, ts, num_images)
         # update usedate in config_files_xml
-        DX.update_cfgfile(config_files_xml, indir, _imagetype, my_config_file, ts, num_images)
+        DX.update_cfgfile(config_files_xml, indir, Globals.imagetype, my_config_file, ts, num_images)
         # finally update the recent files menu
-        self.update_recent_menu(indir, _imagetype)
+        self.update_recent_menu(indir, Globals.imagetype)
 
     def update_recent_menu(self, indir, imagetype):
         # descending by usedate
@@ -2307,7 +2306,7 @@ class Dateimeister_support:
 
         s = '<thumbnails time="' + ts + '">' + "\n"
         file1.write(s)
-        for thumbnail in thumbnails[_imagetype]:
+        for thumbnail in Globals.thumbnails[Globals.imagetype]:
             s = "    <thumbnail filename=\"" + thumbnail.getFile() + "\">\n"
             file1.write(s)
             s = "        <image>" + str(thumbnail.getFile()) + "</image>\n"
@@ -2358,11 +2357,11 @@ class Dateimeister_support:
         else:
             return
         # Tooltip
-        #x, y = canvas_gallery.winfo_pointerxy()
+        #x, y = self.canvas_gallery.winfo_pointerxy()
         text = "no image available"
-        if len(thumbnails) > 0:
-            canvas_x = canvas_gallery.canvasx(event.x)
-            canvas_y = canvas_gallery.canvasy(event.y)
+        if len(Globals.thumbnails) > 0:
+            canvas_x = self.canvas_gallery.canvasx(event.x)
+            canvas_y = self.canvas_gallery.canvasy(event.y)
             thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
             if thumbnail is not None:
                 text = thumbnail.getFile()
@@ -2402,7 +2401,8 @@ class Dateimeister_support:
         if _debug:
             print('Dateimeister_support.Press_indir')
             for arg in args:
-                print ('    another arg:', arg)
+                # print ('    another arg:', arg)
+                pass
             sys.stdout.flush()
         indir = fd.askdirectory() 
         print ("indir %s" % indir)
@@ -2412,8 +2412,6 @@ class Dateimeister_support:
     def Press_outdir(self, *args):
         if _debug:
             print('Dateimeister_support.Press_outdir')
-            for arg in args:
-                print ('    another arg:', arg)
             sys.stdout.flush()
         #outdir = fd.askopenindir() 
         outdir = fd.askdirectory() 
@@ -2426,44 +2424,45 @@ class Dateimeister_support:
         if _debug:
             print('Dateimeister_support.B_camera_press')
             for arg in args:
-                print ('    another arg:', arg)
-            sys.stdout.flush()
+                #print ('    another arg:', arg)
+                sys.stdout.flush()
         # get selected indices
-        selected_indices = lb_camera.curselection()
-        thiscamera = ",".join([lb_camera.get(i) for i in selected_indices]) # because we have a single choice listbox
+        selected_indices = self.lb_camera.curselection()
+        thiscamera = ",".join([self.lb_camera.get(i) for i in selected_indices]) # because we have a single choice listbox
         print ("Kamera ist " + thiscamera)
-        self.clear_textbox(o_camera)
-        self.insert_text(o_camera, thiscamera)
+        self.clear_textbox(self.o_camera)
+        self.insert_text(self.o_camera, thiscamera)
         _button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
         self.button_call.config(state = NORMAL)
         if thiscamera != oldcamera:
-            _button_undo.config(state = DISABLED)    
-            _button_redo.config(state = DISABLED)
-            self.clear_text(t_text1)
-            canvas_gallery.delete("all")
+            self.button_undo.config(state = DISABLED)    
+            self.button_redo.config(state = DISABLED)
+            self.clear_text(self.t_text1)
+            self.canvas_gallery.delete("all")
             filemenu.entryconfig(1, state=DISABLED)
             _button_exclude.config(state = DISABLED)
             _button_include.config(state = DISABLED)
             button_exec.config(state = DISABLED)
             _button_duplicates.config(state = DISABLED)
             label_num.config(text = "0")
-            self.clear_textbox(lb_gen)
+            self.clear_textbox(self.lb_gen)
             oldcamera = thiscamera
-            if _imagetype in thumbnails:
+            if Globals.imagetype in Globals.thumbnails:
                 print("try to delete thumbnails...")
-                thumbnails[_imagetype].clear()
-            if _imagetype in _dict_thumbnails:
+                Globals.thumbnails[Globals.imagetype].clear()
+            if Globals.imagetype in _dict_thumbnails:
                 print("try to delete dict_thumbnails...")
-                _dict_thumbnails[_imagetype] = {}
+                _dict_thumbnails[Globals.imagetype] = {}
 
     def Press_generate(self, *args):
-        global _dict_firstname_fullname, _dict_duplicates, dict_gen_files, dict_gen_files_delete, _dict_duplicates_sourcefiles, \
+        global _dict_firstname_fullname, _dict_duplicates, dict_gen_files_delete, _dict_duplicates_sourcefiles, \
             _outdir, dict_source_target, dict_relpath, dict_gen_files_delrelpath, dict_source_target_tooold, dict_outdirs, _dict_file_image
         global _processid_high, _processid_akt, _list_processids, _stack_processids
         if _debug:
             print('Dateimeister_support.B_camera_press')
             for arg in args:
-                print ('    another arg:', arg)
+                #print ('    another arg:', arg)
+                pass
             sys.stdout.flush()
         
         # cleanup
@@ -2473,19 +2472,19 @@ class Dateimeister_support:
         _processid_high = 0
         _list_processids = []
         _stack_processids = []
-        _button_undo.config(state = DISABLED)    
-        _button_redo.config(state = DISABLED)
+        self.button_undo.config(state = DISABLED)    
+        self.button_redo.config(state = DISABLED)
         
-        self.clear_text(t_text1)
-        canvas_gallery.delete("all")
+        self.clear_text(self.t_text1)
+        self.canvas_gallery.delete("all")
 
         # get indir, outdir, camera
         indir  = self.label_indir.cget('text')
         outdir = self.label_outdir.cget('text')
-        thiscamera = o_camera.get();
+        thiscamera = self.o_camera.get();
         if not indir:
             messagebox.showerror("showerror", "kein Indir ausgewählt")
-            b_button1.focus_set()
+            self.b_button1.focus_set()
             return None
         if not outdir:
             messagebox.showerror("showerror", "kein outdir ausgewählt")
@@ -2495,15 +2494,15 @@ class Dateimeister_support:
             messagebox.showerror("showerror", "keine Kamera ausgewählt")
             self.b_button2.focus_set()
             return None
-        if cb_recursive_var.get():
+        if self.cb_recursive_var.get():
             recursive = "j"
         else:
             recursive = "n"
-        if cb_prefix_var.get():
+        if self.cb_prefix_var.get():
             _use_camera_prefix = True
         else:
             _use_camera_prefix = False
-        if cb_addrelpath_var.get():
+        if self.cb_addrelpath_var.get():
             addrelpath  = "j"
         else:
             addrelpath  = "n"
@@ -2513,12 +2512,12 @@ class Dateimeister_support:
         # Just correct it and run generate again
         self.get_templates() # read them into dict_templates (global)
         
-        self.clear_text(t_text1)
-        self.clear_textbox(lb_gen)
+        self.clear_text(self.t_text1)
+        self.clear_textbox(self.lb_gen)
 
         _dict_duplicates = {}
         owndir = os.getcwd()
-        dict_gen_files = {}
+        self.dict_gen_files = {}
         dict_gen_files_delete = {}
         dict_source_target = {}
         dict_source_target_jpeg = {}
@@ -2542,10 +2541,10 @@ class Dateimeister_support:
         for dateityp in self.dict_cameras[thiscamera]:
             # cleanup
             # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
-            if dateityp in thumbnails:
-                thumbnails[dateityp].clear() # damit werden implizit jetzt alle Bilder gelöscht
+            if dateityp in Globals.thumbnails:
+                Globals.thumbnails[dateityp].clear() # damit werden implizit jetzt alle Bilder gelöscht
             else:
-                thumbnails[dateityp] = []
+                Globals.thumbnails[dateityp] = []
 
             subdir = self.dict_subdirs[dateityp]
             thisoutdir = outdir + "/" + subdir
@@ -2572,8 +2571,8 @@ class Dateimeister_support:
             cmd_file_name = "_copy_" + dateityp + '.cmd'
             cmd_file_full = os.path.join(datadir, cmd_files_subdir, cmd_file_name)
             # generierte Dateien in dict festhalten
-            dict_gen_files[dateityp] = cmd_file_full
-            #print("dict_gen_files[dateityp]: ", str(dict_gen_files[dateityp]), " datadir is: ", datadir)
+            self.dict_gen_files[dateityp] = cmd_file_full
+            #print("self.dict_gen_files[dateityp]: ", str(self.dict_gen_files[dateityp]), " datadir is: ", datadir)
 
             # save name for delete files
             # important: subdir MUST NOT start with a slash!
@@ -2595,7 +2594,7 @@ class Dateimeister_support:
             #print ("OUTFILE is " + os.environ["OUTFILE"])
             # wenn die Endung wegen mehrerer Möglichkeiten (jpeg, jpg) mehr al 1 Eintrag hat, nehmen wir den letzten
             #print("'(.*?)\.({:s})' 'PIC_{:s}_$1.$2'".format(dateityp, thiscamera))
-            self.clear_text(t_text1)
+            self.clear_text(self.t_text1)
             # wir tragen die Dubletten ein       
             lineno = 0
             for this_sourcefile in dict_source_target[dateityp]:
@@ -2651,13 +2650,13 @@ class Dateimeister_support:
                         _dict_firstname_fullname[firstname.upper()] = []
                     _dict_firstname_fullname[firstname.upper()].append(this_sourcefile) # es kann ja in den ganzen Verzeichnissen mehrere jpegs mit demselben Vornamen geben  
 
-        l_label1.config(text = "Output from Dateimeister")
+        self.l_label1.config(text = "Output from Dateimeister")
                 
         # die generierten Dateien in die Listbox eintragen
-        for key in dict_gen_files:
-            lb_gen.insert(END, key)
-        lb_gen.select_set(0)
-        if lb_gen.size() > 0:
+        for key in self.dict_gen_files:
+            self.lb_gen.insert(END, key)
+        self.lb_gen.select_set(0)
+        if self.lb_gen.size() > 0:
             _button_be.config(state = NORMAL)
         filemenu.entryconfig(1, state=DISABLED)
         _button_exclude.config(state = DISABLED)
@@ -2673,13 +2672,14 @@ class Dateimeister_support:
         global _canvas_gallery_width_images
         global _canvas_gallery_width_all
         global _lastposition, _dict_file_image
-        global _imagetype, _dict_duplicates, _duplicates, num_images, _dict_duplicates_sourcefiles, dict_source_target, _win_messages
+        global _dict_duplicates, _duplicates, num_images, _dict_duplicates_sourcefiles, dict_source_target, _win_messages
         global _processid_high, _processid_akt, _list_processids, _stack_processids
 
         if _debug:
             print('Dateimeister_support.Press_be_out')
             for arg in args:
-                print ('    another arg:', arg)
+                #print ('    another arg:', arg)
+                pass
             sys.stdout.flush()
 
         # reset all process-states
@@ -2687,37 +2687,37 @@ class Dateimeister_support:
         _processid_high = 0
         _list_processids = []
         _stack_processids = []
-        _button_undo.config(state = DISABLED)    
-        _button_redo.config(state = DISABLED)
+        self.button_undo.config(state = DISABLED)    
+        self.button_redo.config(state = DISABLED)
         self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
         root.title(title)
         
-        self.clear_text(t_text1)
-        canvas_gallery.delete("all")
+        self.clear_text(self.t_text1)
+        self.canvas_gallery.delete("all")
 
-        if not lb_gen.curselection() == ():
-            selected_indices = lb_gen.curselection()
+        if not self.lb_gen.curselection() == ():
+            selected_indices = self.lb_gen.curselection()
         else:
             messagebox.showerror("showerror", "no Imagetype selected")
-            lb_gen.focus_set()
+            self.lb_gen.focus_set()
             return None
-        thistype = ",".join([lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
-        #print("dict_gen_files: ", str(dict_gen_files))
-        filename = dict_gen_files[thistype]
+        thistype = ",".join([self.lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
+        #print("self.dict_gen_files: ", str(self.dict_gen_files))
+        filename = self.dict_gen_files[thistype]
         imagetype = thistype
-        _imagetype = imagetype # auch in globaler Variable festhalten, da wir das an vielen Stellen brauchen
+        Globals.imagetype = imagetype # auch in globaler Variable festhalten, da wir das an vielen Stellen brauchen
         subdir = self.dict_subdirs[imagetype]
         self.stop_all_players() # should not continue running 
         # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
-        if imagetype in thumbnails:
-            thumbnails[imagetype].clear() # damit werden implizit jetzt alle Bilder gelöscht
+        if imagetype in Globals.thumbnails:
+            Globals.thumbnails[imagetype].clear() # damit werden implizit jetzt alle Bilder gelöscht
         else:
-            thumbnails[imagetype] = []
+            Globals.thumbnails[imagetype] = []
         
         # cleanup
         self.close_child_windows()
         
-        l_label1.config(text = "Output from Dateimeister : " + filename)
+        self.l_label1.config(text = "Output from Dateimeister : " + filename)
         _dict_image_lineno[imagetype] = {} # in Python muss das sein, sonst gehts in der nächsten Ebene nicht
         lineno = 0
         #print(str(dict_source_target))
@@ -2735,16 +2735,16 @@ class Dateimeister_support:
             text_w = 80
             #thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = source_without_dir, target = target_without_dir)
             thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = this_sourcefile, target = this_targetfile)
-            self.insert_text(t_text1, thisline)
+            self.insert_text(self.t_text1, thisline)
             _dict_image_lineno[imagetype][this_sourcefile] = lineno
         
         # wir suchen in der cmd-Datei die Endung für jedes Imagefile. Damit suchen wir in dict_process_image nach einem Eintrag
         # wenn JPEG, dann verarbeiten wir die Zeile und verwenden das mutmaßliche JPEG_Bild in der Gallerie. Wenn use_jpeg gefunden wird
         # suchen wir nach einem passenden JPEG. Falls die Endung im dict nicht gefunden wird, verwenden wir ebenfalls use_jpeg. Später
         # können hier passende RAW-DLLs aufgerufen werden, z.b. mit Name der DLL in der Ini-Datei
-        canvas_height = canvas_gallery.winfo_height()
-        canvas_width  = canvas_gallery.winfo_width()
-        _canvas_gallery_width_visible = canvas_gallery.winfo_width() # Fensterbreite
+        canvas_height = self.canvas_gallery.winfo_height()
+        canvas_width  = self.canvas_gallery.winfo_width()
+        _canvas_gallery_width_visible = self.canvas_gallery.winfo_width() # Fensterbreite
         _lastposition = 0
         _dict_thumbnails[imagetype] = {}
         _dict_thumbnails_lineno[imagetype] = {}
@@ -2778,7 +2778,7 @@ class Dateimeister_support:
             elif process_type == 'VIDEO':
                 print("try to create new videoplayer...")
                 # create new videoplayer
-                player   = DV.VideoPlayer(root, file, canvas_gallery, canvas_width, canvas_height, _lastposition)
+                player   = DV.VideoPlayer(root, file, self.canvas_gallery, canvas_width, canvas_height, _lastposition)
                 image_width, image_height, pimg = player.get_pimg()
                 showfile = file
             else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
@@ -2806,102 +2806,102 @@ class Dateimeister_support:
                     pimg = ImageTk.PhotoImage(r_img)
                 # an den Thumbnails führen wir einige Attribute, außerdem sorgt die Liste dafür, dass der Garbage-Kollektor das Bild nicht löscht.
                 # indem wir es in eine Liste einfügen, bleibt der Referenz-Count > 0
-                id = canvas_gallery.create_image(_lastposition, 0, anchor='nw',image = pimg, tags = 'images')
-                text_id = canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
-                rect_id = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id), outline="blue", fill = "white", tag = 'rect')
-                text_id_num = canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
-                rect_id_num = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
+                id = self.canvas_gallery.create_image(_lastposition, 0, anchor='nw',image = pimg, tags = 'images')
+                text_id = self.canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
+                rect_id = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id), outline="blue", fill = "white", tag = 'rect')
+                text_id_num = self.canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
+                rect_id_num = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
                 # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
                 north_west = (_lastposition + dist_frame, dist_frame)
                 north_east = (_lastposition + image_width - dist_frame, dist_frame)
                 south_west = (_lastposition + dist_frame, image_height - dist_frame)
                 south_east = (_lastposition + image_width - dist_frame, image_height - dist_frame)
-                line_north = canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_east  = canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_south = canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_west  = canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+                line_north = self.canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_east  = self.canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_south = self.canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_west  = self.canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
                 frameids = (line_north, line_east, line_south, line_west)
                 
                 if player is not None:
                     player.setId(id)
                 myimage = MyThumbnail(pimg, self, _lastposition, _lastposition + image_width, file, showfile, id, \
-                    text_id, rect_id, frameids, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
+                    text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, dict_source_target[imagetype][file], self.t_text1)
                 if file in dict_source_target_tooold[imagetype]: #start with state.exclude
                     myimage.setState(state.EXCLUDE, None, False)
                     myimage.set_tooold(True)
-                    canvas_gallery.itemconfig(text_id, text="EXC OVW")
-                thumbnails[imagetype].append(myimage)
+                    self.canvas_gallery.itemconfig(text_id, text="EXC OVW")
+                Globals.thumbnails[imagetype].append(myimage)
                 _dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
                 _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
                 _lastposition += image_width + gap 
                 if myimage.getDuplicate() == 'j':
-                    text_id_dup = canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
-                    rect_id_dup = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
+                    text_id_dup = self.canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                    rect_id_dup = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(_dict_image_lineno[imagetype][file]))
                 if process_type != 'VIDEO':
                     img.close()
             else: # wir haben kein Bild, ein Rechteck einfügen
                 image_height = canvas_height
                 image_width  = int(canvas_height * 4 / 3)
-                id = canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + image_width, canvas_height, fill="blue", tags = 'images')
-                text_id = canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
-                rect_id = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id), outline="blue", fill = "white")
-                text_id_num = canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
-                rect_id_num = canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
+                id = self.canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + image_width, canvas_height, fill="blue", tags = 'images')
+                text_id = self.canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
+                rect_id = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id), outline="blue", fill = "white")
+                text_id_num = self.canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
+                rect_id_num = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
                 # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
                 north_west = (_lastposition + dist_frame, dist_frame)
                 north_east = (_lastposition + image_width - dist_frame, dist_frame)
                 south_west = (_lastposition + dist_frame, image_height - dist_frame)
                 south_east = (_lastposition + image_width - dist_frame, image_height - dist_frame)
-                line_north = canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_east  = canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_south = canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_west  = canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
+                line_north = self.canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_east  = self.canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_south = self.canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
+                line_west  = self.canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
                 frameids = (line_north, line_east, line_south, line_west)
                 myimage = MyThumbnail(0, self, _lastposition, _lastposition + image_width, file, showfile, id, \
-                    text_id, rect_id, frameids, this_lineno, player, duplicate, canvas_gallery, dict_source_target[imagetype][file], t_text1)
+                    text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, dict_source_target[imagetype][file], self.t_text1)
                 if file in dict_source_target_tooold[imagetype]: #start with state.exclude
                     myimage.setState(state.EXCLUDE, None, False)
                     myimage.set_tooold(True)
-                    canvas_gallery.itemconfig(text_id, text="EXC OVW")
-                thumbnails[imagetype].append(myimage)
+                    self.canvas_gallery.itemconfig(text_id, text="EXC OVW")
+                Globals.thumbnails[imagetype].append(myimage)
                 _dict_thumbnails[imagetype][file] = myimage
                 _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
                 _lastposition += image_width + gap 
                 if myimage.getDuplicate() == 'j':
-                    text_id_dup = canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
-                    rect_id_dup =canvas_gallery.create_rectangle(canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
+                    text_id_dup = self.canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                    rect_id_dup =self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(_dict_image_lineno[imagetype][file]))
-        canvas_gallery.tag_raise("dup_rect")
-        canvas_gallery.tag_raise("dup_text")
-        canvas_gallery.tag_raise("rect")
-        canvas_gallery.tag_raise("text")
-        canvas_gallery.tag_raise("line")
-        canvas_gallery.tag_raise("rect_numbers")
-        canvas_gallery.tag_raise("numbers")
-        #canvas_gallery.tag_raise("imageframe")
+        self.canvas_gallery.tag_raise("dup_rect")
+        self.canvas_gallery.tag_raise("dup_text")
+        self.canvas_gallery.tag_raise("rect")
+        self.canvas_gallery.tag_raise("text")
+        self.canvas_gallery.tag_raise("line")
+        self.canvas_gallery.tag_raise("rect_numbers")
+        self.canvas_gallery.tag_raise("numbers")
+        #self.canvas_gallery.tag_raise("imageframe")
         # the frame for selected image
         # gap haben wir einmal zuviel (fürs letzte) gezählt
         _lastposition -= gap
         #print ("Canvas_gallery sichtbare Breite : " + str(_canvas_gallery_width_visible))
         # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
-        if len(thumbnails[imagetype]) > 0: 
-            thumbnail = thumbnails[imagetype][-1]
+        if len(Globals.thumbnails[imagetype]) > 0: 
+            thumbnail = Globals.thumbnails[imagetype][-1]
             rect_len = _canvas_gallery_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + gap)
-            canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + rect_len, canvas_height, fill="yellow")
-            canvas_gallery.config(scrollregion = canvas_gallery.bbox('all')) 
-            _canvas_gallery_width_images = canvas_gallery.bbox('images')[2]
-            _canvas_gallery_width_all    = canvas_gallery.bbox('all')[2]
+            self.canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + rect_len, canvas_height, fill="yellow")
+            self.canvas_gallery.config(scrollregion = self.canvas_gallery.bbox('all')) 
+            _canvas_gallery_width_images = self.canvas_gallery.bbox('images')[2]
+            _canvas_gallery_width_all    = self.canvas_gallery.bbox('all')[2]
             #print ("Canvas_gallery totale Breite(Images): " + str(_canvas_gallery_width_images) + " totale Breite(All): " + str(_canvas_gallery_width_all) \
             #    + " visible: " + str(_canvas_gallery_width_visible) + " lastposition: " + str(_lastposition))
         
         # Pfeiltasten für Scrollen einrichten
-        canvas_gallery.focus_set()
+        self.canvas_gallery.focus_set()
         _button_include.config(state = NORMAL)
         _button_exclude.config(state = NORMAL)
         #print(_dict_duplicates)
         self.historize_process()
-        if len(thumbnails[imagetype]) > 0:
+        if len(Globals.thumbnails[imagetype]) > 0:
             filemenu.entryconfig(1, state=NORMAL)
             filemenu.entryconfig(3, state=NORMAL)
         
@@ -2938,14 +2938,14 @@ class Dateimeister_support:
         if _win_messages is not None: # stop MyMessagesWindow-Objekt
             _win_messages.close_handler()
             _win_messages = None
-        canvas_gallery.xview('moveto', 0)
+        self.canvas_gallery.xview('moveto', 0)
 
     def state_gen_required(self):
         _button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
-        _button_undo.config(state = DISABLED)    
-        _button_redo.config(state = DISABLED)
-        self.clear_text(t_text1)
-        canvas_gallery.delete("all")
+        self.button_undo.config(state = DISABLED)    
+        self.button_redo.config(state = DISABLED)
+        self.clear_text(self.t_text1)
+        self.canvas_gallery.delete("all")
         filemenu.entryconfig(1, state=DISABLED)
         _button_exclude.config(state = DISABLED)
         _button_include.config(state = DISABLED)
@@ -2953,13 +2953,13 @@ class Dateimeister_support:
         _button_duplicates.config(state = DISABLED)
         #button_call.config(state = DISABLED)
         label_num.config(text = "0")
-        self.clear_textbox(lb_gen)
-        if _imagetype in thumbnails:
+        self.clear_textbox(self.lb_gen)
+        if Globals.imagetype in Globals.thumbnails:
             print("try to delete thumbnails...")
-            thumbnails[_imagetype].clear()
-        if _imagetype in _dict_thumbnails:
+            Globals.thumbnails[Globals.imagetype].clear()
+        if Globals.imagetype in _dict_thumbnails:
             print("try to delete dict_thumbnails...")
-            _dict_thumbnails[_imagetype] = {}
+            _dict_thumbnails[Globals.imagetype] = {}
 
     def new_dir_in_xml(self, dirtype, max_dirs, dir_chosen, ts):
         do_del = True
@@ -3063,18 +3063,18 @@ class Dateimeister_support:
         if _win_messages is not None: # stop MyMessagesWindow-Objekt
             _win_messages.close_handler()
             _win_messages = None
-        _win_messages = MyMessagesWindow(_imagetype, dict_gen_files[_imagetype], dict_gen_files_delete[_imagetype], dict_gen_files_delrelpath[_imagetype]) 
+        _win_messages = MyMessagesWindow(self, Globals.imagetype, self.dict_gen_files[Globals.imagetype], dict_gen_files_delete[Globals.imagetype], dict_gen_files_delrelpath[Globals.imagetype]) 
 
     def write_cmdfiles(self):
         for imagetype in dict_source_target:
             self.write_cmdfile(imagetype)
 
     def canvas_gallery_show(self, event):
-        #print('bbox', canvas_gallery.bbox('images'))
-        canvas_gallery.focus_set()
+        #print('bbox', self.canvas_gallery.bbox('images'))
+        self.canvas_gallery.focus_set()
 
-        canvas_x = canvas_gallery.canvasx(event.x)
-        canvas_y = canvas_gallery.canvasy(event.y)
+        canvas_x = self.canvas_gallery.canvasx(event.x)
+        canvas_y = self.canvas_gallery.canvasy(event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             item_id = thumbnail.getId()
@@ -3087,10 +3087,10 @@ class Dateimeister_support:
         self.canvas_gallery_show(_event)
 
     def delay_decr(self, event): # speed +
-        canvas_gallery.focus_set()
+        self.canvas_gallery.focus_set()
         delta = -5
-        canvas_x = canvas_gallery.canvasx(event.x)
-        canvas_y = canvas_gallery.canvasy(event.y)
+        canvas_x = self.canvas_gallery.canvasx(event.x)
+        canvas_y = self.canvas_gallery.canvasy(event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             player = thumbnail.getPlayer()
@@ -3100,10 +3100,10 @@ class Dateimeister_support:
                     player.setDelay(delay + delta)
 
     def delay_incr(self, event): # speed -
-        canvas_gallery.focus_set()
+        self.canvas_gallery.focus_set()
         delta = 5
-        canvas_x = canvas_gallery.canvasx(event.x)
-        canvas_y = canvas_gallery.canvasy(event.y)
+        canvas_x = self.canvas_gallery.canvasx(event.x)
+        canvas_y = self.canvas_gallery.canvasy(event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             player = thumbnail.getPlayer()
@@ -3113,9 +3113,9 @@ class Dateimeister_support:
                     player.setDelay(delay + delta)
 
     def delay_deflt(self, event): # speed normal
-        canvas_gallery.focus_set()
-        canvas_x = canvas_gallery.canvasx(event.x)
-        canvas_y = canvas_gallery.canvasy(event.y)
+        self.canvas_gallery.focus_set()
+        canvas_x = self.canvas_gallery.canvasx(event.x)
+        canvas_y = self.canvas_gallery.canvasy(event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             player = thumbnail.getPlayer()
@@ -3131,15 +3131,15 @@ class Dateimeister_support:
         s1 = 0.0
         s2 = 1.0
         scrolldelta = 0
-        width_scrollbar = scroll_canvas_x.winfo_width()
-        canvas_x = int(canvas_gallery.canvasx(0))
-        canvas_y = int(canvas_gallery.canvasy(0))
+        width_scrollbar = self.scroll_canvas_x.winfo_width()
+        canvas_x = int(self.canvas_gallery.canvasx(0))
+        canvas_y = int(self.canvas_gallery.canvasy(0))
         #print ("Scroll totale Breite(Images): " + str(_canvas_gallery_width_images) + " totale Breite(All): " + str(_canvas_gallery_width_all) \
         #    + " visible: " + str(_canvas_gallery_width_visible)  + " canvas_x: " + str(canvas_x))
         slider_width = int((_canvas_gallery_width_visible / _canvas_gallery_width_all) * width_scrollbar)
         # aktuelle Scroll-Position des Canvas
         # aktuelle position der Scrollbar
-        scrollposition = scroll_canvas_x.get()[0]
+        scrollposition = self.scroll_canvas_x.get()[0]
         
         # wenn wir die Pfeiltasten betätigen, wollen wir auf den Anfang des nächsten (vorherigen) Bildes scrollen.
         # wenn das aktuelle Bild nur teilweise zusehen ist, scrollen wir bei Linkstaste auf den Bildbeginn
@@ -3155,8 +3155,8 @@ class Dateimeister_support:
                         #print("Bild links abgeschnitten, weil canvas_x = " + str(canvas_x) + " und Bildstart = " + str(thumbnail.getStart()))
                     else: #Bild ist vollständig zu sehen, also zurück zum nächsten
                         if index > 0: # es gibt einen Vorgänger
-                            scrolldelta = (thumbnails[_imagetype][index - 1].getStart()) - canvas_x
-                            #print("Vorgänger ist: " + thumbnails[_imagetype][index - 1].getFile() + " Start: " + str(thumbnails[_imagetype][index - 1].getStart())\
+                            scrolldelta = (Globals.thumbnails[Globals.imagetype][index - 1].getStart()) - canvas_x
+                            #print("Vorgänger ist: " + Globals.thumbnails[Globals.imagetype][index - 1].getFile() + " Start: " + str(Globals.thumbnails[Globals.imagetype][index - 1].getStart())\
                             #    + " canvas_x is: " + str(canvas_x) + " scrolldelta is: " + str(scrolldelta))
                 
                 new_canvas_x = canvas_x + scrolldelta
@@ -3166,14 +3166,14 @@ class Dateimeister_support:
                 s2 = new_canvas_x / _canvas_gallery_width_all
                 s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
                 #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
-            scroll_canvas_x.set(s1, s2)
-            canvas_gallery.xview('moveto', s2)
+            self.scroll_canvas_x.set(s1, s2)
+            self.canvas_gallery.xview('moveto', s2)
         elif len(args) == 3 and args[2] == "page":
             #print("Args: ", str(args))
             # wenn wir eine Seite nach rechts scrollen sollen, soll das Bild, das jetzt ganz oder teilweise am rechten Bildrand zu sehen ist, am linken Bildrand erscheinen
             # wenn wir 1 Seite nach links scrollen sollen, soll der Vorgänger des Bildes vollständig am rechten Bildrand sichtbar sein. Wenn das dazu führt,
             # das das Bild am linken Bildrand abgeschnitten ist, scrollen wir auf dessen Anfang
-            thumbnail_last = thumbnails[_imagetype][-1]
+            thumbnail_last = Globals.thumbnails[Globals.imagetype][-1]
             if int(args[1]) > 0: # scroll right
                 # get thumbnail at left border
                 posx = canvas_x
@@ -3242,8 +3242,8 @@ class Dateimeister_support:
                     #b = canvas_x - thumbnail_current.getStart()
                     b = thumbnail_current.getEnd() - canvas_x # visible pixels
                     if b < a: # current would disappear by scrolling, so take the next image
-                        if index_target + 1 < len(thumbnails[_imagetype]):
-                            thumbnail_target = thumbnails[_imagetype][index_target + 1]
+                        if index_target + 1 < len(Globals.thumbnails[Globals.imagetype]):
+                            thumbnail_target = Globals.thumbnails[Globals.imagetype][index_target + 1]
                             #print("*** thumbnail_current would disappear after scroll left")
                     scrolldelta = (thumbnail_target.getStart() - canvas_x)
                 #print("Scroll left 1 page, scrolldelta: " + str(scrolldelta))
@@ -3255,18 +3255,18 @@ class Dateimeister_support:
             s2 = new_canvas_x / _canvas_gallery_width_all
             s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
             #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
-            scroll_canvas_x.set(s1, s2)
-            canvas_gallery.xview('moveto', s2)
+            self.scroll_canvas_x.set(s1, s2)
+            self.canvas_gallery.xview('moveto', s2)
         else:
             #if (1 == 0):
                 #return
-            canvas_gallery.xview(*args)
+            self.canvas_gallery.xview(*args)
 
     def text1_single(self, event): # synchronize text / gallery
-        (row, col) = t_text1.index(tk.CURRENT).split(".")
+        (row, col) = self.t_text1.index(tk.CURRENT).split(".")
         print(row, col)
-        if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
-            thumbnail = _dict_thumbnails_lineno[_imagetype][row]
+        if Globals.imagetype != "" and row in _dict_thumbnails_lineno[Globals.imagetype]:
+            thumbnail = _dict_thumbnails_lineno[Globals.imagetype][row]
             self.scrollToImage(thumbnail)
             thumbnail.scrollTextToLineno() # select this line
 
@@ -3275,15 +3275,15 @@ class Dateimeister_support:
         lstart = "%d.0" % int(row)
         lend   = "%d.0 lineend" % int(row)
         # tindex = "%d.0, %d.0 lineend" % (lineno, lineno + 1)
-        line    = t_text1.get(lstart, lend)
+        line    = self.t_text1.get(lstart, lend)
         regpattern = r'[\/\\]([^\/\\.]+)\.([^\/\\.]+)' 
-        #print(t_text1.index(f"@{event.x},{event.y}"), t_text1.index("current"), line)
+        #print(self.t_text1.index(f"@{event.x},{event.y}"), self.t_text1.index("current"), line)
         
     def text1_double(self, event): # synchronize text / gallery and display FSImage 
-        (row, col) = t_text1.index(tk.CURRENT).split(".")
+        (row, col) = self.t_text1.index(tk.CURRENT).split(".")
         print(row, col)
-        if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
-            thumbnail = _dict_thumbnails_lineno[_imagetype][row]
+        if Globals.imagetype != "" and row in _dict_thumbnails_lineno[Globals.imagetype]:
+            thumbnail = _dict_thumbnails_lineno[Globals.imagetype][row]
             if thumbnail is not None:
                 self.scrollToImage(thumbnail)
                 thumbnail.scrollTextToLineno() # select this line
@@ -3291,18 +3291,18 @@ class Dateimeister_support:
         return("break")  # should stop event processing but doesn't  
 
     def text1_key(self, event): # called for every keyboard input
-        (row, col) = t_text1.index(tk.INSERT).split(".")
+        (row, col) = self.t_text1.index(tk.INSERT).split(".")
         #print("Event x: ", event.x, " Event y: ",event.y)
         #print("Event is " + str(event))
         print("Key pressed: ")
         print(event.char, event.keysym, event.keycode)
         print(row, col)
         if event.keysym == 'Up' or event.keysym == 'Down':
-            if _imagetype != "" and row in _dict_thumbnails_lineno[_imagetype]:
-                thumbnail = _dict_thumbnails_lineno[_imagetype][row]
+            if Globals.imagetype != "" and row in _dict_thumbnails_lineno[Globals.imagetype]:
+                thumbnail = _dict_thumbnails_lineno[Globals.imagetype][row]
                 self.scrollToImage(thumbnail)
                 thumbnail.scrollTextToLineno() # select this line
-        t_text1.mark_set(tk.INSERT, "%d.%d" % (int(row), 0))
+        self.t_text1.mark_set(tk.INSERT, "%d.%d" % (int(row), 0))
 
 
     def scrollToImage(self, thumbnail): # scroll to start-position of thumbnail identified by filename
@@ -3311,13 +3311,13 @@ class Dateimeister_support:
         global _canvas_gallery_width_all
         s1 = 0.0
         s2 = 1.0
-        width_scrollbar = scroll_canvas_x.winfo_width()
+        width_scrollbar = self.scroll_canvas_x.winfo_width()
         slider_width = int((_canvas_gallery_width_visible / _canvas_gallery_width_all) * width_scrollbar)
         # aktuelle Scroll-Position des Canvas
-        canvas_x = canvas_gallery.canvasx(0)
-        canvas_y = canvas_gallery.canvasy(0)
+        canvas_x = self.canvas_gallery.canvasx(0)
+        canvas_y = self.canvas_gallery.canvasy(0)
         # aktuelle position der Scrollbar
-        scrollposition = scroll_canvas_x.get()[0]
+        scrollposition = self.scroll_canvas_x.get()[0]
         
         # den scrollbetrag auf die Größe des Bildes am linken Rand setzen
         if thumbnail is not None:
@@ -3326,8 +3326,8 @@ class Dateimeister_support:
             s2 = new_canvas_x / _canvas_gallery_width_all
             s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
             #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
-        scroll_canvas_x.set(s1, s2)
-        canvas_gallery.xview('moveto', s2)
+        self.scroll_canvas_x.set(s1, s2)
+        self.canvas_gallery.xview('moveto', s2)
 
     def display_image(self, thumbnail):
         global _dict_file_image
@@ -3352,8 +3352,8 @@ class Dateimeister_support:
         # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
         _event = event
         # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
-        canvas_x = canvas_gallery.canvasx(event.x)
-        canvas_y = canvas_gallery.canvasy(event.y)
+        canvas_x = self.canvas_gallery.canvasx(event.x)
+        canvas_y = self.canvas_gallery.canvasy(event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             if thumbnail.getImage() == 0:
@@ -3369,9 +3369,9 @@ class Dateimeister_support:
         context_menu.post(event.x_root, event.y_root)
 
     def canvas_button_1(self, event):  # we need an event to set focus to canvas in order for the arrow keys to work and we scroll text box
-        canvas_gallery.focus_set()
-        canvas_x = canvas_gallery.canvasx(event.x)
-        canvas_y = canvas_gallery.canvasy(event.y)
+        self.canvas_gallery.focus_set()
+        canvas_x = self.canvas_gallery.canvasx(event.x)
+        canvas_y = self.canvas_gallery.canvasy(event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             item_id = thumbnail.getId()
@@ -3379,11 +3379,11 @@ class Dateimeister_support:
             thumbnail.scrollTextToLineno()
 
     def canvas_gallery_exclude(self, event):
-        #print('bbox', canvas_gallery.bbox('images'))
-        canvas_gallery.focus_set()
+        #print('bbox', self.canvas_gallery.bbox('images'))
+        self.canvas_gallery.focus_set()
 
-        canvas_x = canvas_gallery.canvasx(event.x)
-        canvas_y = canvas_gallery.canvasy(event.y)
+        canvas_x = self.canvas_gallery.canvasx(event.x)
+        canvas_y = self.canvas_gallery.canvasy(event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             linenew = ""
@@ -3395,18 +3395,18 @@ class Dateimeister_support:
         self.historize_process()
         
     def Button_exclude_all(self, *args):
-        for thumbnail in thumbnails[_imagetype]:
+        for thumbnail in Globals.thumbnails[Globals.imagetype]:
             if thumbnail.getState() == state.INCLUDE:
                 thumbnail.setState(state.EXCLUDE, None, False)
         self.historize_process()
-        self.write_cmdfile(_imagetype)
+        self.write_cmdfile(Globals.imagetype)
                 
     def Button_include_all(self, *args):
-        for thumbnail in thumbnails[_imagetype]:
+        for thumbnail in Globals.thumbnails[Globals.imagetype]:
             if thumbnail.getState() == state.EXCLUDE:
                 thumbnail.setState(state.INCLUDE, None, False)
         self.historize_process()
-        self.write_cmdfile(_imagetype)
+        self.write_cmdfile(Globals.imagetype)
      
     def canvas_image_exclude(self): # used for exclude and include
         print("Context menu exlude")
@@ -3414,10 +3414,10 @@ class Dateimeister_support:
 
     def canvas_video_restart(self):
         print("Context menu restart")
-        canvas_gallery.focus_set()
+        self.canvas_gallery.focus_set()
 
-        canvas_x = canvas_gallery.canvasx(_event.x)
-        canvas_y = canvas_gallery.canvasy(_event.y)
+        canvas_x = self.canvas_gallery.canvasx(_event.x)
+        canvas_y = self.canvas_gallery.canvasy(_event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             player = thumbnail.getPlayer()
@@ -3464,23 +3464,23 @@ class Dateimeister_support:
     def endis_buttons(self): # disable / enable buttons depending on processids
         global _processid_akt, _processid_high, _processid_incr, _list_processids, _stack_processids
         if len(_list_processids) > 1:
-            _button_undo.config(state = NORMAL)
+            self.button_undo.config(state = NORMAL)
         else:
-            _button_undo.config(state = DISABLED)
+            self.button_undo.config(state = DISABLED)
         if len(_stack_processids) > 0:
-            _button_redo.config(state = NORMAL)
+            self.button_redo.config(state = NORMAL)
         else:
-            _button_redo.config(state = DISABLED)
+            self.button_redo.config(state = DISABLED)
 
     def apply_process_id(self, process_id):
         # set thumbnail-states according actual processid
         global _processid_akt, _processid_high, _processid_incr
         i = 0
-        for thumbnail in thumbnails[_imagetype]:
+        for thumbnail in Globals.thumbnails[Globals.imagetype]:
             thumbnail.setState(self.dict_status_image[process_id][i], None, False)
             i += 1
         self.update_button_state()
-        self.write_cmdfile(_imagetype)
+        self.write_cmdfile(Globals.imagetype)
         
     def historize_process(self):
         global _processid_akt, _processid_high, _processid_incr, _list_processids, _stack_processids
@@ -3489,7 +3489,7 @@ class Dateimeister_support:
         print ("Processid_high is now: " + str(_processid_high) + " Processid_akt is now: " + str(_processid_akt))
         # wir bilden jetzt zu der aktuellen processid eine Liste der states der thumbnails
         self.dict_status_image[_processid_akt] = []
-        for thumbnail in thumbnails[_imagetype]:
+        for thumbnail in Globals.thumbnails[Globals.imagetype]:
             self.dict_status_image[_processid_akt].append(thumbnail.getState())
         self.update_button_state() # refer to function comment
         
@@ -3505,7 +3505,7 @@ class Dateimeister_support:
         count_states = 0
         count_exclude = 0
         count_include = 0
-        for thumbnail in thumbnails[_imagetype]:
+        for thumbnail in Globals.thumbnails[Globals.imagetype]:
             if thumbnail.getState() == state.EXCLUDE:
                 count_exclude += 1
             if thumbnail.getState() == state.INCLUDE:
@@ -3520,17 +3520,17 @@ class Dateimeister_support:
         else:
             _button_include.config(state = NORMAL)
 
-    def button_undo(self):
+    def button_undo_pressed(self):
         self.process_undo((0, 0))
         
-    def button_redo(self):
+    def button_redo_pressed(self):
         self.process_redo((0, 0))
     # Ende undo / redo-Funktionen
 
     def button_duplicates(self):
-        for mytarget in _dict_duplicates[_imagetype]:
+        for mytarget in _dict_duplicates[Globals.imagetype]:
             #print("Duplcate Key: " + mytarget) 
-            mylist = _dict_duplicates[_imagetype][mytarget]
+            mylist = _dict_duplicates[Globals.imagetype][mytarget]
             if len(mylist) > 1: # es gibt 1...n Duplicates
                 print("Duplcate Key: " + mytarget)
                 for mysource in mylist:
@@ -3553,11 +3553,11 @@ class Dateimeister_support:
 
     def on_cb_num_toggle(self):
         if cb_num_var.get():
-            canvas_gallery.itemconfigure("rect_numbers", state="normal")
-            canvas_gallery.itemconfigure("numbers", state="normal")
+            self.canvas_gallery.itemconfigure("rect_numbers", state="normal")
+            self.canvas_gallery.itemconfigure("numbers", state="normal")
         else:
-            canvas_gallery.itemconfigure("rect_numbers", state="hidden")
-            canvas_gallery.itemconfigure("numbers", state="hidden")
+            self.canvas_gallery.itemconfigure("rect_numbers", state="hidden")
+            self.canvas_gallery.itemconfigure("numbers", state="hidden")
 
 
     def clear_textbox(self, o):
@@ -3572,12 +3572,12 @@ class Dateimeister_support:
     def get_thumbnail_by_position(self, canvas_x, canvas_y):
         index = -1
         found = False
-        if _imagetype != "":
-            for thumbnail in thumbnails[_imagetype]:
+        if Globals.imagetype != "":
+            for thumbnail in Globals.thumbnails[Globals.imagetype]:
                 start = thumbnail.getStart()
                 end   = thumbnail.getEnd()
                 if (canvas_x >= start and canvas_x <= end):
-                    index = thumbnails[_imagetype].index(thumbnail)
+                    index = Globals.thumbnails[Globals.imagetype].index(thumbnail)
                     #print("retrieved " + thumbnail.getFile() + " Index: " + str(index))
                     found = True
                     break
@@ -3630,19 +3630,19 @@ class Dateimeister_support:
         for t in dict_pi:
             print("Process Image  {:s}, {:s}".format(t, dict_pi[t]))
         
-        lb_camera.delete(0, END)
+        self.lb_camera.delete(0, END)
         for key in dict_t:
-            lb_camera.insert(END, key)
-        lb_camera.selection_set(END)
+            self.lb_camera.insert(END, key)
+        self.lb_camera.selection_set(END)
 
         return dict_t, dict_s, dict_pi
 
     def stop_all_players(self):
         # stop all video players
-        if _imagetype is not None and _imagetype != "":
+        if Globals.imagetype is not None and Globals.imagetype != "":
             for imagetype in self.dict_subdirs:
-                if imagetype in thumbnails:
-                    for t in thumbnails[_imagetype]: # stop all running players
+                if imagetype in Globals.thumbnails:
+                    for t in Globals.thumbnails[Globals.imagetype]: # stop all running players
                         thisplayer = t.getPlayer()
                         if thisplayer is not None:
                             if thisplayer.getRun(): # running
@@ -3655,9 +3655,9 @@ class Dateimeister_support:
         template_delete     = dict_templates["DELETE"]
         template_delrelpath = dict_templates["DELRELPATH"]
         template_empty      = dict_templates["EMPTY"]
-        header = _uncomment + ' generated by dateimeister ' + ts + '\n'
+        header = Globals.uncomment + ' generated by dateimeister ' + ts + '\n'
         # copy files
-        cmd_file_full = dict_gen_files[imagetype] # filename was already built by generate()
+        cmd_file_full = self.dict_gen_files[imagetype] # filename was already built by generate()
         thiscmdfile = open(cmd_file_full, 'w')
         thiscmdfile.write(header) 
         dict_files = dict_source_target[imagetype]
@@ -3668,13 +3668,13 @@ class Dateimeister_support:
             if imagetype in _dict_thumbnails and sourcefile in _dict_thumbnails[imagetype]:
                 thumbnail = _dict_thumbnails[imagetype][sourcefile]
                 if thumbnail.getState() == state.EXCLUDE:
-                    comment = _uncomment
+                    comment = Globals.uncomment
                 else: # we have to incluse this file even if it is too old
                     do_include = True
             # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
             if do_include == False:
                 if imagetype in dict_source_target_tooold and sourcefile in dict_source_target_tooold[imagetype]:
-                    comment = _uncomment 
+                    comment = Globals.uncomment 
             targetfile = dict_files[sourcefile]
             if platform == "WINDOWS":
                 targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
@@ -3699,13 +3699,13 @@ class Dateimeister_support:
             if imagetype in _dict_thumbnails and sourcefile in _dict_thumbnails[imagetype]:
                 thumbnail = _dict_thumbnails[imagetype][sourcefile]
                 if thumbnail.getState() == state.EXCLUDE:
-                    comment = _uncomment
+                    comment = Globals.uncomment
                 else: # we have to incluse this file even if it is too old
                     do_include = True
             # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
             if do_include == False:
                 if imagetype in dict_source_target_tooold and sourcefile in dict_source_target_tooold[imagetype]:
-                    comment = _uncomment 
+                    comment = Globals.uncomment 
             targetfile = dict_files[sourcefile]
             if platform == "WINDOWS":
                 targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
