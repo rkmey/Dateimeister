@@ -75,6 +75,7 @@ class Globals:
     screen_width = 0
     screen_height = 0
     uncomment = ""
+    gap = 10
 
 class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
@@ -812,11 +813,11 @@ class MyDuplicates:
                     player.setId(id)
                 # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
                 myimage = MyThumbnail(pimg, self.main, self.lastposition, self.lastposition + image_width, showfile, showfile, id, \
-                    text_id, rect_id, frameids, _dict_image_lineno[Globals.imagetype][showfile], player, 'j', self.f, None, None, thumbnail)
+                    text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 myimage.setState(state)
                 self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
-                self.lastposition += image_width + gap 
+                self.lastposition += image_width + Globals.gap 
             else: # wir haben kein Bild, ein Rechteck einfügen
                 image_height = canvas_height
                 image_width  = int(canvas_height * 4 / 3)
@@ -836,21 +837,21 @@ class MyDuplicates:
                 self.f.tag_raise("text")
                 #self.f.tag_raise("imageframe")
                 myimage = MyThumbnail(0, self.main, self.lastposition, self.lastposition + image_width, showfile, showfile, id, \
-                    text_id, rect_id, frameids, _dict_image_lineno[Globals.imagetype][file], player, 'j', self.f, None, None, thumbnail)
+                    text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage
-                self.lastposition += image_width + gap 
+                self.lastposition += image_width + Globals.gap 
             self.num_images += 1
             # register at parent-thumbnail, so it can call us for reacting to state
             # we need a dict with child-parent-thumbnails in order to unregister on close
             self.dict_child_parent[myimage] = thumbnail # child -> parent
             thumbnail.register_Dupl(self)
-        # gap haben wir einmal zuviel (fürs letzte) gezählt
-        self.lastposition -= gap
+        # Globals.gap haben wir einmal zuviel (fürs letzte) gezählt
+        self.lastposition -= Globals.gap
         # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
         if len(self.thumbnails_duplicates[Globals.imagetype]) > 0: 
             thumbnail = self.thumbnails_duplicates[Globals.imagetype][-1]
-            rect_len = self.canvas_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + gap)
+            rect_len = self.canvas_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + Globals.gap)
             self.f.create_rectangle(self.lastposition, 0, self.lastposition + rect_len, canvas_height, fill="yellow")
             self.f.config(scrollregion = self.f.bbox('all')) 
             self.canvas_width_images = self.f.bbox('images')[2]
@@ -887,7 +888,7 @@ class MyDuplicates:
             thumbnail, index = self.get_thumbnail_by_position(canvas_x + 11, canvas_y)
             if thumbnail is not None:
                 if int(args[1]) > 0:
-                    scrolldelta = (thumbnail.getEnd() - canvas_x + gap)
+                    scrolldelta = (thumbnail.getEnd() - canvas_x + Globals.gap)
                 else:
                     if canvas_x - thumbnail.getStart() > 10: # Bild links abgeschnitten, an den Anfang scrollen
                         scrolldelta = (thumbnail.getStart() - canvas_x) # ist dann negativ, was wir ja wollen
@@ -1787,14 +1788,14 @@ class Dateimeister_support:
         self.codepage = ""
         self.config_file = ""
         self.tooltiptext = ""
+        self.context_menu = None
         self.timestamp = datetime.now()
 
         self.init()
         self.root.mainloop()
 
     def init(self):
-        global gap, context_menu, \
-            _dict_image_lineno, _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
+        global _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
             cb_newer, cb_newer_var, config_files_xml, recentmenu, title, label_num, num_images, config_files_subdir, \
             cmd_files_subdir, delay_default, \
             button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
@@ -1965,10 +1966,10 @@ class Dateimeister_support:
         self.canvas_gallery.config(xscrollcommand = self.scroll_canvas_x.set, scrollregion=self.canvas_gallery.bbox("all"))
 
         # Create the context menu
-        context_menu = tk.Menu(self.canvas_gallery, tearoff=0)
-        context_menu.add_command(label="Exclude", command=self.canvas_image_exclude)    
-        context_menu.add_command(label="Show"   , command=self.canvas_image_show)    
-        context_menu.add_command(label="Restart", command=self.canvas_video_restart)    
+        self.context_menu = tk.Menu(self.canvas_gallery, tearoff=0)
+        self.context_menu.add_command(label="Exclude", command=self.canvas_image_exclude)    
+        self.context_menu.add_command(label="Show"   , command=self.canvas_image_show)    
+        self.context_menu.add_command(label="Restart", command=self.canvas_video_restart)    
       
         # Events
         # Button 1 single haben wir deaktiviert, weil double immer auch zuerst single auslöst
@@ -2020,8 +2021,7 @@ class Dateimeister_support:
         dict_gen_files_delete = {}
         Globals.thumbnails = {}
         images = []
-        _dict_image_lineno = {}
-        gap = 10
+        self.dict_image_lineno = {}
         title = self.root.title()
         oldcamera = ""
 
@@ -2382,9 +2382,9 @@ class Dateimeister_support:
                         frames_per_second = 1000 / delay
                         duration_in_seconds = fc / frames_per_second
                         #print ("FPS is: ", fps, " Total Num of Frames is: ", fc, " Delay is: ", delay, " calc duration is: " + str(duration_in_seconds))
-                        context_menu.entryconfig(2, state="normal")
+                        self.context_menu.entryconfig(2, state="normal")
                     else:
-                        context_menu.entryconfig(2, state="disabled")
+                        self.context_menu.entryconfig(2, state="disabled")
 
     def focus_out(self, event):
         #print("***lost Focus")
@@ -2718,7 +2718,7 @@ class Dateimeister_support:
         self.close_child_windows()
         
         self.l_label1.config(text = "Output from Dateimeister : " + filename)
-        _dict_image_lineno[imagetype] = {} # in Python muss das sein, sonst gehts in der nächsten Ebene nicht
+        self.dict_image_lineno[imagetype] = {} # in Python muss das sein, sonst gehts in der nächsten Ebene nicht
         lineno = 0
         #print(str(dict_source_target))
         for this_sourcefile in dict_source_target[imagetype]:
@@ -2736,7 +2736,7 @@ class Dateimeister_support:
             #thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = source_without_dir, target = target_without_dir)
             thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = this_sourcefile, target = this_targetfile)
             self.insert_text(self.t_text1, thisline)
-            _dict_image_lineno[imagetype][this_sourcefile] = lineno
+            self.dict_image_lineno[imagetype][this_sourcefile] = lineno
         
         # wir suchen in der cmd-Datei die Endung für jedes Imagefile. Damit suchen wir in dict_process_image nach einem Eintrag
         # wenn JPEG, dann verarbeiten wir die Zeile und verwenden das mutmaßliche JPEG_Bild in der Gallerie. Wenn use_jpeg gefunden wird
@@ -2788,7 +2788,7 @@ class Dateimeister_support:
             else:
                 duplicate = 'n'
             #print ("Process-type, file" , process_type, ' ', file)
-            this_lineno = _dict_image_lineno[imagetype][file]
+            this_lineno = self.dict_image_lineno[imagetype][file]
             # distance from border for text-boxes
             dist_text  = 10
             # distance from border for image-frame
@@ -2833,11 +2833,11 @@ class Dateimeister_support:
                 Globals.thumbnails[imagetype].append(myimage)
                 _dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
                 _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
-                _lastposition += image_width + gap 
+                _lastposition += image_width + Globals.gap 
                 if myimage.getDuplicate() == 'j':
-                    text_id_dup = self.canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                    text_id_dup = self.canvas_gallery.create_text(_lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
-                #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(_dict_image_lineno[imagetype][file]))
+                #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(self.dict_image_lineno[imagetype][file]))
                 if process_type != 'VIDEO':
                     img.close()
             else: # wir haben kein Bild, ein Rechteck einfügen
@@ -2867,11 +2867,11 @@ class Dateimeister_support:
                 Globals.thumbnails[imagetype].append(myimage)
                 _dict_thumbnails[imagetype][file] = myimage
                 _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
-                _lastposition += image_width + gap 
+                _lastposition += image_width + Globals.gap 
                 if myimage.getDuplicate() == 'j':
-                    text_id_dup = self.canvas_gallery.create_text(_lastposition - gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                    text_id_dup = self.canvas_gallery.create_text(_lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup =self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
-                #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(_dict_image_lineno[imagetype][file]))
+                #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(self.dict_image_lineno[imagetype][file]))
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")
         self.canvas_gallery.tag_raise("rect")
@@ -2881,13 +2881,13 @@ class Dateimeister_support:
         self.canvas_gallery.tag_raise("numbers")
         #self.canvas_gallery.tag_raise("imageframe")
         # the frame for selected image
-        # gap haben wir einmal zuviel (fürs letzte) gezählt
-        _lastposition -= gap
+        # Globals.gap haben wir einmal zuviel (fürs letzte) gezählt
+        _lastposition -= Globals.gap
         #print ("Canvas_gallery sichtbare Breite : " + str(_canvas_gallery_width_visible))
         # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
         if len(Globals.thumbnails[imagetype]) > 0: 
             thumbnail = Globals.thumbnails[imagetype][-1]
-            rect_len = _canvas_gallery_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + gap)
+            rect_len = _canvas_gallery_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + Globals.gap)
             self.canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + rect_len, canvas_height, fill="yellow")
             self.canvas_gallery.config(scrollregion = self.canvas_gallery.bbox('all')) 
             _canvas_gallery_width_images = self.canvas_gallery.bbox('images')[2]
@@ -3148,7 +3148,7 @@ class Dateimeister_support:
             thumbnail, index = self.get_thumbnail_by_position(canvas_x + 11, canvas_y)
             if thumbnail is not None:
                 if int(args[1]) > 0:
-                    scrolldelta = (thumbnail.getEnd() - canvas_x + gap)
+                    scrolldelta = (thumbnail.getEnd() - canvas_x + Globals.gap)
                 else:
                     if canvas_x - thumbnail.getStart() > 10: # Bild links abgeschnitten, an den Anfang scrollen
                         scrolldelta = (thumbnail.getStart() - canvas_x) # ist dann negativ, was wir ja wollen
@@ -3181,7 +3181,7 @@ class Dateimeister_support:
                 while dothumbnail: #while because canvas_x could be on gap
                     thumbnail_current, index_current = self.get_thumbnail_by_position(posx, canvas_y)
                     if thumbnail_current is None:
-                        posx += gap
+                        posx += Globals.gap
                         #print("current retry...")
                     else: #found
                         dothumbnail = False
@@ -3207,7 +3207,7 @@ class Dateimeister_support:
                             dothumbnail = False
                             return
                         else: #could be gap, so look at position - gap
-                            posx -= gap
+                            posx -= Globals.gap
                 #print("Scroll right 1 page, scrolldelta: " + str(scrolldelta))
                         
             else: # scroll left
@@ -3216,7 +3216,7 @@ class Dateimeister_support:
                 while dothumbnail: #while because canvas_x could be on gap
                     thumbnail_current, index_current = self.get_thumbnail_by_position(posx, canvas_y)
                     if thumbnail_current is None:
-                        posx += gap
+                        posx += Globals.gap
                         #print("current retry...")
                     else: #found
                         dothumbnail = False
@@ -3226,7 +3226,7 @@ class Dateimeister_support:
                 while dothumbnail: #while because targetposition could be on gap
                     thumbnail_target, index_target = self.get_thumbnail_by_position(posx, canvas_y)
                     if thumbnail_target is None:
-                        posx += gap
+                        posx += Globals.gap
                         #print("target retry...")
                     else: #found
                         dothumbnail = False
@@ -3321,7 +3321,7 @@ class Dateimeister_support:
         
         # den scrollbetrag auf die Größe des Bildes am linken Rand setzen
         if thumbnail is not None:
-            scrolldelta = (thumbnail.getEnd() - canvas_x + gap)
+            scrolldelta = (thumbnail.getEnd() - canvas_x + Globals.gap)
             new_canvas_x = thumbnail.getStart()
             s2 = new_canvas_x / _canvas_gallery_width_all
             s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
@@ -3358,15 +3358,15 @@ class Dateimeister_support:
         if thumbnail is not None:
             if thumbnail.getImage() == 0:
                 print(" No Image availabl for " + thumbnail.getFile())
-                context_menu.entryconfig(1, state="disabled")
+                self.context_menu.entryconfig(1, state="disabled")
             else:
-                context_menu.entryconfig(1, state="normal")
+                self.context_menu.entryconfig(1, state="normal")
             if thumbnail.getState() == state.INCLUDE:
-                context_menu.entryconfig(0, label = "Exclude " + thumbnail.getFile())
+                self.context_menu.entryconfig(0, label = "Exclude " + thumbnail.getFile())
             else:
-                context_menu.entryconfig(0, label = "Include " + thumbnail.getFile())
-        context_menu.entryconfig(1, label = "Show " + thumbnail.getFile())
-        context_menu.post(event.x_root, event.y_root)
+                self.context_menu.entryconfig(0, label = "Include " + thumbnail.getFile())
+        self.context_menu.entryconfig(1, label = "Show " + thumbnail.getFile())
+        self.context_menu.post(event.x_root, event.y_root)
 
     def canvas_button_1(self, event):  # we need an event to set focus to canvas in order for the arrow keys to work and we scroll text box
         self.canvas_gallery.focus_set()
