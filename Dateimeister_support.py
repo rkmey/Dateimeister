@@ -55,7 +55,6 @@ _processid_high = 0
 _processid_incr = 10
 _list_processids = []
 _stack_processids = [] # list
-_use_camera_prefix = True
 _dict_thumbnails = {}
 _dict_thumbnails_lineno = {}
 _dict_duplicates = {}
@@ -70,12 +69,14 @@ class state(Enum):
     INCLUDE = 1
     EXCLUDE = 2
     
+# variables used by more than 1 class
 class Globals:
     imagetype = ""
     screen_width = 0
     screen_height = 0
     uncomment = ""
     gap = 10
+    button_duplicates = None
 
 class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
@@ -546,7 +547,7 @@ class MyDuplicates:
         self.delay_default = 20 #ToDo: Ini
         
         self.dict_file_image = {}
-        _button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
+        Globals.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
 
     def exclude_call(self, parent, state): # react to request from outside, outside is root - thumbnail
         print("MyDuplicate.Exclude called, State = " + str(state))
@@ -739,12 +740,12 @@ class MyDuplicates:
         for t in self.dict_file_image: # destroy all FSImages
             u = self.dict_file_image[t]
             u.close_handler_external()
-        _button_duplicates.config(state = NORMAL)
+        Globals.button_duplicates.config(state = NORMAL)
         self.main.win_duplicates = None
         
     def stop_all_players(self):
         # stop all video players
-        _button_duplicates.config(state = DISABLED)
+        Globals.button_duplicates.config(state = DISABLED)
         if Globals.imagetype in self.thumbnails_duplicates:
             for t in self.thumbnails_duplicates[Globals.imagetype]: # stop all running players
                 thisplayer = t.getPlayer()
@@ -1790,13 +1791,13 @@ class Dateimeister_support:
         self.tooltiptext = ""
         self.context_menu = None
         self.timestamp = datetime.now()
+        self.use_camera_prefix = True
 
         self.init()
         self.root.mainloop()
 
     def init(self):
-        global _button_exclude, _button_include, _use_camera_prefix, _button_duplicates, _button_be, filemenu, \
-            cb_newer, cb_newer_var, config_files_xml, recentmenu, title, label_num, num_images, config_files_subdir, \
+        global config_files_xml, recentmenu, title, label_num, num_images, config_files_subdir, \
             cmd_files_subdir, delay_default, \
             button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
             combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, \
@@ -1877,24 +1878,24 @@ class Dateimeister_support:
         self.l_label1 = self.w.Label1
         label_num = self.w.Label_num
         self.lb_gen   = self.w.Listbox_gen
-        _button_include = self.w.Button_include
-        _button_exclude = self.w.Button_exclude
-        _button_include.config(state = DISABLED)
-        _button_exclude.config(state = DISABLED)
+        self.button_include = self.w.Button_include
+        self.button_exclude = self.w.Button_exclude
+        self.button_include.config(state = DISABLED)
+        self.button_exclude.config(state = DISABLED)
         self.button_undo = self.w.Button_undo
         self.button_redo = self.w.Button_redo
         self.button_undo.config(state = DISABLED)
         self.button_redo.config(state = DISABLED)
         self.button_undo.configure(command=self.button_undo_pressed)
         self.button_redo.configure(command=self.button_redo_pressed)
-        _button_duplicates = self.w.Button_duplicates
-        _button_duplicates.config(state = DISABLED)
-        _button_be = self.w.Button_be
-        _button_be.config(state = DISABLED)
-        _button_be.config(command = self.Button_be_pressed)
+        Globals.button_duplicates = self.w.Button_duplicates
+        Globals.button_duplicates.config(state = DISABLED)
+        self.button_be = self.w.Button_be
+        self.button_be.config(state = DISABLED)
+        self.button_be.config(command = self.Button_be_pressed)
         button_exec.config(state = DISABLED)
         self.button_call.config(state = DISABLED) # generate-Button
-        _button_duplicates.configure(command=self.button_duplicates)
+        Globals.button_duplicates.configure(command=self.button_duplicates)
         
         self.label_indir  = self.w.Label_indir
         self.label_outdir = self.w.Label_outdir
@@ -1927,10 +1928,10 @@ class Dateimeister_support:
         self.cb_addrelpath_var = self.w.cb_addrelpath_var
         self.cb_addrelpath_var.set(0)
 
-        cb_newer = self.w.Checkbutton_newer
-        cb_newer.config(command = self.state_gen_required)
-        cb_newer_var = self.w.cb_newer_var
-        cb_newer_var.set(0)
+        self.cb_newer = self.w.Checkbutton_newer
+        self.cb_newer.config(command = self.state_gen_required)
+        self.cb_newer_var = self.w.cb_newer_var
+        self.cb_newer_var.set(0)
 
         cb_num = self.w.Checkbutton_num
         cb_num_var = self.w.cbnum_var
@@ -2040,23 +2041,23 @@ class Dateimeister_support:
         
         # Menubar
         menubar = Menu(self.root)
-        filemenu = Menu(menubar, tearoff=0)
-        filemenu.add_command(label="New", command=self.donothing)
-        filemenu.add_command(label="Open config", command=self.open_config)
-        filemenu.add_command(label="Save config", command=self.save_config)
-        filemenu.add_command(label="Save config as...", command=self.saveas_config)
-        filemenu.add_command(label="Apply config", command=self.apply_config)
-        menubar.add_cascade(label="File", menu=filemenu)
+        self.filemenu = Menu(menubar, tearoff=0)
+        self.filemenu.add_command(label="New", command=self.donothing)
+        self.filemenu.add_command(label="Open config", command=self.open_config)
+        self.filemenu.add_command(label="Save config", command=self.save_config)
+        self.filemenu.add_command(label="Save config as...", command=self.saveas_config)
+        self.filemenu.add_command(label="Apply config", command=self.apply_config)
+        menubar.add_cascade(label="File", menu=self.filemenu)
         recentmenu = Menu(menubar, tearoff=0)
-        filemenu.add_cascade(label="Open Recent", menu=recentmenu)
-        filemenu.add_separator()
-        filemenu.add_command(label="Exit", command=self.root.quit)
-        filemenu.entryconfig(0, state=DISABLED)
-        filemenu.entryconfig(1, state=DISABLED) # open after Browse / Edit, we need indir and type
-        filemenu.entryconfig(2, state=DISABLED)
-        filemenu.entryconfig(3, state=DISABLED)
-        filemenu.entryconfig(4, state=DISABLED)
-        filemenu.entryconfig(5, state=DISABLED)
+        self.filemenu.add_cascade(label="Open Recent", menu=recentmenu)
+        self.filemenu.add_separator()
+        self.filemenu.add_command(label="Exit", command=self.root.quit)
+        self.filemenu.entryconfig(0, state=DISABLED)
+        self.filemenu.entryconfig(1, state=DISABLED) # open after Browse / Edit, we need indir and type
+        self.filemenu.entryconfig(2, state=DISABLED)
+        self.filemenu.entryconfig(3, state=DISABLED)
+        self.filemenu.entryconfig(4, state=DISABLED)
+        self.filemenu.entryconfig(5, state=DISABLED)
         
         # camera menu
         cameramenu = Menu(menubar, tearoff=0)
@@ -2176,9 +2177,9 @@ class Dateimeister_support:
         
         endung = 'xml'
         self.config_file = fd.askopenfilename(initialdir = os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
-        filemenu.entryconfig(4, state=NORMAL)
+        self.filemenu.entryconfig(4, state=NORMAL)
         root.title(title + ' ' + self.config_file)
-        filemenu.entryconfig(2, state=NORMAL)
+        self.filemenu.entryconfig(2, state=NORMAL)
 
     def apply_config(self):
         tree = ET.parse(self.config_file)
@@ -2231,9 +2232,9 @@ class Dateimeister_support:
             self.update_config_xml(self.config_file)
             
             root.title(title + ' ' + self.config_file)
-            filemenu.entryconfig(2, state=NORMAL) # Save
-            filemenu.entryconfig(3, state=NORMAL) # Save As
-            filemenu.entryconfig(4, state=NORMAL) # Apply config
+            self.filemenu.entryconfig(2, state=NORMAL) # Save
+            self.filemenu.entryconfig(3, state=NORMAL) # Save As
+            self.filemenu.entryconfig(4, state=NORMAL) # Apply config
 
     def update_config_xml(self, config_file): # Config-xml unter neuem Namen sichern und update
         # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
@@ -2294,7 +2295,7 @@ class Dateimeister_support:
                 recentmenu.entryconfig(ii, state = DISABLED)
             ii += 1
         if ii == 0:
-            filemenu.entryconfig(5, state=DISABLED)
+            self.filemenu.entryconfig(5, state=DISABLED)
 
 
     def write_config(self, filename): # Config-xml unter neuem Namen sichern
@@ -2342,9 +2343,9 @@ class Dateimeister_support:
     def recent_config(self, item):
         print("** Menuitem selected: " + item)
         self.config_file = item
-        filemenu.entryconfig(4, state=NORMAL)
+        self.filemenu.entryconfig(4, state=NORMAL)
         root.title(title + ' ' + self.config_file)
-        filemenu.entryconfig(2, state=NORMAL)
+        self.filemenu.entryconfig(2, state=NORMAL)
     
 
     def tooltip_imagefile(self, event):
@@ -2432,18 +2433,18 @@ class Dateimeister_support:
         print ("Kamera ist " + thiscamera)
         self.clear_textbox(self.o_camera)
         self.insert_text(self.o_camera, thiscamera)
-        _button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
+        self.button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
         self.button_call.config(state = NORMAL)
         if thiscamera != oldcamera:
             self.button_undo.config(state = DISABLED)    
             self.button_redo.config(state = DISABLED)
             self.clear_text(self.t_text1)
             self.canvas_gallery.delete("all")
-            filemenu.entryconfig(1, state=DISABLED)
-            _button_exclude.config(state = DISABLED)
-            _button_include.config(state = DISABLED)
+            self.filemenu.entryconfig(1, state=DISABLED)
+            self.button_exclude.config(state = DISABLED)
+            self.button_include.config(state = DISABLED)
             button_exec.config(state = DISABLED)
-            _button_duplicates.config(state = DISABLED)
+            Globals.button_duplicates.config(state = DISABLED)
             label_num.config(text = "0")
             self.clear_textbox(self.lb_gen)
             oldcamera = thiscamera
@@ -2499,9 +2500,9 @@ class Dateimeister_support:
         else:
             recursive = "n"
         if self.cb_prefix_var.get():
-            _use_camera_prefix = True
+            self.use_camera_prefix = True
         else:
-            _use_camera_prefix = False
+            self.use_camera_prefix = False
         if self.cb_addrelpath_var.get():
             addrelpath  = "j"
         else:
@@ -2551,14 +2552,14 @@ class Dateimeister_support:
             _outdir = thisoutdir # for setting title of duplicate-window
             dict_outdirs[dateityp] = thisoutdir
             endung= self.dict_cameras[thiscamera][dateityp]
-            if _use_camera_prefix:
+            if self.use_camera_prefix:
                 target_prefix = thiscamera + '_'
             else:
                 target_prefix = ''
             dict_source_target[dateityp] = {}
             dict_relpath[dateityp] = {}
             dict_source_target[dateityp], dict_source_target_jpeg[dateityp], dict_source_target_tooold[dateityp] = \
-              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, cb_newer_var.get(), target_prefix, dict_relpath[dateityp])
+              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, dict_relpath[dateityp])
             dict_relpath[dateityp] = dict(reversed(list(dict_relpath[dateityp].items())))
             for ii in dict_relpath[dateityp]:
                 print(" > ", ii, " files: ", dict_relpath[dateityp][ii])
@@ -2657,12 +2658,12 @@ class Dateimeister_support:
             self.lb_gen.insert(END, key)
         self.lb_gen.select_set(0)
         if self.lb_gen.size() > 0:
-            _button_be.config(state = NORMAL)
-        filemenu.entryconfig(1, state=DISABLED)
-        _button_exclude.config(state = DISABLED)
-        _button_include.config(state = DISABLED)
+            self.button_be.config(state = NORMAL)
+        self.filemenu.entryconfig(1, state=DISABLED)
+        self.button_exclude.config(state = DISABLED)
+        self.button_include.config(state = DISABLED)
         button_exec.config(state = DISABLED)
-        _button_duplicates.config(state = DISABLED)
+        Globals.button_duplicates.config(state = DISABLED)
         label_num.config(text = "0")
         os.chdir(owndir)
         self.write_cmdfiles()
@@ -2897,19 +2898,19 @@ class Dateimeister_support:
         
         # Pfeiltasten für Scrollen einrichten
         self.canvas_gallery.focus_set()
-        _button_include.config(state = NORMAL)
-        _button_exclude.config(state = NORMAL)
+        self.button_include.config(state = NORMAL)
+        self.button_exclude.config(state = NORMAL)
         #print(_dict_duplicates)
         self.historize_process()
         if len(Globals.thumbnails[imagetype]) > 0:
-            filemenu.entryconfig(1, state=NORMAL)
-            filemenu.entryconfig(3, state=NORMAL)
+            self.filemenu.entryconfig(1, state=NORMAL)
+            self.filemenu.entryconfig(3, state=NORMAL)
         
         else: # if no images available we dont need config files
-            filemenu.entryconfig(1, state=DISABLED)
-            filemenu.entryconfig(2, state=DISABLED)
-            filemenu.entryconfig(3, state=DISABLED)
-            filemenu.entryconfig(4, state=DISABLED)
+            self.filemenu.entryconfig(1, state=DISABLED)
+            self.filemenu.entryconfig(2, state=DISABLED)
+            self.filemenu.entryconfig(3, state=DISABLED)
+            self.filemenu.entryconfig(4, state=DISABLED)
         _duplicates = False
         
         for mytarget in _dict_duplicates[imagetype]:
@@ -2920,7 +2921,7 @@ class Dateimeister_support:
                 break
         
         if num_images > 0: # config makes no sense for zero images
-            filemenu.entryconfig(5, state=NORMAL)
+            self.filemenu.entryconfig(5, state=NORMAL)
             # get the config-files for indir / type:
             indir = self.label_indir.cget('text')
                 
@@ -2928,9 +2929,9 @@ class Dateimeister_support:
             self.update_recent_menu(indir, imagetype)
         
         if _duplicates:
-            _button_duplicates.config(state = NORMAL)
+            Globals.button_duplicates.config(state = NORMAL)
         else:
-            _button_duplicates.config(state = DISABLED)
+            Globals.button_duplicates.config(state = DISABLED)
         
         label_num.config(text = str(num_images))
         button_exec.config(state = NORMAL)
@@ -2941,16 +2942,16 @@ class Dateimeister_support:
         self.canvas_gallery.xview('moveto', 0)
 
     def state_gen_required(self):
-        _button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
+        self.button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
         self.button_undo.config(state = DISABLED)    
         self.button_redo.config(state = DISABLED)
         self.clear_text(self.t_text1)
         self.canvas_gallery.delete("all")
-        filemenu.entryconfig(1, state=DISABLED)
-        _button_exclude.config(state = DISABLED)
-        _button_include.config(state = DISABLED)
+        self.filemenu.entryconfig(1, state=DISABLED)
+        self.button_exclude.config(state = DISABLED)
+        self.button_include.config(state = DISABLED)
         button_exec.config(state = DISABLED)
-        _button_duplicates.config(state = DISABLED)
+        Globals.button_duplicates.config(state = DISABLED)
         #button_call.config(state = DISABLED)
         label_num.config(text = "0")
         self.clear_textbox(self.lb_gen)
@@ -3512,13 +3513,13 @@ class Dateimeister_support:
                 count_include += 1
             count_states += 1
         if count_exclude == count_states:
-            _button_exclude.config(state = DISABLED)
+            self.button_exclude.config(state = DISABLED)
         else:
-            _button_exclude.config(state = NORMAL)
+            self.button_exclude.config(state = NORMAL)
         if count_include == count_states:
-            _button_include.config(state = DISABLED)
+            self.button_include.config(state = DISABLED)
         else:
-            _button_include.config(state = NORMAL)
+            self.button_include.config(state = NORMAL)
 
     def button_undo_pressed(self):
         self.process_undo((0, 0))
