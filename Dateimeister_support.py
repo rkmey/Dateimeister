@@ -77,6 +77,7 @@ class Globals:
     uncomment = ""
     gap = 10
     button_duplicates = None
+    config_files_xml = None
 
 class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
@@ -1188,7 +1189,7 @@ class MyCameraTreeview:
         self.update_proctype_menu()
             
         # fille treeview from xml
-        self.treeview_from_xml(config_files_xml)
+        self.treeview_from_xml(Globals.config_files_xml)
     
     def new_text(self, o, text):
         o.delete(0, 'end')
@@ -1197,7 +1198,7 @@ class MyCameraTreeview:
     def treeview_clear(self):    
         for i in self.tv.get_children():
            self.tv.delete(i)
-        root.update()    
+        self.root.update()    
 
     def lock_treeview(self, block):
         if block == False: #set to not lockes
@@ -1454,7 +1455,7 @@ class MyCameraTreeview:
         self.new_text(self.entry_camera, text_camera)
         self.new_text(self.entry_type, text_ctype)
         self.new_text(self.entry_suffix, text_suffix)
-        self.dict_subdirs = DX.get_subdirs(config_files_xml)
+        self.dict_subdirs = DX.get_subdirs(Globals.config_files_xml)
         if text_ctype in self.dict_subdirs:
             suffix = self.dict_subdirs[self.ctype]
             print("Suffix for ctype " + text_ctype + " is " + suffix)
@@ -1528,7 +1529,7 @@ class MyCameraTreeview:
         if self.newitem == "SUFFIX_NEW":
             suffix = self.entry_suffix.get().upper()
             if suffix is not None and suffix != "":
-                rc = DX.new_camera_type_suffix(config_files_xml, self.camera, self.ctype, suffix, ts) 
+                rc = DX.new_camera_type_suffix(Globals.config_files_xml, self.camera, self.ctype, suffix, ts) 
             else: # entry_suffix is empty
                 messagebox.showinfo("MyCameraTreeview", "Camera " + self.camera + " type " + ctype + \
                  " no suffix defined. At least 1 is needed  or press cancel", parent = self.root)
@@ -1536,11 +1537,11 @@ class MyCameraTreeview:
                 return
         elif self.newitem == "SUFFIX_RENAME":
             suffix_new = self.entry_suffix.get().upper()
-            rc = DX.update_camera_type_suffix(config_files_xml, self.camera, self.ctype, self.suffix, suffix_new, ts)
+            rc = DX.update_camera_type_suffix(Globals.config_files_xml, self.camera, self.ctype, self.suffix, suffix_new, ts)
             self.suffix = suffix_new
         elif self.newitem == "SUFFIX_DELETE":
             suffix = self.suffix
-            rc = DX.update_camera_type_suffix(config_files_xml, self.camera, self.ctype, suffix, "", ts)  # empty newname will delete suffix
+            rc = DX.update_camera_type_suffix(Globals.config_files_xml, self.camera, self.ctype, suffix, "", ts)  # empty newname will delete suffix
             print("delete suffix rc: " + str(rc))
         elif self.newitem == "TYPE_NEW":
             ctype  = self.entry_type.get().upper()
@@ -1552,29 +1553,29 @@ class MyCameraTreeview:
                     self.entry_suffix.focus_set()
                     return
                 else:
-                    rc = DX.new_camera_type_suffix(config_files_xml, self.camera, ctype, suffix, ts)
+                    rc = DX.new_camera_type_suffix(Globals.config_files_xml, self.camera, ctype, suffix, ts)
             else: # entry_type is empty
                 messagebox.showinfo("MyCameraTreeview", "Camera " + self.camera + " no type defined. Please enter type or press cancel", parent = self.root)
                 self.entry_type.focus_set()
                 return
         elif self.newitem == "TYPE_RENAME":
             type_new = self.entry_type.get().upper()
-            rc = DX.update_camera_type(config_files_xml, self.camera, self.ctype, type_new, ts) 
+            rc = DX.update_camera_type(Globals.config_files_xml, self.camera, self.ctype, type_new, ts) 
             self.ctype = type_new
         elif self.newitem == "TYPE_DELETE":
             #print(" delete requested for: " + self.camera + '.' + self.ctype)
-            rc = DX.update_camera_type(config_files_xml, self.camera, self.ctype, "", ts)  # empty newname will delete suffix
+            rc = DX.update_camera_type(Globals.config_files_xml, self.camera, self.ctype, "", ts)  # empty newname will delete suffix
         elif self.newitem == "TYPE_SUBDIR":
             # create new subdir in xml or update if type-subdir already exists
             subdir = self.entry_subdir.get()
-            rc = DX.new_subdir(config_files_xml, self.ctype, subdir)
+            rc = DX.new_subdir(Globals.config_files_xml, self.ctype, subdir)
             if rc == 0:
                 print("subdir node does not exist, make new for type: " + self.ctype + " subdir: " + subdir)
             elif rc == 1:
                 print("subdir already exists, update subdir for type: " + self.ctype + " subdir: " + subdir)
         elif self.newitem == "PROCTYPE_NEW":
             # create new process_image in xml or update if suffix already exists
-            rc = DX.new_process_image(config_files_xml, self.suffix, self.proctype)
+            rc = DX.new_process_image(Globals.config_files_xml, self.suffix, self.proctype)
             if rc == 0:
                 print("process_image node does not exist, make new for suffix: " + self.suffix + " process: " + self.proctype)
             elif rc == 1:
@@ -1597,7 +1598,7 @@ class MyCameraTreeview:
                         self.entry_suffix.focus_set()
                         return
                     else: # create new camera / type /suffix
-                        rc = DX.new_camera_type_suffix(config_files_xml, camera, ctype, suffix, ts)
+                        rc = DX.new_camera_type_suffix(Globals.config_files_xml, camera, ctype, suffix, ts)
             else: # entry_type is empty
                 messagebox.showinfo("MyCameraTreeview", "Camera " + self.camera + " no camera defined. Please enter camera or press cancel", parent = self.root)
                 self.entry_camera.focus_set()
@@ -1605,13 +1606,13 @@ class MyCameraTreeview:
         elif self.newitem == "CAMERA_RENAME":
             print(" rename requested for: " + self.camera)
             camera_new = self.entry_camera.get().upper()
-            rc = DX.update_camera(config_files_xml, self.camera, camera_new)
+            rc = DX.update_camera(Globals.config_files_xml, self.camera, camera_new)
             self.camera = camera_new
         elif self.newitem == "CAMERA_DELETE":
             print(" delete requested for: " + self.camera)
-            rc = DX.update_camera(config_files_xml, self.camera, "") # empty newname will delete camera
+            rc = DX.update_camera(Globals.config_files_xml, self.camera, "") # empty newname will delete camera
 
-        self.treeview_from_xml(config_files_xml) # refresh treeview from changed xml
+        self.treeview_from_xml(Globals.config_files_xml) # refresh treeview from changed xml
         if self.camera is not None and self.camera != "":
             self.open_camera(self.camera) # expand camera node
         self.enable_processing(False, False, False, False, False, "", "", "", "") # enable/ disable entries, buttons, return key
@@ -1696,7 +1697,7 @@ class MyCameraTreeview:
         print("apply_process_id, xml to apply is: ", xml_filename)
         # copy historized xml to "normal" xml
         sourcefile = xml_filename
-        targetfile = config_files_xml
+        targetfile = Globals.config_files_xml
         try:
             shutil.copy(sourcefile, targetfile)
             #print("Source file copied to destination successfully.")
@@ -1717,7 +1718,7 @@ class MyCameraTreeview:
         except:
             print("Error occurred while copying file.")
         # now apply xml
-        self.treeview_from_xml(config_files_xml) # refresh treeview from changed xml
+        self.treeview_from_xml(Globals.config_files_xml) # refresh treeview from changed xml
         if self.camera is not None and self.camera != "":
             self.open_camera(self.camera) # expand camera node
         
@@ -1728,13 +1729,13 @@ class MyCameraTreeview:
         # wir we save the current xml-file to firstname-<processid>.xml
         # E:/Arbeit/python/Dateimeister_vor_git/daten/config/dateimeister_configfiles.xml
         config_dir = os.path.join(datadir, config_files_subdir)
-        xml_filename = config_files_xml
+        xml_filename = Globals.config_files_xml
         # replace last . by <processid>.
         xml_filename = re.sub(r'\.([^\.]+)$', rf"_{self.processid_akt}.\1", xml_filename) # reconstruct newline in template
         self.dict_processid_xmlfile[self.processid_akt] = xml_filename
         print("historize_process, new xml is: ", xml_filename)
         # save actual xml (changed by the action which called historize_processorize) to a config file with xml_filename containing the actual processid
-        sourcefile = config_files_xml
+        sourcefile = Globals.config_files_xml
         targetfile = xml_filename
         try:
             shutil.copy(sourcefile, targetfile)
@@ -1797,7 +1798,7 @@ class Dateimeister_support:
         self.root.mainloop()
 
     def init(self):
-        global config_files_xml, recentmenu, title, label_num, num_images, config_files_subdir, \
+        global title, label_num, num_images, config_files_subdir, \
             cmd_files_subdir, delay_default, \
             button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
             combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, \
@@ -1818,7 +1819,7 @@ class Dateimeister_support:
         datadir = config["dirs"]["datadir"]
         config_files_subdir = config["dirs"]["config_files_subdir"]
         cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
-        config_files_xml = config["misc"]["config_files_xml"]
+        Globals.config_files_xml = config["misc"]["config_files_xml"]
         
         # read process_types from ini because depemdent on dateimeister implementation
         self.dict_proctypes = config["proc_types"]
@@ -2048,8 +2049,8 @@ class Dateimeister_support:
         self.filemenu.add_command(label="Save config as...", command=self.saveas_config)
         self.filemenu.add_command(label="Apply config", command=self.apply_config)
         menubar.add_cascade(label="File", menu=self.filemenu)
-        recentmenu = Menu(menubar, tearoff=0)
-        self.filemenu.add_cascade(label="Open Recent", menu=recentmenu)
+        self.recentmenu = Menu(menubar, tearoff=0)
+        self.filemenu.add_cascade(label="Open Recent", menu=self.recentmenu)
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.root.quit)
         self.filemenu.entryconfig(0, state=DISABLED)
@@ -2073,7 +2074,7 @@ class Dateimeister_support:
         self.root.config(menu=menubar)
         
         # fill in combobox
-        result = DX.get_indirs(config_files_xml)
+        result = DX.get_indirs(Globals.config_files_xml)
         dict_filename_usedate = {}
         for tfile in result:
             #print("infile: " + tfile)
@@ -2104,7 +2105,7 @@ class Dateimeister_support:
             combobox_indir.itemconfig(ii, fg="gray")
 
         # fill out combobox
-        result = DX.get_outdirs(config_files_xml)
+        result = DX.get_outdirs(Globals.config_files_xml)
         dict_filename_usedate = {}
         for tfile in result:
             #print("infile: " + tfile)
@@ -2178,15 +2179,15 @@ class Dateimeister_support:
         endung = 'xml'
         self.config_file = fd.askopenfilename(initialdir = os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
         self.filemenu.entryconfig(4, state=NORMAL)
-        root.title(title + ' ' + self.config_file)
+        self.root.title(title + ' ' + self.config_file)
         self.filemenu.entryconfig(2, state=NORMAL)
 
     def apply_config(self):
         tree = ET.parse(self.config_file)
-        root = tree.getroot()
-        time = root.attrib['time']
+        xmlroot = tree.getroot()
+        time = xmlroot.attrib['time']
         print(time)    
-        for thumbnail in root.findall('thumbnail'):
+        for thumbnail in xmlroot.findall('thumbnail'):
             #print (thumbnail.attrib['filename'])   
             image = thumbnail.find('image').text
             mystate = thumbnail.find('state').text
@@ -2231,7 +2232,7 @@ class Dateimeister_support:
             # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
             self.update_config_xml(self.config_file)
             
-            root.title(title + ' ' + self.config_file)
+            self.root.title(title + ' ' + self.config_file)
             self.filemenu.entryconfig(2, state=NORMAL) # Save
             self.filemenu.entryconfig(3, state=NORMAL) # Save As
             self.filemenu.entryconfig(4, state=NORMAL) # Apply config
@@ -2264,17 +2265,17 @@ class Dateimeister_support:
                         if ii < num_to_delete:
                             if loop == 1: # in the first pass only delete entries for not existing files
                                 if not os.path.isfile(t):
-                                    DX.delete_cfgfile(config_files_xml, indir, Globals.imagetype, t)
+                                    DX.delete_cfgfile(Globals.config_files_xml, indir, Globals.imagetype, t)
                                     ii += 1
                             else: # delete also existing files if necessary
-                                DX.delete_cfgfile(config_files_xml, indir, Globals.imagetype, t)
+                                DX.delete_cfgfile(Globals.config_files_xml, indir, Globals.imagetype, t)
                                 ii += 1
                         else:
                             break
         # now create new entry for my_config_file
-        DX.new_cfgfile(config_files_xml, indir, Globals.imagetype, my_config_file, ts, num_images)
-        # update usedate in config_files_xml
-        DX.update_cfgfile(config_files_xml, indir, Globals.imagetype, my_config_file, ts, num_images)
+        DX.new_cfgfile(Globals.config_files_xml, indir, Globals.imagetype, my_config_file, ts, num_images)
+        # update usedate in Globals.config_files_xml
+        DX.update_cfgfile(Globals.config_files_xml, indir, Globals.imagetype, my_config_file, ts, num_images)
         # finally update the recent files menu
         self.update_recent_menu(indir, Globals.imagetype)
 
@@ -2283,16 +2284,16 @@ class Dateimeister_support:
         result, sorted_d = self.get_dict_of_config_files(indir, imagetype)
         #print("get_dict_of_config_files: " + str(sorted_d))
         
-        recentmenu.delete(0, "end")
+        self.recentmenu.delete(0, "end")
         ii = 0
         for item in sorted_d:
             usedate      = result[item]['usedate']
             mynum_images = result[item]['num_images']
             labeltext = item + ' (usedate: ' + usedate + ' ,images: ' + mynum_images + ')'
-            recentmenu.add_command(label=labeltext, command = lambda item=item: self.recent_config(item))
+            self.recentmenu.add_command(label=labeltext, command = lambda item=item: self.recent_config(item))
             print("  config_file: " + labeltext)
             if not os.path.isfile(item):
-                recentmenu.entryconfig(ii, state = DISABLED)
+                self.recentmenu.entryconfig(ii, state = DISABLED)
             ii += 1
         if ii == 0:
             self.filemenu.entryconfig(5, state=DISABLED)
@@ -2324,7 +2325,7 @@ class Dateimeister_support:
     def get_dict_of_config_files(self, pindir, imagetype): # returns dict sorted by usedate asc
         # lower and slash instead of backslash
         indir = re.sub(r'\\', '/', pindir).lower()
-        result = DX.get_cfgfiles(config_files_xml, indir, imagetype)
+        result = DX.get_cfgfiles(Globals.config_files_xml, indir, imagetype)
         dict_filename_usedate = {}
         for cfg_file in result:
             print("config_file: " + cfg_file)
@@ -2344,7 +2345,7 @@ class Dateimeister_support:
         print("** Menuitem selected: " + item)
         self.config_file = item
         self.filemenu.entryconfig(4, state=NORMAL)
-        root.title(title + ' ' + self.config_file)
+        self.root.title(title + ' ' + self.config_file)
         self.filemenu.entryconfig(2, state=NORMAL)
     
 
@@ -2691,7 +2692,7 @@ class Dateimeister_support:
         self.button_undo.config(state = DISABLED)    
         self.button_redo.config(state = DISABLED)
         self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
-        root.title(title)
+        self.root.title(title)
         
         self.clear_text(self.t_text1)
         self.canvas_gallery.delete("all")
@@ -2779,7 +2780,7 @@ class Dateimeister_support:
             elif process_type == 'VIDEO':
                 print("try to create new videoplayer...")
                 # create new videoplayer
-                player   = DV.VideoPlayer(root, file, self.canvas_gallery, canvas_width, canvas_height, _lastposition)
+                player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height, _lastposition)
                 image_width, image_height, pimg = player.get_pimg()
                 showfile = file
             else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
@@ -2965,21 +2966,21 @@ class Dateimeister_support:
     def new_dir_in_xml(self, dirtype, max_dirs, dir_chosen, ts):
         do_del = True
         if dirtype == 'indir':
-            d = DX.get_indirs(config_files_xml)
+            d = DX.get_indirs(Globals.config_files_xml)
             if dir_chosen in d:
                 do_del = False # existing dir, no cleanup
         elif dirtype == 'outdir':
-            d = DX.get_outdirs(config_files_xml)
+            d = DX.get_outdirs(Globals.config_files_xml)
             if dir_chosen in d:
                 do_del = False # existing dir, no cleanup
-        # delete dir-entrie(s) from config_files_xml only if a new one has been selected
+        # delete dir-entrie(s) from Globals.config_files_xml only if a new one has been selected
         print("do_del: " + str(do_del) + " dir_chosen: " + dir_chosen)
         if do_del: # 2 pass: in the first we delete entries with not existing dir, in the second existing dirs (if necessary)
             for loop in range(1,3): # 3 is excluded
                 if dirtype == 'indir':
-                    d = DX.get_indirs(config_files_xml)
+                    d = DX.get_indirs(Globals.config_files_xml)
                 elif dirtype == 'outdir':
-                    d = DX.get_outdirs(config_files_xml)
+                    d = DX.get_outdirs(Globals.config_files_xml)
                 # sort descending by usedate
                 dict_dir_usedate = {}
                 for ii in d:
@@ -2997,9 +2998,9 @@ class Dateimeister_support:
                             if not os.path.isdir(t):
                                 if ii < num_to_delete:
                                     if dirtype == 'indir':
-                                        DX.delete_indir(config_files_xml, t)
+                                        DX.delete_indir(Globals.config_files_xml, t)
                                     elif dirtype == 'outdir':
-                                        DX.delete_outdir(config_files_xml, t)
+                                        DX.delete_outdir(Globals.config_files_xml, t)
                                     ii += 1
                                 else:
                                     break
@@ -3010,17 +3011,17 @@ class Dateimeister_support:
                         for t in reversed(list_dirs): # now the oldest are on top
                             if ii < num_to_delete:
                                 if dirtype == 'indir':
-                                    DX.delete_indir(config_files_xml, t)
+                                    DX.delete_indir(Globals.config_files_xml, t)
                                 elif dirtype == 'outdir':
-                                    DX.delete_outdir(config_files_xml, t)
+                                    DX.delete_outdir(Globals.config_files_xml, t)
                                 ii += 1
                             else:
                                 break
         # will add xml node if not existing or update usedate if existing
         if dirtype == 'indir':
-            DX.new_indir (config_files_xml, dir_chosen, "", "", ts, 0)
+            DX.new_indir (Globals.config_files_xml, dir_chosen, "", "", ts, 0)
         if dirtype == 'outdir':
-            DX.new_outdir(config_files_xml, dir_chosen, ts)
+            DX.new_outdir(Globals.config_files_xml, dir_chosen, ts)
 
     def close_child_windows(self): #closes duplicates, fs-images and exec-windows    
         global _dict_file_image, _win_messages
@@ -3549,8 +3550,8 @@ class Dateimeister_support:
     def on_window_destroy(self, a):
         a = 1
         #print ("Destroy called.")
-        #root.instance.destroy()
-        #root.withdraw()
+        #self.root.instance.destroy()
+        #self.root.withdraw()
 
     def on_cb_num_toggle(self):
         if cb_num_var.get():
@@ -3595,15 +3596,15 @@ class Dateimeister_support:
         cameraname = "Retina Reflex"
         ctype      = "JPEG"
         suffix     = "JPG"
-        rc = DX.new_camera_type_suffix(config_files_xml, cameraname, ctype, suffix, ts) 
+        rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
         suffix     = "JPEG"
-        rc = DX.new_camera_type_suffix(config_files_xml, cameraname, ctype, suffix, ts) 
+        rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
         ctype      = "VIDEO"
         suffix     = "MOV"
-        rc = DX.new_camera_type_suffix(config_files_xml, cameraname, ctype, suffix, ts) 
+        rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
         # dateimeister_config_xml.py returns suffixes as list we need them as a comma separated string
         dict_cameras = {}
-        dict_cameras = DX.get_cameras_types_suffixes(config_files_xml)
+        dict_cameras = DX.get_cameras_types_suffixes(Globals.config_files_xml)
         #print("Cameras: " + str(dict_cameras))
         dict_t = {}
         for camera in dict_cameras:
@@ -3622,12 +3623,12 @@ class Dateimeister_support:
                 exit()
 
         dict_s = {}
-        dict_s = DX.get_subdirs(config_files_xml)
+        dict_s = DX.get_subdirs(Globals.config_files_xml)
         for imagetype in dict_s:
             print("Subdir {:s}, {:s}".format(imagetype, dict_s[imagetype]))
         
         dict_pi = {}
-        dict_pi = DX.get_process_image(config_files_xml)
+        dict_pi = DX.get_process_image(Globals.config_files_xml)
         for t in dict_pi:
             print("Process Image  {:s}, {:s}".format(t, dict_pi[t]))
         
@@ -3754,7 +3755,6 @@ class Dateimeister_support:
 # #############################################################
 if __name__ == '__main__':
     '''Main entry point for the application.'''
-    global root
     root = tk.Tk()
     app = Dateimeister_support(root)
 
