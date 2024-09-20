@@ -76,8 +76,11 @@ class Globals:
     screen_height = 0
     uncomment = ""
     gap = 10
-    button_duplicates = None
-    config_files_xml = None
+    button_duplicates   = None
+    config_files_xml    = None
+    config_files_subdir = None
+    cmd_files_subdir    = None
+    delay_default = 20 #ToDo: Ini
 
 class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
@@ -330,8 +333,8 @@ class MyFSImage:
             self.f.tag_raise("line")
             self.player.setId(self.id)
             self.player.pstart()
-            self.player.setDelay(delay_default)
-            self.w2.Scale_fps.set(1000 / delay_default)
+            self.player.setDelay(Globals.delay_default)
+            self.w2.Scale_fps.set(1000 / Globals.delay_default)
             self.playerstatus = 'play'
             self.w2.Button_pp.config(text = 'pause')
     def getPlayer(self):
@@ -545,7 +548,6 @@ class MyDuplicates:
         self.timestamp = datetime.now()
         self.tooltiptext = ""
         self.tt = Dateimeister.ToolTip(self.f, "no images available", delay=0, follow = True)
-        self.delay_default = 20 #ToDo: Ini
         
         self.dict_file_image = {}
         Globals.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
@@ -666,7 +668,7 @@ class MyDuplicates:
                     player = thumbnail.getPlayer()
                     if player is not None: # this is a video
                         player.pstart()
-                        player.setDelay(delay_default)
+                        player.setDelay(Globals.delay_default)
                         fps   = player.getFPS()
                         fc    = player.getFrameCount()
                         delay = player.getDelay()
@@ -712,7 +714,7 @@ class MyDuplicates:
             player = thumbnail.getPlayer()
             if player is not None: # a video
                 delay = player.getDelay()
-                player.setDelay(self.delay_default)
+                player.setDelay(Globals.delay_default)
                 
     def lb_double(self, event):
         cs = self.w3.Listbox_dupl.curselection()
@@ -1063,7 +1065,7 @@ class MyMessagesWindow:
         self.w.Label_script.config(text = cmdfile)
         my_cmd = "call " + cmdfile 
         owndir = os.getcwd()
-        os.chdir(os.path.join(datadir, cmd_files_subdir))    
+        os.chdir(os.path.join(datadir, Globals.cmd_files_subdir))    
         my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         (output, error) = my_cmd_output.communicate()
         self.show_messages(output, True)
@@ -1728,7 +1730,7 @@ class MyCameraTreeview:
         print ("Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
         # wir we save the current xml-file to firstname-<processid>.xml
         # E:/Arbeit/python/Dateimeister_vor_git/daten/config/dateimeister_configfiles.xml
-        config_dir = os.path.join(datadir, config_files_subdir)
+        config_dir = os.path.join(datadir, Globals.config_files_subdir)
         xml_filename = Globals.config_files_xml
         # replace last . by <processid>.
         xml_filename = re.sub(r'\.([^\.]+)$', rf"_{self.processid_akt}.\1", xml_filename) # reconstruct newline in template
@@ -1798,12 +1800,9 @@ class Dateimeister_support:
         self.root.mainloop()
 
     def init(self):
-        global title, label_num, num_images, config_files_subdir, \
-            cmd_files_subdir, delay_default, \
-            button_exec, dict_gen_files_delete, cb_num, cb_num_var, dict_templates, templatefile, \
+        global cb_num, cb_num_var, dict_templates, templatefile, \
             combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, \
             button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, dict_proctypes, _dict_file_image
-    #    print("Init called\n")
         windll = ctypes.windll.kernel32
         self.codepage = windll.GetUserDefaultUILanguage()
         self.language = locale.windows_locale[ windll.GetUserDefaultUILanguage() ]
@@ -1817,8 +1816,8 @@ class Dateimeister_support:
         default_indir  = config["dirs"]["indir"]
         default_outdir = config["dirs"]["outdir"]
         datadir = config["dirs"]["datadir"]
-        config_files_subdir = config["dirs"]["config_files_subdir"]
-        cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
+        Globals.config_files_subdir = config["dirs"]["config_files_subdir"]
+        Globals.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
         Globals.config_files_xml = config["misc"]["config_files_xml"]
         
         # read process_types from ini because depemdent on dateimeister implementation
@@ -1837,8 +1836,6 @@ class Dateimeister_support:
             messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + platform)
             exit()
         
-        delay_default = 20 #ToDo: Ini
-
         dict_templates = {}
         _dict_file_image = {}
 
@@ -1856,8 +1853,8 @@ class Dateimeister_support:
         self.b_button_outdir.config(command=self.Press_outdir)
         self.button_call = self.w.Button_call
         self.button_call.config(command = self.Press_generate)
-        button_exec = self.w.Button_exec
-        button_exec.config(command = self.button_exec_pressed)
+        self.button_exec = self.w.Button_exec
+        self.button_exec.config(command = self.button_exec_pressed)
         self.Button_exclude = self.w.Button_exclude
         self.Button_exclude.config(command=self.Button_exclude_all)
         self.Button_include = self.w.Button_include
@@ -1877,7 +1874,7 @@ class Dateimeister_support:
         self.t_text1.tag_configure("select_exclude", foreground="red", background = "darkgrey")
         
         self.l_label1 = self.w.Label1
-        label_num = self.w.Label_num
+        self.label_num = self.w.Label_num
         self.lb_gen   = self.w.Listbox_gen
         self.button_include = self.w.Button_include
         self.button_exclude = self.w.Button_exclude
@@ -1894,7 +1891,7 @@ class Dateimeister_support:
         self.button_be = self.w.Button_be
         self.button_be.config(state = DISABLED)
         self.button_be.config(command = self.Button_be_pressed)
-        button_exec.config(state = DISABLED)
+        self.button_exec.config(state = DISABLED)
         self.button_call.config(state = DISABLED) # generate-Button
         Globals.button_duplicates.configure(command=self.button_duplicates)
         
@@ -2018,13 +2015,13 @@ class Dateimeister_support:
         self.label_indir.config(text = default_indir)
         self.label_outdir.config(text = default_outdir)
         self.l_label1.config(text = "Messages")
-        label_num.config(text = "0")
+        self.label_num.config(text = "0")
         self.dict_gen_files = {}
-        dict_gen_files_delete = {}
+        self.dict_gen_files_delete = {}
         Globals.thumbnails = {}
         images = []
         self.dict_image_lineno = {}
-        title = self.root.title()
+        self.title = self.root.title()
         oldcamera = ""
 
         
@@ -2177,9 +2174,9 @@ class Dateimeister_support:
         # get config_files for indir / type
         
         endung = 'xml'
-        self.config_file = fd.askopenfilename(initialdir = os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
+        self.config_file = fd.askopenfilename(initialdir = os.path.join(datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
         self.filemenu.entryconfig(4, state=NORMAL)
-        self.root.title(title + ' ' + self.config_file)
+        self.root.title(self.title + ' ' + self.config_file)
         self.filemenu.entryconfig(2, state=NORMAL)
 
     def apply_config(self):
@@ -2216,11 +2213,11 @@ class Dateimeister_support:
             # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
             self.update_config_xml(self.config_file)
         else:
-            saveas_config()
+            self.saveas_config()
 
     def saveas_config(self): # Config-xml unter neuem Namen sichern
         endung = 'xml'
-        self.config_file = fd.asksaveasfilename(initialdir = os.path.join(datadir, config_files_subdir), filetypes=[("config files", endung)])
+        self.config_file = fd.asksaveasfilename(initialdir = os.path.join(datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
         if (len(self.config_file) > 0):
             match = re.search(rf".*?{endung}$", self.config_file)
             if match:
@@ -2232,7 +2229,7 @@ class Dateimeister_support:
             # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
             self.update_config_xml(self.config_file)
             
-            self.root.title(title + ' ' + self.config_file)
+            self.root.title(self.title + ' ' + self.config_file)
             self.filemenu.entryconfig(2, state=NORMAL) # Save
             self.filemenu.entryconfig(3, state=NORMAL) # Save As
             self.filemenu.entryconfig(4, state=NORMAL) # Apply config
@@ -2273,9 +2270,9 @@ class Dateimeister_support:
                         else:
                             break
         # now create new entry for my_config_file
-        DX.new_cfgfile(Globals.config_files_xml, indir, Globals.imagetype, my_config_file, ts, num_images)
+        DX.new_cfgfile(Globals.config_files_xml, indir, Globals.imagetype, my_config_file, ts, self.num_images)
         # update usedate in Globals.config_files_xml
-        DX.update_cfgfile(Globals.config_files_xml, indir, Globals.imagetype, my_config_file, ts, num_images)
+        DX.update_cfgfile(Globals.config_files_xml, indir, Globals.imagetype, my_config_file, ts, self.num_images)
         # finally update the recent files menu
         self.update_recent_menu(indir, Globals.imagetype)
 
@@ -2345,7 +2342,7 @@ class Dateimeister_support:
         print("** Menuitem selected: " + item)
         self.config_file = item
         self.filemenu.entryconfig(4, state=NORMAL)
-        self.root.title(title + ' ' + self.config_file)
+        self.root.title(self.title + ' ' + self.config_file)
         self.filemenu.entryconfig(2, state=NORMAL)
     
 
@@ -2377,7 +2374,7 @@ class Dateimeister_support:
                     player = thumbnail.getPlayer()
                     if player is not None: # this is a video
                         player.pstart()
-                        player.setDelay(delay_default)
+                        player.setDelay(Globals.delay_default)
                         fps   = player.getFPS()
                         fc    = player.getFrameCount()
                         delay = player.getDelay()
@@ -2444,9 +2441,9 @@ class Dateimeister_support:
             self.filemenu.entryconfig(1, state=DISABLED)
             self.button_exclude.config(state = DISABLED)
             self.button_include.config(state = DISABLED)
-            button_exec.config(state = DISABLED)
+            self.button_exec.config(state = DISABLED)
             Globals.button_duplicates.config(state = DISABLED)
-            label_num.config(text = "0")
+            self.label_num.config(text = "0")
             self.clear_textbox(self.lb_gen)
             oldcamera = thiscamera
             if Globals.imagetype in Globals.thumbnails:
@@ -2457,7 +2454,7 @@ class Dateimeister_support:
                 _dict_thumbnails[Globals.imagetype] = {}
 
     def Press_generate(self, *args):
-        global _dict_firstname_fullname, _dict_duplicates, dict_gen_files_delete, _dict_duplicates_sourcefiles, \
+        global _dict_firstname_fullname, _dict_duplicates, _dict_duplicates_sourcefiles, \
             _outdir, dict_source_target, dict_relpath, dict_gen_files_delrelpath, dict_source_target_tooold, dict_outdirs, _dict_file_image
         global _processid_high, _processid_akt, _list_processids, _stack_processids
         if _debug:
@@ -2520,7 +2517,7 @@ class Dateimeister_support:
         _dict_duplicates = {}
         owndir = os.getcwd()
         self.dict_gen_files = {}
-        dict_gen_files_delete = {}
+        self.dict_gen_files_delete = {}
         dict_source_target = {}
         dict_source_target_jpeg = {}
         dict_source_target_tooold = {}
@@ -2571,7 +2568,7 @@ class Dateimeister_support:
             print(dateityp + " F NUM: " + str(num_files))
             # save name for cmdfile
             cmd_file_name = "_copy_" + dateityp + '.cmd'
-            cmd_file_full = os.path.join(datadir, cmd_files_subdir, cmd_file_name)
+            cmd_file_full = os.path.join(datadir, Globals.cmd_files_subdir, cmd_file_name)
             # generierte Dateien in dict festhalten
             self.dict_gen_files[dateityp] = cmd_file_full
             #print("self.dict_gen_files[dateityp]: ", str(self.dict_gen_files[dateityp]), " datadir is: ", datadir)
@@ -2579,14 +2576,14 @@ class Dateimeister_support:
             # save name for delete files
             # important: subdir MUST NOT start with a slash!
             cmd_file_name_delete = "_delete_" + dateityp + '.cmd'
-            cmd_file_full_delete = os.path.join(datadir, cmd_files_subdir, cmd_file_name_delete)
+            cmd_file_full_delete = os.path.join(datadir, Globals.cmd_files_subdir, cmd_file_name_delete)
             # generierte Dateien in dict festhalten
-            dict_gen_files_delete[dateityp] = cmd_file_full_delete
-            #print("dict_gen_files_delete[dateityp]: ", str(dict_gen_files_delete[dateityp]))
+            self.dict_gen_files_delete[dateityp] = cmd_file_full_delete
+            #print("dict_gen_files_delete[dateityp]: ", str(self.dict_gen_files_delete[dateityp]))
 
             # save name for delrelpath files
             cmd_file_name_delrelpath = "_delrelpath_" + dateityp + '.cmd'
-            cmd_file_full_delrelpath = os.path.join(datadir, cmd_files_subdir, cmd_file_name_delrelpath)
+            cmd_file_full_delrelpath = os.path.join(datadir, Globals.cmd_files_subdir, cmd_file_name_delrelpath)
             # generierte Dateien in dict festhalten
             dict_gen_files_delrelpath[dateityp] = cmd_file_full_delrelpath
             #print("dict_gen_files_delrelpath[dateityp]: ", str(dict_gen_files_delrelpath[dateityp]))
@@ -2663,9 +2660,9 @@ class Dateimeister_support:
         self.filemenu.entryconfig(1, state=DISABLED)
         self.button_exclude.config(state = DISABLED)
         self.button_include.config(state = DISABLED)
-        button_exec.config(state = DISABLED)
+        self.button_exec.config(state = DISABLED)
         Globals.button_duplicates.config(state = DISABLED)
-        label_num.config(text = "0")
+        self.label_num.config(text = "0")
         os.chdir(owndir)
         self.write_cmdfiles()
     
@@ -2674,7 +2671,7 @@ class Dateimeister_support:
         global _canvas_gallery_width_images
         global _canvas_gallery_width_all
         global _lastposition, _dict_file_image
-        global _dict_duplicates, _duplicates, num_images, _dict_duplicates_sourcefiles, dict_source_target, _win_messages
+        global _dict_duplicates, _duplicates, _dict_duplicates_sourcefiles, dict_source_target, _win_messages
         global _processid_high, _processid_akt, _list_processids, _stack_processids
 
         if _debug:
@@ -2692,7 +2689,7 @@ class Dateimeister_support:
         self.button_undo.config(state = DISABLED)    
         self.button_redo.config(state = DISABLED)
         self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
-        self.root.title(title)
+        self.root.title(self.title)
         
         self.clear_text(self.t_text1)
         self.canvas_gallery.delete("all")
@@ -2750,9 +2747,9 @@ class Dateimeister_support:
         _lastposition = 0
         _dict_thumbnails[imagetype] = {}
         _dict_thumbnails_lineno[imagetype] = {}
-        num_images = 0
+        self.num_images = 0
         for file in dict_source_target[imagetype]:
-            num_images += 1
+            self.num_images += 1
             this_targetfile = dict_source_target[imagetype][file]
             # wir brauchen die Endung der Datei und den Vornamen
             regpattern = r'[\/\\]([^\/\\."]+)\.([^\/\\."]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
@@ -2811,7 +2808,7 @@ class Dateimeister_support:
                 id = self.canvas_gallery.create_image(_lastposition, 0, anchor='nw',image = pimg, tags = 'images')
                 text_id = self.canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
                 rect_id = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id), outline="blue", fill = "white", tag = 'rect')
-                text_id_num = self.canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
+                text_id_num = self.canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(self.num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
                 rect_id_num = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
                 # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
                 north_west = (_lastposition + dist_frame, dist_frame)
@@ -2848,7 +2845,7 @@ class Dateimeister_support:
                 id = self.canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + image_width, canvas_height, fill="blue", tags = 'images')
                 text_id = self.canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
                 rect_id = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id), outline="blue", fill = "white")
-                text_id_num = self.canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
+                text_id_num = self.canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(self.num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
                 rect_id_num = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
                 # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
                 north_west = (_lastposition + dist_frame, dist_frame)
@@ -2921,7 +2918,7 @@ class Dateimeister_support:
                 _duplicates = True
                 break
         
-        if num_images > 0: # config makes no sense for zero images
+        if self.num_images > 0: # config makes no sense for zero images
             self.filemenu.entryconfig(5, state=NORMAL)
             # get the config-files for indir / type:
             indir = self.label_indir.cget('text')
@@ -2934,8 +2931,8 @@ class Dateimeister_support:
         else:
             Globals.button_duplicates.config(state = DISABLED)
         
-        label_num.config(text = str(num_images))
-        button_exec.config(state = NORMAL)
+        self.label_num.config(text = str(self.num_images))
+        self.button_exec.config(state = NORMAL)
         self.write_cmdfile(imagetype)
         if _win_messages is not None: # stop MyMessagesWindow-Objekt
             _win_messages.close_handler()
@@ -2951,10 +2948,10 @@ class Dateimeister_support:
         self.filemenu.entryconfig(1, state=DISABLED)
         self.button_exclude.config(state = DISABLED)
         self.button_include.config(state = DISABLED)
-        button_exec.config(state = DISABLED)
+        self.button_exec.config(state = DISABLED)
         Globals.button_duplicates.config(state = DISABLED)
         #button_call.config(state = DISABLED)
-        label_num.config(text = "0")
+        self.label_num.config(text = "0")
         self.clear_textbox(self.lb_gen)
         if Globals.imagetype in Globals.thumbnails:
             print("try to delete thumbnails...")
@@ -3065,7 +3062,7 @@ class Dateimeister_support:
         if _win_messages is not None: # stop MyMessagesWindow-Objekt
             _win_messages.close_handler()
             _win_messages = None
-        _win_messages = MyMessagesWindow(self, Globals.imagetype, self.dict_gen_files[Globals.imagetype], dict_gen_files_delete[Globals.imagetype], dict_gen_files_delrelpath[Globals.imagetype]) 
+        _win_messages = MyMessagesWindow(self, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], dict_gen_files_delrelpath[Globals.imagetype]) 
 
     def write_cmdfiles(self):
         for imagetype in dict_source_target:
@@ -3123,7 +3120,7 @@ class Dateimeister_support:
             player = thumbnail.getPlayer()
             if player is not None: # a video
                 delay = player.getDelay()
-                player.setDelay(delay_default)
+                player.setDelay(Globals.delay_default)
 
     def xview(self, *args):
         #print (*args)
@@ -3690,7 +3687,7 @@ class Dateimeister_support:
         thiscmdfile.close()
 
         # delete files
-        cmd_file_full = dict_gen_files_delete[imagetype] # filename was already built by generate()
+        cmd_file_full = self.dict_gen_files_delete[imagetype] # filename was already built by generate()
         thiscmdfile = open(cmd_file_full, 'w')
         thiscmdfile.write(header) 
         dict_files = dict_source_target[imagetype]
