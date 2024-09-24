@@ -1800,9 +1800,7 @@ class Dateimeister_support:
         self.root.mainloop()
 
     def init(self):
-        global cb_num, cb_num_var, dict_templates, templatefile, \
-            combobox_indir, combobox_indir_var, combobox_outdir, combobox_outdir_var, max_configfiles, max_indirs, max_outdirs, \
-            button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, dict_proctypes, _dict_file_image
+        global button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, dict_proctypes, _dict_file_image
         windll = ctypes.windll.kernel32
         self.codepage = windll.GetUserDefaultUILanguage()
         self.language = locale.windows_locale[ windll.GetUserDefaultUILanguage() ]
@@ -1826,17 +1824,17 @@ class Dateimeister_support:
             print("Proctype: " + self.dict_proctypes[t]) 
         
         Globals.uncomment = config["misc"]["uncomment"] + " "        
-        templatefile = config["misc"]["templatefile"]
+        self.templatefile = config["misc"]["templatefile"]
         #max number of config_file-, indir-, outdir-entries in xml
-        max_configfiles = config["misc"]["max_configfiles"]
-        max_indirs      = config["misc"]["max_indirs"]
-        max_outdirs     = config["misc"]["max_outdirs"]
+        self.max_configfiles = config["misc"]["max_configfiles"]
+        self.max_indirs      = config["misc"]["max_indirs"]
+        self.max_outdirs     = config["misc"]["max_outdirs"]
         platform = config["misc"]["platform"].upper()
         if platform != "UNIX" and platform != "WINDOWS":
             messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + platform)
             exit()
         
-        dict_templates = {}
+        self.dict_templates = {}
         _dict_file_image = {}
 
 
@@ -1931,26 +1929,26 @@ class Dateimeister_support:
         self.cb_newer_var = self.w.cb_newer_var
         self.cb_newer_var.set(0)
 
-        cb_num = self.w.Checkbutton_num
-        cb_num_var = self.w.cbnum_var
-        cb_num_var.set(1)
+        self.cb_num = self.w.Checkbutton_num
+        self.cb_num_var = self.w.cbnum_var
+        self.cb_num_var.set(1)
 
-        combobox_indir = self.w.TCombobox_indir
-        combobox_indir_var = self.w.combobox_indir
-        combobox_indir.configure(exportselection=False)
-        combobox_outdir = self.w.TCombobox_outdir
-        combobox_outdir_var = self.w.combobox_outdir
-        combobox_outdir.configure(exportselection=False)
+        self.combobox_indir = self.w.TCombobox_indir
+        self.combobox_indir_var = self.w.combobox_indir
+        self.combobox_indir.configure(exportselection=False)
+        self.combobox_outdir = self.w.TCombobox_outdir
+        self.combobox_outdir_var = self.w.combobox_outdir
+        self.combobox_outdir.configure(exportselection=False)
         
         # Scrollbars
-        VI = Scrollbar(combobox_indir, orient= VERTICAL)
+        VI = Scrollbar(self.combobox_indir, orient= VERTICAL)
         VI.place(relx = 1, rely = 0, relheight = 1, relwidth = .015, anchor = tk.NE)
-        VI.config(command = combobox_indir.yview)
-        combobox_indir.config(yscrollcommand = VI.set)
-        VO = Scrollbar(combobox_outdir, orient= VERTICAL)
+        VI.config(command = self.combobox_indir.yview)
+        self.combobox_indir.config(yscrollcommand = VI.set)
+        VO = Scrollbar(self.combobox_outdir, orient= VERTICAL)
         VO.place(relx = 1, rely = 0, relheight = 1, relwidth = .015, anchor = tk.NE)
-        VO.config(command = combobox_outdir.yview)
-        combobox_outdir.config(yscrollcommand = VO.set)
+        VO.config(command = self.combobox_outdir.yview)
+        self.combobox_outdir.config(yscrollcommand = VO.set)
         #listbox camera
         VC = Scrollbar(self.w.Frame_camera, orient= VERTICAL)
         VC.place(relx = 1, rely = 0.01, relheight = .96, relwidth = .03, anchor = tk.NE)
@@ -2004,11 +2002,11 @@ class Dateimeister_support:
         self.t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
         print("Bindtags: %s " % str(self.t_text1.bindtags()))
 
-        cb_num.config(command = self.on_cb_num_toggle)
-        combobox_indir.bind('<Double-1>', self.combobox_indir_double)
-        combobox_outdir.bind('<Double-1>', self.combobox_outdir_double)
-        combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
-        combobox_outdir.bind("<<ListboxSelect>>", lambda event: self.combobox_outdir_check_exist(event))
+        self.cb_num.config(command = self.on_cb_num_toggle)
+        self.combobox_indir.bind('<Double-1>', self.combobox_indir_double)
+        self.combobox_outdir.bind('<Double-1>', self.combobox_outdir_double)
+        self.combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
+        self.combobox_outdir.bind("<<ListboxSelect>>", lambda event: self.combobox_outdir_check_exist(event))
         button_indir_from_list.config(command = self.combobox_indir_double)  
         button_outdir_from_list.config(command = self.combobox_outdir_double)  
         
@@ -2088,18 +2086,18 @@ class Dateimeister_support:
         ii = 0
         indexes = []
         for tfile in sorted_d:
-            combobox_indir.insert(END, tfile)
+            self.combobox_indir.insert(END, tfile)
             if not os.path.isdir(tfile):
                 #print("INDIR: " + tfile + " INDEX: " + str(ii))
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
             ii += 1
         if ii > 0:
-            combobox_indir.select_set(0)
+            self.combobox_indir.select_set(0)
             button_indir_from_list.config(state = NORMAL)
         else: 
             button_indir_from_list.config(state = DISABLED)
         for ii in indexes:
-            combobox_indir.itemconfig(ii, fg="gray")
+            self.combobox_indir.itemconfig(ii, fg="gray")
 
         # fill out combobox
         result = DX.get_outdirs(Globals.config_files_xml)
@@ -2119,18 +2117,18 @@ class Dateimeister_support:
         ii = 0
         indexes = []
         for tfile in sorted_d:
-            combobox_outdir.insert(END, tfile)
+            self.combobox_outdir.insert(END, tfile)
             if not os.path.isdir(tfile):
                 print("OUTDIR: " + tfile + " INDEX: " + str(ii))
                 indexes.append(ii) # list of indizes to disable because dir does not exist
             ii += 1
         if ii > 0:
-            combobox_outdir.select_set(0)
+            self.combobox_outdir.select_set(0)
             button_outdir_from_list.config(state = NORMAL)
         else: 
             button_outdir_from_list.config(state = DISABLED)
         for ii in indexes:
-            combobox_outdir.itemconfig(ii, fg="gray")
+            self.combobox_outdir.itemconfig(ii, fg="gray")
         
     def donothing(self):
         print("Menuitem not yet implemented")
@@ -2145,29 +2143,29 @@ class Dateimeister_support:
         self.B_camera_press(event)
 
     def combobox_indir_double(self, event = None):
-        selected_indices = combobox_indir.curselection()
-        indir = ",".join([combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
+        selected_indices = self.combobox_indir.curselection()
+        indir = ",".join([self.combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
         self.label_indir.config(text = indir)
 
     def combobox_outdir_double(self, event = None):
-        selected_indices = combobox_outdir.curselection()
-        outdir = ",".join([combobox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
+        selected_indices = self.combobox_outdir.curselection()
+        outdir = ",".join([self.combobox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
         self.label_outdir.config(text = outdir)
 
     def combobox_indir_check_exist(self, event):
-        index = combobox_indir.curselection()[0]
-        indir = combobox_indir.get(index) # because listbox has single selection
+        index = self.combobox_indir.curselection()[0]
+        indir = self.combobox_indir.get(index) # because listbox has single selection
         print("current selection is: " + indir + " INDEX: " + str(index))
         if not os.path.isdir(indir):
-            combobox_indir.selection_clear(index) # dont select, MessageBox
+            self.combobox_indir.selection_clear(index) # dont select, MessageBox
             messagebox.showerror("showerror", "Indir: " + indir + " does not exist, choose another one")
     
     def combobox_outdir_check_exist(self, event):
-        index = combobox_outdir.curselection()[0]
-        outdir = combobox_outdir.get(index) # because listbox has single selection
+        index = self.combobox_outdir.curselection()[0]
+        outdir = self.combobox_outdir.get(index) # because listbox has single selection
         print("current selection is: " + outdir + " INDEX: " + str(index))
         if not os.path.isdir(outdir):
-            combobox_outdir.selection_clear(index) # dont select, MessageBox
+            self.combobox_outdir.selection_clear(index) # dont select, MessageBox
             messagebox.showerror("showerror", "outdir: " + outdir + " does not exist, choose another one")
         
     def open_config(self):
@@ -2254,7 +2252,7 @@ class Dateimeister_support:
                 list_cfgfiles = []
                 for t_cfg in sorted_d:
                     list_cfgfiles.append(t_cfg)
-                num_to_delete = len(list_cfgfiles) - int(max_configfiles) + 1
+                num_to_delete = len(list_cfgfiles) - int(self.max_configfiles) + 1
                 if num_to_delete > 0:
                     #print(str(list_cfgfiles))
                     ii = 0
@@ -2405,7 +2403,7 @@ class Dateimeister_support:
             sys.stdout.flush()
         indir = fd.askdirectory() 
         print ("indir %s" % indir)
-        #self.clear_textbox(combobox_indir)
+        #self.clear_textbox(self.combobox_indir)
         self.label_indir.config(text = indir)
 
     def Press_outdir(self, *args):
@@ -2415,7 +2413,7 @@ class Dateimeister_support:
         #outdir = fd.askopenindir() 
         outdir = fd.askdirectory() 
         print ("outdir %s" % outdir)
-        #self.clear_textbox(combobox_outdir)
+        #self.clear_textbox(self.combobox_outdir)
         self.label_outdir.config(text = outdir)
 
     def B_camera_press(self, *args):
@@ -2531,11 +2529,11 @@ class Dateimeister_support:
 
         this_i = re.sub(r'\\', '/', indir).lower()
         # delete indir-entries from xml if number gt than max from ini, oldest first
-        self.new_dir_in_xml('indir', max_indirs, this_i, ts)
+        self.new_dir_in_xml('indir', self.max_indirs, this_i, ts)
 
         this_o = re.sub(r'\\', '/', outdir).lower()
         # delete outdir-entries from xml if number gt than max from ini, oldest first
-        self.new_dir_in_xml('outdir', max_outdirs, this_o, ts)
+        self.new_dir_in_xml('outdir', self.max_outdirs, this_o, ts)
 
         for dateityp in self.dict_cameras[thiscamera]:
             # cleanup
@@ -3037,12 +3035,11 @@ class Dateimeister_support:
             _win_messages = None
 
     def get_templates(self):
-        global dict_templates
-        dict_templates = {}
+        self.dict_templates = {}
         try:
-            file = open(templatefile)
+            file = open(self.templatefile)
         except FileNotFoundError:
-            print("File does not exist: " + templatefile)
+            print("File does not exist: " + self.templatefile)
         templates = file.read().replace('\n', '<<<NL>>>')
         #print(templates)
         regpattern = r'\[([^\]]+)\](.*?)\[/\1\]'
@@ -3052,7 +3049,7 @@ class Dateimeister_support:
             template     = ii[1]
             #print("templatename: " + templatename)
             #print(template)
-            dict_templates[templatename] = template
+            self.dict_templates[templatename] = template
         
         templates = re.sub(r'<<<NL>>>', '\n', templates)
         #print(templates)
@@ -3551,7 +3548,7 @@ class Dateimeister_support:
         #self.root.withdraw()
 
     def on_cb_num_toggle(self):
-        if cb_num_var.get():
+        if self.cb_num_var.get():
             self.canvas_gallery.itemconfigure("rect_numbers", state="normal")
             self.canvas_gallery.itemconfigure("numbers", state="normal")
         else:
@@ -3650,10 +3647,10 @@ class Dateimeister_support:
      
     def write_cmdfile(self, imagetype):
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-        template_copy       = dict_templates["COPY"]
-        template_delete     = dict_templates["DELETE"]
-        template_delrelpath = dict_templates["DELRELPATH"]
-        template_empty      = dict_templates["EMPTY"]
+        template_copy       = self.dict_templates["COPY"]
+        template_delete     = self.dict_templates["DELETE"]
+        template_delrelpath = self.dict_templates["DELRELPATH"]
+        template_empty      = self.dict_templates["EMPTY"]
         header = Globals.uncomment + ' generated by dateimeister ' + ts + '\n'
         # copy files
         cmd_file_full = self.dict_gen_files[imagetype] # filename was already built by generate()
