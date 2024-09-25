@@ -44,24 +44,11 @@ import dateimeister_generator as DG
 #from Dateimeister import ToolTip
 
 _debug = True # False to eliminate debug printing from callback functions.
-_index_of_leftmost = -1
-_canvas_gallery_width_visible = 0
-_canvas_gallery_width_images = 0
-_canvas_gallery_width_all = 0
-_image = 0
-_dict_firstname_fullname = {}
-_processid_akt = 0
-_processid_high = 0
-_processid_incr = 10
-_list_processids = []
-_stack_processids = [] # list
 _dict_thumbnails = {}
 _dict_thumbnails_lineno = {}
 _dict_duplicates = {}
 _dict_duplicates_sourcefiles = {}
 _duplicates = False
-_dict_file_image = {} # key: Imagefilename, value MyFSImage-Objekt, mit fullscale Image, canvas id, window...
-_win_messages = None
 
 
 from enum import Enum
@@ -81,6 +68,7 @@ class Globals:
     config_files_subdir = None
     cmd_files_subdir    = None
     delay_default = 20 #ToDo: Ini
+    datadir = ""
 
 class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
@@ -400,7 +388,7 @@ class MyFSImage:
             self.w2.Button_exclude.config(text = "Include")
             self.w2.Label_status.config(text = "Excluded")
     
-    def close_handler(self): #calles when window is closing: delete player and fsimage, remove from _dict_file_image
+    def close_handler(self): #calles when window is closing: delete player and fsimage, remove from dict_file_image
         t = self.dict_caller[self.file]
         self.thumbnail.register_FSimage(None)
         self.dict_caller.pop(self.file)
@@ -410,11 +398,10 @@ class MyFSImage:
         self.root2.destroy()
         del t
         
-    def close_handler_external(self): # called from external. Do the same things as close_handler, except remove from _dict_file_image
+    def close_handler_external(self): # called from external. Do the same things as close_handler, except remove from dict_file_image
         # can be called from main window or Duplicates-Window which use different dicts
         t = self.dict_caller[self.file]
         self.thumbnail.register_FSimage(None)
-        #_dict_file_image.pop(self.file) # the dict is dont do this when calles from external, because probably dict is in use
         if self.player is not None:
             self.player.pstop()
             del self.player
@@ -603,7 +590,7 @@ class MyDuplicates:
                 print ("FSImage restart file: " + file)
                 player.restart()
                 fs_image.setPlaystatus('play') # Status, Buttontext
-        else: # ein neues Objekt anlegen und in _dict_file_image eintragen
+        else: # ein neues Objekt anlegen und in self.dict_file_image eintragen
             print ("FSImage does not exist for file: " + file)
             fs_image = MyFSImage(file, thumbnail, self.dict_file_image, self.main)
             self.dict_file_image[file] = fs_image
@@ -1065,7 +1052,7 @@ class MyMessagesWindow:
         self.w.Label_script.config(text = cmdfile)
         my_cmd = "call " + cmdfile 
         owndir = os.getcwd()
-        os.chdir(os.path.join(datadir, Globals.cmd_files_subdir))    
+        os.chdir(os.path.join(Globals.datadir, Globals.cmd_files_subdir))    
         my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         (output, error) = my_cmd_output.communicate()
         self.show_messages(output, True)
@@ -1730,7 +1717,7 @@ class MyCameraTreeview:
         print ("Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
         # wir we save the current xml-file to firstname-<processid>.xml
         # E:/Arbeit/python/Dateimeister_vor_git/daten/config/dateimeister_configfiles.xml
-        config_dir = os.path.join(datadir, Globals.config_files_subdir)
+        config_dir = os.path.join(Globals.datadir, Globals.config_files_subdir)
         xml_filename = Globals.config_files_xml
         # replace last . by <processid>.
         xml_filename = re.sub(r'\.([^\.]+)$', rf"_{self.processid_akt}.\1", xml_filename) # reconstruct newline in template
@@ -1795,12 +1782,18 @@ class Dateimeister_support:
         self.context_menu = None
         self.timestamp = datetime.now()
         self.use_camera_prefix = True
+        self.processid_akt = 0
+        self.processid_high = 0
+        self.processid_incr = 10
+        self.list_processids = []
+        self.stack_processids = [] # list
+        self.win_messages = None
+
 
         self.init()
         self.root.mainloop()
 
     def init(self):
-        global button_indir_from_list, button_outdir_from_list, platform, datadir, oldcamera, dict_proctypes, _dict_file_image
         windll = ctypes.windll.kernel32
         self.codepage = windll.GetUserDefaultUILanguage()
         self.language = locale.windows_locale[ windll.GetUserDefaultUILanguage() ]
@@ -1813,7 +1806,7 @@ class Dateimeister_support:
         config.read(inifile)
         default_indir  = config["dirs"]["indir"]
         default_outdir = config["dirs"]["outdir"]
-        datadir = config["dirs"]["datadir"]
+        Globals.datadir = config["dirs"]["datadir"]
         Globals.config_files_subdir = config["dirs"]["config_files_subdir"]
         Globals.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
         Globals.config_files_xml = config["misc"]["config_files_xml"]
@@ -1829,13 +1822,13 @@ class Dateimeister_support:
         self.max_configfiles = config["misc"]["max_configfiles"]
         self.max_indirs      = config["misc"]["max_indirs"]
         self.max_outdirs     = config["misc"]["max_outdirs"]
-        platform = config["misc"]["platform"].upper()
-        if platform != "UNIX" and platform != "WINDOWS":
+        self.platform = config["misc"]["platform"].upper()
+        if self.platform != "UNIX" and self.platform != "WINDOWS":
             messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + platform)
             exit()
         
         self.dict_templates = {}
-        _dict_file_image = {}
+        self.dict_file_image = {}
 
 
         # configure some controls
@@ -1895,8 +1888,8 @@ class Dateimeister_support:
         
         self.label_indir  = self.w.Label_indir
         self.label_outdir = self.w.Label_outdir
-        button_indir_from_list = self.w.Button_indir_from_list
-        button_outdir_from_list = self.w.Button_outdir_from_list
+        self.button_indir_from_list = self.w.Button_indir_from_list
+        self.button_outdir_from_list = self.w.Button_outdir_from_list
         
         # Scrollbars
         V = Scrollbar(self.w.Frame1)
@@ -2007,8 +2000,8 @@ class Dateimeister_support:
         self.combobox_outdir.bind('<Double-1>', self.combobox_outdir_double)
         self.combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
         self.combobox_outdir.bind("<<ListboxSelect>>", lambda event: self.combobox_outdir_check_exist(event))
-        button_indir_from_list.config(command = self.combobox_indir_double)  
-        button_outdir_from_list.config(command = self.combobox_outdir_double)  
+        self.button_indir_from_list.config(command = self.combobox_indir_double)  
+        self.button_outdir_from_list.config(command = self.combobox_outdir_double)  
         
         self.label_indir.config(text = default_indir)
         self.label_outdir.config(text = default_outdir)
@@ -2020,7 +2013,7 @@ class Dateimeister_support:
         images = []
         self.dict_image_lineno = {}
         self.title = self.root.title()
-        oldcamera = ""
+        self.oldcamera = ""
 
         
         # Fenstergröße
@@ -2093,9 +2086,9 @@ class Dateimeister_support:
             ii += 1
         if ii > 0:
             self.combobox_indir.select_set(0)
-            button_indir_from_list.config(state = NORMAL)
+            self.button_indir_from_list.config(state = NORMAL)
         else: 
-            button_indir_from_list.config(state = DISABLED)
+            self.button_indir_from_list.config(state = DISABLED)
         for ii in indexes:
             self.combobox_indir.itemconfig(ii, fg="gray")
 
@@ -2124,9 +2117,9 @@ class Dateimeister_support:
             ii += 1
         if ii > 0:
             self.combobox_outdir.select_set(0)
-            button_outdir_from_list.config(state = NORMAL)
+            self.button_outdir_from_list.config(state = NORMAL)
         else: 
-            button_outdir_from_list.config(state = DISABLED)
+            self.button_outdir_from_list.config(state = DISABLED)
         for ii in indexes:
             self.combobox_outdir.itemconfig(ii, fg="gray")
         
@@ -2172,7 +2165,7 @@ class Dateimeister_support:
         # get config_files for indir / type
         
         endung = 'xml'
-        self.config_file = fd.askopenfilename(initialdir = os.path.join(datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
+        self.config_file = fd.askopenfilename(initialdir = os.path.join(Globals.datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
         self.filemenu.entryconfig(4, state=NORMAL)
         self.root.title(self.title + ' ' + self.config_file)
         self.filemenu.entryconfig(2, state=NORMAL)
@@ -2215,7 +2208,7 @@ class Dateimeister_support:
 
     def saveas_config(self): # Config-xml unter neuem Namen sichern
         endung = 'xml'
-        self.config_file = fd.asksaveasfilename(initialdir = os.path.join(datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
+        self.config_file = fd.asksaveasfilename(initialdir = os.path.join(Globals.datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
         if (len(self.config_file) > 0):
             match = re.search(rf".*?{endung}$", self.config_file)
             if match:
@@ -2417,7 +2410,6 @@ class Dateimeister_support:
         self.label_outdir.config(text = outdir)
 
     def B_camera_press(self, *args):
-        global oldcamera
         if _debug:
             print('Dateimeister_support.B_camera_press')
             for arg in args:
@@ -2431,7 +2423,7 @@ class Dateimeister_support:
         self.insert_text(self.o_camera, thiscamera)
         self.button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
         self.button_call.config(state = NORMAL)
-        if thiscamera != oldcamera:
+        if thiscamera != self.oldcamera:
             self.button_undo.config(state = DISABLED)    
             self.button_redo.config(state = DISABLED)
             self.clear_text(self.t_text1)
@@ -2443,7 +2435,7 @@ class Dateimeister_support:
             Globals.button_duplicates.config(state = DISABLED)
             self.label_num.config(text = "0")
             self.clear_textbox(self.lb_gen)
-            oldcamera = thiscamera
+            self.oldcamera = thiscamera
             if Globals.imagetype in Globals.thumbnails:
                 print("try to delete thumbnails...")
                 Globals.thumbnails[Globals.imagetype].clear()
@@ -2452,9 +2444,8 @@ class Dateimeister_support:
                 _dict_thumbnails[Globals.imagetype] = {}
 
     def Press_generate(self, *args):
-        global _dict_firstname_fullname, _dict_duplicates, _dict_duplicates_sourcefiles, \
-            _outdir, dict_source_target, dict_relpath, dict_gen_files_delrelpath, dict_source_target_tooold, dict_outdirs, _dict_file_image
-        global _processid_high, _processid_akt, _list_processids, _stack_processids
+        global _dict_duplicates, _dict_duplicates_sourcefiles, \
+            _outdir, dict_source_target, dict_relpath, dict_gen_files_delrelpath, dict_source_target_tooold, dict_outdirs
         if _debug:
             print('Dateimeister_support.B_camera_press')
             for arg in args:
@@ -2465,10 +2456,10 @@ class Dateimeister_support:
         # cleanup
         self.close_child_windows()
         # reset all process-states
-        _processid_akt  = 0
-        _processid_high = 0
-        _list_processids = []
-        _stack_processids = []
+        self.processid_akt  = 0
+        self.processid_high = 0
+        self.list_processids = []
+        self.stack_processids = []
         self.button_undo.config(state = DISABLED)    
         self.button_redo.config(state = DISABLED)
         
@@ -2521,7 +2512,7 @@ class Dateimeister_support:
         dict_source_target_tooold = {}
         dict_relpath = {}
         dict_gen_files_delrelpath = {}
-        _dict_firstname_fullname = {}
+        self.dict_firstname_fullname = {}
         dict_outdirs = {}
 
         # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
@@ -2566,22 +2557,22 @@ class Dateimeister_support:
             print(dateityp + " F NUM: " + str(num_files))
             # save name for cmdfile
             cmd_file_name = "_copy_" + dateityp + '.cmd'
-            cmd_file_full = os.path.join(datadir, Globals.cmd_files_subdir, cmd_file_name)
+            cmd_file_full = os.path.join(Globals.datadir, Globals.cmd_files_subdir, cmd_file_name)
             # generierte Dateien in dict festhalten
             self.dict_gen_files[dateityp] = cmd_file_full
-            #print("self.dict_gen_files[dateityp]: ", str(self.dict_gen_files[dateityp]), " datadir is: ", datadir)
+            #print("self.dict_gen_files[dateityp]: ", str(self.dict_gen_files[dateityp]), " datadir is: ", Globals.datadir)
 
             # save name for delete files
             # important: subdir MUST NOT start with a slash!
             cmd_file_name_delete = "_delete_" + dateityp + '.cmd'
-            cmd_file_full_delete = os.path.join(datadir, Globals.cmd_files_subdir, cmd_file_name_delete)
+            cmd_file_full_delete = os.path.join(Globals.datadir, Globals.cmd_files_subdir, cmd_file_name_delete)
             # generierte Dateien in dict festhalten
             self.dict_gen_files_delete[dateityp] = cmd_file_full_delete
             #print("dict_gen_files_delete[dateityp]: ", str(self.dict_gen_files_delete[dateityp]))
 
             # save name for delrelpath files
             cmd_file_name_delrelpath = "_delrelpath_" + dateityp + '.cmd'
-            cmd_file_full_delrelpath = os.path.join(datadir, Globals.cmd_files_subdir, cmd_file_name_delrelpath)
+            cmd_file_full_delrelpath = os.path.join(Globals.datadir, Globals.cmd_files_subdir, cmd_file_name_delrelpath)
             # generierte Dateien in dict festhalten
             dict_gen_files_delrelpath[dateityp] = cmd_file_full_delrelpath
             #print("dict_gen_files_delrelpath[dateityp]: ", str(dict_gen_files_delrelpath[dateityp]))
@@ -2617,7 +2608,7 @@ class Dateimeister_support:
                         _dict_duplicates_sourcefiles[mysource] = mytarget
             #print("_dict_duplicates: " + str(_dict_duplicates[dateityp])) 
 
-            # alle Dateien aus der gerade verarbeiteten cmd-Datei tragen wir in _dict_firstname_fullname ein, wenn type = JPEG
+            # alle Dateien aus der gerade verarbeiteten cmd-Datei tragen wir in dict_firstname_fullname ein, wenn type = JPEG
         regpattern = r'[\/\\]([^\/\\.]+)\.([^\/\\.]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
         regpattern_source = r'"([^"]+)"' # Sourcefile
         target_file = ""
@@ -2643,9 +2634,9 @@ class Dateimeister_support:
                     exit()
                 process_type = self.dict_process_image[lastname].upper()
                 if (process_type == "JPEG"):
-                    if firstname.upper() not in _dict_firstname_fullname:
-                        _dict_firstname_fullname[firstname.upper()] = []
-                    _dict_firstname_fullname[firstname.upper()].append(this_sourcefile) # es kann ja in den ganzen Verzeichnissen mehrere jpegs mit demselben Vornamen geben  
+                    if firstname.upper() not in self.dict_firstname_fullname:
+                        self.dict_firstname_fullname[firstname.upper()] = []
+                    self.dict_firstname_fullname[firstname.upper()].append(this_sourcefile) # es kann ja in den ganzen Verzeichnissen mehrere jpegs mit demselben Vornamen geben  
 
         self.l_label1.config(text = "Output from Dateimeister")
                 
@@ -2665,12 +2656,8 @@ class Dateimeister_support:
         self.write_cmdfiles()
     
     def Button_be_pressed(self, *args):
-        global _canvas_gallery_width_visible
-        global _canvas_gallery_width_images
-        global _canvas_gallery_width_all
-        global _lastposition, _dict_file_image
-        global _dict_duplicates, _duplicates, _dict_duplicates_sourcefiles, dict_source_target, _win_messages
-        global _processid_high, _processid_akt, _list_processids, _stack_processids
+        global _lastposition
+        global _dict_duplicates, _duplicates, _dict_duplicates_sourcefiles, dict_source_target
 
         if _debug:
             print('Dateimeister_support.Press_be_out')
@@ -2680,10 +2667,10 @@ class Dateimeister_support:
             sys.stdout.flush()
 
         # reset all process-states
-        _processid_akt  = 0
-        _processid_high = 0
-        _list_processids = []
-        _stack_processids = []
+        self.processid_akt  = 0
+        self.processid_high = 0
+        self.list_processids = []
+        self.stack_processids = []
         self.button_undo.config(state = DISABLED)    
         self.button_redo.config(state = DISABLED)
         self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
@@ -2741,7 +2728,7 @@ class Dateimeister_support:
         # können hier passende RAW-DLLs aufgerufen werden, z.b. mit Name der DLL in der Ini-Datei
         canvas_height = self.canvas_gallery.winfo_height()
         canvas_width  = self.canvas_gallery.winfo_width()
-        _canvas_gallery_width_visible = self.canvas_gallery.winfo_width() # Fensterbreite
+        self.canvas_gallery_width_visible = self.canvas_gallery.winfo_width() # Fensterbreite
         _lastposition = 0
         _dict_thumbnails[imagetype] = {}
         _dict_thumbnails_lineno[imagetype] = {}
@@ -2765,8 +2752,8 @@ class Dateimeister_support:
             if (process_type == "JPEG"):
                 showfile = file # Image-file to show in Canvas
             elif process_type == "USE_JPEG":
-                if firstname.upper() in _dict_firstname_fullname:
-                    showfile = _dict_firstname_fullname[firstname.upper()][-1]
+                if firstname.upper() in self.dict_firstname_fullname:
+                    showfile = self.dict_firstname_fullname[firstname.upper()][-1]
                     #print ("*** JPEG found for " + file + " using " + showfile)
                 else:
                     showfile = "none"
@@ -2880,17 +2867,17 @@ class Dateimeister_support:
         # the frame for selected image
         # Globals.gap haben wir einmal zuviel (fürs letzte) gezählt
         _lastposition -= Globals.gap
-        #print ("Canvas_gallery sichtbare Breite : " + str(_canvas_gallery_width_visible))
+        #print ("Canvas_gallery sichtbare Breite : " + str(self.canvas_gallery_width_visible))
         # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
         if len(Globals.thumbnails[imagetype]) > 0: 
             thumbnail = Globals.thumbnails[imagetype][-1]
-            rect_len = _canvas_gallery_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + Globals.gap)
+            rect_len = self.canvas_gallery_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + Globals.gap)
             self.canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + rect_len, canvas_height, fill="yellow")
             self.canvas_gallery.config(scrollregion = self.canvas_gallery.bbox('all')) 
-            _canvas_gallery_width_images = self.canvas_gallery.bbox('images')[2]
-            _canvas_gallery_width_all    = self.canvas_gallery.bbox('all')[2]
-            #print ("Canvas_gallery totale Breite(Images): " + str(_canvas_gallery_width_images) + " totale Breite(All): " + str(_canvas_gallery_width_all) \
-            #    + " visible: " + str(_canvas_gallery_width_visible) + " lastposition: " + str(_lastposition))
+            self.canvas_gallery_width_images = self.canvas_gallery.bbox('images')[2]
+            self.canvas_gallery_width_all    = self.canvas_gallery.bbox('all')[2]
+            #print ("Canvas_gallery totale Breite(Images): " + str(self.canvas_gallery_width_images) + " totale Breite(All): " + str(self.canvas_gallery_width_all) \
+            #    + " visible: " + str(self.canvas_gallery_width_visible) + " lastposition: " + str(_lastposition))
         
         # Pfeiltasten für Scrollen einrichten
         self.canvas_gallery.focus_set()
@@ -2932,9 +2919,9 @@ class Dateimeister_support:
         self.label_num.config(text = str(self.num_images))
         self.button_exec.config(state = NORMAL)
         self.write_cmdfile(imagetype)
-        if _win_messages is not None: # stop MyMessagesWindow-Objekt
-            _win_messages.close_handler()
-            _win_messages = None
+        if self.win_messages is not None: # stop MyMessagesWindow-Objekt
+            self.win_messages.close_handler()
+            self.win_messages = None
         self.canvas_gallery.xview('moveto', 0)
 
     def state_gen_required(self):
@@ -3019,20 +3006,19 @@ class Dateimeister_support:
             DX.new_outdir(Globals.config_files_xml, dir_chosen, ts)
 
     def close_child_windows(self): #closes duplicates, fs-images and exec-windows    
-        global _dict_file_image, _win_messages
         # cleanup
         self.stop_all_players() # should not continue running 
         if self.win_duplicates is not None: # stop MyDuplicates-Objekt
             self.win_duplicates.close_handler()
             self.win_duplicates = None
         # delete all fsimage by close-call
-        for t in _dict_file_image:
-            u = _dict_file_image[t]
+        for t in self.dict_file_image:
+            u = self.dict_file_image[t]
             u.close_handler_external()
-        _dict_file_image = {}
-        if _win_messages is not None: # stop MyMessagesWindow-Objekt
-            _win_messages.close_handler()
-            _win_messages = None
+        self.dict_file_image = {}
+        if self.win_messages is not None: # stop MyMessagesWindow-Objekt
+            self.win_messages.close_handler()
+            self.win_messages = None
 
     def get_templates(self):
         self.dict_templates = {}
@@ -3055,11 +3041,10 @@ class Dateimeister_support:
         #print(templates)
             
     def button_exec_pressed(self):
-        global _win_messages
-        if _win_messages is not None: # stop MyMessagesWindow-Objekt
-            _win_messages.close_handler()
-            _win_messages = None
-        _win_messages = MyMessagesWindow(self, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], dict_gen_files_delrelpath[Globals.imagetype]) 
+        if self.win_messages is not None: # stop MyMessagesWindow-Objekt
+            self.win_messages.close_handler()
+            self.win_messages = None
+        self.win_messages = MyMessagesWindow(self, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], dict_gen_files_delrelpath[Globals.imagetype]) 
 
     def write_cmdfiles(self):
         for imagetype in dict_source_target:
@@ -3121,18 +3106,15 @@ class Dateimeister_support:
 
     def xview(self, *args):
         #print (*args)
-        global _canvas_gallery_width_visible
-        global _canvas_gallery_width_images
-        global _canvas_gallery_width_all
         s1 = 0.0
         s2 = 1.0
         scrolldelta = 0
         width_scrollbar = self.scroll_canvas_x.winfo_width()
         canvas_x = int(self.canvas_gallery.canvasx(0))
         canvas_y = int(self.canvas_gallery.canvasy(0))
-        #print ("Scroll totale Breite(Images): " + str(_canvas_gallery_width_images) + " totale Breite(All): " + str(_canvas_gallery_width_all) \
-        #    + " visible: " + str(_canvas_gallery_width_visible)  + " canvas_x: " + str(canvas_x))
-        slider_width = int((_canvas_gallery_width_visible / _canvas_gallery_width_all) * width_scrollbar)
+        #print ("Scroll totale Breite(Images): " + str(self.canvas_gallery_width_images) + " totale Breite(All): " + str(self.canvas_gallery_width_all) \
+        #    + " visible: " + str(self.canvas_gallery_width_visible)  + " canvas_x: " + str(canvas_x))
+        slider_width = int((self.canvas_gallery_width_visible / self.canvas_gallery_width_all) * width_scrollbar)
         # aktuelle Scroll-Position des Canvas
         # aktuelle position der Scrollbar
         scrollposition = self.scroll_canvas_x.get()[0]
@@ -3157,10 +3139,10 @@ class Dateimeister_support:
                 
                 new_canvas_x = canvas_x + scrolldelta
                 # nach links scrollen machr keinen Sinn, wenn wir schon ganz links stehen, analog rechts
-                if (int(args[1]) < 0 and canvas_x <= 0) or (int(args[1]) > 0 and new_canvas_x >= _canvas_gallery_width_images):
+                if (int(args[1]) < 0 and canvas_x <= 0) or (int(args[1]) > 0 and new_canvas_x >= self.canvas_gallery_width_images):
                    return
-                s2 = new_canvas_x / _canvas_gallery_width_all
-                s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
+                s2 = new_canvas_x / self.canvas_gallery_width_all
+                s1 = (new_canvas_x - slider_width) / self.canvas_gallery_width_all
                 #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
             self.scroll_canvas_x.set(s1, s2)
             self.canvas_gallery.xview('moveto', s2)
@@ -3182,14 +3164,14 @@ class Dateimeister_support:
                     else: #found
                         dothumbnail = False
                 # get thumbnail at right border
-                posx = canvas_x + _canvas_gallery_width_visible # start
+                posx = canvas_x + self.canvas_gallery_width_visible # start
                 dothumbnail = True
                 while dothumbnail:
                     thumbnail, index = self.get_thumbnail_by_position(posx, canvas_y)
                     if thumbnail is not None:
                         # we have to check, if whole canvas is filled by a very wide image (panorama), in which case we scroll by width of canvas
                         if thumbnail == thumbnail_current:
-                            scrolldelta = _canvas_gallery_width_visible
+                            scrolldelta = self.canvas_gallery_width_visible
                         else:
                             tfile = thumbnail.getFile()
                             #print("Image at right: " + tfile + " last: " + thumbnail_last.getFile() + " last-end: " + str(thumbnail_last.getEnd()))
@@ -3197,9 +3179,9 @@ class Dateimeister_support:
                             dothumbnail = False
                     else: # no thumbnail, we check if there are no more images at right
                         #print("scrolling right, end of last image: " + str(thumbnail_last.getFile()) + " " + str(thumbnail_last.getEnd()) + \
-                        #  " End of canvas: " + str(canvas_x + _canvas_gallery_width_visible))
-                        if canvas_x + _canvas_gallery_width_visible >= thumbnail_last.getEnd(): # no image at right position of canvas, do nothing
-                            #print("*** reached the end of scrolling right, end of last image: " + str(thumbnail_last.getFile()) + " " + str(thumbnail_last.getEnd()) + " End of canvas: " + str(canvas_x + _canvas_gallery_width_visible))
+                        #  " End of canvas: " + str(canvas_x + self.canvas_gallery_width_visible))
+                        if canvas_x + self.canvas_gallery_width_visible >= thumbnail_last.getEnd(): # no image at right position of canvas, do nothing
+                            #print("*** reached the end of scrolling right, end of last image: " + str(thumbnail_last.getFile()) + " " + str(thumbnail_last.getEnd()) + " End of canvas: " + str(canvas_x + self.canvas_gallery_width_visible))
                             dothumbnail = False
                             return
                         else: #could be gap, so look at position - gap
@@ -3216,7 +3198,7 @@ class Dateimeister_support:
                         #print("current retry...")
                     else: #found
                         dothumbnail = False
-                targetposition = max(thumbnail_current.getEnd() - _canvas_gallery_width_visible, 0) # scroll to the target which is width_visible ahead of position of left
+                targetposition = max(thumbnail_current.getEnd() - self.canvas_gallery_width_visible, 0) # scroll to the target which is width_visible ahead of position of left
                 posx = targetposition
                 dothumbnail = True
                 while dothumbnail: #while because targetposition could be on gap
@@ -3231,7 +3213,7 @@ class Dateimeister_support:
                 #print("Target for scroll left: " + tfile + " position: " + str(targetposition) + " current at left border: " + cfile + " start: " + str(thumbnail_current.getStart()))
                 # we have to check, if whole canvas is filled by a very wide image (panorama), in which case we scroll by width of canvas
                 if thumbnail_target == thumbnail_current:
-                    scrolldelta = -_canvas_gallery_width_visible
+                    scrolldelta = -self.canvas_gallery_width_visible
                 else:
                     # if leftmost visible would completely disappear by scroll left, target is nect thumbnail
                     a = targetposition - thumbnail_target.getStart() # actual scrollamount, we need the thumbnail acual at left side of cnvas
@@ -3246,10 +3228,10 @@ class Dateimeister_support:
 
             new_canvas_x = canvas_x + scrolldelta
             # nach links scrollen machr keinen Sinn, wenn wir schon ganz links stehen, analog rechts
-            if (int(args[1]) < 0 and canvas_x <= 0) or (int(args[1]) > 0 and new_canvas_x >= _canvas_gallery_width_images):
+            if (int(args[1]) < 0 and canvas_x <= 0) or (int(args[1]) > 0 and new_canvas_x >= self.canvas_gallery_width_images):
                return
-            s2 = new_canvas_x / _canvas_gallery_width_all
-            s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
+            s2 = new_canvas_x / self.canvas_gallery_width_all
+            s1 = (new_canvas_x - slider_width) / self.canvas_gallery_width_all
             #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
             self.scroll_canvas_x.set(s1, s2)
             self.canvas_gallery.xview('moveto', s2)
@@ -3302,13 +3284,10 @@ class Dateimeister_support:
 
 
     def scrollToImage(self, thumbnail): # scroll to start-position of thumbnail identified by filename
-        global _canvas_gallery_width_visible
-        global _canvas_gallery_width_images
-        global _canvas_gallery_width_all
         s1 = 0.0
         s2 = 1.0
         width_scrollbar = self.scroll_canvas_x.winfo_width()
-        slider_width = int((_canvas_gallery_width_visible / _canvas_gallery_width_all) * width_scrollbar)
+        slider_width = int((self.canvas_gallery_width_visible / self.canvas_gallery_width_all) * width_scrollbar)
         # aktuelle Scroll-Position des Canvas
         canvas_x = self.canvas_gallery.canvasx(0)
         canvas_y = self.canvas_gallery.canvasy(0)
@@ -3319,29 +3298,28 @@ class Dateimeister_support:
         if thumbnail is not None:
             scrolldelta = (thumbnail.getEnd() - canvas_x + Globals.gap)
             new_canvas_x = thumbnail.getStart()
-            s2 = new_canvas_x / _canvas_gallery_width_all
-            s1 = (new_canvas_x - slider_width) / _canvas_gallery_width_all
+            s2 = new_canvas_x / self.canvas_gallery_width_all
+            s1 = (new_canvas_x - slider_width) / self.canvas_gallery_width_all
             #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
         self.scroll_canvas_x.set(s1, s2)
         self.canvas_gallery.xview('moveto', s2)
 
     def display_image(self, thumbnail):
-        global _dict_file_image
         file = thumbnail.getShowfile()
         # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
-        if file in _dict_file_image:
+        if file in self.dict_file_image:
             print ("FSImage exists for file: " + file)
-            fs_image = _dict_file_image[file]
+            fs_image = self.dict_file_image[file]
             player = fs_image.getPlayer()
             if player is not None: # this is a video
                 print ("FSImage restart file: " + file)
                 player.restart()
                 fs_image.setPlaystatus('play') # Status, Buttontext
-        else: # ein neues Objekt anlegen und in _dict_file_image eintragen
+        else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file)
-                fs_image = MyFSImage(file, thumbnail, _dict_file_image, self)
-                _dict_file_image[file] = fs_image
+                fs_image = MyFSImage(file, thumbnail, self.dict_file_image, self)
+                self.dict_file_image[file] = fs_image
 
     def show_context_menu(self, event):
         global context_men, _event
@@ -3423,54 +3401,50 @@ class Dateimeister_support:
         
     # Undo /Redo Funktionen
     def process_undo(self, event):
-        global _processid_akt, _processid_high, _processid_incr, _list_processids, _stack_processids
         print("ctrl_z pressed.")
         # if there is a predecessor in list_processids (len > 1):
         #   move processid_akt from list_processids to undo-stack, then apply new act (predecessor) giving the processids from act and undone
-        num_elements = len(_list_processids)
+        num_elements = len(self.list_processids)
         if num_elements <= 1:
             messagebox.showinfo("UNDO", "no further processes which can be undone")
         else:
-            processid_undone = _list_processids[-1] # last element
-            _stack_processids.append(processid_undone)
-            _list_processids.pop() # removes last element
-            _processid_akt = _list_processids[-1] # "new" last element
-            print (" UNDO List Processids: " + str(_list_processids) + " REDO Stack Processids: " + str(_stack_processids))
-            self.apply_process_id(_processid_akt)
+            processid_undone = self.list_processids[-1] # last element
+            self.stack_processids.append(processid_undone)
+            self.list_processids.pop() # removes last element
+            self.processid_akt = self.list_processids[-1] # "new" last element
+            print (" UNDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
+            self.apply_process_id(self.processid_akt)
             self.endis_buttons()
 
     def process_redo(self, event):
-        global _processid_akt, _processid_high, _processid_incr, _list_processids, _stack_processids
         print("ctrl_y pressed.")
         # if there is an element in stack processids (len > 1):
         #   move last processid from stack processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
-        num_elements = len(_stack_processids)
+        num_elements = len(self.stack_processids)
         if num_elements < 1:
             messagebox.showinfo("REDO", "no further processes which can be redone")
         else:
-            processid_predecessor = _list_processids[-1] # last element
-            processid_redone = _stack_processids[-1] # last element
-            _list_processids.append(processid_redone)
-            _stack_processids.pop() # removes last element
-            _processid_akt = _list_processids[-1] # "new" last element
-            print (" REDO List Processids: " + str(_list_processids) + " REDO Stack Processids: " + str(_stack_processids))
-            self.apply_process_id(_processid_akt)
+            processid_predecessor = self.list_processids[-1] # last element
+            processid_redone = self.stack_processids[-1] # last element
+            self.list_processids.append(processid_redone)
+            self.stack_processids.pop() # removes last element
+            self.processid_akt = self.list_processids[-1] # "new" last element
+            print (" REDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
+            self.apply_process_id(self.processid_akt)
             self.endis_buttons()
 
     def endis_buttons(self): # disable / enable buttons depending on processids
-        global _processid_akt, _processid_high, _processid_incr, _list_processids, _stack_processids
-        if len(_list_processids) > 1:
+        if len(self.list_processids) > 1:
             self.button_undo.config(state = NORMAL)
         else:
             self.button_undo.config(state = DISABLED)
-        if len(_stack_processids) > 0:
+        if len(self.stack_processids) > 0:
             self.button_redo.config(state = NORMAL)
         else:
             self.button_redo.config(state = DISABLED)
 
     def apply_process_id(self, process_id):
         # set thumbnail-states according actual processid
-        global _processid_akt, _processid_high, _processid_incr
         i = 0
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
             thumbnail.setState(self.dict_status_image[process_id][i], None, False)
@@ -3479,17 +3453,16 @@ class Dateimeister_support:
         self.write_cmdfile(Globals.imagetype)
         
     def historize_process(self):
-        global _processid_akt, _processid_high, _processid_incr, _list_processids, _stack_processids
-        _processid_high += _processid_incr
-        _processid_akt = _processid_high
-        print ("Processid_high is now: " + str(_processid_high) + " Processid_akt is now: " + str(_processid_akt))
+        self.processid_high += self.processid_incr
+        self.processid_akt = self.processid_high
+        print ("Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
         # wir bilden jetzt zu der aktuellen processid eine Liste der states der thumbnails
-        self.dict_status_image[_processid_akt] = []
+        self.dict_status_image[self.processid_akt] = []
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
-            self.dict_status_image[_processid_akt].append(thumbnail.getState())
+            self.dict_status_image[self.processid_akt].append(thumbnail.getState())
         self.update_button_state() # refer to function comment
         
-        _list_processids.append(_processid_akt)
+        self.list_processids.append(self.processid_akt)
         # UNDO / REDO disabeln, wenn Aktion nicht möglich, weil es keine frühere / spätere Bearbeitung gibt
         self.endis_buttons()
 
@@ -3672,9 +3645,9 @@ class Dateimeister_support:
                 if imagetype in dict_source_target_tooold and sourcefile in dict_source_target_tooold[imagetype]:
                     comment = Globals.uncomment 
             targetfile = dict_files[sourcefile]
-            if platform == "WINDOWS":
+            if self.platform == "WINDOWS":
                 targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
-            elif platform == "UNIX":
+            elif self.platform == "UNIX":
                 targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
             str_ret = template_copy
             str_ret = str_ret.replace('<source>', sourcefile)
@@ -3703,9 +3676,9 @@ class Dateimeister_support:
                 if imagetype in dict_source_target_tooold and sourcefile in dict_source_target_tooold[imagetype]:
                     comment = Globals.uncomment 
             targetfile = dict_files[sourcefile]
-            if platform == "WINDOWS":
+            if self.platform == "WINDOWS":
                 targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
-            elif platform == "UNIX":
+            elif self.platform == "UNIX":
                 targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
             str_ret = template_delete
             str_ret = str_ret.replace('<source>', sourcefile)
@@ -3720,19 +3693,19 @@ class Dateimeister_support:
         thiscmdfile.write(header)
         outdir = dict_outdirs[imagetype]
         # for cmd we need backslash, for Unix slash
-        if platform == "WINDOWS":
+        if self.platform == "WINDOWS":
             outdir = re.sub(r'/', '\\\\', outdir) # replace / by \
-        elif platform == "UNIX":
+        elif self.platform == "UNIX":
             outdir = re.sub(r'\\', '/', outdir) # replace \ by /
         stroutfile = "@set OUTDIR=" + outdir + '\n'
         thiscmdfile.write(stroutfile) 
         for relpath in dict_relpath[imagetype]:
             comment = ""
             str_ret = template_delrelpath
-            if platform == "WINDOWS":
+            if self.platform == "WINDOWS":
                 str_ret = str_ret.replace('<trenner>', '\\')
                 relpath = re.sub(r'/', '\\\\', relpath) # replace / by \
-            elif platform == "UNIX":
+            elif self.platform == "UNIX":
                 str_ret = str_ret.replace('<trenner>', '/')
                 relpath = re.sub(r'\\', '/', relpath) # replace \ by /
             str_ret = str_ret.replace('<relpath>', relpath)
