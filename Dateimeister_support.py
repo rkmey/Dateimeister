@@ -44,11 +44,6 @@ import dateimeister_generator as DG
 #from Dateimeister import ToolTip
 
 _debug = True # False to eliminate debug printing from callback functions.
-_dict_thumbnails = {}
-_dict_thumbnails_lineno = {}
-_dict_duplicates = {}
-_dict_duplicates_sourcefiles = {}
-_duplicates = False
 
 
 from enum import Enum
@@ -69,6 +64,9 @@ class Globals:
     cmd_files_subdir    = None
     delay_default = 20 #ToDo: Ini
     datadir = ""
+    dict_thumbnails = {}
+    dict_duplicates = {}
+    outdir = ""
 
 class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
@@ -495,7 +493,7 @@ class MyDuplicates:
         self.root3.geometry(v_dim)
         self.root3.resizable(False, False)
         title = self.root3.title()
-        self.root3.title(title + " for " + _outdir)
+        self.root3.title(title + " for " + Globals.outdir)
 
         # horizontal scrollbar for cancas
         self.H_I = Scrollbar(self.f, orient = HORIZONTAL, command = self.xview)
@@ -515,7 +513,7 @@ class MyDuplicates:
         self.V_L.pack(side=RIGHT, fill=BOTH)
         self.w3.Listbox_dupl.config(yscrollcommand = self.V_L.set) 
         self.w3.Listbox_dupl.bind('<Double-1>', self.lb_double)
-        for key in _dict_duplicates[Globals.imagetype]:
+        for key in Globals.dict_duplicates[Globals.imagetype]:
             self.w3.Listbox_dupl.insert(END, key)
         self.w3.Listbox_dupl.select_set(0)
 
@@ -749,7 +747,7 @@ class MyDuplicates:
         self.f.delete('all')
         self.thumbnails_duplicates[Globals.imagetype] = []
         self.dict_thumbnails_duplicates[Globals.imagetype] = {}
-        list_duplicate_sourcefiles = _dict_duplicates[Globals.imagetype][target_file]
+        list_duplicate_sourcefiles = Globals.dict_duplicates[Globals.imagetype][target_file]
         self.lastposition = 0
         self.num_images = 0
         # distance from border for text-boxes
@@ -759,7 +757,7 @@ class MyDuplicates:
         height_scrollbar = self.H_I.winfo_height()
 
         for source_file in list_duplicate_sourcefiles:
-            thumbnail = _dict_thumbnails[Globals.imagetype][source_file]
+            thumbnail = Globals.dict_thumbnails[Globals.imagetype][source_file]
             showfile = thumbnail.getShowfile()
             state = thumbnail.getState() # we want to use the current state and copy it to the duplicate-thumbnail
             if showfile != 'none':
@@ -922,7 +920,7 @@ class MyDuplicates:
 
     def __del__(self):
         self.a = 1
-        print("*** Deleting MyDuplicates-Objekt. Outdir is " + str(_outdir))
+        print("*** Deleting MyDuplicates-Objekt. Outdir is " + str(Globals.outdir))
 
 # Message Output from generated scripts
 class MyMessagesWindow:
@@ -1788,8 +1786,15 @@ class Dateimeister_support:
         self.list_processids = []
         self.stack_processids = [] # list
         self.win_messages = None
-
-
+        self.dict_thumbnails_lineno = {}
+        self.dict_duplicates_sourcefiles = {}
+        self.duplicates = False
+        self.dict_outdirs = {}
+        self.dict_source_target = {}
+        self.dict_relpath = {}
+        self.dict_gen_files_delrelpath = {}
+        self.dict_source_target_tooold = {}
+        
         self.init()
         self.root.mainloop()
 
@@ -2182,12 +2187,12 @@ class Dateimeister_support:
             #print(image)
             #print(mystate)
             # apply config
-            if image in _dict_thumbnails[Globals.imagetype]:
-                if _dict_thumbnails[Globals.imagetype][image] in Globals.thumbnails[Globals.imagetype]:
+            if image in Globals.dict_thumbnails[Globals.imagetype]:
+                if Globals.dict_thumbnails[Globals.imagetype][image] in Globals.thumbnails[Globals.imagetype]:
                     if mystate == "state.INCLUDE":
-                        _dict_thumbnails[Globals.imagetype][image].setState(state.INCLUDE, None, False)
+                        Globals.dict_thumbnails[Globals.imagetype][image].setState(state.INCLUDE, None, False)
                     else:
-                        _dict_thumbnails[Globals.imagetype][image].setState(state.EXCLUDE, None, False)
+                        Globals.dict_thumbnails[Globals.imagetype][image].setState(state.EXCLUDE, None, False)
                 else:
                     print("thumbnail for " + Globals.imagetype + " file " + image + " not found")
                     print(Globals.thumbnails)
@@ -2439,13 +2444,11 @@ class Dateimeister_support:
             if Globals.imagetype in Globals.thumbnails:
                 print("try to delete thumbnails...")
                 Globals.thumbnails[Globals.imagetype].clear()
-            if Globals.imagetype in _dict_thumbnails:
+            if Globals.imagetype in Globals.dict_thumbnails:
                 print("try to delete dict_thumbnails...")
-                _dict_thumbnails[Globals.imagetype] = {}
+                Globals.dict_thumbnails[Globals.imagetype] = {}
 
     def Press_generate(self, *args):
-        global _dict_duplicates, _dict_duplicates_sourcefiles, \
-            _outdir, dict_source_target, dict_relpath, dict_gen_files_delrelpath, dict_source_target_tooold, dict_outdirs
         if _debug:
             print('Dateimeister_support.B_camera_press')
             for arg in args:
@@ -2498,22 +2501,22 @@ class Dateimeister_support:
         
         # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
         # Just correct it and run generate again
-        self.get_templates() # read them into dict_templates (global)
+        self.get_templates() # read them into dict_templates (instance variable)
         
         self.clear_text(self.t_text1)
         self.clear_textbox(self.lb_gen)
 
-        _dict_duplicates = {}
+        Globals.dict_duplicates = {}
         owndir = os.getcwd()
         self.dict_gen_files = {}
         self.dict_gen_files_delete = {}
-        dict_source_target = {}
+        self.dict_source_target = {}
         dict_source_target_jpeg = {}
-        dict_source_target_tooold = {}
-        dict_relpath = {}
-        dict_gen_files_delrelpath = {}
+        self.dict_source_target_tooold = {}
+        self.dict_relpath = {}
+        self.dict_gen_files_delrelpath = {}
         self.dict_firstname_fullname = {}
-        dict_outdirs = {}
+        self.dict_outdirs = {}
 
         # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
@@ -2536,23 +2539,22 @@ class Dateimeister_support:
 
             subdir = self.dict_subdirs[dateityp]
             thisoutdir = outdir + "/" + subdir
-            _outdir = thisoutdir # for setting title of duplicate-window
-            dict_outdirs[dateityp] = thisoutdir
+            self.dict_outdirs[dateityp] = thisoutdir
             endung= self.dict_cameras[thiscamera][dateityp]
             if self.use_camera_prefix:
                 target_prefix = thiscamera + '_'
             else:
                 target_prefix = ''
-            dict_source_target[dateityp] = {}
-            dict_relpath[dateityp] = {}
-            dict_source_target[dateityp], dict_source_target_jpeg[dateityp], dict_source_target_tooold[dateityp] = \
-              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, dict_relpath[dateityp])
-            dict_relpath[dateityp] = dict(reversed(list(dict_relpath[dateityp].items())))
-            for ii in dict_relpath[dateityp]:
-                print(" > ", ii, " files: ", dict_relpath[dateityp][ii])
+            self.dict_source_target[dateityp] = {}
+            self.dict_relpath[dateityp] = {}
+            self.dict_source_target[dateityp], dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp] = \
+              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, self.dict_relpath[dateityp])
+            self.dict_relpath[dateityp] = dict(reversed(list(self.dict_relpath[dateityp].items())))
+            for ii in self.dict_relpath[dateityp]:
+                print(" > ", ii, " files: ", self.dict_relpath[dateityp][ii])
             num_files = 0
-            for thisfile in dict_source_target[dateityp]:
-                #print("IN: " + thisfile + " OUT: " + dict_source_target[dateityp][thisfile])
+            for thisfile in self.dict_source_target[dateityp]:
+                #print("IN: " + thisfile + " OUT: " + self.dict_source_target[dateityp][thisfile])
                 num_files += 1
             print(dateityp + " F NUM: " + str(num_files))
             # save name for cmdfile
@@ -2574,10 +2576,10 @@ class Dateimeister_support:
             cmd_file_name_delrelpath = "_delrelpath_" + dateityp + '.cmd'
             cmd_file_full_delrelpath = os.path.join(Globals.datadir, Globals.cmd_files_subdir, cmd_file_name_delrelpath)
             # generierte Dateien in dict festhalten
-            dict_gen_files_delrelpath[dateityp] = cmd_file_full_delrelpath
-            #print("dict_gen_files_delrelpath[dateityp]: ", str(dict_gen_files_delrelpath[dateityp]))
+            self.dict_gen_files_delrelpath[dateityp] = cmd_file_full_delrelpath
+            #print("self.dict_gen_files_delrelpath[dateityp]: ", str(self.dict_gen_files_delrelpath[dateityp]))
 
-            _dict_duplicates[dateityp] = {}
+            Globals.dict_duplicates[dateityp] = {}
             print ("OUTDIR is " + thisoutdir + " ENDUNG is " + endung)
             #print ("OUTFILE is " + os.environ["OUTFILE"])
             # wenn die Endung wegen mehrerer Möglichkeiten (jpeg, jpg) mehr al 1 Eintrag hat, nehmen wir den letzten
@@ -2585,28 +2587,28 @@ class Dateimeister_support:
             self.clear_text(self.t_text1)
             # wir tragen die Dubletten ein       
             lineno = 0
-            for this_sourcefile in dict_source_target[dateityp]:
+            for this_sourcefile in self.dict_source_target[dateityp]:
                 lineno += 1
                 #print(line)
-                dupl_target_file = dict_source_target[dateityp][this_sourcefile].upper() #for duplicate target  check ignore case
-                if dupl_target_file not in _dict_duplicates[dateityp]:
-                    _dict_duplicates[dateityp][dupl_target_file] = []
-                _dict_duplicates[dateityp][dupl_target_file].append(this_sourcefile) # Duplicates  
-            # remove singles from  _dict_duplicates, we use a copy because we must not delete entries during iteration
-            # create _dict_duplicates_sourcefiles , key = sourcefile, value = targetfile
-            _dict_duplicates_sourcefiles[dateityp] = {}
+                dupl_target_file = self.dict_source_target[dateityp][this_sourcefile].upper() #for duplicate target  check ignore case
+                if dupl_target_file not in Globals.dict_duplicates[dateityp]:
+                    Globals.dict_duplicates[dateityp][dupl_target_file] = []
+                Globals.dict_duplicates[dateityp][dupl_target_file].append(this_sourcefile) # Duplicates  
+            # remove singles from  dict_duplicates, we use a copy because we must not delete entries during iteration
+            # create dict_duplicates_sourcefiles , key = sourcefile, value = targetfile
+            self.dict_duplicates_sourcefiles[dateityp] = {}
             dict_h = {}
-            dict_h = copy.deepcopy(_dict_duplicates[dateityp])
+            dict_h = copy.deepcopy(Globals.dict_duplicates[dateityp])
             for mytarget in dict_h:
                 #print("Duplcate Key: " + mytarget) 
                 mylist = dict_h[mytarget]
                 if len(mylist) == 1: # only 1 file
-                    del _dict_duplicates[dateityp][mytarget]
+                    del Globals.dict_duplicates[dateityp][mytarget]
                     #print("nodupl: ", str(mylist))
                 else:
                     for mysource in mylist:
-                        _dict_duplicates_sourcefiles[mysource] = mytarget
-            #print("_dict_duplicates: " + str(_dict_duplicates[dateityp])) 
+                        self.dict_duplicates_sourcefiles[mysource] = mytarget
+            #print("dict_duplicates: " + str(Globals.dict_duplicates[dateityp])) 
 
             # alle Dateien aus der gerade verarbeiteten cmd-Datei tragen wir in dict_firstname_fullname ein, wenn type = JPEG
         regpattern = r'[\/\\]([^\/\\.]+)\.([^\/\\.]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
@@ -2656,9 +2658,6 @@ class Dateimeister_support:
         self.write_cmdfiles()
     
     def Button_be_pressed(self, *args):
-        global _lastposition
-        global _dict_duplicates, _duplicates, _dict_duplicates_sourcefiles, dict_source_target
-
         if _debug:
             print('Dateimeister_support.Press_be_out')
             for arg in args:
@@ -2691,6 +2690,7 @@ class Dateimeister_support:
         imagetype = thistype
         Globals.imagetype = imagetype # auch in globaler Variable festhalten, da wir das an vielen Stellen brauchen
         subdir = self.dict_subdirs[imagetype]
+        Globals.outdir = self.dict_outdirs[imagetype] # for setting title of duplicate-window
         self.stop_all_players() # should not continue running 
         # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
         if imagetype in Globals.thumbnails:
@@ -2704,9 +2704,9 @@ class Dateimeister_support:
         self.l_label1.config(text = "Output from Dateimeister : " + filename)
         self.dict_image_lineno[imagetype] = {} # in Python muss das sein, sonst gehts in der nächsten Ebene nicht
         lineno = 0
-        #print(str(dict_source_target))
-        for this_sourcefile in dict_source_target[imagetype]:
-            this_targetfile = dict_source_target[imagetype][this_sourcefile]
+        #print(str(self.dict_source_target))
+        for this_sourcefile in self.dict_source_target[imagetype]:
+            this_targetfile = self.dict_source_target[imagetype][this_sourcefile]
             lineno += 1
             source_without_dir = re.sub(re.escape(self.label_indir.cget('text')), '', this_sourcefile)
             source_without_dir = re.sub(r'^[\\\/]', '', source_without_dir)
@@ -2729,13 +2729,13 @@ class Dateimeister_support:
         canvas_height = self.canvas_gallery.winfo_height()
         canvas_width  = self.canvas_gallery.winfo_width()
         self.canvas_gallery_width_visible = self.canvas_gallery.winfo_width() # Fensterbreite
-        _lastposition = 0
-        _dict_thumbnails[imagetype] = {}
-        _dict_thumbnails_lineno[imagetype] = {}
+        self.lastposition = 0
+        Globals.dict_thumbnails[imagetype] = {}
+        self.dict_thumbnails_lineno[imagetype] = {}
         self.num_images = 0
-        for file in dict_source_target[imagetype]:
+        for file in self.dict_source_target[imagetype]:
             self.num_images += 1
-            this_targetfile = dict_source_target[imagetype][file]
+            this_targetfile = self.dict_source_target[imagetype][file]
             # wir brauchen die Endung der Datei und den Vornamen
             regpattern = r'[\/\\]([^\/\\."]+)\.([^\/\\."]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
             match = re.search(regpattern, file)
@@ -2762,12 +2762,12 @@ class Dateimeister_support:
             elif process_type == 'VIDEO':
                 print("try to create new videoplayer...")
                 # create new videoplayer
-                player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height, _lastposition)
+                player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height, self.lastposition)
                 image_width, image_height, pimg = player.get_pimg()
                 showfile = file
             else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
                 showfile = "none"
-            if file in _dict_duplicates_sourcefiles: # for storing in Thumbnail
+            if file in self.dict_duplicates_sourcefiles: # for storing in Thumbnail
                 duplicate = 'j'
             else:
                 duplicate = 'n'
@@ -2790,16 +2790,16 @@ class Dateimeister_support:
                     pimg = ImageTk.PhotoImage(r_img)
                 # an den Thumbnails führen wir einige Attribute, außerdem sorgt die Liste dafür, dass der Garbage-Kollektor das Bild nicht löscht.
                 # indem wir es in eine Liste einfügen, bleibt der Referenz-Count > 0
-                id = self.canvas_gallery.create_image(_lastposition, 0, anchor='nw',image = pimg, tags = 'images')
-                text_id = self.canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
+                id = self.canvas_gallery.create_image(self.lastposition, 0, anchor='nw',image = pimg, tags = 'images')
+                text_id = self.canvas_gallery.create_text(self.lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
                 rect_id = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id), outline="blue", fill = "white", tag = 'rect')
-                text_id_num = self.canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(self.num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
+                text_id_num = self.canvas_gallery.create_text(self.lastposition + dist_text, image_height - dist_text, text=str(self.num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
                 rect_id_num = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
                 # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
-                north_west = (_lastposition + dist_frame, dist_frame)
-                north_east = (_lastposition + image_width - dist_frame, dist_frame)
-                south_west = (_lastposition + dist_frame, image_height - dist_frame)
-                south_east = (_lastposition + image_width - dist_frame, image_height - dist_frame)
+                north_west = (self.lastposition + dist_frame, dist_frame)
+                north_east = (self.lastposition + image_width - dist_frame, dist_frame)
+                south_west = (self.lastposition + dist_frame, image_height - dist_frame)
+                south_east = (self.lastposition + image_width - dist_frame, image_height - dist_frame)
                 line_north = self.canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
                 line_east  = self.canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
                 line_south = self.canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
@@ -2808,18 +2808,18 @@ class Dateimeister_support:
                 
                 if player is not None:
                     player.setId(id)
-                myimage = MyThumbnail(pimg, self, _lastposition, _lastposition + image_width, file, showfile, id, \
-                    text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, dict_source_target[imagetype][file], self.t_text1)
-                if file in dict_source_target_tooold[imagetype]: #start with state.exclude
+                myimage = MyThumbnail(pimg, self, self.lastposition, self.lastposition + image_width, file, showfile, id, \
+                    text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
+                if file in self.dict_source_target_tooold[imagetype]: #start with state.exclude
                     myimage.setState(state.EXCLUDE, None, False)
                     myimage.set_tooold(True)
                     self.canvas_gallery.itemconfig(text_id, text="EXC OVW")
                 Globals.thumbnails[imagetype].append(myimage)
-                _dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
-                _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
-                _lastposition += image_width + Globals.gap 
+                Globals.dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
+                self.dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
+                self.lastposition += image_width + Globals.gap 
                 if myimage.getDuplicate() == 'j':
-                    text_id_dup = self.canvas_gallery.create_text(_lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                    text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(self.dict_image_lineno[imagetype][file]))
                 if process_type != 'VIDEO':
@@ -2827,33 +2827,33 @@ class Dateimeister_support:
             else: # wir haben kein Bild, ein Rechteck einfügen
                 image_height = canvas_height
                 image_width  = int(canvas_height * 4 / 3)
-                id = self.canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + image_width, canvas_height, fill="blue", tags = 'images')
-                text_id = self.canvas_gallery.create_text(_lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
+                id = self.canvas_gallery.create_rectangle(self.lastposition, 0, self.lastposition + image_width, canvas_height, fill="blue", tags = 'images')
+                text_id = self.canvas_gallery.create_text(self.lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
                 rect_id = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id), outline="blue", fill = "white")
-                text_id_num = self.canvas_gallery.create_text(_lastposition + dist_text, image_height - dist_text, text=str(self.num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
+                text_id_num = self.canvas_gallery.create_text(self.lastposition + dist_text, image_height - dist_text, text=str(self.num_images), fill="red", font=('Helvetica 10 bold'), anchor =  "sw", tag = "numbers")
                 rect_id_num = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_num), outline="blue", fill = "white", tag = "rect_numbers")
                 # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
-                north_west = (_lastposition + dist_frame, dist_frame)
-                north_east = (_lastposition + image_width - dist_frame, dist_frame)
-                south_west = (_lastposition + dist_frame, image_height - dist_frame)
-                south_east = (_lastposition + image_width - dist_frame, image_height - dist_frame)
+                north_west = (self.lastposition + dist_frame, dist_frame)
+                north_east = (self.lastposition + image_width - dist_frame, dist_frame)
+                south_west = (self.lastposition + dist_frame, image_height - dist_frame)
+                south_east = (self.lastposition + image_width - dist_frame, image_height - dist_frame)
                 line_north = self.canvas_gallery.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
                 line_east  = self.canvas_gallery.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
                 line_south = self.canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
                 line_west  = self.canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
                 frameids = (line_north, line_east, line_south, line_west)
-                myimage = MyThumbnail(0, self, _lastposition, _lastposition + image_width, file, showfile, id, \
-                    text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, dict_source_target[imagetype][file], self.t_text1)
-                if file in dict_source_target_tooold[imagetype]: #start with state.exclude
+                myimage = MyThumbnail(0, self, self.lastposition, self.lastposition + image_width, file, showfile, id, \
+                    text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
+                if file in self.dict_source_target_tooold[imagetype]: #start with state.exclude
                     myimage.setState(state.EXCLUDE, None, False)
                     myimage.set_tooold(True)
                     self.canvas_gallery.itemconfig(text_id, text="EXC OVW")
                 Globals.thumbnails[imagetype].append(myimage)
-                _dict_thumbnails[imagetype][file] = myimage
-                _dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
-                _lastposition += image_width + Globals.gap 
+                Globals.dict_thumbnails[imagetype][file] = myimage
+                self.dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
+                self.lastposition += image_width + Globals.gap 
                 if myimage.getDuplicate() == 'j':
-                    text_id_dup = self.canvas_gallery.create_text(_lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                    text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup =self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(self.dict_image_lineno[imagetype][file]))
         self.canvas_gallery.tag_raise("dup_rect")
@@ -2866,24 +2866,24 @@ class Dateimeister_support:
         #self.canvas_gallery.tag_raise("imageframe")
         # the frame for selected image
         # Globals.gap haben wir einmal zuviel (fürs letzte) gezählt
-        _lastposition -= Globals.gap
+        self.lastposition -= Globals.gap
         #print ("Canvas_gallery sichtbare Breite : " + str(self.canvas_gallery_width_visible))
         # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
         if len(Globals.thumbnails[imagetype]) > 0: 
             thumbnail = Globals.thumbnails[imagetype][-1]
             rect_len = self.canvas_gallery_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + Globals.gap)
-            self.canvas_gallery.create_rectangle(_lastposition, 0, _lastposition + rect_len, canvas_height, fill="yellow")
+            self.canvas_gallery.create_rectangle(self.lastposition, 0, self.lastposition + rect_len, canvas_height, fill="yellow")
             self.canvas_gallery.config(scrollregion = self.canvas_gallery.bbox('all')) 
             self.canvas_gallery_width_images = self.canvas_gallery.bbox('images')[2]
             self.canvas_gallery_width_all    = self.canvas_gallery.bbox('all')[2]
             #print ("Canvas_gallery totale Breite(Images): " + str(self.canvas_gallery_width_images) + " totale Breite(All): " + str(self.canvas_gallery_width_all) \
-            #    + " visible: " + str(self.canvas_gallery_width_visible) + " lastposition: " + str(_lastposition))
+            #    + " visible: " + str(self.canvas_gallery_width_visible) + " lastposition: " + str(self.lastposition))
         
         # Pfeiltasten für Scrollen einrichten
         self.canvas_gallery.focus_set()
         self.button_include.config(state = NORMAL)
         self.button_exclude.config(state = NORMAL)
-        #print(_dict_duplicates)
+        #print(Globals.dict_duplicates)
         self.historize_process()
         if len(Globals.thumbnails[imagetype]) > 0:
             self.filemenu.entryconfig(1, state=NORMAL)
@@ -2894,13 +2894,13 @@ class Dateimeister_support:
             self.filemenu.entryconfig(2, state=DISABLED)
             self.filemenu.entryconfig(3, state=DISABLED)
             self.filemenu.entryconfig(4, state=DISABLED)
-        _duplicates = False
+        self.duplicates = False
         
-        for mytarget in _dict_duplicates[imagetype]:
+        for mytarget in Globals.dict_duplicates[imagetype]:
             #print("Duplcate Key: " + mytarget) 
-            mylist = _dict_duplicates[imagetype][mytarget]
+            mylist = Globals.dict_duplicates[imagetype][mytarget]
             if len(mylist) > 1: # es gibt 1...n Duplicates
-                _duplicates = True
+                self.duplicates = True
                 break
         
         if self.num_images > 0: # config makes no sense for zero images
@@ -2911,7 +2911,7 @@ class Dateimeister_support:
             # finally update recent menu
             self.update_recent_menu(indir, imagetype)
         
-        if _duplicates:
+        if self.duplicates:
             Globals.button_duplicates.config(state = NORMAL)
         else:
             Globals.button_duplicates.config(state = DISABLED)
@@ -2941,9 +2941,9 @@ class Dateimeister_support:
         if Globals.imagetype in Globals.thumbnails:
             print("try to delete thumbnails...")
             Globals.thumbnails[Globals.imagetype].clear()
-        if Globals.imagetype in _dict_thumbnails:
+        if Globals.imagetype in Globals.dict_thumbnails:
             print("try to delete dict_thumbnails...")
-            _dict_thumbnails[Globals.imagetype] = {}
+            Globals.dict_thumbnails[Globals.imagetype] = {}
 
     def new_dir_in_xml(self, dirtype, max_dirs, dir_chosen, ts):
         do_del = True
@@ -3044,10 +3044,10 @@ class Dateimeister_support:
         if self.win_messages is not None: # stop MyMessagesWindow-Objekt
             self.win_messages.close_handler()
             self.win_messages = None
-        self.win_messages = MyMessagesWindow(self, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], dict_gen_files_delrelpath[Globals.imagetype]) 
+        self.win_messages = MyMessagesWindow(self, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], self.dict_gen_files_delrelpath[Globals.imagetype]) 
 
     def write_cmdfiles(self):
-        for imagetype in dict_source_target:
+        for imagetype in self.dict_source_target:
             self.write_cmdfile(imagetype)
 
     def canvas_gallery_show(self, event):
@@ -3065,7 +3065,7 @@ class Dateimeister_support:
 
     def canvas_image_show(self):
         print("Context menu show")
-        self.canvas_gallery_show(_event)
+        self.canvas_gallery_show(self.event)
 
     def delay_decr(self, event): # speed +
         self.canvas_gallery.focus_set()
@@ -3243,8 +3243,8 @@ class Dateimeister_support:
     def text1_single(self, event): # synchronize text / gallery
         (row, col) = self.t_text1.index(tk.CURRENT).split(".")
         print(row, col)
-        if Globals.imagetype != "" and row in _dict_thumbnails_lineno[Globals.imagetype]:
-            thumbnail = _dict_thumbnails_lineno[Globals.imagetype][row]
+        if Globals.imagetype != "" and row in self.dict_thumbnails_lineno[Globals.imagetype]:
+            thumbnail = self.dict_thumbnails_lineno[Globals.imagetype][row]
             self.scrollToImage(thumbnail)
             thumbnail.scrollTextToLineno() # select this line
 
@@ -3260,8 +3260,8 @@ class Dateimeister_support:
     def text1_double(self, event): # synchronize text / gallery and display FSImage 
         (row, col) = self.t_text1.index(tk.CURRENT).split(".")
         print(row, col)
-        if Globals.imagetype != "" and row in _dict_thumbnails_lineno[Globals.imagetype]:
-            thumbnail = _dict_thumbnails_lineno[Globals.imagetype][row]
+        if Globals.imagetype != "" and row in self.dict_thumbnails_lineno[Globals.imagetype]:
+            thumbnail = self.dict_thumbnails_lineno[Globals.imagetype][row]
             if thumbnail is not None:
                 self.scrollToImage(thumbnail)
                 thumbnail.scrollTextToLineno() # select this line
@@ -3276,8 +3276,8 @@ class Dateimeister_support:
         print(event.char, event.keysym, event.keycode)
         print(row, col)
         if event.keysym == 'Up' or event.keysym == 'Down':
-            if Globals.imagetype != "" and row in _dict_thumbnails_lineno[Globals.imagetype]:
-                thumbnail = _dict_thumbnails_lineno[Globals.imagetype][row]
+            if Globals.imagetype != "" and row in self.dict_thumbnails_lineno[Globals.imagetype]:
+                thumbnail = self.dict_thumbnails_lineno[Globals.imagetype][row]
                 self.scrollToImage(thumbnail)
                 thumbnail.scrollTextToLineno() # select this line
         self.t_text1.mark_set(tk.INSERT, "%d.%d" % (int(row), 0))
@@ -3322,9 +3322,8 @@ class Dateimeister_support:
                 self.dict_file_image[file] = fs_image
 
     def show_context_menu(self, event):
-        global context_men, _event
         # das Event müssen wir speichern, da die eigenlichen Funktionen die x und y benötigen
-        _event = event
+        self.event = event
         # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
         canvas_x = self.canvas_gallery.canvasx(event.x)
         canvas_y = self.canvas_gallery.canvasy(event.y)
@@ -3384,14 +3383,14 @@ class Dateimeister_support:
      
     def canvas_image_exclude(self): # used for exclude and include
         print("Context menu exlude")
-        self.canvas_gallery_exclude(_event)
+        self.canvas_gallery_exclude(self.event)
 
     def canvas_video_restart(self):
         print("Context menu restart")
         self.canvas_gallery.focus_set()
 
-        canvas_x = self.canvas_gallery.canvasx(_event.x)
-        canvas_y = self.canvas_gallery.canvasy(_event.y)
+        canvas_x = self.canvas_gallery.canvasx(self.event.x)
+        canvas_y = self.canvas_gallery.canvasy(self.event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             player = thumbnail.getPlayer()
@@ -3497,9 +3496,9 @@ class Dateimeister_support:
     # Ende undo / redo-Funktionen
 
     def button_duplicates(self):
-        for mytarget in _dict_duplicates[Globals.imagetype]:
+        for mytarget in Globals.dict_duplicates[Globals.imagetype]:
             #print("Duplcate Key: " + mytarget) 
-            mylist = _dict_duplicates[Globals.imagetype][mytarget]
+            mylist = Globals.dict_duplicates[Globals.imagetype][mytarget]
             if len(mylist) > 1: # es gibt 1...n Duplicates
                 print("Duplcate Key: " + mytarget)
                 for mysource in mylist:
@@ -3507,12 +3506,10 @@ class Dateimeister_support:
         self.win_duplicates = MyDuplicates(self) 
        
     def menu_cameras_edit(self):
-        global _win_camera
-        _win_camera = MyCameraTreeview(self) 
+        self.win_camera = MyCameraTreeview(self) 
 
     def menu_diatisch(self):
-        global _win_diatisch
-        _win_diatisch = DIAT.Diatisch() 
+        self.win_diatisch = DIAT.Diatisch() 
 
     def on_window_destroy(self, a):
         a = 1
@@ -3629,20 +3626,20 @@ class Dateimeister_support:
         cmd_file_full = self.dict_gen_files[imagetype] # filename was already built by generate()
         thiscmdfile = open(cmd_file_full, 'w')
         thiscmdfile.write(header) 
-        dict_files = dict_source_target[imagetype]
+        dict_files = self.dict_source_target[imagetype]
         for sourcefile in dict_files:
             comment = ""
             do_include = False
             #print(imagetype + ', ' + sourcefile)
-            if imagetype in _dict_thumbnails and sourcefile in _dict_thumbnails[imagetype]:
-                thumbnail = _dict_thumbnails[imagetype][sourcefile]
+            if imagetype in Globals.dict_thumbnails and sourcefile in Globals.dict_thumbnails[imagetype]:
+                thumbnail = Globals.dict_thumbnails[imagetype][sourcefile]
                 if thumbnail.getState() == state.EXCLUDE:
                     comment = Globals.uncomment
                 else: # we have to incluse this file even if it is too old
                     do_include = True
             # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
             if do_include == False:
-                if imagetype in dict_source_target_tooold and sourcefile in dict_source_target_tooold[imagetype]:
+                if imagetype in self.dict_source_target_tooold and sourcefile in self.dict_source_target_tooold[imagetype]:
                     comment = Globals.uncomment 
             targetfile = dict_files[sourcefile]
             if self.platform == "WINDOWS":
@@ -3660,20 +3657,20 @@ class Dateimeister_support:
         cmd_file_full = self.dict_gen_files_delete[imagetype] # filename was already built by generate()
         thiscmdfile = open(cmd_file_full, 'w')
         thiscmdfile.write(header) 
-        dict_files = dict_source_target[imagetype]
+        dict_files = self.dict_source_target[imagetype]
         for sourcefile in dict_files:
             comment = ""
             do_include = False
             #print(imagetype + ', ' + sourcefile)
-            if imagetype in _dict_thumbnails and sourcefile in _dict_thumbnails[imagetype]:
-                thumbnail = _dict_thumbnails[imagetype][sourcefile]
+            if imagetype in Globals.dict_thumbnails and sourcefile in Globals.dict_thumbnails[imagetype]:
+                thumbnail = Globals.dict_thumbnails[imagetype][sourcefile]
                 if thumbnail.getState() == state.EXCLUDE:
                     comment = Globals.uncomment
                 else: # we have to incluse this file even if it is too old
                     do_include = True
             # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
             if do_include == False:
-                if imagetype in dict_source_target_tooold and sourcefile in dict_source_target_tooold[imagetype]:
+                if imagetype in self.dict_source_target_tooold and sourcefile in self.dict_source_target_tooold[imagetype]:
                     comment = Globals.uncomment 
             targetfile = dict_files[sourcefile]
             if self.platform == "WINDOWS":
@@ -3688,10 +3685,10 @@ class Dateimeister_support:
         thiscmdfile.close()
         
         # delrelpath files : remove addrelpath-generated files, but only if empty
-        cmd_file_full = dict_gen_files_delrelpath[imagetype] # filename was already built by generate()
+        cmd_file_full = self.dict_gen_files_delrelpath[imagetype] # filename was already built by generate()
         thiscmdfile = open(cmd_file_full, 'w')
         thiscmdfile.write(header)
-        outdir = dict_outdirs[imagetype]
+        outdir = self.dict_outdirs[imagetype]
         # for cmd we need backslash, for Unix slash
         if self.platform == "WINDOWS":
             outdir = re.sub(r'/', '\\\\', outdir) # replace / by \
@@ -3699,7 +3696,7 @@ class Dateimeister_support:
             outdir = re.sub(r'\\', '/', outdir) # replace \ by /
         stroutfile = "@set OUTDIR=" + outdir + '\n'
         thiscmdfile.write(stroutfile) 
-        for relpath in dict_relpath[imagetype]:
+        for relpath in self.dict_relpath[imagetype]:
             comment = ""
             str_ret = template_delrelpath
             if self.platform == "WINDOWS":
