@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 import Dateimeister
 from datetime import datetime, timezone
 import hashlib
+import Undo_Redo as UR
 
 
 from enum import Enum
@@ -220,6 +221,7 @@ class Diatisch:
         self.list_target_images = []
 
         # Undo /Redo control
+        self.UR = UR.Undo_Redo_Diatisch()
         self.processid_akt = 0
         self.processid_high = 0
         self.processid_incr = 10
@@ -825,6 +827,7 @@ class Diatisch:
             if not i.is_selected():
                 canvas.select_ctr += 1
                 i.select(canvas, canvas.select_ctr)
+        self.historize_process()
 
     def select_image(self, image, canvas):
         if not image.is_selected():
@@ -898,43 +901,37 @@ class Diatisch:
     # Undo /Redo Funktionen
     def process_undo(self, event):
         print("ctrl_z pressed.")
-        # if there is a predecessor in list_processids (len > 1):
-        #   move processid_akt from list_processids to undo-stack, then apply new act (predecessor) giving the processids from act and undone
-        num_elements = len(self.list_processids)
-        if num_elements <= 1:
+        rc, p_now, p_before = self.UR.process_undo()
+        if not rc: # undo was not possible
             messagebox.showinfo("UNDO", "no further processes which can be undone", parent = self.root)
         else:
-            processid_undone = self.list_processids[-1] # last element
-            self.stack_processids.append(processid_undone)
-            self.list_processids.pop() # removes last element
-            self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" UNDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids) + " apply processid: " + str(self.processid_akt))
-            self.apply_process_id(self.processid_akt, processid_undone)
+            self.apply_process_id(p_now, p_before)
             self.endis_buttons()
 
     def process_redo(self, event):
         print("ctrl_y pressed.")
-        # if there is an element in stack processids (len > 1):
-        #   move last processid from stack processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
-        num_elements = len(self.stack_processids)
-        if num_elements < 1:
+        rc, p_now, p_before = self.UR.process_redo()
+        if not rc:
             messagebox.showinfo("REDO", "no further processes which can be redone", parent = self.root)
         else:
-            processid_predecessor = self.list_processids[-1] # last element
-            processid_redone = self.stack_processids[-1] # last element
-            self.list_processids.append(processid_redone)
-            self.stack_processids.pop() # removes last element
-            self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" REDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids) + " apply processid: " + str(self.processid_akt))
-            self.apply_process_id(self.processid_akt, processid_predecessor)
+            self.apply_process_id(p_now, p_before)
             self.endis_buttons()
 
+    def button_undo_h(self, event = None):
+        print("Button Undo pressed")
+        self.process_undo(event)
+        
+    def button_redo_h(self, event = None):
+        print("Button Redo pressed")
+        self.process_redo(event)
+
     def endis_buttons(self): # disable / enable buttons depending on processids
-        if len(self.list_processids) > 1:
+        rc_undo, rc_redo = self.UR.endis_buttons()
+        if rc_undo:
             self.button_undo.config(state = NORMAL)
         else:
             self.button_undo.config(state = DISABLED)
-        if len(self.stack_processids) > 0:
+        if rc_redo:
             self.button_redo.config(state = NORMAL)
         else:
             self.button_redo.config(state = DISABLED)
@@ -1030,20 +1027,10 @@ class Diatisch:
         print("Hashsum source Filenames is: ", h.str_hashsum_source_filenames, " Hashsum target Filenames is: ", h.str_hashsum_target_filenames)
         print("Hashsum source Selection is: ", h.str_hashsum_source_selection, "(", str_source_selection, ")", " Hashsum target Selection is: ", h.str_hashsum_target_selection, "(", str_target_selection, ")")
         
-        self.processid_high += self.processid_incr
-        self.processid_akt = self.processid_high
-        self.dict_processid_histobj[self.processid_akt] = h
-        self.list_processids.append(self.processid_akt)
-        print (" Historize: Processid_akt is now: " + str(self.processid_akt))
+        self.UR.historize_process()
+        self.dict_processid_histobj[self.UR.get_processid_akt()] = h
         self.endis_buttons()
 
-    def button_undo_h(self, event = None):
-        print("Undo pressed")
-        self.process_undo((0, 0))
-        
-    def button_redo_h(self, event = None):
-        print("Redo pressed")
-        self.process_redo((0, 0))
     # Ende undo /redo-Funktionen
 
 class HistObj:
