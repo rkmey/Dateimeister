@@ -41,6 +41,7 @@ import dateimeister_config_xml as DX
 import dateimeister_video as DV
 import Diatisch as DIAT
 import dateimeister_generator as DG
+import Undo_Redo as UR
 #from Dateimeister import ToolTip
 
 _debug = True # False to eliminate debug printing from callback functions.
@@ -1161,15 +1162,12 @@ class MyCameraTreeview:
         self.entry_suffix.config(state = DISABLED)                  
         self.entry_subdir.config(state = DISABLED)                  
 
-        # Undo /Redo Funktionen
-        self.processid_akt = 0
-        self.processid_high = 0
-        self.processid_incr = 10
+        # Undo /Redo control
+        self.UR = UR.Undo_Redo_Camera()
         self.dict_processid_xmlfile = {}
-        self.list_processids = []
-        self.stack_processids = [] # list
         # historize initial state
         self.historize_process()
+        # Undo /Redo control end
 
         self.lock_treeview(False)
         # populate proctype submenue with proctypes from ini
@@ -1632,52 +1630,46 @@ class MyCameraTreeview:
 
 
 
-    # Undo /Redo Funktionen
+    # Undo /Redo functions
     def process_undo(self, event):
         print("ctrl_z pressed.")
-        # if there is a predecessor in list_processids (len > 1):
-        #   move processid_akt from list_processids to undo-stack, then apply new act (predecessor) giving the processids from act and undone
-        num_elements = len(self.list_processids)
-        if num_elements <= 1:
+        rc, p_now, p_before = self.UR.process_undo()
+        if not rc: # undo was not possible
             messagebox.showinfo("UNDO", "no further processes which can be undone", parent = self.root)
         else:
-            processid_undone = self.list_processids[-1] # last element
-            self.stack_processids.append(processid_undone)
-            self.list_processids.pop() # removes last element
-            self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" UNDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
-            self.apply_process_id(self.processid_akt)
+            self.apply_process_id(p_now, p_before)
             self.endis_buttons()
 
     def process_redo(self, event):
         print("ctrl_y pressed.")
-        # if there is an element in stack processids (len > 1):
-        #   move last processid from stack processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
-        num_elements = len(self.stack_processids)
-        if num_elements < 1:
+        rc, p_now, p_before = self.UR.process_redo()
+        if not rc:
             messagebox.showinfo("REDO", "no further processes which can be redone", parent = self.root)
         else:
-            processid_predecessor = self.list_processids[-1] # last element
-            processid_redone = self.stack_processids[-1] # last element
-            self.list_processids.append(processid_redone)
-            self.stack_processids.pop() # removes last element
-            self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" REDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
-            self.apply_process_id(self.processid_akt)
+            self.apply_process_id(p_now, p_before)
             self.endis_buttons()
 
+    def button_undo_h(self, event = None):
+        print("Button Undo pressed")
+        self.process_undo(event)
+        
+    def button_redo_h(self, event = None):
+        print("Button Redo pressed")
+        self.process_redo(event)
+
     def endis_buttons(self): # disable / enable buttons depending on processids
-        if len(self.list_processids) > 1:
+        rc_undo, rc_redo = self.UR.endis_buttons()
+        if rc_undo:
             self.button_undo.config(state = NORMAL)
         else:
             self.button_undo.config(state = DISABLED)
-        if len(self.stack_processids) > 0:
+        if rc_redo:
             self.button_redo.config(state = NORMAL)
         else:
             self.button_redo.config(state = DISABLED)
 
 
-    def apply_process_id(self, process_id):
+    def apply_process_id(self, process_id, processid_predecessor):
         # apply xml for actual processid
         # copy xml for processid_akt to "normal" xml and apply it
         xml_filename = self.dict_processid_xmlfile[process_id]
@@ -1710,16 +1702,15 @@ class MyCameraTreeview:
             self.open_camera(self.camera) # expand camera node
         
     def historize_process(self):
-        self.processid_high += self.processid_incr
-        self.processid_akt = self.processid_high
-        print ("Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
+        self.UR.historize_process()
+        processid_akt = self.UR.get_processid_akt()
         # wir we save the current xml-file to firstname-<processid>.xml
         # E:/Arbeit/python/Dateimeister_vor_git/daten/config/dateimeister_configfiles.xml
         config_dir = os.path.join(Globals.datadir, Globals.config_files_subdir)
         xml_filename = Globals.config_files_xml
         # replace last . by <processid>.
-        xml_filename = re.sub(r'\.([^\.]+)$', rf"_{self.processid_akt}.\1", xml_filename) # reconstruct newline in template
-        self.dict_processid_xmlfile[self.processid_akt] = xml_filename
+        xml_filename = re.sub(r'\.([^\.]+)$', rf"_{processid_akt}.\1", xml_filename) # reconstruct newline in template
+        self.dict_processid_xmlfile[processid_akt] = xml_filename
         print("historize_process, new xml is: ", xml_filename)
         # save actual xml (changed by the action which called historize_processorize) to a config file with xml_filename containing the actual processid
         sourcefile = Globals.config_files_xml
@@ -1744,7 +1735,6 @@ class MyCameraTreeview:
         except:
             print("Error occurred while copying file.")
 
-        self.list_processids.append(self.processid_akt)
         self.endis_buttons()
 
     def button_undo_h(self, event = None):

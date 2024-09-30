@@ -222,12 +222,7 @@ class Diatisch:
 
         # Undo /Redo control
         self.UR = UR.Undo_Redo_Diatisch()
-        self.processid_akt = 0
-        self.processid_high = 0
-        self.processid_incr = 10
         self.dict_processid_histobj = {} # key processid to be applied value: histobj
-        self.list_processids = []
-        self.stack_processids = [] # list
         # historize initial state
         self.historize_process()
         # Undo /Redo control end
@@ -898,7 +893,7 @@ class Diatisch:
         #    print("    dict_images id: ", str(t), " filename: " , f)
         return dict_images
 
-    # Undo /Redo Funktionen
+    # Undo /Redo functions
     def process_undo(self, event):
         print("ctrl_z pressed.")
         rc, p_now, p_before = self.UR.process_undo()

@@ -69,22 +69,19 @@ class Undo_Redo_Diatisch(Undo_Redo):
         self.list_processids.append(self.processid_akt)
         print (" Historize Diatisch: Processid_akt is now: " + str(self.processid_akt))
         
+class Undo_Redo_Dateimeister(Undo_Redo):
+    def historize_process(self):
+        self.processid_high += self.processid_incr
+        self.processid_akt = self.processid_high
+        self.list_processids.append(self.processid_akt)
+        print (" Historize Dateimeister: Processid_akt is now: " + str(self.processid_akt))
     
-
-class HistDiatisch:
-    def __init__(self):
-
-        # dict and list of source / target images, to be historized
-        self.dict_source_images = {}
-        self.dict_target_images = {}
-        self.list_source_images = []
-        self.list_target_images = []
-        self.source_select_ctr = 0
-        self.target_select_ctr = 0
-        self.str_hashsum_source_filenames = ""
-        self.str_hashsum_target_filenames = ""
-        self.str_hashsum_source_selection = ""
-        self.str_hashsum_target_selection = ""
+class Undo_Redo_Camera(Undo_Redo):
+    def historize_process(self):
+        self.processid_high += self.processid_incr
+        self.processid_akt = self.processid_high
+        self.list_processids.append(self.processid_akt)
+        print (" Historize Camera: Processid_akt is now: " + str(self.processid_akt))
 
 
 
