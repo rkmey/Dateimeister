@@ -1737,12 +1737,6 @@ class MyCameraTreeview:
 
         self.endis_buttons()
 
-    def button_undo_h(self, event = None):
-        print("UUNdo pressed")
-        self.process_undo((0, 0))
-        
-    def button_redo_h(self, event = None):
-        self.process_redo((0, 0))
     # Ende undo /redo-Funktionen
 
 
@@ -1770,11 +1764,11 @@ class Dateimeister_support:
         self.context_menu = None
         self.timestamp = datetime.now()
         self.use_camera_prefix = True
-        self.processid_akt = 0
-        self.processid_high = 0
-        self.processid_incr = 10
-        self.list_processids = []
-        self.stack_processids = [] # list
+
+        # Undo /Redo control
+        self.UR = UR.Undo_Redo_Dateimeister()
+        # Undo /Redo control end
+
         self.win_messages = None
         self.dict_thumbnails_lineno = {}
         self.dict_duplicates_sourcefiles = {}
@@ -1870,8 +1864,8 @@ class Dateimeister_support:
         self.button_redo = self.w.Button_redo
         self.button_undo.config(state = DISABLED)
         self.button_redo.config(state = DISABLED)
-        self.button_undo.configure(command=self.button_undo_pressed)
-        self.button_redo.configure(command=self.button_redo_pressed)
+        self.button_undo.configure(command=self.button_undo_h)
+        self.button_redo.configure(command=self.button_redo_h)
         Globals.button_duplicates = self.w.Button_duplicates
         Globals.button_duplicates.config(state = DISABLED)
         self.button_be = self.w.Button_be
@@ -2449,10 +2443,7 @@ class Dateimeister_support:
         # cleanup
         self.close_child_windows()
         # reset all process-states
-        self.processid_akt  = 0
-        self.processid_high = 0
-        self.list_processids = []
-        self.stack_processids = []
+        self.UR.reset()
         self.button_undo.config(state = DISABLED)    
         self.button_redo.config(state = DISABLED)
         
@@ -2656,10 +2647,7 @@ class Dateimeister_support:
             sys.stdout.flush()
 
         # reset all process-states
-        self.processid_akt  = 0
-        self.processid_high = 0
-        self.list_processids = []
-        self.stack_processids = []
+        self.UR.reset()
         self.button_undo.config(state = DISABLED)    
         self.button_redo.config(state = DISABLED)
         self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
@@ -3387,52 +3375,51 @@ class Dateimeister_support:
             if player is not None: # this is a video
                 player.restart()
                 
-        
+
     # Undo /Redo Funktionen
     def process_undo(self, event):
         print("ctrl_z pressed.")
-        # if there is a predecessor in list_processids (len > 1):
-        #   move processid_akt from list_processids to undo-stack, then apply new act (predecessor) giving the processids from act and undone
-        num_elements = len(self.list_processids)
-        if num_elements <= 1:
-            messagebox.showinfo("UNDO", "no further processes which can be undone")
+        rc, p_now, p_before = self.UR.process_undo()
+        if not rc: # undo was not possible
+            messagebox.showinfo("UNDO", "no further processes which can be undone", parent = self.root)
         else:
-            processid_undone = self.list_processids[-1] # last element
-            self.stack_processids.append(processid_undone)
-            self.list_processids.pop() # removes last element
-            self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" UNDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
-            self.apply_process_id(self.processid_akt)
+            self.apply_process_id(p_now, p_before)
             self.endis_buttons()
 
     def process_redo(self, event):
         print("ctrl_y pressed.")
-        # if there is an element in stack processids (len > 1):
-        #   move last processid from stack processids to list_processids, then apply new act (moved from stack) giving the processids from act and predecessor of list_processids
-        num_elements = len(self.stack_processids)
-        if num_elements < 1:
-            messagebox.showinfo("REDO", "no further processes which can be redone")
+        rc, p_now, p_before = self.UR.process_redo()
+        if not rc:
+            messagebox.showinfo("REDO", "no further processes which can be redone", parent = self.root)
         else:
-            processid_predecessor = self.list_processids[-1] # last element
-            processid_redone = self.stack_processids[-1] # last element
-            self.list_processids.append(processid_redone)
-            self.stack_processids.pop() # removes last element
-            self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" REDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids))
-            self.apply_process_id(self.processid_akt)
+            self.apply_process_id(p_now, p_before)
             self.endis_buttons()
 
+    def button_undo_h(self, event = None):
+        print("Button Undo pressed")
+        self.process_undo(event)
+        
+    def button_redo_h(self, event = None):
+        print("Button Redo pressed")
+        self.process_redo(event)
+
+    def button_undo_pressed(self):
+        self.process_undo((0, 0))
+        
+    def button_redo_pressed(self):
+        self.process_redo((0, 0))
     def endis_buttons(self): # disable / enable buttons depending on processids
-        if len(self.list_processids) > 1:
+        rc_undo, rc_redo = self.UR.endis_buttons()
+        if rc_undo:
             self.button_undo.config(state = NORMAL)
         else:
             self.button_undo.config(state = DISABLED)
-        if len(self.stack_processids) > 0:
+        if rc_redo:
             self.button_redo.config(state = NORMAL)
         else:
             self.button_redo.config(state = DISABLED)
 
-    def apply_process_id(self, process_id):
+    def apply_process_id(self, process_id, processid_predecessor):
         # set thumbnail-states according actual processid
         i = 0
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
@@ -3442,16 +3429,14 @@ class Dateimeister_support:
         self.write_cmdfile(Globals.imagetype)
         
     def historize_process(self):
-        self.processid_high += self.processid_incr
-        self.processid_akt = self.processid_high
-        print ("Processid_high is now: " + str(self.processid_high) + " Processid_akt is now: " + str(self.processid_akt))
+        self.UR.historize_process()
+        processid_akt = self.UR.get_processid_akt()
         # wir bilden jetzt zu der aktuellen processid eine Liste der states der thumbnails
-        self.dict_status_image[self.processid_akt] = []
+        self.dict_status_image[processid_akt] = []
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
-            self.dict_status_image[self.processid_akt].append(thumbnail.getState())
+            self.dict_status_image[processid_akt].append(thumbnail.getState())
         self.update_button_state() # refer to function comment
         
-        self.list_processids.append(self.processid_akt)
         # UNDO / REDO disabeln, wenn Aktion nicht möglich, weil es keine frühere / spätere Bearbeitung gibt
         self.endis_buttons()
 
@@ -3477,12 +3462,6 @@ class Dateimeister_support:
             self.button_include.config(state = DISABLED)
         else:
             self.button_include.config(state = NORMAL)
-
-    def button_undo_pressed(self):
-        self.process_undo((0, 0))
-        
-    def button_redo_pressed(self):
-        self.process_redo((0, 0))
     # Ende undo / redo-Funktionen
 
     def button_duplicates(self):

@@ -11,6 +11,12 @@ class Undo_Redo:
         # Undo /Redo control end
     # Undo /Redo Funktionen
 
+    def reset(self):
+        self.processid_akt  = 0
+        self.processid_high = 0
+        self.list_processids = []
+        self.stack_processids = []
+
     def get_processid_akt(self):
         return self.processid_akt
 
