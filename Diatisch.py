@@ -75,12 +75,13 @@ class Diatisch:
     # 20240813 we want to store images only once per canvas not in every MyImage-object, access is via filename which is stored in MyImage object
     #  we need dict as a "global" class variable because we want to access it also from methods of MyImage-objects.
     dict_filename_images = {} # Filename -> MyImage contains all source filenames which is sufficient as target files are a subset of source files
-    def __init__(self, root = None): # if called from own main root will be initialized there
+    def __init__(self, root = None, list_imagefiles = None): # if called from own main root will be initialized there
         if root is None:
             self.root = tk.Toplevel()
         else:
             self.root = root
         self.root.title("Diatisch")
+        print("List Imagefiles is: " + str(list_imagefiles))
         # Fenstergröße
         screen_width  = int(self.root.winfo_screenwidth() * .75) # adjust as needed
         screen_height = int(self.root.winfo_screenheight() * .5) # adjust as needed
@@ -245,6 +246,8 @@ class Diatisch:
         self.dist_frame = 20 # distance of dotted select frame from border in Pixels
         self.single_image_to_copy   = None # name of single image selected by menuitem to copy from source to target
         self.single_image_to_delete = None # name of single image selected by menuitem to delete from target
+        if list_imagefiles:
+            self.load_images(list_imagefiles)
 
     def show_context_menu_source(self, event):
         # event has to be stored because some functions require x, y
@@ -340,35 +343,53 @@ class Diatisch:
         #self.canvas_show(self.event)
 
 
-    def load_images(self):
+    def load_images(self, p_imagefiles = None):
+        if self.list_source_images:
+            if not messagebox.askyesnocancel("Open", "this action cannot be undone. Proceed?", parent = self.root):
+                return False
         self.list_source_images = []
         self.dict_source_images = []
+        self.list_target_images = []
+        self.dict_target_images = []
+        self.source_canvas.delete("all")
+        self.target_canvas.delete("all")
         Diatisch.dict_filename_images = {}
-        directory = filedialog.askdirectory()
-        if directory:
-            image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
-            tag_prefix = 'P'
-            tag_no = 0
-            for img_file in image_files:
-                tag_no += 1
+        self.UR.reset()
+        tag_prefix = 'P'
+        tag_no = 0
+        directory = None
+        if p_imagefiles: # imagefiles given by caller
+            image_files = p_imagefiles
+        else:
+            directory = filedialog.askdirectory()
+            if directory:
+                image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
+            else:
+                messagebox.showerror("Open", "unable to open: " + directory, parent = self.root)
+                return False
+        for img_file in image_files:
+            tag_no += 1
+            if directory:
                 filename = os.path.join(directory, img_file)
-                # get image
-                img = Image.open(filename)
-                image_width_orig, image_height_orig = img.size
-                faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
-                #print("Image " + filename + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
-                display_width  = int(image_width_orig * faktor)
-                display_height = int(image_height_orig * faktor)
-                newsize = (display_width, display_height)
-                r_img = img.resize(newsize, Image.Resampling.NEAREST)
-                photo = ImageTk.PhotoImage(r_img)
-                # insert into self.list_source_images
-                i = MyImage(filename, self.source_canvas, tag_prefix + str(tag_no))
-                self.list_source_images.append(i)
-                Diatisch.dict_filename_images[filename] = photo
-                
-            self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
-            self.unselect_all(self.dict_source_images, self.source_canvas)
+            else:
+                filename = img_file
+            # get image
+            img = Image.open(filename)
+            image_width_orig, image_height_orig = img.size
+            faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
+            #print("Image " + filename + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
+            display_width  = int(image_width_orig * faktor)
+            display_height = int(image_height_orig * faktor)
+            newsize = (display_width, display_height)
+            r_img = img.resize(newsize, Image.Resampling.NEAREST)
+            photo = ImageTk.PhotoImage(r_img)
+            # insert into self.list_source_images
+            i = MyImage(filename, self.source_canvas, tag_prefix + str(tag_no))
+            self.list_source_images.append(i)
+            Diatisch.dict_filename_images[filename] = photo
+            
+        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
+        self.unselect_all(self.dict_source_images, self.source_canvas)
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
         print("LOAD ", directory)
         self.historize_process()
@@ -616,7 +637,7 @@ class Diatisch:
 
         elif proctype == pt.COPY_SINGLE:
             if self.single_image_to_copy is None:
-                messagebox.showerror(str(proctype), "Internal error single image to copy is None.")
+                messagebox.showerror(str(proctype), "Internal error single image to copy is None.", parent = self.root)
                 return
             img = self.single_image_to_copy
             if img.get_filename() not in set_target_filenames: # skip if already exists
@@ -738,7 +759,7 @@ class Diatisch:
                     self.list_target_images.append(img)
             elif proctype == pt.DELETE_SINGLE: # we insert all images which are not image_to_delete (because we wish to delete all which are selected)
                 if self.single_image_to_delete is None:
-                    messagebox.showerror(str(proctype), "Internal error single image to delete is None.")
+                    messagebox.showerror(str(proctype), "Internal error single image to delete is None.", parent = self.root)
                     return
                 if img.get_filename() != self.single_image_to_delete.get_filename():
                     self.list_target_images.append(img)
@@ -1046,5 +1067,5 @@ class HistObj:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = Diatisch(root)  # Set m and n as desired
+    app = Diatisch(root, False)  # when run as main we have no list of image files
     root.mainloop()

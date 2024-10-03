@@ -3478,7 +3478,19 @@ class Dateimeister_support:
         self.win_camera = MyCameraTreeview(self) 
 
     def menu_diatisch(self):
-        self.win_diatisch = DIAT.Diatisch() 
+        # if jpeg build list of not excluded imagefiles and call diatisch
+        if Globals.imagetype == "JPEG":
+            list_diatisch = []
+            for i in Globals.dict_thumbnails[Globals.imagetype]:
+                t = Globals.dict_thumbnails[Globals.imagetype][i]
+                if t.getState() == state.INCLUDE:
+                    list_diatisch.append(i)
+            if list_diatisch:
+                self.win_diatisch = DIAT.Diatisch(None, list_diatisch)
+            else:
+                messagebox.showinfo("Diatisch", "no images available for Diatisch")
+        else:
+            messagebox.showinfo("Diatisch", "only jpeg supported by Diatisch")
 
     def on_window_destroy(self, a):
         a = 1
