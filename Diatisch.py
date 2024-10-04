@@ -208,7 +208,7 @@ class Diatisch:
         self.source_canvas.bind('<Motion>', self.tooltip_imagefile_source)    
         self.target_canvas.bind("<Button-3>", self.show_context_menu_target) 
         self.target_canvas.bind('<Motion>', self.tooltip_imagefile_target)    
-        #self.target_canvas.bind('<Motion>', lambda event, i = self.target_canvas, j = self.dict_target_images, k = "target": self.tooltip_imagefile(event, i, j, k))    
+        #self.target_canvas.bind('<Motion>', lambda event, i = self.target_canvas, j = self.dict_target_images[self.list_no], k = "target": self.tooltip_imagefile(event, i, j, k))    
         self.st = Dateimeister.ToolTip(self.source_canvas, "no images available", delay=0, follow = True)
         self.tt = Dateimeister.ToolTip(self.target_canvas, "no images available", delay=0, follow = True)
 
@@ -216,16 +216,22 @@ class Diatisch:
         self.list_dragged_images = []
 
         # dict and list of source / target images, to be historized
+        self.list_no = 0  # for each load incremented by 1. Key into lists / dicts, historized
         self.dict_source_images = {} # ID -> MyImage
         self.dict_target_images = {} # ID -> MyImage
-        self.list_source_images = []
-        self.list_target_images = []
+        self.dict_list_source_images = {}
+        self.dict_list_target_images = {}
+        self.dict_source_images[self.list_no] = {} # ID -> MyImage
+        self.dict_target_images[self.list_no] = {} # ID -> MyImage
+        self.dict_list_source_images[self.list_no] = []
+        self.dict_list_target_images[self.list_no] = []
+
 
         # Undo /Redo control
         self.UR = UR.Undo_Redo_Diatisch()
         self.dict_processid_histobj = {} # key processid to be applied value: histobj
         # historize initial state
-        self.historize_process()
+        #self.historize_process()
         # Undo /Redo control end
 
         self.event = None
@@ -258,13 +264,13 @@ class Diatisch:
         canvas_y = self.source_canvas.canvasy(event.y)
         if (closest := self.source_canvas.find_closest(self.source_canvas.canvasx(event.x), self.source_canvas.canvasy(event.y))):
             image_id = closest[0]
-            img      = self.dict_source_images[image_id]
+            img      = self.dict_source_images[self.list_no][image_id]
             text     = img.get_filename()
             self.context_menu_source.entryconfig(0, label = "Show " + text)
             self.context_menu_source.entryconfig(2, label = "Copy " + text)
             self.single_image_to_copy = img # will be set to None in update_target_canvas after copying
             selected = False
-            for i in self.list_source_images:
+            for i in self.dict_list_source_images[self.list_no]:
                 if i.is_selected():
                     selected = True
                     break
@@ -283,13 +289,13 @@ class Diatisch:
         canvas_y = self.target_canvas.canvasy(event.y)
         if (closest := self.target_canvas.find_closest(self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y))):
             image_id = closest[0]
-            img      = self.dict_target_images[image_id]
+            img      = self.dict_target_images[self.list_no][image_id]
             text     = img.get_filename()
             self.context_menu_target.entryconfig(0, label = "Show " + text)
             self.context_menu_target.entryconfig(2, label = "Delete " + text)
             self.single_image_to_delete = img # will be set to None in delete_target_canvas after delete
             selected = False
-            for i in self.list_target_images:
+            for i in self.dict_list_target_images[self.list_no]:
                 if i.is_selected():
                     selected = True
                     break
@@ -311,8 +317,8 @@ class Diatisch:
         text = "no image available"
         if (closest := self.source_canvas.find_closest(self.source_canvas.canvasx(event.x), self.source_canvas.canvasy(event.y))):
             image_id = closest[0]
-            if image_id in self.dict_source_images:
-                img      = self.dict_source_images[image_id]
+            if image_id in self.dict_source_images[self.list_no]:
+                img      = self.dict_source_images[self.list_no][image_id]
                 text     = img.get_filename()
                 if text != self.tooltiptext_st:
                     self.st.update(text)
@@ -330,8 +336,8 @@ class Diatisch:
         text = "no image available"
         if (closest := self.target_canvas.find_closest(self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y))):
             image_id = closest[0]
-            if image_id in self.dict_source_images:
-                img      = self.dict_target_images[image_id]
+            if image_id in self.dict_target_images[self.list_no]:
+                img      = self.dict_target_images[self.list_no][image_id]
                 text     = img.get_filename()
                 if text != self.tooltiptext_tt:
                     self.tt.update(text)
@@ -344,13 +350,13 @@ class Diatisch:
 
 
     def load_images(self, p_imagefiles = None):
-        if self.list_source_images:
+        if self.dict_list_source_images[self.list_no]:
             if not messagebox.askyesnocancel("Open", "this action cannot be undone. Proceed?", parent = self.root):
                 return False
-        self.list_source_images = []
-        self.dict_source_images = []
-        self.list_target_images = []
-        self.dict_target_images = []
+        self.dict_list_source_images[self.list_no] = []
+        self.dict_source_images[self.list_no] = []
+        self.dict_list_target_images[self.list_no] = []
+        self.dict_target_images[self.list_no] = []
         self.source_canvas.delete("all")
         self.target_canvas.delete("all")
         Diatisch.dict_filename_images = {}
@@ -383,13 +389,13 @@ class Diatisch:
             newsize = (display_width, display_height)
             r_img = img.resize(newsize, Image.Resampling.NEAREST)
             photo = ImageTk.PhotoImage(r_img)
-            # insert into self.list_source_images
+            # insert into self.dict_list_source_images[self.list_no]
             i = MyImage(filename, self.source_canvas, tag_prefix + str(tag_no))
-            self.list_source_images.append(i)
+            self.dict_list_source_images[self.list_no].append(i)
             Diatisch.dict_filename_images[filename] = photo
             
-        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
-        self.unselect_all(self.dict_source_images, self.source_canvas)
+        self.dict_source_images[self.list_no] = self.display_image_objects(self.dict_list_source_images[self.list_no], self.source_canvas)
+        self.unselect_all(self.dict_source_images[self.list_no], self.source_canvas)
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
         print("LOAD ", directory)
         self.historize_process()
@@ -406,21 +412,21 @@ class Diatisch:
         if (self.check_event_in_rect(event, source_rect)): # select Image(s)
             #print("Event in source_canvas")
             self.drag_started_in = "source"
-            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, source_rect, self.source_canvas, self.dict_source_images)
+            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, source_rect, self.source_canvas, self.dict_source_images[self.list_no])
             if img_closest_id > 0:
-                self.image_press = self.dict_source_images[img_closest_id]
+                self.image_press = self.dict_source_images[self.list_no][img_closest_id]
                 print("image found in source canvas, action = PRESS: ", self.image_press.get_filename())
-                self.selection(event, self.source_canvas, self.dict_source_images, action.PRESS)
+                self.selection(event, self.source_canvas, self.dict_source_images[self.list_no], action.PRESS)
             else: # do nothing
                 print("no image found in source canvas, action = PRESS")
         elif (self.check_event_in_rect(event, target_rect)):
             #print("Event in target_canvas")
             self.drag_started_in = "target"
-            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
+            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images[self.list_no])
             if img_closest_id > 0:
-                self.image_press = self.dict_target_images[img_closest_id]
+                self.image_press = self.dict_target_images[self.list_no][img_closest_id]
                 print("image found in target canvas, action = PRESS: ", self.image_press.get_filename())
-                self.selection(event, self.target_canvas, self.dict_target_images, action.PRESS)
+                self.selection(event, self.target_canvas, self.dict_target_images[self.list_no], action.PRESS)
             else: # do nothing
                 print("no image found in target canvas, action = PRESS")
         else:
@@ -511,24 +517,24 @@ class Diatisch:
     def copy_selected_source_images(self): # copy selected images from source to target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
-        self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
+        self.file_at_dragposition = self.find_last_selected_target_image(self.dict_list_target_images[self.list_no])
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
-        changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED)
+        changed = self.update_target_canvas(None, self.dict_source_images[self.list_no], target_rect, pt.COPY_SELECTED)
         if changed:
             self.historize_process()        
     def copy_single_source_image(self): # copy image under context menuitem select... from source to target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
-        self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
+        self.file_at_dragposition = self.find_last_selected_target_image(self.dict_list_target_images[self.list_no])
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
-        changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SINGLE)
+        changed = self.update_target_canvas(None, self.dict_source_images[self.list_no], target_rect, pt.COPY_SINGLE)
         if changed:
             self.historize_process()        
     def delete_selected_target_images(self): # delete selected images from target
-        self.delete_target_canvas(self.dict_target_images, pt.DELETE_SELECTED)
+        self.delete_target_canvas(self.dict_target_images[self.list_no], pt.DELETE_SELECTED)
         self.historize_process()        
     def delete_single_target_image(self): # delete image under context menuitem delete... from target
-        self.delete_target_canvas(self.dict_target_images, pt.DELETE_SINGLE)
+        self.delete_target_canvas(self.dict_target_images[self.list_no], pt.DELETE_SINGLE)
         self.historize_process()        
 
     def find_last_selected_target_image(self, list_images): # helper function for finding last selected target (as insert point for copy)
@@ -556,23 +562,23 @@ class Diatisch:
             print("*** Drop Event in target_canvas")
             print ("Drop event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
             print ("Target canvasx: ", str(self.target_canvas.canvasx(event.x)), "canvasy: ", str(self.target_canvas.canvasy(event.y)))
-            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
+            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images[self.list_no])
             if img_closest_id > 0:
-                self.image_release = self.dict_target_images[img_closest_id]
+                self.image_release = self.dict_target_images[self.list_no][img_closest_id]
                 print("image found in target canvas, action = RELEASE: ", self.image_release.get_filename())
             if self.drag_started_in == "source": # drop images from source
-                #for t in self.list_target_images:
+                #for t in self.dict_list_target_images[self.list_no]:
                 #    print("Before Target image: ", t.get_filename())
                 # fill list of dragged images by checking if selected
-                changed = self.update_target_canvas(event, self.dict_source_images, target_rect, pt.DROP_FROM_SOURCE)
+                changed = self.update_target_canvas(event, self.dict_source_images[self.list_no], target_rect, pt.DROP_FROM_SOURCE)
                 if changed:
                     self.historize_process()
             elif self.drag_started_in == "target": # move images within target
                 # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
-                canvas_target_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
+                canvas_target_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images[self.list_no], action.RELEASE) 
                 print("canvas_target_rebuild_required = ", str(canvas_target_rebuild_required))
                 if canvas_target_rebuild_required:
-                    changed = self.update_target_canvas(event, self.dict_target_images, target_rect, pt.DROP_FROM_TARGET)
+                    changed = self.update_target_canvas(event, self.dict_target_images[self.list_no], target_rect, pt.DROP_FROM_TARGET)
                     if  changed: 
                         self.historize_process()
             else: # do nothing
@@ -582,11 +588,11 @@ class Diatisch:
                 
         elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
             print("Drop Event in source")
-            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, source_rect, self.source_canvas, self.dict_source_images)
+            img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, source_rect, self.source_canvas, self.dict_source_images[self.list_no])
             if img_closest_id > 0:
-                self.image_release = self.dict_source_images[img_closest_id]
+                self.image_release = self.dict_source_images[self.list_no][img_closest_id]
                 print("image found in source canvas, action = RELEASE: ", self.image_release.get_filename())
-                canvas_target_rebuild_required = self.selection(event, self.source_canvas, self.dict_source_images, action.RELEASE)
+                canvas_target_rebuild_required = self.selection(event, self.source_canvas, self.dict_source_images[self.list_no], action.RELEASE)
                 self.historize_process()
             else: # do nothing
                 print("no image found in source canvas, action = PRESS")
@@ -598,7 +604,7 @@ class Diatisch:
     def update_target_canvas(self, event, dict_images, target_rect, proctype):
         old_list_target_filenames = [] # for checking if list is changed
         new_list_target_filenames = [] # for checking if list is changed
-        for i in self.list_target_images:
+        for i in self.dict_list_target_images[self.list_no]:
             old_list_target_filenames.append(i.get_filename()) 
         changed = False  # init to false
             
@@ -607,7 +613,7 @@ class Diatisch:
         set_target_filenames = set() # create an empty set
         set_target_filenames.clear()
         if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED:
-            for i in self.list_target_images:
+            for i in self.dict_list_target_images[self.list_no]:
                 set_target_filenames.add(i.get_filename())
 
         list_dragged_images = []
@@ -658,9 +664,9 @@ class Diatisch:
             no_target_image = False
             if event is not None: # event from mouse release
                 # get id, distances of image under drop event
-                img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
+                img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images[self.list_no])
                 if img_closest_id > 0:
-                    img_closest = self.dict_target_images[img_closest_id]
+                    img_closest = self.dict_target_images[self.list_no][img_closest_id]
                     file_at_dragposition = img_closest.get_filename()
                     if dist_event_left > dist_event_right:
                         dragpos = dragposition.BEHIND # insert BEHIND hit image
@@ -677,7 +683,7 @@ class Diatisch:
                 dragpos = dragposition.BEHIND
 
             # now insert list of dragged images in target list, before or behind file_at_dragposition
-            for i in self.list_target_images:
+            for i in self.dict_list_target_images[self.list_no]:
                 print("Before Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " selected: ", str(i.is_selected()))
             list_dragged_images.sort(key=lambda a: int(a.selected))
             #print("list dragged images: " + str(list_dragged_images))
@@ -692,21 +698,21 @@ class Diatisch:
             #     if dragpos = BEFORE, insert list_dragged_images, insert filename
             #     else: insert filename, insert list_dragged_images
             #   else insert filename
-            if self.list_target_images == []: #initial drag from source
+            if self.dict_list_target_images[self.list_no] == []: #initial drag from source
                 for i in list_dragged_images:
-                    self.list_target_images.append(i)
+                    self.dict_list_target_images[self.list_no].append(i)
             elif no_target_image: # drop outside images: start with all images not in list_dragged_images, followed by list_dragged images
                 list_temp = []
-                for i in self.list_target_images:
+                for i in self.dict_list_target_images[self.list_no]:
                     thisfile = i.get_filename()
                     if thisfile not in set_dragged_filenames:
                         list_temp.append(i)
                 for j in list_dragged_images:
                     list_temp.append(j)
-                self.list_target_images = list_temp    
+                self.dict_list_target_images[self.list_no] = list_temp    
             else:
                 list_temp = []
-                for i in self.list_target_images:
+                for i in self.dict_list_target_images[self.list_no]:
                     thisfile = i.get_filename()
                     if thisfile ==  file_at_dragposition:
                         if dragpos == dragposition.BEFORE:
@@ -722,18 +728,18 @@ class Diatisch:
                     elif thisfile not in set_dragged_filenames: # skip if in set_dragged_filenames
                         list_temp.append(i)
                 
-                self.list_target_images = list_temp
-            #print("list_target_images: ", str(self.list_target_images))
+                self.dict_list_target_images[self.list_no] = list_temp
+            #print("list_target_images: ", str(self.dict_list_target_images[self.list_no]))
             # rebuild target canvas, refresh dicts
-            for i in self.list_target_images:
+            for i in self.dict_list_target_images[self.list_no]:
                 new_list_target_filenames.append(i.get_filename()) 
             changed = self.lists_equal(new_list_target_filenames, old_list_target_filenames)
             if changed:
-                self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
-                #for t in self.dict_target_images:
-                #    print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
+                self.dict_target_images[self.list_no] = self.display_image_objects(self.dict_list_target_images[self.list_no], self.target_canvas)
+                #for t in self.dict_target_images[self.list_no]:
+                #    print("dict_target_images[self.list_no] id: ", t, " Filename: ", self.dict_target_images[self.list_no][t].get_filename())
                 # now select all dragged images
-                for i in self.list_target_images:
+                for i in self.dict_list_target_images[self.list_no]:
                     # for convenience we select all dragged images and unselect all others
                     thisfile = i.get_filename()
                     print("After Target Image: ", thisfile, " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
@@ -751,22 +757,22 @@ class Diatisch:
 
     def delete_target_canvas(self, dict_images, proctype):
         # delete 1 single or all selected Images from target_canvas
-        self.list_target_images = [] 
+        self.dict_list_target_images[self.list_no] = [] 
         for i in dict_images:
             img = dict_images[i]
             if proctype == pt.DELETE_SELECTED: # we insert all images which are not selected (because we wish to delete all which are selected)
                 if not img.is_selected():
-                    self.list_target_images.append(img)
+                    self.dict_list_target_images[self.list_no].append(img)
             elif proctype == pt.DELETE_SINGLE: # we insert all images which are not image_to_delete (because we wish to delete all which are selected)
                 if self.single_image_to_delete is None:
                     messagebox.showerror(str(proctype), "Internal error single image to delete is None.", parent = self.root)
                     return
                 if img.get_filename() != self.single_image_to_delete.get_filename():
-                    self.list_target_images.append(img)
+                    self.dict_list_target_images[self.list_no].append(img)
         # rebuild target canvas, refresh dicts
-        self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
+        self.dict_target_images[self.list_no] = self.display_image_objects(self.dict_list_target_images[self.list_no], self.target_canvas)
         # now select / unselect, remember: display image objects always shows selecttion frame because it is drawn last!
-        for i in self.list_target_images:
+        for i in self.dict_list_target_images[self.list_no]:
             # we selected all images which were selected before the delete action and unselect the others
             if i.is_selected(): # select
                 self.select_image(i, self.target_canvas)
@@ -825,7 +831,7 @@ class Diatisch:
 
     def select_all_source_images(self):
         print("select_all_source_images Pressed")
-        self.select_all(self.list_source_images, self.source_canvas)
+        self.select_all(self.dict_list_source_images[self.list_no], self.source_canvas)
 
     def delete_selected(self):
         print("Delete Selected Pressed")
@@ -956,26 +962,26 @@ class Diatisch:
     def apply_process_id(self, process_id, processid_predecessor):
         print("apply_process_id, id to apply is: ", str(process_id), " processid was: ", str(processid_predecessor))
         
-        list_obj_source = self.dict_processid_histobj[process_id].list_source_images
-        list_obj_target = self.dict_processid_histobj[process_id].list_target_images
+        list_obj_source = self.dict_processid_histobj[process_id].dict_list_source_images[self.list_no]
+        list_obj_target = self.dict_processid_histobj[process_id].dict_list_target_images[self.list_no]
         source_new = False
         target_new = False
         if self.dict_processid_histobj[process_id].str_hashsum_source_filenames != self.dict_processid_histobj[processid_predecessor].str_hashsum_source_filenames:
             # rebuild list of source images
-            self.list_source_images = []
-            self.dict_source_images = {}
+            self.dict_list_source_images[self.list_no] = []
+            self.dict_source_images[self.list_no] = {}
             for i in list_obj_source:
-                self.list_source_images.append(i)
-            self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
+                self.dict_list_source_images[self.list_no].append(i)
+            self.dict_source_images[self.list_no] = self.display_image_objects(self.dict_list_source_images[self.list_no], self.source_canvas)
             source_new = True
  
         if self.dict_processid_histobj[process_id].str_hashsum_target_filenames != self.dict_processid_histobj[processid_predecessor].str_hashsum_target_filenames:
             # rebuild list of target images
-            self.list_target_images = []
-            self.dict_target_images = {}
+            self.dict_list_target_images[self.list_no] = []
+            self.dict_target_images[self.list_no] = {}
             for i in list_obj_target:
-                self.list_target_images.append(i)
-            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
+                self.dict_list_target_images[self.list_no].append(i)
+            self.dict_target_images[self.list_no] = self.display_image_objects(self.dict_list_target_images[self.list_no], self.target_canvas)
             target_new = True
 
         # restore the select counters for sequence of selection
@@ -983,24 +989,24 @@ class Diatisch:
         self.target_canvas.select_ctr = self.dict_processid_histobj[process_id].target_select_ctr
         # apply selection if canvas has changed or hashsums for selection are not equal
         if source_new or self.dict_processid_histobj[process_id].str_hashsum_source_selection != self.dict_processid_histobj[processid_predecessor].str_hashsum_source_selection:
-            # list_obj and self.list_source_images have same structure, so we can use an index to access the elements of self.list_source_images
+            # list_obj and self.dict_list_source_images[self.list_no] have same structure, so we can use an index to access the elements of self.dict_list_source_images[self.list_no]
             ii = 0
             for i in list_obj_source:
                 # print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
                 if i.is_selected():
-                    self.list_source_images[ii].select(self.source_canvas, i.get_ctr())
+                    self.dict_list_source_images[self.list_no][ii].select(self.source_canvas, i.get_ctr())
                 else:
-                    self.list_source_images[ii].unselect(self.source_canvas)
+                    self.dict_list_source_images[self.list_no][ii].unselect(self.source_canvas)
                 ii += 1
         if target_new or self.dict_processid_histobj[process_id].str_hashsum_target_selection != self.dict_processid_histobj[processid_predecessor].str_hashsum_target_selection:
-            # list_obj and self.list_target_images have same structure, so we can use an index to access the elements of self.list_source_images
+            # list_obj and self.dict_list_target_images[self.list_no] have same structure, so we can use an index to access the elements of self.dict_list_source_images[self.list_no]
             ii = 0
             for i in list_obj_target:
                 #print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
                 if i.is_selected():
-                    self.list_target_images[ii].select(self.target_canvas, i.get_ctr())
+                    self.dict_list_target_images[self.list_no][ii].select(self.target_canvas, i.get_ctr())
                 else:
-                    self.list_target_images[ii].unselect(self.target_canvas)
+                    self.dict_list_target_images[self.list_no][ii].unselect(self.target_canvas)
         
     def historize_process(self):
         h = HistObj()
@@ -1011,23 +1017,25 @@ class Diatisch:
         hashsum_target_selection = hashlib.md5()
         str_source_selection = ""
         str_target_selection = ""
-        for i in self.list_source_images:
+        h.dict_list_source_images[self.list_no] = []
+        h.dict_list_target_images[self.list_no] = []
+        for i in self.dict_list_source_images[self.list_no]:
             #print("* H Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
             newcopy = MyImage(i.get_filename(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
-            h.list_source_images.append(newcopy)
+            h.dict_list_source_images[self.list_no].append(newcopy)
             hashsum_source_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
             str_source_selection += str(i.selected)
-        for i in self.list_target_images:
+        for i in self.dict_list_target_images[self.list_no]:
             newcopy = MyImage(i.get_filename(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
-            h.list_target_images.append(newcopy)
+            h.dict_list_target_images[self.list_no].append(newcopy)
             hashsum_target_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
             str_target_selection += str(i.selected)
-        #for i in self.dict_source_images:
-        #    h.dict_source_images[i] = self.dict_source_images[i]
-        #for i in self.dict_target_images:
-        #    h.dict_target_images[i] = self.dict_target_images[i]
+        #for i in self.dict_source_images[self.list_no]:
+        #    h.dict_source_images[self.list_no][i] = self.dict_source_images[self.list_no][i]
+        #for i in self.dict_target_images[self.list_no]:
+        #    h.dict_target_images[self.list_no][i] = self.dict_target_images[self.list_no][i]
         
         h.source_select_ctr = self.source_canvas.select_ctr
         h.target_select_ctr = self.target_canvas.select_ctr
@@ -1055,8 +1063,8 @@ class HistObj:
         # dict and list of source / target images, to be historized
         self.dict_source_images = {}
         self.dict_target_images = {}
-        self.list_source_images = []
-        self.list_target_images = []
+        self.dict_list_source_images = {}
+        self.dict_list_target_images = {}
         self.source_select_ctr = 0
         self.target_select_ctr = 0
         self.str_hashsum_source_filenames = ""

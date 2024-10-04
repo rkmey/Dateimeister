@@ -9,3 +9,7 @@ git pull
 
 ansehen mit:
 git tag
+
+
+Vergleich remote / local file:
+git diff master:Diatisch.py -- Diatisch.py
