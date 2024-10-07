@@ -306,6 +306,7 @@ class Diatisch:
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
         print("LOAD ", directory)
         self.historize_process()
+        self.root.lift()
 
     def show_context_menu_source(self, event):
         # event has to be stored because some functions require x, y
