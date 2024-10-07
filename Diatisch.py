@@ -258,6 +258,11 @@ class Diatisch:
         self.timestamp = datetime.now() 
         self.image_press = None
         self.image_release = None
+        
+        # the following two change attributes are for a transaction of press / release. 
+        # They are set to false in start_drag, changed in selection() and used in drop to decide about rebuild canvas and historization
+        self.canvas_target_rebuild_required = False
+        self.selection_changed = False
         self.dist_frame = 20 # distance of dotted select frame from border in Pixels
         self.single_image_to_copy   = None # name of single image selected by menuitem to copy from source to target
         self.single_image_to_delete = None # name of single image selected by menuitem to delete from target
@@ -410,6 +415,9 @@ class Diatisch:
 
 
     def start_drag(self, event):
+        # as we have a transaction of 2 steps (press / release) we have to keep the change attributes as member variables
+        self.canvas_target_rebuild_required = False
+        self.selection_changed = False
         # check where mouse is 
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
@@ -450,10 +458,8 @@ class Diatisch:
     
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
         # returns True if no further processing required else False (rebuild target-canvas
-        canvas_target_rebuild_required = False
-        selection_changed = False
         if self.image_press is None: # no selection possible
-            return canvas_target_rebuild_required
+            return
         img = self.image_press
         if event.state & 0x4: # ctrl-key is pressed 
             ctrl_pressed = True
@@ -470,7 +476,7 @@ class Diatisch:
         if ctrl_pressed == False:
             #print("unselect all: ", str(dict_images))
             c = self.unselect_all(dict_images, canvas)
-            selection_changed = self.check_changed(selection_changed, c)
+            self.selection_changed = self.check_changed(self.selection_changed, c)
         print ("***** Action is: "+ str(action)+ ", Selected = "+ str(selected)+ ", actual image is: "+ str(img.get_filename())+ \
           ", image press is: " + (self.image_press.get_filename() if self.image_press is not None else "None") + \
           ", image  release: " + (self.image_release.get_filename() if self.image_release is not None else "None") + \
@@ -482,7 +488,7 @@ class Diatisch:
                 print("SyP")
                 img.was_selected = True
                 c = self.select_image(img, canvas) # select because unselect all has unselected this image
-                selection_changed = self.check_changed(selection_changed, c)
+                self.selection_changed = self.check_changed(self.selection_changed, c)
             else: # action.RELEASE:
             # unselect only if actual image is the same as before
                 print("SyR")
@@ -491,24 +497,24 @@ class Diatisch:
                     if img.was_selected:
                         print("SyRSyWy")
                         c = self.unselect_image(img, canvas)
-                        selection_changed = self.check_changed(selection_changed, c)
+                        self.selection_changed = self.check_changed(self.selection_changed, c)
                     else:
                         print("SyRSyWn")
                         img.was_selected = True
                         c = self.select_image(img, canvas) # select because unselect all has unselected this image
-                        selection_changed = self.check_changed(selection_changed, c)
+                        self.selection_changed = self.check_changed(self.selection_changed, c)
                 else:
                     print("SyRSn")
                     c = self.select_image(img, canvas)
-                    selection_changed = self.check_changed(selection_changed, c)
-                    canvas_target_rebuild_required = True # drop image requires action
+                    self.selection_changed = self.check_changed(self.selection_changed, c)
+                    self.canvas_target_rebuild_required = True # drop image requires action
 
         else: # not selected
             print("Sn")
             if action == action.PRESS:
                 print("SnP")
                 c = self.select_image(img, canvas)
-                selection_changed = self.check_changed(selection_changed, c)
+                self.selection_changed = self.check_changed(self.selection_changed, c)
                 img.was_selected = False
             else: # action.RELEASE:
             # unselect only if actual image is the same as before
@@ -518,18 +524,18 @@ class Diatisch:
                     if img.was_selected:
                         print("SnRSyWy")
                         c = self.unselect_image(img, canvas)
-                        selection_changed = self.check_changed(selection_changed, c)
+                        self.selection_changed = self.check_changed(self.selection_changed, c)
                     else:
                         print("SnRSyWn")
                         img.was_selected = True
                         c = self.select_image(img, canvas) # select because unselect all has unselected this image
-                        selection_changed = self.check_changed(selection_changed, c)
+                        self.selection_changed = self.check_changed(self.selection_changed, c)
                 else:
                     print("SnRSn")
                     c = self.select_image(img, canvas)
-                    selection_changed = self.check_changed(selection_changed, c)
-                    canvas_target_rebuild_required = True # drop image requires action
-        return canvas_target_rebuild_required, selection_changed
+                    self.selection_changed = self.check_changed(self.selection_changed, c)
+                    self.canvas_target_rebuild_required = True # drop image requires action
+        return
     
     def check_changed(self, s, c):
         # if 1st arg is False, set to True is 2nd arg is true. Purpose: never reset a True value to False
@@ -586,7 +592,6 @@ class Diatisch:
         #print("Target rect is: ", str(target_rect))
         self.image_release = None
         changed = False
-        selection_changed = False
         if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
             print("*** Drop Event in target_canvas")
             print ("Drop event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
@@ -602,9 +607,9 @@ class Diatisch:
                 changed = self.update_target_canvas(event, self.dict_source_images, target_rect, pt.DROP_FROM_SOURCE)
             elif self.drag_started_in == "target": # move images within target
                 # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
-                canvas_target_rebuild_required, selection_changed = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
-                print("canvas_target_rebuild_required = ", str(canvas_target_rebuild_required))
-                if canvas_target_rebuild_required:
+                self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
+                print("canvas_target_rebuild_required = ", str(self.canvas_target_rebuild_required))
+                if self.canvas_target_rebuild_required:
                     changed = self.update_target_canvas(event, self.dict_target_images, target_rect, pt.DROP_FROM_TARGET)
             else: # do nothing
                 print("no image found in source canvas, action = RELEASE")
@@ -617,14 +622,14 @@ class Diatisch:
             if img_closest_id > 0:
                 self.image_release = self.dict_source_images[img_closest_id]
                 print("image found in source canvas, action = RELEASE: ", self.image_release.get_filename())
-                canvas_target_rebuild_required, selection_changed = self.selection(event, self.source_canvas, self.dict_source_images, action.RELEASE)
+                self.selection(event, self.source_canvas, self.dict_source_images, action.RELEASE)
             else: # do nothing
                 print("no image found in source canvas, action = PRESS")
                 
         else:
             print("Drop-Event not in target canvas")
 
-        if  changed or selection_changed: 
+        if  changed or self.selection_changed: 
             self.historize_process()
         self.drag_started_in = ""
 
