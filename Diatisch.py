@@ -55,11 +55,21 @@ class MyImage:
         #print("  find with tag ", self.tag, ": ", str(self.canvas.find_withtag(self.tag)))
         for i in self.canvas.find_withtag(self.tag):
             self.canvas.itemconfigure(i, state = 'normal')
+        if not self.is_selected(): 
+            changed = True
+        else:
+            changed = False
         self.selected = ctr
+        return changed # True if prior state was not selected, False otherwise
     def unselect(self, canvas):
         for i in self.canvas.find_withtag(self.tag):
             self.canvas.itemconfigure(i, state = 'hidden')
+        if not self.is_selected(): 
+            changed = False
+        else:
+            changed = True
         self.selected = 0
+        return changed # True if prior state was selected, False otherwise
     def is_selected(self):
         if self.selected > 0:
             return True
@@ -255,9 +265,6 @@ class Diatisch:
             self.load_images(list_imagefiles)
 
     def load_images(self, p_imagefiles = None):
-        if self.list_source_images:
-            if not messagebox.askyesnocancel("Open", "this action cannot be undone. Proceed?", parent = self.root):
-                return False
         self.list_source_images = []
         self.dict_source_images = {}
         self.list_target_images = []
@@ -444,6 +451,7 @@ class Diatisch:
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
         # returns True if no further processing required else False (rebuild target-canvas
         canvas_target_rebuild_required = False
+        selection_changed = False
         if self.image_press is None: # no selection possible
             return canvas_target_rebuild_required
         img = self.image_press
@@ -461,8 +469,8 @@ class Diatisch:
             selected = False
         if ctrl_pressed == False:
             #print("unselect all: ", str(dict_images))
-            self.unselect_all(dict_images, canvas)
-            True
+            c = self.unselect_all(dict_images, canvas)
+            selection_changed = self.check_changed(selection_changed, c)
         print ("***** Action is: "+ str(action)+ ", Selected = "+ str(selected)+ ", actual image is: "+ str(img.get_filename())+ \
           ", image press is: " + (self.image_press.get_filename() if self.image_press is not None else "None") + \
           ", image  release: " + (self.image_release.get_filename() if self.image_release is not None else "None") + \
@@ -473,7 +481,8 @@ class Diatisch:
             if action == action.PRESS:
                 print("SyP")
                 img.was_selected = True
-                self.select_image(img, canvas) # select because unselect all has unselected this image
+                c = self.select_image(img, canvas) # select because unselect all has unselected this image
+                selection_changed = self.check_changed(selection_changed, c)
             else: # action.RELEASE:
             # unselect only if actual image is the same as before
                 print("SyR")
@@ -481,21 +490,25 @@ class Diatisch:
                     print("SyRSy")
                     if img.was_selected:
                         print("SyRSyWy")
-                        self.unselect_image(img, canvas)
+                        c = self.unselect_image(img, canvas)
+                        selection_changed = self.check_changed(selection_changed, c)
                     else:
                         print("SyRSyWn")
                         img.was_selected = True
-                        self.select_image(img, canvas) # select because unselect all has unselected this image
+                        c = self.select_image(img, canvas) # select because unselect all has unselected this image
+                        selection_changed = self.check_changed(selection_changed, c)
                 else:
                     print("SyRSn")
-                    self.select_image(img, canvas)
+                    c = self.select_image(img, canvas)
+                    selection_changed = self.check_changed(selection_changed, c)
                     canvas_target_rebuild_required = True # drop image requires action
 
         else: # not selected
             print("Sn")
             if action == action.PRESS:
                 print("SnP")
-                self.select_image(img, canvas)
+                c = self.select_image(img, canvas)
+                selection_changed = self.check_changed(selection_changed, c)
                 img.was_selected = False
             else: # action.RELEASE:
             # unselect only if actual image is the same as before
@@ -504,16 +517,28 @@ class Diatisch:
                     print("SnRSy")
                     if img.was_selected:
                         print("SnRSyWy")
-                        self.unselect_image(img, canvas)
+                        c = self.unselect_image(img, canvas)
+                        selection_changed = self.check_changed(selection_changed, c)
                     else:
                         print("SnRSyWn")
                         img.was_selected = True
-                        self.select_image(img, canvas) # select because unselect all has unselected this image
+                        c = self.select_image(img, canvas) # select because unselect all has unselected this image
+                        selection_changed = self.check_changed(selection_changed, c)
                 else:
                     print("SnRSn")
-                    self.select_image(img, canvas)
+                    c = self.select_image(img, canvas)
+                    selection_changed = self.check_changed(selection_changed, c)
                     canvas_target_rebuild_required = True # drop image requires action
-        return canvas_target_rebuild_required
+        return canvas_target_rebuild_required, selection_changed
+    
+    def check_changed(self, s, c):
+        # if 1st arg is False, set to True is 2nd arg is true. Purpose: never reset a True value to False
+        sret = s
+        if s == False:
+            if c == True:
+                sret = True
+        return sret
+
     
     # event handlers for context menus
     def copy_selected_source_images(self): # copy selected images from source to target
@@ -560,6 +585,8 @@ class Diatisch:
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
         #print("Target rect is: ", str(target_rect))
         self.image_release = None
+        changed = False
+        selection_changed = False
         if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
             print("*** Drop Event in target_canvas")
             print ("Drop event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
@@ -573,16 +600,12 @@ class Diatisch:
                 #    print("Before Target image: ", t.get_filename())
                 # fill list of dragged images by checking if selected
                 changed = self.update_target_canvas(event, self.dict_source_images, target_rect, pt.DROP_FROM_SOURCE)
-                if changed:
-                    self.historize_process()
             elif self.drag_started_in == "target": # move images within target
                 # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
-                canvas_target_rebuild_required = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
+                canvas_target_rebuild_required, selection_changed = self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
                 print("canvas_target_rebuild_required = ", str(canvas_target_rebuild_required))
                 if canvas_target_rebuild_required:
                     changed = self.update_target_canvas(event, self.dict_target_images, target_rect, pt.DROP_FROM_TARGET)
-                    if  changed: 
-                        self.historize_process()
             else: # do nothing
                 print("no image found in source canvas, action = RELEASE")
                 
@@ -594,13 +617,15 @@ class Diatisch:
             if img_closest_id > 0:
                 self.image_release = self.dict_source_images[img_closest_id]
                 print("image found in source canvas, action = RELEASE: ", self.image_release.get_filename())
-                canvas_target_rebuild_required = self.selection(event, self.source_canvas, self.dict_source_images, action.RELEASE)
-                self.historize_process()
+                canvas_target_rebuild_required, selection_changed = self.selection(event, self.source_canvas, self.dict_source_images, action.RELEASE)
             else: # do nothing
                 print("no image found in source canvas, action = PRESS")
                 
         else:
             print("Drop-Event not in target canvas")
+
+        if  changed or selection_changed: 
+            self.historize_process()
         self.drag_started_in = ""
 
     def update_target_canvas(self, event, dict_images, target_rect, proctype):
@@ -833,31 +858,40 @@ class Diatisch:
 
     def select_all_source_images(self):
         print("select_all_source_images Pressed")
-        self.select_all(self.list_source_images, self.source_canvas)
+        changed = self.select_all(self.list_source_images, self.source_canvas)
+        if changed:
+            self.historize_process()
 
     def delete_selected(self):
         print("Delete Selected Pressed")
 
     def unselect_all(self, dict_images, canvas):
+        changed = False
         for i in dict_images:
             image = dict_images[i]
             #print("Unselect: ", str(image.get_filename()))
-            image.unselect(canvas)
+            c = image.unselect(canvas)
+            changed = self.check_changed(changed, c)
         #reset counter
         canvas.select_ctr = 0
+        return changed
     
     def select_all(self, list_images, canvas):
+        changed = False
         for i in list_images:
             if not i.is_selected():
                 canvas.select_ctr += 1
-                i.select(canvas, canvas.select_ctr)
-        self.historize_process()
+                c = i.select(canvas, canvas.select_ctr)
+                changed = self.check_changed(changed, c)
+        return changed
 
     def select_image(self, image, canvas):
+        changed = False
         if not image.is_selected():
             canvas.select_ctr += 1
             print ("--- SELECT CALL")
-            image.select(canvas, canvas.select_ctr)
+            changed = image.select(canvas, canvas.select_ctr)
+        return changed
 
     def toggle_selection(self, image, canvas):
         if image.is_selected():
@@ -867,7 +901,9 @@ class Diatisch:
             image.select(canvas, canvas.select_ctr)
 
     def unselect_image(self, image, canvas):
-        image.unselect(canvas)
+        changed = False
+        changed = image.unselect(canvas)
+        return changed
 
     def get_root_coordinates_for_widget(self, widget):
         # return rect of widget-coordinates relative to root window
@@ -1011,6 +1047,7 @@ class Diatisch:
                     self.list_target_images[ii].select(self.target_canvas, i.get_ctr())
                 else:
                     self.list_target_images[ii].unselect(self.target_canvas)
+                ii += 1
         
     def historize_process(self):
         h = HistObj()
