@@ -3,8 +3,9 @@ import tkinter as tk
 from tkinter.constants import *
 from tkinter import filedialog
 from tkinter import messagebox
+from tkinter.font import Font
 from PIL import Image, ImageTk
-import Dateimeister
+import Tooltip as TT
 from datetime import datetime, timezone
 import hashlib
 import Undo_Redo as UR
@@ -35,7 +36,7 @@ class ScrollableCanvas(tk.Canvas):
 
     def on_configure(self, event):
         self.configure(scrollregion=self.bbox("all"))
-        print ("<Configure> called")
+        #print ("<Configure> called")
 
 class MyImage:
     def __init__(self, filename, canvas, tag):
@@ -107,6 +108,27 @@ class Diatisch:
         self.row_height  = 200
         self.xpos = 0
         self.ypos = 0
+
+        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
+        self.width  = 0
+        self.height = 0
+        self.text_font = Font(family="Helvetica", size=8)
+
+        self.Frame_labels = tk.Frame(self.root)
+        self.Frame_labels.place(relx=.01, rely=0.00, relheight=0.04, relwidth=0.98)
+        self.Frame_labels.configure(relief='groove')
+        self.Frame_labels.configure(borderwidth="2")
+        self.Frame_labels.configure(relief="groove")
+        self.Frame_labels.configure(background="#d9d9d9")
+        self.Frame_labels.configure(highlightbackground="#d9d9d9")
+        self.Frame_labels.configure(highlightcolor="black")
+
+        self.Label_source_ctr = tk.Label(self.Frame_labels)
+        self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=0.3)
+        self.Label_source_ctr.configure(anchor=tk.NW)
+        self.Label_source_ctr.configure(background="#d9d9d9")
+        self.Label_source_ctr.configure(font=self.text_font)
+        self.Label_source_ctr.configure(text='''Num Images Source''')
 
         self.Frame_source = tk.Frame(self.root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.85, relwidth=0.48)
@@ -222,8 +244,8 @@ class Diatisch:
         self.target_canvas.bind("<Button-3>", self.show_context_menu_target) 
         self.target_canvas.bind('<Motion>', self.tooltip_imagefile_target)    
         #self.target_canvas.bind('<Motion>', lambda event, i = self.target_canvas, j = self.dict_target_images, k = "target": self.tooltip_imagefile(event, i, j, k))    
-        self.st = Dateimeister.ToolTip(self.source_canvas, "no images available", delay=0, follow = True)
-        self.tt = Dateimeister.ToolTip(self.target_canvas, "no images available", delay=0, follow = True)
+        self.st = TT.ToolTip(self.source_canvas, "no images available", delay=0, follow = True)
+        self.tt = TT.ToolTip(self.target_canvas, "no images available", delay=0, follow = True)
 
         # temporary storage of dragged images while dragging
         self.list_dragged_images = []
@@ -234,8 +256,6 @@ class Diatisch:
         self.list_source_images = []
         self.list_target_images = []
         
-        # we need 
-
         # Undo /Redo control
         self.UR = UR.Undo_Redo_Diatisch()
         self.dict_processid_histobj = {} # key processid to be applied value: histobj
@@ -268,6 +288,18 @@ class Diatisch:
         self.single_image_to_delete = None # name of single image selected by menuitem to delete from target
         if list_imagefiles:
             self.load_images(list_imagefiles)
+
+    def on_configure(self, event):
+        x = str(event.widget)
+        if x == ".": # . is toplevel window
+            if (self.width != event.width):
+                self.width = event.width
+                print(f"The width of Toplevel is {self.width}")        
+            if (self.height != event.height):
+                self.height = event.height
+                print(f"The height of Toplevel is {self.height}")
+        self.text_font.configure(size=int(self.height / 75))                
+                
 
     def load_images(self, p_imagefiles = None):
         self.list_source_images = []
