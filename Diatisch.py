@@ -8,6 +8,7 @@ from PIL import Image, ImageTk
 import Tooltip as TT
 from datetime import datetime, timezone
 import hashlib
+import re
 import Undo_Redo as UR
 
 
@@ -97,9 +98,11 @@ class Diatisch:
         self.root.title("Diatisch")
         print("List Imagefiles is: " + str(list_imagefiles))
         # Fenstergröße
+        physical_width  = self.root.winfo_screenwidth()
+        physical_height = self.root.winfo_screenheight()
         screen_width  = int(self.root.winfo_screenwidth() * .75) # adjust as needed
         screen_height = int(self.root.winfo_screenheight() * .5) # adjust as needed
-        print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height))
+        print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height) + " physical: " + str(physical_width) + " x " + str(physical_height))
         v_dim=str(screen_width)+'x'+str(screen_height)
         self.root.geometry(v_dim)
 
@@ -114,8 +117,10 @@ class Diatisch:
         self.height = 0
         self.text_font = Font(family="Helvetica", size=8)
 
+        self.frame_labels_height = 0.04 # needed for calculation of font size
+        self.label_height = 0.9 # needed for calculation of font size
         self.Frame_labels = tk.Frame(self.root)
-        self.Frame_labels.place(relx=.01, rely=0.00, relheight=0.04, relwidth=0.98)
+        self.Frame_labels.place(relx=.01, rely=0.00, relheight=self.frame_labels_height, relwidth=0.98)
         self.Frame_labels.configure(relief='groove')
         self.Frame_labels.configure(borderwidth="2")
         self.Frame_labels.configure(relief="groove")
@@ -124,11 +129,26 @@ class Diatisch:
         self.Frame_labels.configure(highlightcolor="black")
 
         self.Label_source_ctr = tk.Label(self.Frame_labels)
-        self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=0.3)
+        self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.3)
         self.Label_source_ctr.configure(anchor=tk.NW)
         self.Label_source_ctr.configure(background="#d9d9d9")
         self.Label_source_ctr.configure(font=self.text_font)
-        self.Label_source_ctr.configure(text='''Num Images Source''')
+        self.Label_source_ctr.configure(text='Num Images Source: 0')
+
+        self.Label_process_id = tk.Label(self.Frame_labels)
+        self.Label_process_id.place(relx=0.35, rely=0.0, relheight=self.label_height, relwidth=0.3)
+        self.Label_process_id.configure(anchor=tk.NW)
+        self.Label_process_id.configure(background="#d9d9d9")
+        self.Label_process_id.configure(font=self.text_font)
+        self.Label_process_id.configure(text='Process ID: 0')
+
+        self.Label_target_ctr = tk.Label(self.Frame_labels)
+        self.Label_target_ctr.place(relx=.6, rely=0.0, relheight=self.label_height, relwidth=0.3)
+        self.Label_target_ctr.configure(anchor=tk.NE)
+        self.Label_target_ctr.configure(background="#d9d9d9")
+        self.Label_target_ctr.configure(font=self.text_font)
+        self.Label_target_ctr.configure(text='Num Images Target: 0')
+
 
         self.Frame_source = tk.Frame(self.root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.85, relwidth=0.48)
@@ -294,11 +314,14 @@ class Diatisch:
         if x == ".": # . is toplevel window
             if (self.width != event.width):
                 self.width = event.width
-                print(f"The width of Toplevel is {self.width}")        
+                #print(f"The width of Toplevel is {self.width}")        
             if (self.height != event.height):
                 self.height = event.height
-                print(f"The height of Toplevel is {self.height}")
-        self.text_font.configure(size=int(self.height / 75))                
+                self.Label_source_ctr.update()
+                l_height = self.Label_source_ctr.winfo_height()
+                fontsize_use = int(.8 * min(12.0, l_height * .75))
+                print(f"The height of Toplevel is {self.height}, label height is {l_height} set fontsize to {fontsize_use}")
+                self.text_font.configure(size=fontsize_use)                
                 
 
     def load_images(self, p_imagefiles = None):
@@ -345,7 +368,7 @@ class Diatisch:
             self.list_source_images.append(i)
             Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = photo
             
-        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
+        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
         self.unselect_all(self.dict_source_images, self.source_canvas)
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
         print("LOAD ", directory)
@@ -799,7 +822,7 @@ class Diatisch:
                 new_list_target_filenames.append(i.get_filename()) 
             changed = self.lists_equal(new_list_target_filenames, old_list_target_filenames)
             if changed:
-                self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
+                self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
                 #for t in self.dict_target_images:
                 #    print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
                 # now select all dragged images
@@ -834,7 +857,7 @@ class Diatisch:
                 if img.get_filename() != self.single_image_to_delete.get_filename():
                     self.list_target_images.append(img)
         # rebuild target canvas, refresh dicts
-        self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
+        self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
         # now select / unselect, remember: display image objects always shows selecttion frame because it is drawn last!
         for i in self.list_target_images:
             # we selected all images which were selected before the delete action and unselect the others
@@ -957,11 +980,12 @@ class Diatisch:
         else:
             return False
 
-    def display_image_objects(self, list_obj, canvas): # display list of images on canvas, use already converted photos in objects, better performance
+    def display_image_objects(self, list_obj, canvas, label_ctr): # display list of images on canvas, use already converted photos in objects, better performance
         xpos = 0
         ypos = 0
         row  = 0
         col  = 0
+        ctr  = 0
         canvas.delete("all")
         dict_images = {}
         for i in list_obj:
@@ -981,6 +1005,7 @@ class Diatisch:
             line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = Diatisch.line_color, width = Diatisch.line_width, tags=i.get_tag())
             dict_images[img_id] = i
             #print("   Insert into dict key: ", str(img_id), " filename: " , obj.get_filename())
+            ctr += 1
             xpos += display_width
             col += 1
             if col >= self.n:
@@ -993,6 +1018,9 @@ class Diatisch:
         #for t in dict_images:
         #    f = dict_images[t].get_filename() 
         #    print("    dict_images id: ", str(t), " filename: " , f)
+        labeltext = label_ctr.cget('text')
+        labeltext = re.sub(r"\d+$", f"{str(ctr)}", labeltext) # replace single backslash by slash
+        label_ctr.config(text = labeltext)
         return dict_images
 
     # Undo /Redo functions
@@ -1049,7 +1077,7 @@ class Diatisch:
             self.dict_source_images = {}
             for i in list_obj_source:
                 self.list_source_images.append(i)
-            self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas)
+            self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
             source_new = True
  
         if h.str_hashsum_target_filenames != self.dict_processid_histobj[processid_predecessor].str_hashsum_target_filenames:
@@ -1058,7 +1086,7 @@ class Diatisch:
             self.dict_target_images = {}
             for i in list_obj_target:
                 self.list_target_images.append(i)
-            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas)
+            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
             target_new = True
 
         # restore the select counters for sequence of selection
@@ -1085,6 +1113,9 @@ class Diatisch:
                 else:
                     self.list_target_images[ii].unselect(self.target_canvas)
                 ii += 1
+        labeltext = self.Label_process_id.cget('text')
+        labeltext = re.sub(r"\d+$", f"{str(process_id)}", labeltext) # replace num by processid
+        self.Label_process_id.config(text = labeltext)
         
     def historize_process(self):
         h = HistObj()
@@ -1131,6 +1162,9 @@ class Diatisch:
         self.UR.historize_process()
         self.dict_processid_histobj[self.UR.get_processid_akt()] = h
         self.endis_buttons()
+        labeltext = self.Label_process_id.cget('text')
+        labeltext = re.sub(r"\d+$", f"{str(self.UR.get_processid_akt())}", labeltext) # replace num by processid
+        self.Label_process_id.config(text = labeltext)
 
     # Ende undo /redo-Funktionen
 
