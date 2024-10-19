@@ -90,7 +90,7 @@ class Diatisch:
     idx_akt  = 0 # current index into dict according to history (undo / redo)
     dict_filename_images = {}
     dict_filename_images[idx_akt] = {} # Filename -> MyImage contains all source filenames which is sufficient as target files are a subset of source files
-    def __init__(self, root = None, list_imagefiles = None): # if called from own main root will be initialized there
+    def __init__(self, root = None, list_imagefiles = None, list_result = None, callback = None): # if called from own main root will be initialized there
         if root is None:
             self.root = tk.Toplevel()
         else:
@@ -275,6 +275,10 @@ class Diatisch:
         self.dict_target_images = {} # ID -> MyImage
         self.list_source_images = []
         self.list_target_images = []
+        self.list_result = list_result  # reference given from caller
+        self.callback = None
+        if callback:
+            self.callback = callback
         
         # Undo /Redo control
         self.UR = UR.Undo_Redo_Diatisch()
@@ -298,6 +302,8 @@ class Diatisch:
         self.timestamp = datetime.now() 
         self.image_press = None
         self.image_release = None
+        
+        self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
         
         # the following two change attributes are for a transaction of press / release. 
         # They are set to false in start_drag, changed in selection() and used in drop to decide about rebuild canvas and historization
@@ -1168,6 +1174,16 @@ class Diatisch:
 
     # Ende undo /redo-Funktionen
 
+
+    def close_handler(self): #calles when window is closing
+        print("Diatisch: call callback when window is closed")
+        if self.callback:
+            for i in self.list_target_images:
+                #print(i)
+                self.list_result.append(i.get_filename())
+            self.callback()
+        self.root.destroy()
+
 class HistObj:
     def __init__(self):
 
@@ -1187,5 +1203,5 @@ class HistObj:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = Diatisch(root, False)  # when run as main we have no list of image files
+    app = Diatisch(root, False, False, False)  # when run as main we have no list of image files and no result list, no callback
     root.mainloop()

@@ -68,6 +68,7 @@ class Globals:
     dict_thumbnails = {}
     dict_duplicates = {}
     outdir = ""
+    list_result_diatisch = []
 
 class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
@@ -1778,6 +1779,7 @@ class Dateimeister_support:
         self.dict_relpath = {}
         self.dict_gen_files_delrelpath = {}
         self.dict_source_target_tooold = {}
+        self.win_diatisch = None
         
         self.init()
         self.root.mainloop()
@@ -3479,18 +3481,26 @@ class Dateimeister_support:
 
     def menu_diatisch(self):
         # if jpeg build list of not excluded imagefiles and call diatisch
-        if Globals.imagetype == "JPEG":
-            list_diatisch = []
-            for i in Globals.dict_thumbnails[Globals.imagetype]:
-                t = Globals.dict_thumbnails[Globals.imagetype][i]
-                if t.getState() == state.INCLUDE:
-                    list_diatisch.append(i)
-            if list_diatisch:
-                self.win_diatisch = DIAT.Diatisch(None, list_diatisch)
+        if not self.win_diatisch: # run only once
+            if Globals.imagetype == "JPEG":
+                list_diatisch = []
+                for i in Globals.dict_thumbnails[Globals.imagetype]:
+                    t = Globals.dict_thumbnails[Globals.imagetype][i]
+                    if t.getState() == state.INCLUDE:
+                        list_diatisch.append(i)
+                if list_diatisch:
+                    Globals.list_result_diatisch = []
+                    self.win_diatisch = DIAT.Diatisch(None, list_diatisch, Globals.list_result_diatisch, self.diatisch_callback)
+                else:
+                    messagebox.showinfo("Diatisch", "no images available for Diatisch")
             else:
-                messagebox.showinfo("Diatisch", "no images available for Diatisch")
-        else:
-            messagebox.showinfo("Diatisch", "only jpeg supported by Diatisch")
+                messagebox.showinfo("Diatisch", "only jpeg supported by Diatisch")
+
+    def diatisch_callback(self): #calback-Funktion called from diatisch on closing
+        print("callback from diatisch")
+        for i in Globals.list_result_diatisch:
+            print(i)
+        self.win_diatisch = None
 
     def on_window_destroy(self, a):
         a = 1
