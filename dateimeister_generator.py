@@ -11,7 +11,6 @@ def dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, new
     # List all files and directories in the specified path, returns list
     #print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
     print("Dateimeister addrelpath is: ", addrelpath)
-    obj = os.scandir(indir)
     dict_result = {}
     dict_result_all = {} # we need all JPEG-Files for process_type "use_jpeg". Ignore timestamp modified
     dict_result_tooold = {} # we want to keep the files which are not copied because a newer target exist
