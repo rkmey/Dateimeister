@@ -7,7 +7,7 @@ import re
 from datetime import datetime, timezone
 
 
-def dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, newer, target_prefix, dict_relpath):
+def dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, newer, target_prefix, dict_relpath, select_list):
     # List all files and directories in the specified path, returns list
     #print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
     print("Dateimeister addrelpath is: ", addrelpath)
@@ -166,5 +166,15 @@ def dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, new
             for dir in dirs:
                 a = 1
                 #print("D: " + os.path.join(root, dir))
+        # 20241022 only return entries from select_list if not None
+        #print(str(dict_result))
+        if select_list:
+            backslash = "\\"
+            for i in select_list:
+                i = re.sub(re.escape(backslash), r'\\', i) # replace single backslash by double backslash
+                if i in dict_result:
+                    print("select file: " + i)
+                else:
+                    print("select file not found: ", i)
     return dict_result, dict_result_all, dict_result_tooold
 
