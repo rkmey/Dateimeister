@@ -2799,6 +2799,8 @@ class Dateimeister_support:
                 self.dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
                 self.lastposition += image_width + Globals.gap 
                 if myimage.getDuplicate() == 'j':
+                    if imagetype.upper() == "JPEG":
+                        print ("Duplicate: " + file)
                     text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(self.dict_image_lineno[imagetype][file]))

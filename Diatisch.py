@@ -96,7 +96,7 @@ class Diatisch:
         else:
             self.root = root
         self.root.title("Diatisch")
-        print("List Imagefiles is: " + str(list_imagefiles))
+        #print("List Imagefiles is: " + str(list_imagefiles))
         # Fenstergröße
         physical_width  = self.root.winfo_screenwidth()
         physical_height = self.root.winfo_screenheight()

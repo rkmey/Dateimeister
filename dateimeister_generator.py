@@ -167,14 +167,22 @@ def dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, new
                 a = 1
                 #print("D: " + os.path.join(root, dir))
         # 20241022 only return entries from select_list if not None
-        #print(str(dict_result))
-        if select_list:
+        if select_list and dateityp.upper() == "JPEG":
+            #print(str(dict_result))
             backslash = "\\"
-            for i in select_list:
-                i = re.sub(re.escape(backslash), r'\\', i) # replace single backslash by double backslash
-                if i in dict_result:
-                    print("select file: " + i)
-                else:
-                    print("select file not found: ", i)
+            select_result = {}
+            select_result_all = {}
+            select_result_tooold = {}
+            for key in select_list:
+                #key = re.sub(re.escape(backslash), r'\\\\', key) # replace single backslash by double backslash - not necessary although dict_result-entries seem to have 2 backslash and select_list only 1
+                try:
+                    value = dict_result[key]
+                    select_result[key] = value
+                    print("select file: " + key)
+                except KeyError:
+                    print("select file not found: ", key)
+            dict_result        = select_result
+            dict_result_all    = select_result_all
+            dict_result_tooold = select_result_tooold
     return dict_result, dict_result_all, dict_result_tooold
 
