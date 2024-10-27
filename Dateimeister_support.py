@@ -2579,7 +2579,8 @@ class Dateimeister_support:
                 Globals.dict_duplicates[dateityp][dupl_target_file].append(this_sourcefile) # Duplicates  
             # remove singles from  dict_duplicates, we use a copy because we must not delete entries during iteration
             # create dict_duplicates_sourcefiles , key = sourcefile, value = targetfile
-            self.dict_duplicates_sourcefiles[dateityp] = {}
+            if dateityp in self.dict_duplicates_sourcefiles:
+                self.dict_duplicates_sourcefiles[dateityp].clear()
             dict_h = {}
             dict_h = copy.deepcopy(Globals.dict_duplicates[dateityp])
             for mytarget in dict_h:
