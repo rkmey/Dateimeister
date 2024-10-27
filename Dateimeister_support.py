@@ -2427,12 +2427,8 @@ class Dateimeister_support:
             self.label_num.config(text = "0")
             self.clear_textbox(self.lb_gen)
             self.oldcamera = thiscamera
-            if Globals.imagetype in Globals.thumbnails:
-                print("try to delete thumbnails...")
-                Globals.thumbnails[Globals.imagetype].clear()
-            if Globals.imagetype in Globals.dict_thumbnails:
-                print("try to delete dict_thumbnails...")
-                Globals.dict_thumbnails[Globals.imagetype] = {}
+            self.clear_dict_2nd(Globals.thumbnails, Globals.imagetype)
+            self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
 
     def Press_generate(self, *args):
         if _debug:
@@ -2514,11 +2510,9 @@ class Dateimeister_support:
 
         for dateityp in self.dict_cameras[thiscamera]:
             # cleanup
+            self.clear_dict_2nd(Globals.thumbnails, dateityp)
             # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
-            if dateityp in Globals.thumbnails:
-                Globals.thumbnails[dateityp].clear() # damit werden implizit jetzt alle Bilder gelöscht
-            else:
-                Globals.thumbnails[dateityp] = []
+            Globals.thumbnails[dateityp] = []
 
             subdir = self.dict_subdirs[dateityp]
             thisoutdir = outdir + "/" + subdir
@@ -2572,17 +2566,19 @@ class Dateimeister_support:
             lineno = 0
             for this_sourcefile in self.dict_source_target[dateityp]:
                 lineno += 1
-                #print(line)
+                #print(this_sourcefile)
                 dupl_target_file = self.dict_source_target[dateityp][this_sourcefile].upper() #for duplicate target  check ignore case
                 if dupl_target_file not in Globals.dict_duplicates[dateityp]:
+                    #self.clear_dict_2nd(Globals.dict_duplicates, dateityp)
                     Globals.dict_duplicates[dateityp][dupl_target_file] = []
                 Globals.dict_duplicates[dateityp][dupl_target_file].append(this_sourcefile) # Duplicates  
             # remove singles from  dict_duplicates, we use a copy because we must not delete entries during iteration
-            # create dict_duplicates_sourcefiles , key = sourcefile, value = targetfile
-            if dateityp in self.dict_duplicates_sourcefiles:
-                self.dict_duplicates_sourcefiles[dateityp].clear()
+            # create dict_duplicates_sourcefiles , key = imagetype, value = dict:sourcefile->targetfile
+            self.clear_dict_2nd(self.dict_duplicates_sourcefiles, dateityp)
+            self.dict_duplicates_sourcefiles[dateityp] = {}
             dict_h = {}
             dict_h = copy.deepcopy(Globals.dict_duplicates[dateityp])
+            #print("dict_duplicates: " + str(Globals.dict_duplicates[dateityp])) 
             for mytarget in dict_h:
                 #print("Duplcate Key: " + mytarget) 
                 mylist = dict_h[mytarget]
@@ -2591,7 +2587,7 @@ class Dateimeister_support:
                     #print("nodupl: ", str(mylist))
                 else:
                     for mysource in mylist:
-                        self.dict_duplicates_sourcefiles[mysource] = mytarget
+                        self.dict_duplicates_sourcefiles[dateityp][mysource] = mytarget
             #print("dict_duplicates: " + str(Globals.dict_duplicates[dateityp])) 
 
             # alle Dateien aus der gerade verarbeiteten cmd-Datei tragen wir in dict_firstname_fullname ein, wenn type = JPEG
@@ -2673,12 +2669,10 @@ class Dateimeister_support:
         subdir = self.dict_subdirs[imagetype]
         Globals.outdir = self.dict_outdirs[imagetype] # for setting title of duplicate-window
         self.stop_all_players() # should not continue running 
-        # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
-        if imagetype in Globals.thumbnails:
-            Globals.thumbnails[imagetype].clear() # damit werden implizit jetzt alle Bilder gelöscht
-        else:
-            Globals.thumbnails[imagetype] = []
         
+        self.clear_dict_2nd(Globals.thumbnails, imagetype)
+        # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
+        Globals.thumbnails[imagetype] = []
         # cleanup
         self.close_child_windows()
         
@@ -2748,7 +2742,7 @@ class Dateimeister_support:
                 showfile = file
             else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
                 showfile = "none"
-            if file in self.dict_duplicates_sourcefiles: # for storing in Thumbnail
+            if file in self.dict_duplicates_sourcefiles[imagetype]: # for storing in Thumbnail
                 duplicate = 'j'
             else:
                 duplicate = 'n'
@@ -2921,12 +2915,8 @@ class Dateimeister_support:
         #button_call.config(state = DISABLED)
         self.label_num.config(text = "0")
         self.clear_textbox(self.lb_gen)
-        if Globals.imagetype in Globals.thumbnails:
-            print("try to delete thumbnails...")
-            Globals.thumbnails[Globals.imagetype].clear()
-        if Globals.imagetype in Globals.dict_thumbnails:
-            print("try to delete dict_thumbnails...")
-            Globals.dict_thumbnails[Globals.imagetype] = {}
+        self.clear_dict_2nd(Globals.thumbnails, Globals.imagetype)
+        self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
 
     def new_dir_in_xml(self, dirtype, max_dirs, dir_chosen, ts):
         do_del = True
@@ -3437,6 +3427,7 @@ class Dateimeister_support:
         self.UR.historize_process()
         processid_akt = self.UR.get_processid_akt()
         # wir bilden jetzt zu der aktuellen processid eine Liste der states der thumbnails
+        self.clear_dict_2nd(self.dict_status_image, processid_akt)
         self.dict_status_image[processid_akt] = []
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
             self.dict_status_image[processid_akt].append(thumbnail.getState())
@@ -3522,6 +3513,11 @@ class Dateimeister_support:
 
     def clear_textbox(self, o):
         o.delete(0, 'end')
+        
+    def clear_dict_2nd(self, d, key):
+        # clears dict or list on 2nd level
+        if key in d:
+            d[key].clear()
         
     def clear_text(self, o):
         o.delete(1.0, 'end')
