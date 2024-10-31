@@ -2429,6 +2429,9 @@ class Dateimeister_support:
             self.oldcamera = thiscamera
             self.clear_dict_2nd(Globals.thumbnails, Globals.imagetype)
             self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
+        if Globals.list_result_diatisch:
+            Globals.list_result_diatisch.clear()
+            Globals.list_result_diatisch = None
 
     def Press_generate(self, *args):
         if _debug:
@@ -2524,8 +2527,8 @@ class Dateimeister_support:
                 target_prefix = ''
             self.dict_source_target[dateityp] = {}
             self.dict_relpath[dateityp] = {}
-            self.dict_source_target[dateityp], dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp] = \
-              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, self.dict_relpath[dateityp], Globals.list_result_diatisch)
+            self.dict_source_target[dateityp], dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp], self.dict_relpath[dateityp] = \
+              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch)
             self.dict_relpath[dateityp] = dict(reversed(list(self.dict_relpath[dateityp].items())))
             for ii in self.dict_relpath[dateityp]:
                 print(" > ", ii, " files: ", self.dict_relpath[dateityp][ii])
