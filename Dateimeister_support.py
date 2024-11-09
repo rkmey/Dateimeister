@@ -1780,6 +1780,8 @@ class Dateimeister_support:
         self.dict_gen_files_delrelpath = {}
         self.dict_source_target_tooold = {}
         self.win_diatisch = None
+        self.dict_lb_camera_index = {}
+        self.diatisch_camera_name = "DIATISCH" # name used for insert / retrieve index in listbox
         
         self.init()
         self.root.mainloop()
@@ -3497,6 +3499,13 @@ class Dateimeister_support:
         print("callback from diatisch")
         for i in Globals.list_result_diatisch:
             print(i)
+        # select Diatisch_camera
+        self.lb_camera.selection_clear(0, END)
+        idx_diatisch = int(self.dict_lb_camera_index[self.diatisch_camera_name])
+        self.lb_camera.selection_set(idx_diatisch)
+        self.clear_textbox(self.o_camera)
+        self.insert_text(self.o_camera, self.diatisch_camera_name)
+        self.Press_generate()
         self.win_diatisch = None
 
     def on_window_destroy(self, a):
@@ -3550,15 +3559,15 @@ class Dateimeister_support:
 
     def get_camera_xml(self): # returns dict with all cameras, types and suffixes
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-        cameraname = "Retina Reflex"
+        cameraname = self.diatisch_camera_name
         ctype      = "JPEG"
         suffix     = "JPG"
         rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
         suffix     = "JPEG"
         rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
-        ctype      = "VIDEO"
-        suffix     = "MOV"
-        rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
+        #ctype      = "VIDEO"
+        #suffix     = "MOV"
+        #rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
         # dateimeister_config_xml.py returns suffixes as list we need them as a comma separated string
         dict_cameras = {}
         dict_cameras = DX.get_cameras_types_suffixes(Globals.config_files_xml)
@@ -3590,8 +3599,11 @@ class Dateimeister_support:
             print("Process Image  {:s}, {:s}".format(t, dict_pi[t]))
         
         self.lb_camera.delete(0, END)
+        index = 0
         for key in dict_t:
             self.lb_camera.insert(END, key)
+            self.dict_lb_camera_index[key] = index
+            index += 1
         self.lb_camera.selection_set(END)
 
         return dict_t, dict_s, dict_pi
