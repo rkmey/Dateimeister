@@ -24,6 +24,7 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
         ii += 1
 
     if select_list: # comes from Diatisch
+        fctr = 0
         for fullname in select_list:
             if os.path.isfile(fullname):
                 filename = os.path.basename(fullname)
@@ -32,6 +33,14 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
                 filename = re.sub(r"\\", "/", filename) # replace single backslash by slash
                 fullname = os.path.join(root, filename)
                 sourcefile, targetfile, docopy, process = process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixes, addrelpath, newer, target_prefix)
+
+                targetroot = os.path.dirname(targetfile)
+                targetfilename = os.path.basename(targetfile)
+                fctr += 1
+                targetfilename = '{:04d}_'.format(fctr) + targetfilename
+                targetfile = os.path.join(targetroot, targetfilename)
+                targetfile = re.sub(r"\\", "/", targetfile) # replace single backslash by slash
+                
                 if process == "j":
                     if dateityp.upper() == "JPEG":
                         dict_result_all[sourcefile] = targetfile # we need all jpeg-files regardless of copy-status
