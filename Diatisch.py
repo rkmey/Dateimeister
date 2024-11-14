@@ -312,6 +312,7 @@ class Diatisch:
         self.dist_frame = 20 # distance of dotted select frame from border in Pixels
         self.single_image_to_copy   = None # name of single image selected by menuitem to copy from source to target
         self.single_image_to_delete = None # name of single image selected by menuitem to delete from target
+        self.image_files = []
         if list_imagefiles:
             self.load_images(list_imagefiles)
 
@@ -345,15 +346,15 @@ class Diatisch:
         tag_no = 0
         directory = None
         if p_imagefiles: # imagefiles given by caller
-            image_files = p_imagefiles
+            self.image_files = p_imagefiles
         else:
             directory = filedialog.askdirectory()
             if directory:
-                image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
+                self.image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
             else:
                 messagebox.showerror("Open", "unable to open: " + directory, parent = self.root)
                 return False
-        for img_file in image_files:
+        for img_file in self.image_files:
             tag_no += 1
             if directory:
                 filename = os.path.join(directory, img_file)
@@ -1183,6 +1184,38 @@ class Diatisch:
                 self.list_result.append(i.get_filename())
             self.callback()
         self.root.destroy()
+
+    def write_config(self, filename): # Config-xml unter neuem Namen sichern
+        file1 = open(filename, "w")
+        
+        s = '<?xml version="1.0" encoding="iso-8859-1"?>' + "\n"
+        file1.write(s)
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        
+        # write node infiles
+        s = '<infiles time="' + ts + '">' + "\n"
+        file1.write(s)
+        for i in self.list_images:
+            s = "    <infile filename=\"" + i + "\">\n"
+            file1.write(s)
+            s = "    </infile>\n"
+            file1.write(s)
+        s = '</infiles>' + "\n"
+        file1.write(s)
+        
+        # write node slides
+        s = '<slides time="' + ts + '">' + "\n"
+        file1.write(s)
+        for i in self.list_target_images:
+            s = "    <slide filename=\"" + i.get_filename() + "\">\n"
+            file1.write(s)
+            s = "    </slide>\n"
+            file1.write(s)
+        s = '</slides>' + "\n"
+        file1.write(s)
+        # Closing file
+        file1.close()
+        
 
 class HistObj:
     def __init__(self):
