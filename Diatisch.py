@@ -1,17 +1,20 @@
 import os
 import tkinter as tk
 from tkinter.constants import *
-from tkinter import filedialog
+from tkinter import filedialog as fd
 from tkinter import messagebox
 from tkinter.font import Font
 from PIL import Image, ImageTk
 import Tooltip as TT
+import time
 from datetime import datetime, timezone
+from time import gmtime, strftime
+
 import hashlib
 import re
 import configparser 
 import Undo_Redo as UR
-
+import dateimeister_config_xml as DX
 
 from enum import Enum
 class action(Enum):
@@ -21,6 +24,16 @@ class dragposition(Enum):
     BEFORE  = 1
     BEHIND  = 2
     
+FILE_NEW          = 0
+OPEN_CONFIG       = 1
+OPEN_APPLY_CONFIG = 2
+SAVE_CONFIG       = 3
+SAVE_CONFIG_AS    = 4
+APPLY_CONFIG      = 5
+OPEN_RECENT       = 6
+EXIT              = 7
+
+
 class pt(Enum):
     DROP_FROM_SOURCE  = 1
     DROP_FROM_TARGET  = 2
@@ -28,7 +41,7 @@ class pt(Enum):
     COPY_SINGLE       = 4
     DELETE_SELECTED   = 5
     DELETE_SINGLE     = 6
-
+    
 
 class ScrollableCanvas(tk.Canvas):
     def __init__(self, master, **kwargs):
@@ -96,7 +109,8 @@ class Diatisch:
             self.root = tk.Toplevel()
         else:
             self.root = root
-        self.root.title("Diatisch")
+        self.title = "Diatisch"
+        self.root.title(self.title)
         #print("List Imagefiles is: " + str(list_imagefiles))
         # Fenstergröße
         physical_width  = self.root.winfo_screenwidth()
@@ -121,11 +135,7 @@ class Diatisch:
         self.frame_labels_height = 0.04 # needed for calculation of font size
         self.label_height = 0.9 # needed for calculation of font size
 
-        # Frame for everything else
-        self.frame_root = tk.Frame(self.root)
-        self.frame_root.place(relx=.01, rely=0.1, relheight=.9, relwidth=1)
-
-        self.Frame_labels = tk.Frame(self.frame_root)
+        self.Frame_labels = tk.Frame(self.root)
         self.Frame_labels.place(relx=.01, rely=0.00, relheight=self.frame_labels_height, relwidth=0.98)
         self.Frame_labels.configure(relief='groove')
         self.Frame_labels.configure(borderwidth="2")
@@ -156,7 +166,7 @@ class Diatisch:
         self.Label_target_ctr.configure(text='Num Images Target: 0')
 
 
-        self.Frame_source = tk.Frame(self.frame_root)
+        self.Frame_source = tk.Frame(self.root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.85, relwidth=0.48)
         self.Frame_source.configure(relief='groove')
         self.Frame_source.configure(borderwidth="2")
@@ -165,7 +175,7 @@ class Diatisch:
         self.Frame_source.configure(highlightbackground="#d9d9d9")
         self.Frame_source.configure(highlightcolor="black")
 
-        self.Frame_target = tk.Frame(self.frame_root)
+        self.Frame_target = tk.Frame(self.root)
         self.Frame_target.place(relx=.51, rely=0.05, relheight=0.85, relwidth=0.48)
         self.Frame_target.configure(relief='groove')
         self.Frame_target.configure(borderwidth="2")
@@ -174,7 +184,7 @@ class Diatisch:
         self.Frame_target.configure(highlightbackground="#d9d9d9")
         self.Frame_target.configure(highlightcolor="black")
 
-        self.Frame_source_ctl = tk.Frame(self.frame_root)
+        self.Frame_source_ctl = tk.Frame(self.root)
         self.Frame_source_ctl.place(relx=.01, rely=0.92, relheight=0.05, relwidth=0.48)
         self.Frame_source_ctl.configure(relief='groove')
         self.Frame_source_ctl.configure(borderwidth="2")
@@ -183,7 +193,7 @@ class Diatisch:
         self.Frame_source_ctl.configure(highlightbackground="#d9d9d9")
         self.Frame_source_ctl.configure(highlightcolor="black")
 
-        self.Frame_target_ctl = tk.Frame(self.frame_root)
+        self.Frame_target_ctl = tk.Frame(self.root)
         self.Frame_target_ctl.place(relx=.51, rely=0.92, relheight=0.05, relwidth=0.48)
         self.Frame_target_ctl.configure(relief='groove')
         self.Frame_target_ctl.configure(borderwidth="2")
@@ -311,6 +321,8 @@ class Diatisch:
         self.config_files_xml = ""
         self.config_files_subdir = ""
         self.cmd_files_subdir    = ""
+        self.config_file = ""
+        self.ctr_targetfiles = 0
 
         self.timestamp = datetime.now() 
         self.image_press = None
@@ -333,24 +345,21 @@ class Diatisch:
 
     def init(self):
         # Menubar
-        menubar = tk.Menu(self.root)
-        self.filemenu = tk.Menu(menubar, tearoff=0)
+        self.menubar = tk.Menu(self.root)
+        self.root.configure(menu = self.menubar)
+        self.filemenu = tk.Menu(self.menubar, tearoff=0)
         self.filemenu.add_command(label="New", command=self.donothing)
         self.filemenu.add_command(label="Open config", command=self.open_config)
+        self.filemenu.add_command(label="Open and apply config", command=self.open_apply_config)
         self.filemenu.add_command(label="Save config", command=self.save_config)
         self.filemenu.add_command(label="Save config as...", command=self.saveas_config)
         self.filemenu.add_command(label="Apply config", command=self.apply_config)
-        menubar.add_cascade(label="File", menu=self.filemenu)
-        self.recentmenu = tk.Menu(menubar, tearoff=0)
+        self.menubar.add_cascade(label="File", menu=self.filemenu)
+        self.recentmenu = tk.Menu(self.menubar, tearoff=0)
         self.filemenu.add_cascade(label="Open Recent", menu=self.recentmenu)
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.root.quit)
-        self.filemenu.entryconfig(0, state=DISABLED)
-        self.filemenu.entryconfig(1, state=DISABLED) # open after Browse / Edit, we need indir and type
-        self.filemenu.entryconfig(2, state=DISABLED)
-        self.filemenu.entryconfig(3, state=DISABLED)
-        self.filemenu.entryconfig(4, state=DISABLED)
-        self.filemenu.entryconfig(5, state=DISABLED)
+        self.endis_filemenu_items()
 
     def read_ini(self):
         inifile = "Dateimeister.ini" 
@@ -360,7 +369,7 @@ class Diatisch:
         self.datadir = config["dirs"]["datadir"]
         self.config_files_subdir = config["dirs"]["config_files_subdir"]
         self.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
-        self.config_files_xml = config["misc"]["config_files_xml"]
+        self.config_files_xml = config["misc"]["config_files_diatisch_xml"]
         print("Config Files xml from ini is: " + self.config_files_xml)
         
         
@@ -396,7 +405,7 @@ class Diatisch:
         if p_imagefiles: # imagefiles given by caller
             self.image_files = p_imagefiles
         else:
-            directory = filedialog.askdirectory()
+            directory = fd.askdirectory()
             if directory:
                 self.image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
             else:
@@ -1074,8 +1083,10 @@ class Diatisch:
         #    f = dict_images[t].get_filename() 
         #    print("    dict_images id: ", str(t), " filename: " , f)
         labeltext = label_ctr.cget('text')
-        labeltext = re.sub(r"\d+$", f"{str(ctr)}", labeltext) # replace single backslash by slash
+        labeltext = re.sub(r"\d+$", f"{str(ctr)}", labeltext)
         label_ctr.config(text = labeltext)
+        self.ctr_targetfiles = ctr
+        self.endis_filemenu_items()
         return dict_images
 
     # Undo /Redo functions
@@ -1245,6 +1256,15 @@ class Diatisch:
         self.root.title(self.title + ' ' + self.config_file)
         self.filemenu.entryconfig(2, state=NORMAL)
 
+    def open_apply_config(self):
+        # get config_files for source / target images
+        
+        endung = 'xml'
+        self.config_file = fd.askopenfilename(initialdir = os.path.join(self.datadir, self.config_files_subdir), filetypes=[("config files", endung)])
+        self.filemenu.entryconfig(4, state=NORMAL)
+        self.root.title(self.title + ' ' + self.config_file)
+        self.filemenu.entryconfig(2, state=NORMAL)
+
     def save_config(self): # Config-xml speichern
         print("Config File is: " + self.config_file)
         if self.config_file != "":
@@ -1256,7 +1276,7 @@ class Diatisch:
 
     def saveas_config(self): # Config-xml unter neuem Namen sichern
         endung = 'xml'
-        self.config_file = fd.asksaveasfilename(initialdir = os.path.join(Globals.datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
+        self.config_file = fd.asksaveasfilename(initialdir = os.path.join(self.datadir, self.config_files_subdir), filetypes=[("config files", endung)])
         if (len(self.config_file) > 0):
             match = re.search(rf".*?{endung}$", self.config_file)
             if match:
@@ -1275,41 +1295,66 @@ class Diatisch:
 
     def write_config(self, filename): # Config-xml unter neuem Namen sichern
         file1 = open(filename, "w")
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        ctr_source = 0
+        ctr_target = 0
         
         s = '<?xml version="1.0" encoding="iso-8859-1"?>' + "\n"
         file1.write(s)
-        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         
         # write node infiles
-        s = '<infiles time="' + ts + '">' + "\n"
+        s = '<images time="' + ts + '">' + "\n"
         file1.write(s)
-        for i in self.list_images:
-            s = "    <infile filename=\"" + i + "\">\n"
+        s = '    <infiles time="' + ts + '">' + "\n"
+        file1.write(s)
+        for i in self.list_source_images:
+            s = "        <infile filename=\"" + i.get_filename() + "\">\n"
             file1.write(s)
-            s = "    </infile>\n"
+            s = "        </infile>\n"
             file1.write(s)
-        s = '</infiles>' + "\n"
+            ctr_source += 1
+        s = '    </infiles>' + "\n"
         file1.write(s)
         
         # write node slides
-        s = '<slides time="' + ts + '">' + "\n"
+        s = '    <slides time="' + ts + '">' + "\n"
         file1.write(s)
         for i in self.list_target_images:
-            s = "    <slide filename=\"" + i.get_filename() + "\">\n"
+            s = "        <slide filename=\"" + i.get_filename() + "\">\n"
             file1.write(s)
-            s = "    </slide>\n"
+            s = "        </slide>\n"
             file1.write(s)
-        s = '</slides>' + "\n"
+            ctr_target += 1
+        s = '    </slides>' + "\n"
+        file1.write(s)
+        s = '</images>' + "\n"
         file1.write(s)
         # Closing file
         file1.close()
+
+        # create new xml-entry for file
+        DX.new_cfgfile_diatisch(self.config_files_xml, filename, ts, ctr_source, ctr_target)
 
     def donothing(self):
         print("Menuitem not yet implemented")
     
     def apply_config(self):
         print("Menuitem not yet implemented")
-    
+        
+    def endis_filemenu_items(self):
+        self.filemenu.entryconfig(FILE_NEW,          state=DISABLED)
+        self.filemenu.entryconfig(OPEN_CONFIG,       state=DISABLED)
+        self.filemenu.entryconfig(OPEN_APPLY_CONFIG, state=DISABLED)
+        self.filemenu.entryconfig(SAVE_CONFIG,       state=DISABLED)
+        self.filemenu.entryconfig(SAVE_CONFIG_AS,    state=DISABLED)
+        self.filemenu.entryconfig(APPLY_CONFIG,      state=DISABLED)
+        self.filemenu.entryconfig(OPEN_RECENT,       state=DISABLED)
+        
+        if self.config_file != "": # a config file has been opened
+            self.filemenu.entryconfig(APPLY_CONFIG,      state=NORMAL)
+        if self.ctr_targetfiles > 0:    
+            self.filemenu.entryconfig(SAVE_CONFIG,       state=NORMAL)
+            self.filemenu.entryconfig(SAVE_CONFIG_AS,    state=NORMAL)
         
 
 class HistObj:

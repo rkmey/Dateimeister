@@ -532,6 +532,30 @@ def new_subdir(xmlfile, type_name, subdir):
     mytree.write(xmlfile)
     return rc
 
+def new_cfgfile_diatisch(xmlfile, config_file, usedate, ctr_source, ctr_target):
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    fstr_cfgf = ("configfile[@filename=" + '"' + "%s" + "\"]")
+    fstr_cfgf = (fstr_cfgf % config_file)
+    #print ("xml search: " + fstr_cfgf)
+    # find config_file, if exist update usedate else new entry
+    result = mytree.findall(fstr_cfgf)
+    if not result: # config file does not exist
+        print("new config-file, try to create entry for: " + config_file)
+        i = ET.SubElement(myroot, 'configfile')
+        i.set("filename", config_file)
+        i.set("usedate", usedate)
+        i.set("ctr_source", str(ctr_source))
+        i.set("ctr_target", str(ctr_target))
+    else: # update usedate
+        print("config-file node alredy exists: " + config_file)
+        for i in result:
+            i.set("usedate", usedate)
+            i.set("ctr_source", str(ctr_source))
+            i.set("ctr_target", str(ctr_target))
+    indent(myroot)
+    mytree.write(xmlfile)
+
 
 # beautify
 
