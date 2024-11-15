@@ -9,6 +9,7 @@ import Tooltip as TT
 from datetime import datetime, timezone
 import hashlib
 import re
+import configparser 
 import Undo_Redo as UR
 
 
@@ -119,7 +120,12 @@ class Diatisch:
 
         self.frame_labels_height = 0.04 # needed for calculation of font size
         self.label_height = 0.9 # needed for calculation of font size
-        self.Frame_labels = tk.Frame(self.root)
+
+        # Frame for everything else
+        self.frame_root = tk.Frame(self.root)
+        self.frame_root.place(relx=.01, rely=0.1, relheight=.9, relwidth=1)
+
+        self.Frame_labels = tk.Frame(self.frame_root)
         self.Frame_labels.place(relx=.01, rely=0.00, relheight=self.frame_labels_height, relwidth=0.98)
         self.Frame_labels.configure(relief='groove')
         self.Frame_labels.configure(borderwidth="2")
@@ -150,7 +156,7 @@ class Diatisch:
         self.Label_target_ctr.configure(text='Num Images Target: 0')
 
 
-        self.Frame_source = tk.Frame(self.root)
+        self.Frame_source = tk.Frame(self.frame_root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.85, relwidth=0.48)
         self.Frame_source.configure(relief='groove')
         self.Frame_source.configure(borderwidth="2")
@@ -159,7 +165,7 @@ class Diatisch:
         self.Frame_source.configure(highlightbackground="#d9d9d9")
         self.Frame_source.configure(highlightcolor="black")
 
-        self.Frame_target = tk.Frame(self.root)
+        self.Frame_target = tk.Frame(self.frame_root)
         self.Frame_target.place(relx=.51, rely=0.05, relheight=0.85, relwidth=0.48)
         self.Frame_target.configure(relief='groove')
         self.Frame_target.configure(borderwidth="2")
@@ -168,7 +174,7 @@ class Diatisch:
         self.Frame_target.configure(highlightbackground="#d9d9d9")
         self.Frame_target.configure(highlightcolor="black")
 
-        self.Frame_source_ctl = tk.Frame(self.root)
+        self.Frame_source_ctl = tk.Frame(self.frame_root)
         self.Frame_source_ctl.place(relx=.01, rely=0.92, relheight=0.05, relwidth=0.48)
         self.Frame_source_ctl.configure(relief='groove')
         self.Frame_source_ctl.configure(borderwidth="2")
@@ -177,7 +183,7 @@ class Diatisch:
         self.Frame_source_ctl.configure(highlightbackground="#d9d9d9")
         self.Frame_source_ctl.configure(highlightcolor="black")
 
-        self.Frame_target_ctl = tk.Frame(self.root)
+        self.Frame_target_ctl = tk.Frame(self.frame_root)
         self.Frame_target_ctl.place(relx=.51, rely=0.92, relheight=0.05, relwidth=0.48)
         self.Frame_target_ctl.configure(relief='groove')
         self.Frame_target_ctl.configure(borderwidth="2")
@@ -299,6 +305,13 @@ class Diatisch:
         self.context_menu_target.add_command(label="Delete Selected"   , command=self.delete_selected_target_images)    
         self.context_menu_target.add_command(label="Delete "   , command=self.delete_single_target_image)    
 
+
+        self.default_indir  = ""
+        self.datadir = ""
+        self.config_files_xml = ""
+        self.config_files_subdir = ""
+        self.cmd_files_subdir    = ""
+
         self.timestamp = datetime.now() 
         self.image_press = None
         self.image_release = None
@@ -313,9 +326,44 @@ class Diatisch:
         self.single_image_to_copy   = None # name of single image selected by menuitem to copy from source to target
         self.single_image_to_delete = None # name of single image selected by menuitem to delete from target
         self.image_files = []
+        self.read_ini()
+        self.init()
         if list_imagefiles:
             self.load_images(list_imagefiles)
 
+    def init(self):
+        # Menubar
+        menubar = tk.Menu(self.root)
+        self.filemenu = tk.Menu(menubar, tearoff=0)
+        self.filemenu.add_command(label="New", command=self.donothing)
+        self.filemenu.add_command(label="Open config", command=self.open_config)
+        self.filemenu.add_command(label="Save config", command=self.save_config)
+        self.filemenu.add_command(label="Save config as...", command=self.saveas_config)
+        self.filemenu.add_command(label="Apply config", command=self.apply_config)
+        menubar.add_cascade(label="File", menu=self.filemenu)
+        self.recentmenu = tk.Menu(menubar, tearoff=0)
+        self.filemenu.add_cascade(label="Open Recent", menu=self.recentmenu)
+        self.filemenu.add_separator()
+        self.filemenu.add_command(label="Exit", command=self.root.quit)
+        self.filemenu.entryconfig(0, state=DISABLED)
+        self.filemenu.entryconfig(1, state=DISABLED) # open after Browse / Edit, we need indir and type
+        self.filemenu.entryconfig(2, state=DISABLED)
+        self.filemenu.entryconfig(3, state=DISABLED)
+        self.filemenu.entryconfig(4, state=DISABLED)
+        self.filemenu.entryconfig(5, state=DISABLED)
+
+    def read_ini(self):
+        inifile = "Dateimeister.ini" 
+        config = configparser.ConfigParser() 
+        config.read(inifile)
+        self.default_indir  = config["dirs"]["indir"]
+        self.datadir = config["dirs"]["datadir"]
+        self.config_files_subdir = config["dirs"]["config_files_subdir"]
+        self.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
+        self.config_files_xml = config["misc"]["config_files_xml"]
+        print("Config Files xml from ini is: " + self.config_files_xml)
+        
+        
     def on_configure(self, event):
         x = str(event.widget)
         if x == ".": # . is toplevel window
@@ -1185,6 +1233,46 @@ class Diatisch:
             self.callback()
         self.root.destroy()
 
+    def donothing(self):
+        print("Menuitem not yet implemented")
+    
+    def open_config(self):
+        # get config_files for source / target images
+        
+        endung = 'xml'
+        self.config_file = fd.askopenfilename(initialdir = os.path.join(self.datadir, self.config_files_subdir), filetypes=[("config files", endung)])
+        self.filemenu.entryconfig(4, state=NORMAL)
+        self.root.title(self.title + ' ' + self.config_file)
+        self.filemenu.entryconfig(2, state=NORMAL)
+
+    def save_config(self): # Config-xml speichern
+        print("Config File is: " + self.config_file)
+        if self.config_file != "":
+            self.write_config(self.config_file)
+            # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
+            #self.update_config_xml(self.config_file)
+        else:
+            self.saveas_config()
+
+    def saveas_config(self): # Config-xml unter neuem Namen sichern
+        endung = 'xml'
+        self.config_file = fd.asksaveasfilename(initialdir = os.path.join(Globals.datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
+        if (len(self.config_file) > 0):
+            match = re.search(rf".*?{endung}$", self.config_file)
+            if match:
+                filename = self.config_file
+            else:
+                filename = self.config_file + '.' + endung
+                self.config_file = filename
+            self.write_config(filename)
+            # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
+            #self.update_config_xml(self.config_file)
+            
+            self.root.title(self.title + ' ' + self.config_file)
+            self.filemenu.entryconfig(2, state=NORMAL) # Save
+            self.filemenu.entryconfig(3, state=NORMAL) # Save As
+            self.filemenu.entryconfig(4, state=NORMAL) # Apply config
+
     def write_config(self, filename): # Config-xml unter neuem Namen sichern
         file1 = open(filename, "w")
         
@@ -1215,6 +1303,13 @@ class Diatisch:
         file1.write(s)
         # Closing file
         file1.close()
+
+    def donothing(self):
+        print("Menuitem not yet implemented")
+    
+    def apply_config(self):
+        print("Menuitem not yet implemented")
+    
         
 
 class HistObj:
