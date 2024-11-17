@@ -557,6 +557,23 @@ def new_cfgfile_diatisch(xmlfile, config_file, usedate, ctr_source, ctr_target):
     mytree.write(xmlfile)
 
 
+# return list of indirentries
+def get_cfgfiles_diatisch(xmlfile):
+    cfgfiles = {}
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    fstr_indir = ("configfile")
+    result = mytree.findall(fstr_indir)
+    for i in result:
+        #print(i.attrib , i.text)
+        cfgfiles[i.attrib['filename']] = {}
+        cfgfiles[i.attrib['filename']]['usedate'] = i.attrib['usedate']
+        cfgfiles[i.attrib['filename']]['ctr_source'] = i.attrib['ctr_source']
+        cfgfiles[i.attrib['filename']]['ctr_target'] = i.attrib['ctr_target']
+    return cfgfiles
+
+
+
 # beautify
 
 def indent(elem, level=0):

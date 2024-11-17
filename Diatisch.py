@@ -9,6 +9,7 @@ import Tooltip as TT
 import time
 from datetime import datetime, timezone
 from time import gmtime, strftime
+import operator
 
 import hashlib
 import re
@@ -167,7 +168,7 @@ class Diatisch:
 
 
         self.Frame_source = tk.Frame(self.root)
-        self.Frame_source.place(relx=.01, rely=0.05, relheight=0.85, relwidth=0.48)
+        self.Frame_source.place(relx=.01, rely=0.05, relheight=0.75, relwidth=0.48)
         self.Frame_source.configure(relief='groove')
         self.Frame_source.configure(borderwidth="2")
         self.Frame_source.configure(relief="groove")
@@ -176,7 +177,7 @@ class Diatisch:
         self.Frame_source.configure(highlightcolor="black")
 
         self.Frame_target = tk.Frame(self.root)
-        self.Frame_target.place(relx=.51, rely=0.05, relheight=0.85, relwidth=0.48)
+        self.Frame_target.place(relx=.51, rely=0.05, relheight=0.75, relwidth=0.48)
         self.Frame_target.configure(relief='groove')
         self.Frame_target.configure(borderwidth="2")
         self.Frame_target.configure(relief="groove")
@@ -185,7 +186,7 @@ class Diatisch:
         self.Frame_target.configure(highlightcolor="black")
 
         self.Frame_source_ctl = tk.Frame(self.root)
-        self.Frame_source_ctl.place(relx=.01, rely=0.92, relheight=0.05, relwidth=0.48)
+        self.Frame_source_ctl.place(relx=.01, rely=0.82, relheight=0.05, relwidth=0.48)
         self.Frame_source_ctl.configure(relief='groove')
         self.Frame_source_ctl.configure(borderwidth="2")
         self.Frame_source_ctl.configure(relief="groove")
@@ -194,13 +195,38 @@ class Diatisch:
         self.Frame_source_ctl.configure(highlightcolor="black")
 
         self.Frame_target_ctl = tk.Frame(self.root)
-        self.Frame_target_ctl.place(relx=.51, rely=0.92, relheight=0.05, relwidth=0.48)
+        self.Frame_target_ctl.place(relx=.51, rely=0.82, relheight=0.05, relwidth=0.48)
         self.Frame_target_ctl.configure(relief='groove')
         self.Frame_target_ctl.configure(borderwidth="2")
         self.Frame_target_ctl.configure(relief="groove")
         self.Frame_target_ctl.configure(background="#d9d9d9")
         self.Frame_target_ctl.configure(highlightbackground="#d9d9d9")
         self.Frame_target_ctl.configure(highlightcolor="black")
+
+        # combobox for config files
+        self.combobox_cfg_var = tk.StringVar()
+        self.combobox_cfg = tk.Listbox(self.root)
+        self.combobox_cfg.place(relx=.8, rely=0.87, relheight=0.1, relwidth=0.19)
+        self.combobox_cfg.configure(background="white")
+        self.combobox_cfg.configure(disabledforeground="#a3a3a3")
+        self.combobox_cfg.configure(font="TkFixedFont")
+        self.combobox_cfg.configure(foreground="black")
+        self.combobox_cfg.configure(highlightbackground="#d9d9d9")
+        self.combobox_cfg.configure(highlightcolor="black")
+        self.combobox_cfg.configure(selectbackground="#c4c4c4")
+        self.combobox_cfg.configure(selectforeground="black")
+        self.combobox_cfg.configure(selectmode='single')
+        self.combobox_cfg.configure(listvariable=self.combobox_cfg_var)
+        # Scrollbars
+        VI = tk.Scrollbar(self.combobox_cfg, orient= VERTICAL)
+        VI.place(relx = 1, rely = 0, relheight = 1, relwidth = .02, anchor = tk.NE)
+        VI.config(command = self.combobox_cfg.yview)
+        self.combobox_cfg.config(yscrollcommand = VI.set)
+        HI = tk.Scrollbar(self.combobox_cfg, orient= HORIZONTAL)
+        HI.place(relx = 0, rely = 1, relheight = 0.1, relwidth = 1, anchor = tk.SW)
+        HI.config(command = self.combobox_cfg.xview)
+        self.combobox_cfg.config(xscrollcommand = HI.set)
+        self.combobox_cfg.bind('<Double-1>', self.combobox_cfg_double)
 
         # canvas source with scrollbars
         self.source_canvas = ScrollableCanvas(self.Frame_source, bg="yellow")
@@ -360,6 +386,7 @@ class Diatisch:
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.root.quit)
         self.endis_filemenu_items()
+        self.update_combobox_cfg()
 
     def read_ini(self):
         inifile = "Dateimeister.ini" 
@@ -371,7 +398,44 @@ class Diatisch:
         self.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
         self.config_files_xml = config["misc"]["config_files_diatisch_xml"]
         print("Config Files xml from ini is: " + self.config_files_xml)
-        
+
+    def update_combobox_cfg(self):
+        # fill cfg combobox
+        result = DX.get_cfgfiles_diatisch(self.config_files_xml)
+        dict_filename_usedate = {}
+        for tfile in result:
+            #print("infile: " + tfile)
+            attribute = result[tfile]
+            searchattr = 'usedate'
+            for attribut in attribute:
+                print("  " + attribut + " = " + attribute[attribut])
+                if attribut == searchattr:
+                    dict_filename_usedate[tfile] = attribute[searchattr]
+            
+        # descending by usedate
+        sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
+        # make list
+        ii = 0
+        indexes = []
+        for tfile in sorted_d:
+            self.combobox_cfg.insert(END, tfile)
+            if not os.path.isfile(tfile):
+                #print("INDIR: " + tfile + " INDEX: " + str(ii))
+                indexes.append(ii) # list of indizes to grey out because dir does not exist
+            ii += 1
+        if ii > 0:
+            self.combobox_cfg.select_set(0)
+            #self.button_indir_from_list.config(state = NORMAL)
+        else: 
+            #self.button_indir_from_list.config(state = DISABLED)
+            pass
+        for ii in indexes:
+            self.combobox_cfg.itemconfig(ii, fg="gray")
+
+    def combobox_cfg_double(self, event = None):
+        selected_indices = self.combobox_cfg.curselection()
+        cfgfile = ",".join([self.combobox_cfg.get(i) for i in selected_indices]) # because listbox has single selection
+        print("cfg file selected is: " + cfgfile)
         
     def on_configure(self, event):
         x = str(event.widget)
@@ -388,7 +452,9 @@ class Diatisch:
                 self.text_font.configure(size=fontsize_use)                
                 
 
-    def load_images(self, p_imagefiles = None):
+    def load_images(self, p_imagefiles_source = None, p_imagefiles_target = None):
+        # if list-source is given use it, else ask for dir to open
+        # if list-target is given use it
         self.list_source_images = []
         self.dict_source_images = {}
         self.list_target_images = []
@@ -402,8 +468,8 @@ class Diatisch:
         tag_prefix = 'P'
         tag_no = 0
         directory = None
-        if p_imagefiles: # imagefiles given by caller
-            self.image_files = p_imagefiles
+        if p_imagefiles_source: # imagefiles given by caller
+            self.image_files = p_imagefiles_source
         else:
             directory = fd.askdirectory()
             if directory:
