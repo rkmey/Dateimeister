@@ -565,12 +565,26 @@ def get_cfgfiles_diatisch(xmlfile):
     fstr_indir = ("configfile")
     result = mytree.findall(fstr_indir)
     for i in result:
-        #print(i.attrib , i.text)
         cfgfiles[i.attrib['filename']] = {}
         cfgfiles[i.attrib['filename']]['usedate'] = i.attrib['usedate']
         cfgfiles[i.attrib['filename']]['ctr_source'] = i.attrib['ctr_source']
         cfgfiles[i.attrib['filename']]['ctr_target'] = i.attrib['ctr_target']
     return cfgfiles
+    
+# return list of source files from Diatisch config file
+def get_filenames_diatisch(xmlfile, ftype, ftype2):
+    files = []
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    result = mytree.findall(ftype)
+    for i in result:
+        #print(i.attrib['time'])
+        result2 = i.findall(ftype2)
+        for j in result2:
+            #print('x' + j.attrib['name'])
+            files.append(j.attrib['name'])
+    return files
+    
 
 
 

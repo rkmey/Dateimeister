@@ -436,6 +436,15 @@ class Diatisch:
         selected_indices = self.combobox_cfg.curselection()
         cfgfile = ",".join([self.combobox_cfg.get(i) for i in selected_indices]) # because listbox has single selection
         print("cfg file selected is: " + cfgfile)
+        # build lists of source and target files
+        sourcefiles = DX.get_filenames_diatisch(cfgfile, "sourcefiles", "sourcefile")
+        for i in sourcefiles:
+            print ("sourcefile: " + i)
+        targetfiles = DX.get_filenames_diatisch(cfgfile, "targetfiles", "targetfile")
+        for i in targetfiles:
+            print ("targetfile: " + i)
+        self.load_images(sourcefiles, targetfiles)
+        
         
     def on_configure(self, event):
         x = str(event.widget)
@@ -1368,33 +1377,35 @@ class Diatisch:
         s = '<?xml version="1.0" encoding="iso-8859-1"?>' + "\n"
         file1.write(s)
         
-        # write node infiles
+        # write node sourcefiles
         s = '<images time="' + ts + '">' + "\n"
         file1.write(s)
-        s = '    <infiles time="' + ts + '">' + "\n"
+        s = '    <sourcefiles time="' + ts + '">' + "\n"
         file1.write(s)
         for i in self.list_source_images:
-            s = "        <infile filename=\"" + i.get_filename() + "\">\n"
+            s = "        <sourcefile name=\"" + i.get_filename() + "\">\n"
             file1.write(s)
-            s = "        </infile>\n"
+            s = "        </sourcefile>\n"
             file1.write(s)
             ctr_source += 1
-        s = '    </infiles>' + "\n"
+        s = '    </sourcefiles>' + "\n"
         file1.write(s)
         
-        # write node slides
-        s = '    <slides time="' + ts + '">' + "\n"
+        # write node targetfiles
+        s = '    <targetfiles time="' + ts + '">' + "\n"
         file1.write(s)
         for i in self.list_target_images:
-            s = "        <slide filename=\"" + i.get_filename() + "\">\n"
+            s = "        <targetfile name=\"" + i.get_filename() + "\">\n"
             file1.write(s)
-            s = "        </slide>\n"
+            s = "        </targetfile>\n"
             file1.write(s)
-            ctr_target += 1
-        s = '    </slides>' + "\n"
+            ctr_source += 1
+        s = '    </targetfiles>' + "\n"
         file1.write(s)
+
         s = '</images>' + "\n"
         file1.write(s)
+
         # Closing file
         file1.close()
 
