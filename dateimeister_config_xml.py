@@ -532,6 +532,20 @@ def new_subdir(xmlfile, type_name, subdir):
     mytree.write(xmlfile)
     return rc
 
+# return list of Diatisch indirs
+def get_indirs_diatisch(xmlfile):
+    indirs = {}
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    result1 = myroot.findall("indirs")
+    if result1:
+        for i in result1:
+            result2 = i.findall("indir")
+            for j in result2:
+                indirs[j.attrib['filename']] = {}
+                indirs[j.attrib['filename']]['usedate'] = j.attrib['usedate']
+    return indirs
+
 def new_cfgfile_diatisch(xmlfile, config_file, usedate, ctr_source, ctr_target):
     mytree = ET.parse(xmlfile)
     myroot = mytree.getroot()
@@ -539,39 +553,44 @@ def new_cfgfile_diatisch(xmlfile, config_file, usedate, ctr_source, ctr_target):
     fstr_cfgf = (fstr_cfgf % config_file)
     #print ("xml search: " + fstr_cfgf)
     # find config_file, if exist update usedate else new entry
-    result = mytree.findall(fstr_cfgf)
-    if not result: # config file does not exist
-        print("new config-file, try to create entry for: " + config_file)
-        i = ET.SubElement(myroot, 'configfile')
-        i.set("filename", config_file)
-        i.set("usedate", usedate)
-        i.set("ctr_source", str(ctr_source))
-        i.set("ctr_target", str(ctr_target))
-    else: # update usedate
-        print("config-file node alredy exists: " + config_file)
-        for i in result:
-            i.set("usedate", usedate)
-            i.set("ctr_source", str(ctr_source))
-            i.set("ctr_target", str(ctr_target))
+    result1 = mytree.findall("config_files")
+    if result1:
+        for i in result1:
+            result2 = i.findall(fstr_cfgf)
+            if not result2: # config file does not exist
+                print("new config-file, try to create entry for: " + config_file)
+                j = ET.SubElement(i, 'configfile')
+                j.set("filename", config_file)
+                j.set("usedate", usedate)
+                j.set("ctr_source", str(ctr_source))
+                j.set("ctr_target", str(ctr_target))
+            else: # update usedate
+                print("config-file node alredy exists: " + config_file)
+                for j in result2:
+                    j.set("usedate", usedate)
+                    j.set("ctr_source", str(ctr_source))
+                    j.set("ctr_target", str(ctr_target))
     indent(myroot)
     mytree.write(xmlfile)
 
 
-# return list of indirentries
+# return list of Diatisch config files
 def get_cfgfiles_diatisch(xmlfile):
     cfgfiles = {}
     mytree = ET.parse(xmlfile)
     myroot = mytree.getroot()
-    fstr_indir = ("configfile")
-    result = mytree.findall(fstr_indir)
-    for i in result:
-        cfgfiles[i.attrib['filename']] = {}
-        cfgfiles[i.attrib['filename']]['usedate'] = i.attrib['usedate']
-        cfgfiles[i.attrib['filename']]['ctr_source'] = i.attrib['ctr_source']
-        cfgfiles[i.attrib['filename']]['ctr_target'] = i.attrib['ctr_target']
+    result1 = myroot.findall("config_files")
+    if result1:
+        for i in result1:
+            result2 = i.findall("configfile")
+            for j in result2:
+                cfgfiles[j.attrib['filename']] = {}
+                cfgfiles[j.attrib['filename']]['usedate'] = j.attrib['usedate']
+                cfgfiles[j.attrib['filename']]['ctr_source'] = j.attrib['ctr_source']
+                cfgfiles[j.attrib['filename']]['ctr_target'] = j.attrib['ctr_target']
     return cfgfiles
     
-# return list of source files from Diatisch config file
+# return list of source / target files from Diatisch config file
 def get_filenames_diatisch(xmlfile, ftype, ftype2):
     files = []
     mytree = ET.parse(xmlfile)

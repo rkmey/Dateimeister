@@ -206,7 +206,7 @@ class Diatisch:
         # combobox for config files
         self.combobox_cfg_var = tk.StringVar()
         self.combobox_cfg = tk.Listbox(self.root)
-        self.combobox_cfg.place(relx=.8, rely=0.87, relheight=0.1, relwidth=0.19)
+        self.combobox_cfg.place(relx=.51, rely=0.87, relheight=0.1, relwidth=0.35)
         self.combobox_cfg.configure(background="white")
         self.combobox_cfg.configure(disabledforeground="#a3a3a3")
         self.combobox_cfg.configure(font="TkFixedFont")
@@ -218,15 +218,42 @@ class Diatisch:
         self.combobox_cfg.configure(selectmode='single')
         self.combobox_cfg.configure(listvariable=self.combobox_cfg_var)
         # Scrollbars
-        VI = tk.Scrollbar(self.combobox_cfg, orient= VERTICAL)
-        VI.place(relx = 1, rely = 0, relheight = 1, relwidth = .02, anchor = tk.NE)
-        VI.config(command = self.combobox_cfg.yview)
-        self.combobox_cfg.config(yscrollcommand = VI.set)
-        HI = tk.Scrollbar(self.combobox_cfg, orient= HORIZONTAL)
-        HI.place(relx = 0, rely = 1, relheight = 0.1, relwidth = 1, anchor = tk.SW)
-        HI.config(command = self.combobox_cfg.xview)
-        self.combobox_cfg.config(xscrollcommand = HI.set)
+        VI_CFG = tk.Scrollbar(self.combobox_cfg, orient= VERTICAL)
+        VI_CFG.place(relx = 1, rely = 0, relheight = 1, relwidth = .02, anchor = tk.NE)
+        VI_CFG.config(command = self.combobox_cfg.yview)
+        self.combobox_cfg.config(yscrollcommand = VI_CFG.set)
+        HI_CFG = tk.Scrollbar(self.combobox_cfg, orient= HORIZONTAL)
+        HI_CFG.place(relx = 0, rely = 1, relheight = 0.1, relwidth = 1, anchor = tk.SW)
+        HI_CFG.config(command = self.combobox_cfg.xview)
+        self.combobox_cfg.config(xscrollcommand = HI_CFG.set)
         self.combobox_cfg.bind('<Double-1>', self.combobox_cfg_double)
+        self.combobox_cfg.bind("<<ListboxSelect>>", lambda event: self.combobox_cfg_check_exist(event))
+
+        # combobox for Indirs
+        self.combobox_indir_var = tk.StringVar()
+        self.combobox_indir = tk.Listbox(self.root)
+        self.combobox_indir.place(relx=.01, rely=0.87, relheight=0.1, relwidth=0.35)
+        self.combobox_indir.configure(background="white")
+        self.combobox_indir.configure(disabledforeground="#a3a3a3")
+        self.combobox_indir.configure(font="TkFixedFont")
+        self.combobox_indir.configure(foreground="black")
+        self.combobox_indir.configure(highlightbackground="#d9d9d9")
+        self.combobox_indir.configure(highlightcolor="black")
+        self.combobox_indir.configure(selectbackground="#c4c4c4")
+        self.combobox_indir.configure(selectforeground="black")
+        self.combobox_indir.configure(selectmode='single')
+        self.combobox_indir.configure(listvariable=self.combobox_indir_var)
+        # Scrollbars
+        VI_INDIR = tk.Scrollbar(self.combobox_indir, orient= VERTICAL)
+        VI_INDIR.place(relx = 1, rely = 0, relheight = 1, relwidth = .02, anchor = tk.NE)
+        VI_INDIR.config(command = self.combobox_indir.yview)
+        self.combobox_indir.config(yscrollcommand = VI_INDIR.set)
+        HI_INDIR = tk.Scrollbar(self.combobox_indir, orient= HORIZONTAL)
+        HI_INDIR.place(relx = 0, rely = 1, relheight = 0.1, relwidth = 1, anchor = tk.SW)
+        HI_INDIR.config(command = self.combobox_indir.xview)
+        self.combobox_indir.config(xscrollcommand = HI_INDIR.set)
+        self.combobox_indir.bind('<Double-1>', self.combobox_indir_double)
+        self.combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
 
         # canvas source with scrollbars
         self.source_canvas = ScrollableCanvas(self.Frame_source, bg="yellow")
@@ -387,6 +414,7 @@ class Diatisch:
         self.filemenu.add_command(label="Exit", command=self.root.quit)
         self.endis_filemenu_items()
         self.update_combobox_cfg()
+        self.update_combobox_indir()
 
     def read_ini(self):
         inifile = "Dateimeister.ini" 
@@ -401,6 +429,7 @@ class Diatisch:
 
     def update_combobox_cfg(self):
         # fill cfg combobox
+        self.combobox_cfg.delete(0, 'end')
         result = DX.get_cfgfiles_diatisch(self.config_files_xml)
         dict_filename_usedate = {}
         for tfile in result:
@@ -446,6 +475,64 @@ class Diatisch:
         self.load_images(sourcefiles, targetfiles)
         
         
+    def combobox_cfg_check_exist(self, event):
+        if self.combobox_cfg.curselection():
+            index = self.combobox_cfg.curselection()[0]
+            sel   = self.combobox_cfg.get(index) # because listbox has single selection
+            #print("current selection is: " + sel + " INDEX: " + str(index))
+            if not os.path.isfile(sel):
+                self.combobox_cfg.selection_clear(index) # dont select, MessageBox
+                messagebox.showerror("showerror", "Configfile: " + sel + " does not exist, choose another one")
+
+    def update_combobox_indir(self):
+        # fill cfg combobox
+        self.combobox_indir.delete(0, 'end')
+        result = DX.get_indirs_diatisch(self.config_files_xml)
+        dict_filename_usedate = {}
+        for tfile in result:
+            #print("infile: " + tfile)
+            attribute = result[tfile]
+            searchattr = 'usedate'
+            for attribut in attribute:
+                print("  " + attribut + " = " + attribute[attribut])
+                if attribut == searchattr:
+                    dict_filename_usedate[tfile] = attribute[searchattr]
+            
+        # descending by usedate
+        sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
+        # make list
+        ii = 0
+        indexes = []
+        for tfile in sorted_d:
+            self.combobox_indir.insert(END, tfile)
+            if not os.path.isdir(tfile):
+                #print("INDIR: " + tfile + " INDEX: " + str(ii))
+                indexes.append(ii) # list of indizes to grey out because dir does not exist
+            ii += 1
+        if ii > 0:
+            self.combobox_indir.select_set(0)
+            #self.button_indir_from_list.config(state = NORMAL)
+        else: 
+            #self.button_indir_from_list.config(state = DISABLED)
+            pass
+        for ii in indexes:
+            self.combobox_indir.itemconfig(ii, fg="gray")
+
+    def combobox_indir_double(self, event = None):
+        selected_indices = self.combobox_indir.curselection()
+        indir = ",".join([self.combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
+        print("indir selected is: " + indir)
+        
+        
+    def combobox_indir_check_exist(self, event):
+        if self.combobox_indir.curselection():
+            index = self.combobox_indir.curselection()[0]
+            sel   = self.combobox_indir.get(index) # because listbox has single selection
+            #print("current selection is: " + sel + " INDEX: " + str(index))
+            if not os.path.isdir(sel):
+                self.combobox_indir.selection_clear(index) # dont select, MessageBox
+                messagebox.showerror("showerror", "Indir: " + sel + " does not exist, choose another one")
+
     def on_configure(self, event):
         x = str(event.widget)
         if x == ".": # . is toplevel window
@@ -510,6 +597,29 @@ class Diatisch:
         self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
         self.unselect_all(self.dict_source_images, self.source_canvas)
         self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
+        
+        if p_imagefiles_target: # imagefiles given by caller
+            for filename in p_imagefiles_target:
+                tag_no += 1
+                # get image
+                img = Image.open(filename)
+                image_width_orig, image_height_orig = img.size
+                faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
+                #print("Image " + filename + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
+                display_width  = int(image_width_orig * faktor)
+                display_height = int(image_height_orig * faktor)
+                newsize = (display_width, display_height)
+                r_img = img.resize(newsize, Image.Resampling.NEAREST)
+                photo = ImageTk.PhotoImage(r_img)
+                # insert into self.list_target_images
+                i = MyImage(filename, self.target_canvas, tag_prefix + str(tag_no))
+                self.list_target_images.append(i)
+                #Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = photo
+            
+            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
+            self.unselect_all(self.dict_target_images, self.target_canvas)
+            self.target_canvas.configure(scrollregion=self.target_canvas.bbox("all")) # update scrollregion
+
         print("LOAD ", directory)
         self.historize_process()
         self.root.lift()
@@ -1383,7 +1493,8 @@ class Diatisch:
         s = '    <sourcefiles time="' + ts + '">' + "\n"
         file1.write(s)
         for i in self.list_source_images:
-            s = "        <sourcefile name=\"" + i.get_filename() + "\">\n"
+            name = re.sub(r"\\", "/", i.get_filename()) # replace single backslash by slash
+            s = "        <sourcefile name=\"" + name + "\">\n"
             file1.write(s)
             s = "        </sourcefile>\n"
             file1.write(s)
@@ -1395,11 +1506,12 @@ class Diatisch:
         s = '    <targetfiles time="' + ts + '">' + "\n"
         file1.write(s)
         for i in self.list_target_images:
-            s = "        <targetfile name=\"" + i.get_filename() + "\">\n"
+            name = re.sub(r"\\", "/", i.get_filename()) # replace single backslash by slash
+            s = "        <targetfile name=\"" + name + "\">\n"
             file1.write(s)
             s = "        </targetfile>\n"
             file1.write(s)
-            ctr_source += 1
+            ctr_target += 1
         s = '    </targetfiles>' + "\n"
         file1.write(s)
 
@@ -1411,6 +1523,9 @@ class Diatisch:
 
         # create new xml-entry for file
         DX.new_cfgfile_diatisch(self.config_files_xml, filename, ts, ctr_source, ctr_target)
+        # update listbox
+        self.update_combobox_cfg()
+
 
     def donothing(self):
         print("Menuitem not yet implemented")
