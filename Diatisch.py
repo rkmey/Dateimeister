@@ -25,14 +25,18 @@ class dragposition(Enum):
     BEFORE  = 1
     BEHIND  = 2
     
-FILE_NEW          = 0
-OPEN_CONFIG       = 1
-OPEN_APPLY_CONFIG = 2
-SAVE_CONFIG       = 3
-SAVE_CONFIG_AS    = 4
-APPLY_CONFIG      = 5
-OPEN_RECENT       = 6
-EXIT              = 7
+CFG_NEW          = 0
+CFG_OPEN_CONFIG       = 1
+CFG_OPEN_APPLY_CONFIG = 2
+CFG_SAVE_CONFIG       = 3
+CFG_SAVE_CONFIG_AS    = 4
+CFG_APPLY_CONFIG      = 5
+CFG_OPEN_RECENT       = 6
+
+FILE_OPEN             = 0
+FILE_CLOSE            = 1
+FILE_EXIT             = 2
+FILE_OPEN_RECENT      = 3
 
 
 class pt(Enum):
@@ -101,7 +105,7 @@ class Diatisch:
     line_color = "red"
     # 20240813 we want to store images only once per canvas not in every MyImage-object, access is via filename which is stored in MyImage object
     #  we need dict as a "global" class variable because we want to access it also from methods of MyImage-objects.
-    idx_high = 0 # Index into dict, incrementented by each call to load_images
+    idx_high = 0 # Index into dict, incrementented by each call to load images
     idx_akt  = 0 # current index into dict according to history (undo / redo)
     dict_filename_images = {}
     dict_filename_images[idx_akt] = {} # Filename -> MyImage contains all source filenames which is sufficient as target files are a subset of source files
@@ -394,25 +398,36 @@ class Diatisch:
         self.read_ini()
         self.init()
         if list_imagefiles:
-            self.load_images(list_imagefiles)
+            self.load_images(None, list_imagefiles)
 
     def init(self):
         # Menubar
         self.menubar = tk.Menu(self.root)
         self.root.configure(menu = self.menubar)
+
+        # The file menu
         self.filemenu = tk.Menu(self.menubar, tearoff=0)
-        self.filemenu.add_command(label="New", command=self.donothing)
-        self.filemenu.add_command(label="Open config", command=self.open_config)
-        self.filemenu.add_command(label="Open and apply config", command=self.open_apply_config)
-        self.filemenu.add_command(label="Save config", command=self.save_config)
-        self.filemenu.add_command(label="Save config as...", command=self.saveas_config)
-        self.filemenu.add_command(label="Apply config", command=self.apply_config)
-        self.menubar.add_cascade(label="File", menu=self.filemenu)
-        self.recentmenu = tk.Menu(self.menubar, tearoff=0)
-        self.filemenu.add_cascade(label="Open Recent", menu=self.recentmenu)
+        self.filemenu.add_command(label="Open", command=self.donothing)
+        self.filemenu.add_command(label="Close", command=self.open_config)
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.root.quit)
-        self.endis_filemenu_items()
+        self.menubar.add_cascade(label="File", menu=self.filemenu)
+        self.recentmenu_file = tk.Menu(self.menubar, tearoff=0)
+        self.filemenu.add_cascade(label="Open Recent", menu=self.recentmenu_file)
+
+        # The config Menu
+        self.configmenu = tk.Menu(self.menubar, tearoff=0)
+        self.configmenu.add_command(label="New", command=self.donothing)
+        self.configmenu.add_command(label="Open config", command=self.open_config)
+        self.configmenu.add_command(label="Open and apply config", command=self.open_apply_config)
+        self.configmenu.add_command(label="Save config", command=self.save_config)
+        self.configmenu.add_command(label="Save config as...", command=self.saveas_config)
+        self.configmenu.add_command(label="Apply config", command=self.apply_config)
+        self.menubar.add_cascade(label="Config", menu=self.configmenu)
+        self.recentmenu_cfg = tk.Menu(self.menubar, tearoff=0)
+        self.configmenu.add_cascade(label="Open Recent", menu=self.recentmenu_cfg)
+
+        self.endis_menu_items()
         self.update_combobox_cfg()
         self.update_combobox_indir()
 
@@ -472,7 +487,7 @@ class Diatisch:
         targetfiles = DX.get_filenames_diatisch(cfgfile, "targetfiles", "targetfile")
         for i in targetfiles:
             print ("targetfile: " + i)
-        self.load_images(sourcefiles, targetfiles)
+        self.load_images(None, sourcefiles, targetfiles)
         
         
     def combobox_cfg_check_exist(self, event):
@@ -522,7 +537,7 @@ class Diatisch:
         selected_indices = self.combobox_indir.curselection()
         indir = ",".join([self.combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
         print("indir selected is: " + indir)
-        
+        self.load_images(indir)
         
     def combobox_indir_check_exist(self, event):
         if self.combobox_indir.curselection():
@@ -548,7 +563,7 @@ class Diatisch:
                 self.text_font.configure(size=fontsize_use)                
                 
 
-    def load_images(self, p_imagefiles_source = None, p_imagefiles_target = None):
+    def load_images(self, p_indir = None, p_imagefiles_source = None, p_imagefiles_target = None):
         # if list-source is given use it, else ask for dir to open
         # if list-target is given use it
         self.list_source_images = []
@@ -564,15 +579,19 @@ class Diatisch:
         tag_prefix = 'P'
         tag_no = 0
         directory = None
-        if p_imagefiles_source: # imagefiles given by caller
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        if p_imagefiles_source: # imagefiles given by caller, no directory needed
             self.image_files = p_imagefiles_source
-        else:
+        elif p_indir: #directory given by caller
+            directory = p_indir
+        else: # display dir dialog
             directory = fd.askdirectory()
-            if directory:
-                self.image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
-            else:
+            if not directory: # something went wrong
                 messagebox.showerror("Open", "unable to open: " + directory, parent = self.root)
                 return False
+        if directory: # read files from directory
+            self.image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
+            DX.new_indir_diatisch(self.config_files_xml, directory, ts)
         for img_file in self.image_files:
             tag_no += 1
             if directory:
@@ -621,6 +640,8 @@ class Diatisch:
             self.target_canvas.configure(scrollregion=self.target_canvas.bbox("all")) # update scrollregion
 
         print("LOAD ", directory)
+        if directory: 
+            self.update_combobox_indir()
         self.historize_process()
         self.root.lift()
 
@@ -1271,7 +1292,7 @@ class Diatisch:
         labeltext = re.sub(r"\d+$", f"{str(ctr)}", labeltext)
         label_ctr.config(text = labeltext)
         self.ctr_targetfiles = ctr
-        self.endis_filemenu_items()
+        self.endis_menu_items()
         return dict_images
 
     # Undo /Redo functions
@@ -1437,18 +1458,18 @@ class Diatisch:
         
         endung = 'xml'
         self.config_file = fd.askopenfilename(initialdir = os.path.join(self.datadir, self.config_files_subdir), filetypes=[("config files", endung)])
-        self.filemenu.entryconfig(4, state=NORMAL)
+        self.configmenu.entryconfig(CFG_SAVE_CONFIG, state=NORMAL)
         self.root.title(self.title + ' ' + self.config_file)
-        self.filemenu.entryconfig(2, state=NORMAL)
+        self.configmenu.entryconfig(CFG_SAVE_CONFIG_AS, state=NORMAL)
 
     def open_apply_config(self):
         # get config_files for source / target images
         
         endung = 'xml'
         self.config_file = fd.askopenfilename(initialdir = os.path.join(self.datadir, self.config_files_subdir), filetypes=[("config files", endung)])
-        self.filemenu.entryconfig(4, state=NORMAL)
+        self.configmenu.entryconfig(CFG_SAVE_CONFIG, state=NORMAL)
         self.root.title(self.title + ' ' + self.config_file)
-        self.filemenu.entryconfig(2, state=NORMAL)
+        self.configmenu.entryconfig(CFG_SAVE_CONFIG_AS, state=NORMAL)
 
     def save_config(self): # Config-xml speichern
         print("Config File is: " + self.config_file)
@@ -1474,9 +1495,9 @@ class Diatisch:
             #self.update_config_xml(self.config_file)
             
             self.root.title(self.title + ' ' + self.config_file)
-            self.filemenu.entryconfig(2, state=NORMAL) # Save
-            self.filemenu.entryconfig(3, state=NORMAL) # Save As
-            self.filemenu.entryconfig(4, state=NORMAL) # Apply config
+            self.configmenu.entryconfig(CFG_SAVE_CONFIG, state=NORMAL) # Save
+            self.configmenu.entryconfig(CFG_SAVE_CONFIG_AS, state=NORMAL) # Save As
+            self.configmenu.entryconfig(CFG_OPEN_APPLY_CONFIG, state=NORMAL) # Apply config
 
     def write_config(self, filename): # Config-xml unter neuem Namen sichern
         file1 = open(filename, "w")
@@ -1533,20 +1554,20 @@ class Diatisch:
     def apply_config(self):
         print("Menuitem not yet implemented")
         
-    def endis_filemenu_items(self):
-        self.filemenu.entryconfig(FILE_NEW,          state=DISABLED)
-        self.filemenu.entryconfig(OPEN_CONFIG,       state=DISABLED)
-        self.filemenu.entryconfig(OPEN_APPLY_CONFIG, state=DISABLED)
-        self.filemenu.entryconfig(SAVE_CONFIG,       state=DISABLED)
-        self.filemenu.entryconfig(SAVE_CONFIG_AS,    state=DISABLED)
-        self.filemenu.entryconfig(APPLY_CONFIG,      state=DISABLED)
-        self.filemenu.entryconfig(OPEN_RECENT,       state=DISABLED)
+    def endis_menu_items(self):
+        self.configmenu.entryconfig(CFG_NEW,               state=DISABLED)
+        self.configmenu.entryconfig(CFG_OPEN_CONFIG,       state=DISABLED)
+        self.configmenu.entryconfig(CFG_OPEN_APPLY_CONFIG, state=DISABLED)
+        self.configmenu.entryconfig(CFG_SAVE_CONFIG,       state=DISABLED)
+        self.configmenu.entryconfig(CFG_SAVE_CONFIG_AS,    state=DISABLED)
+        self.configmenu.entryconfig(CFG_APPLY_CONFIG,      state=DISABLED)
+        self.configmenu.entryconfig(CFG_OPEN_RECENT,       state=DISABLED)
         
         if self.config_file != "": # a config file has been opened
-            self.filemenu.entryconfig(APPLY_CONFIG,      state=NORMAL)
+            self.configmenu.entryconfig(CFG_APPLY_CONFIG,      state=NORMAL)
         if self.ctr_targetfiles > 0:    
-            self.filemenu.entryconfig(SAVE_CONFIG,       state=NORMAL)
-            self.filemenu.entryconfig(SAVE_CONFIG_AS,    state=NORMAL)
+            self.configmenu.entryconfig(CFG_SAVE_CONFIG,       state=NORMAL)
+            self.configmenu.entryconfig(CFG_SAVE_CONFIG_AS,    state=NORMAL)
         
 
 class HistObj:
