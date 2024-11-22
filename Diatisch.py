@@ -380,6 +380,7 @@ class Diatisch:
         self.cmd_files_subdir    = ""
         self.config_file = ""
         self.ctr_targetfiles = 0
+        self.indir = ""
 
         self.timestamp = datetime.now() 
         self.image_press = None
@@ -443,8 +444,9 @@ class Diatisch:
         print("Config Files xml from ini is: " + self.config_files_xml)
 
     def update_combobox_cfg(self):
-        # fill cfg combobox
+        # fill cfg combobox and recentmenu cfg
         self.combobox_cfg.delete(0, 'end')
+        self.recentmenu_cfg.delete(0, "end")
         result = DX.get_cfgfiles_diatisch(self.config_files_xml)
         dict_filename_usedate = {}
         for tfile in result:
@@ -461,11 +463,14 @@ class Diatisch:
         # make list
         ii = 0
         indexes = []
-        for tfile in sorted_d:
-            self.combobox_cfg.insert(END, tfile)
-            if not os.path.isfile(tfile):
-                #print("INDIR: " + tfile + " INDEX: " + str(ii))
+        for item in sorted_d:
+            self.combobox_cfg.insert(END, item)
+            if not os.path.isfile(item):
+                #print("INDIR: " + item + " INDEX: " + str(ii))
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
+            usedate = dict_filename_usedate[item]
+            labeltext = item + ' (usedate: ' + usedate + ')'
+            self.recentmenu_cfg.add_command(label=labeltext, command = lambda item=item: self.recent_config_cfg(item))
             ii += 1
         if ii > 0:
             self.combobox_cfg.select_set(0)
@@ -475,11 +480,28 @@ class Diatisch:
             pass
         for ii in indexes:
             self.combobox_cfg.itemconfig(ii, fg="gray")
+            self.recentmenu_cfg.itemconfig(ii, fg="gray")
 
+    def recent_config_cfg(self, item):
+        # get and apply configfile from recent-menu
+        print("** Menuitem selected: " + item)
+        self.config_file = item
+        self.filemenu.entryconfig(CFG_SAVE_CONFIG, state=NORMAL)
+        self.root.title(self.title + ' ' + self.config_file)
+        self.filemenu.entryconfig(CFG_SAVE_CONFIG_AS, state=NORMAL)
+        
+        # apply config file
+        sourcefiles = DX.get_filenames_diatisch(self.config_file, "sourcefiles", "sourcefile")
+        targetfiles = DX.get_filenames_diatisch(self.config_file, "targetfiles", "targetfile")
+        self.load_images(None, sourcefiles, targetfiles)
+    
     def combobox_cfg_double(self, event = None):
+        # get and apply configfile from listbox
         selected_indices = self.combobox_cfg.curselection()
         cfgfile = ",".join([self.combobox_cfg.get(i) for i in selected_indices]) # because listbox has single selection
         print("cfg file selected is: " + cfgfile)
+        self.config_file = cfgfile
+        self.root.title(self.title + ' ' + self.config_file)
         # build lists of source and target files
         sourcefiles = DX.get_filenames_diatisch(cfgfile, "sourcefiles", "sourcefile")
         for i in sourcefiles:
@@ -1561,7 +1583,7 @@ class Diatisch:
         self.configmenu.entryconfig(CFG_SAVE_CONFIG,       state=DISABLED)
         self.configmenu.entryconfig(CFG_SAVE_CONFIG_AS,    state=DISABLED)
         self.configmenu.entryconfig(CFG_APPLY_CONFIG,      state=DISABLED)
-        self.configmenu.entryconfig(CFG_OPEN_RECENT,       state=DISABLED)
+        self.configmenu.entryconfig(CFG_OPEN_RECENT,       state=NORMAL)
         
         if self.config_file != "": # a config file has been opened
             self.configmenu.entryconfig(CFG_APPLY_CONFIG,      state=NORMAL)
