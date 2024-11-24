@@ -546,6 +546,37 @@ def get_indirs_diatisch(xmlfile):
                 indirs[j.attrib['name']]['usedate'] = j.attrib['usedate']
     return indirs
 
+# return list of Diatisch config files
+def get_cfgfiles_diatisch(xmlfile):
+    cfgfiles = {}
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    result1 = myroot.findall("config_files")
+    if result1:
+        for i in result1:
+            result2 = i.findall("configfile")
+            for j in result2:
+                cfgfiles[j.attrib['filename']] = {}
+                cfgfiles[j.attrib['filename']]['usedate'] = j.attrib['usedate']
+                cfgfiles[j.attrib['filename']]['ctr_source'] = j.attrib['ctr_source']
+                cfgfiles[j.attrib['filename']]['ctr_target'] = j.attrib['ctr_target']
+    return cfgfiles
+    
+# generic function for get indirs or configfiles and usedate, for simplicuity of caller implementation    
+def get_diatisch_items_usedate(xmlfile, parent, entry, attrname):
+    indirs = {}
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    result1 = myroot.findall(parent)
+    if result1:
+        for i in result1:
+            result2 = i.findall(entry)
+            for j in result2:
+                indirs[j.attrib[attrname]] = {}
+                indirs[j.attrib[attrname]]['usedate'] = j.attrib['usedate']
+    return indirs
+
+    
 def new_cfgfile_diatisch(xmlfile, config_file, usedate, ctr_source, ctr_target):
     mytree = ET.parse(xmlfile)
     myroot = mytree.getroot()
@@ -617,21 +648,22 @@ def new_node_diatisch(xmlfile, nodetype, usedate):
     mytree.write(xmlfile)
 
 
-# return list of Diatisch config files
-def get_cfgfiles_diatisch(xmlfile):
+# deletes entrytype under parent. Parent must be direct child of root
+def delete_diatisch_item(xmlfile, parent, entrytype, attrname, attrvalue):
     cfgfiles = {}
     mytree = ET.parse(xmlfile)
     myroot = mytree.getroot()
-    result1 = myroot.findall("config_files")
+    fstr = ("{:s}[@{:s}=" + '"' + "{:s}" + "\"]").format(entrytype, attrname, attrvalue)
+    print ("xml search: " + fstr)
+    result1 = myroot.findall(parent)
     if result1:
         for i in result1:
-            result2 = i.findall("configfile")
+            result2 = i.findall(fstr)
             for j in result2:
-                cfgfiles[j.attrib['filename']] = {}
-                cfgfiles[j.attrib['filename']]['usedate'] = j.attrib['usedate']
-                cfgfiles[j.attrib['filename']]['ctr_source'] = j.attrib['ctr_source']
-                cfgfiles[j.attrib['filename']]['ctr_target'] = j.attrib['ctr_target']
-    return cfgfiles
+                i.remove(j)
+    indent(myroot)
+    mytree.write(xmlfile)
+    
     
 # return list of source / target files from Diatisch config file
 def get_filenames_diatisch(xmlfile, ftype, ftype2):

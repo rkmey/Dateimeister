@@ -431,6 +431,8 @@ class Diatisch:
         self.endis_menu_items()
         self.update_combobox_cfg()
         self.update_combobox_indir()
+        
+        #DX.delete_diatisch_item(self.config_files_xml, "indirs", "indir", "name", "e:/fotos/dateimeister")
 
     def read_ini(self):
         inifile = "Dateimeister.ini" 
@@ -441,13 +443,15 @@ class Diatisch:
         self.config_files_subdir = config["dirs"]["config_files_subdir"]
         self.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
         self.config_files_xml = config["misc"]["config_files_diatisch_xml"]
+        self.max_indirs = config["misc"]["max_indirs_diatisch"]
+        self.max_configfiles = config["misc"]["max_configfiles_diatisch"]
         print("Config Files xml from ini is: " + self.config_files_xml)
 
     def update_combobox_cfg(self):
         # fill cfg combobox and recentmenu cfg
         self.combobox_cfg.delete(0, 'end')
         self.recentmenu_cfg.delete(0, "end")
-        result = DX.get_cfgfiles_diatisch(self.config_files_xml)
+        result = DX.get_diatisch_items_usedate(self.config_files_xml, "config_files", "configfile", "filename")
         dict_filename_usedate = {}
         for tfile in result:
             #print("infile: " + tfile)
@@ -524,7 +528,7 @@ class Diatisch:
     def update_combobox_indir(self):
         # fill cfg combobox
         self.combobox_indir.delete(0, 'end')
-        result = DX.get_indirs_diatisch(self.config_files_xml)
+        result = DX.get_diatisch_items_usedate(self.config_files_xml, "indirs", "indir", "name")
         dict_filename_usedate = {}
         for tfile in result:
             #print("infile: " + tfile)
@@ -601,7 +605,6 @@ class Diatisch:
         tag_prefix = 'P'
         tag_no = 0
         directory = None
-        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         if p_imagefiles_source: # imagefiles given by caller, no directory needed
             self.image_files = p_imagefiles_source
         elif p_indir: #directory given by caller
@@ -613,7 +616,14 @@ class Diatisch:
                 return False
         if directory: # read files from directory
             self.image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
-            DX.new_indir_diatisch(self.config_files_xml, directory, ts)
+ 
+            # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
+            ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+            this_i = re.sub(r'\\', '/', directory).lower()
+            # delete indir-entries from xml if number gt than max from ini, oldest and not existing first. we have to supply the necessary xml-information
+            self.new_item_in_xml(self.max_indirs, this_i, ts, "indirs", "indir", "name")
+            # now create new indir
+            DX.new_indir_diatisch(self.config_files_xml, directory.lower(), ts)
         for img_file in self.image_files:
             tag_no += 1
             if directory:
@@ -666,6 +676,52 @@ class Diatisch:
             self.update_combobox_indir()
         self.historize_process()
         self.root.lift()
+
+    def new_item_in_xml(self, max_items, item_chosen, ts, parent, entry, attrname):
+        # if item_chosen does not exist so that a new item has to be created:
+        # removes entries if max value from ini is reached. removes not existing and old entries first
+        # leaves max - 1 entries so that caller can add new item
+        # items are indirs or config_files which this method must not know, but only files and dirs are supported because existence is checked
+        do_del = True
+        d = DX.get_diatisch_items_usedate(self.config_files_xml, parent, entry, attrname)
+        if item_chosen in d:
+            do_del = False # existing item, no cleanup
+        # delete item(s) from xml file only if a new one has been selected
+        print("do_del: " + str(do_del) + " item_chosen: " + item_chosen)
+        if do_del: # 2 pass: in the first we delete entries with not existing item, in the second existing items (if necessary)
+            for loop in range(1,3): # 3 is excluded
+                d = DX.get_diatisch_items_usedate(self.config_files_xml, parent, entry, attrname)
+                # sort descending by usedate
+                dict_item_usedate = {}
+                for ii in d:
+                    dict_item_usedate[ii] = d[ii]['usedate'] # item -> usedate
+                sorted_d = dict( sorted(dict_item_usedate.items(), key=operator.itemgetter(1), reverse=True))
+                list_items = []
+                for tdir in sorted_d:
+                    list_items.append(tdir)
+                num_to_delete = len(list_items) - int(max_items) + 1 # +1 for we will make a new item later. already deleted items are no more in get-items 
+                if loop == 1:
+                    print("loop is " + str(loop))
+                    # delete only not existing items
+                    if num_to_delete > 0:
+                        ii = 0
+                        for t in reversed(list_items): # now the oldest are on top
+                            if not os.path.isdir(t) and not os.path.isfile(t):
+                                if ii < num_to_delete:
+                                    DX.delete_diatisch_item(self.config_files_xml, parent, entry, attrname, t)
+                                    ii += 1
+                                else:
+                                    break
+                elif loop == 2:
+                    # delete existing items if necessary
+                    if num_to_delete > 0:
+                        ii = 0
+                        for t in reversed(list_items): # now the oldest are on top
+                            if ii < num_to_delete:
+                                DX.delete_diatisch_item(self.config_files_xml, parent, entry, attrname, t)
+                                ii += 1
+                            else:
+                                break
 
     def show_context_menu_source(self, event):
         # event has to be stored because some functions require x, y
