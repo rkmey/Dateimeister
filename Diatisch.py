@@ -16,6 +16,7 @@ import re
 import configparser 
 import Undo_Redo as UR
 import dateimeister_config_xml as DX
+import dateimeister_generator as DG
 
 from enum import Enum
 class action(Enum):
@@ -98,7 +99,7 @@ class MyImage:
             return False
     def get_tag(self):
         return self.tag
-
+        
      
 class Diatisch:
     line_width = 5
@@ -210,7 +211,7 @@ class Diatisch:
         # combobox for config files
         self.combobox_cfg_var = tk.StringVar()
         self.combobox_cfg = tk.Listbox(self.root)
-        self.combobox_cfg.place(relx=.51, rely=0.87, relheight=0.1, relwidth=0.35)
+        self.combobox_cfg.place(relx=.51, rely=0.87, relheight=0.1, relwidth=0.40)
         self.combobox_cfg.configure(background="white")
         self.combobox_cfg.configure(disabledforeground="#a3a3a3")
         self.combobox_cfg.configure(font="TkFixedFont")
@@ -232,11 +233,14 @@ class Diatisch:
         self.combobox_cfg.config(xscrollcommand = HI_CFG.set)
         self.combobox_cfg.bind('<Double-1>', self.combobox_cfg_double)
         self.combobox_cfg.bind("<<ListboxSelect>>", lambda event: self.combobox_cfg_check_exist(event))
+        # Button
+        self.button_apply_cfg = tk.Button(self.root, text="Apply selected", command=self.combobox_cfg_double)
+        self.button_apply_cfg.place(relx=.91, rely=0.87, relheight=0.04, relwidth=0.07)
 
         # combobox for Indirs
         self.combobox_indir_var = tk.StringVar()
         self.combobox_indir = tk.Listbox(self.root)
-        self.combobox_indir.place(relx=.01, rely=0.87, relheight=0.1, relwidth=0.35)
+        self.combobox_indir.place(relx=.01, rely=0.87, relheight=0.1, relwidth=0.40)
         self.combobox_indir.configure(background="white")
         self.combobox_indir.configure(disabledforeground="#a3a3a3")
         self.combobox_indir.configure(font="TkFixedFont")
@@ -258,6 +262,9 @@ class Diatisch:
         self.combobox_indir.config(xscrollcommand = HI_INDIR.set)
         self.combobox_indir.bind('<Double-1>', self.combobox_indir_double)
         self.combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
+        # Button
+        self.button_apply_indir = tk.Button(self.root, text="Apply selected", command=self.combobox_indir_double)
+        self.button_apply_indir.place(relx=.41, rely=0.87, relheight=0.04, relwidth=0.07)
 
         # canvas source with scrollbars
         self.source_canvas = ScrollableCanvas(self.Frame_source, bg="yellow")
@@ -291,9 +298,6 @@ class Diatisch:
         anz_button_source = 5
         buttonpos_source  = 0.0
         relwidth_source   = 1 / anz_button_source
-        self.load_button = tk.Button(self.Frame_source_ctl, text="Load Images", command=self.load_images)
-        self.load_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
-        buttonpos_source += relwidth_source
         self.select_all_button = tk.Button(self.Frame_source_ctl, text="Select all", command=self.select_all_source_images)
         self.select_all_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
         buttonpos_source += relwidth_source
@@ -372,6 +376,12 @@ class Diatisch:
         self.context_menu_target.add_command(label="Delete Selected"   , command=self.delete_selected_target_images)    
         self.context_menu_target.add_command(label="Delete "   , command=self.delete_single_target_image)    
 
+        self.cb_recursive_var = tk.IntVar()
+        self.cb_recursive = tk.Checkbutton(self.root)
+        self.cb_recursive.place(relx=.41, rely=0.92, relheight=0.04, relwidth=0.04)
+        self.cb_recursive.configure(variable=self.cb_recursive_var)
+        self.cb_recursive.configure(text='''recursive''')
+        self.cb_recursive = TT.ToolTip(self.cb_recursive, '''process  subdirectories''')
 
         self.default_indir  = ""
         self.datadir = ""
@@ -408,8 +418,8 @@ class Diatisch:
 
         # The file menu
         self.filemenu = tk.Menu(self.menubar, tearoff=0)
-        self.filemenu.add_command(label="Open", command=self.donothing)
-        self.filemenu.add_command(label="Close", command=self.open_config)
+        self.filemenu.add_command(label="Open", command=self.load_images)
+        self.filemenu.add_command(label="Close", command=self.close_indir)
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.root.quit)
         self.menubar.add_cascade(label="File", menu=self.filemenu)
@@ -499,7 +509,7 @@ class Diatisch:
         targetfiles = DX.get_filenames_diatisch(self.config_file, "targetfiles", "targetfile")
         self.load_images(None, sourcefiles, targetfiles)
     
-    def combobox_cfg_double(self, event = None):
+    def combobox_cfg_double(self, event = None): # used also for Button
         # get and apply configfile from listbox
         selected_indices = self.combobox_cfg.curselection()
         cfgfile = ",".join([self.combobox_cfg.get(i) for i in selected_indices]) # because listbox has single selection
@@ -539,9 +549,6 @@ class Diatisch:
                 print("  " + attribut + " = " + attribute[attribut])
                 if attribut == searchattr:
                     dict_filename_usedate[item] = attribute[searchattr]
-            usedate = dict_filename_usedate[item]
-            labeltext = item + ' (usedate: ' + usedate + ')'
-            self.recentmenu_file.add_command(label=labeltext, command = lambda item=item: self.recent_config_indir(item))
             
         # descending by usedate
         sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
@@ -550,6 +557,9 @@ class Diatisch:
         indexes = []
         for item in sorted_d:
             self.combobox_indir.insert(END, item)
+            usedate = dict_filename_usedate[item]
+            labeltext = item + ' (usedate: ' + usedate + ')'
+            self.recentmenu_file.add_command(label=labeltext, command = lambda item=item: self.recent_config_indir(item))
             if not os.path.isdir(item):
                 #print("INDIR: " + item + " INDEX: " + str(ii))
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
@@ -562,6 +572,7 @@ class Diatisch:
             pass
         for ii in indexes:
             self.combobox_indir.itemconfig(ii, fg="gray")
+            self.recentmenu_file.entryconfig(ii, state = DISABLED)
 
     def recent_config_indir(self, item):
         # get and apply indir from recent-menu
@@ -629,9 +640,18 @@ class Diatisch:
                 messagebox.showerror("Open", "unable to open: " + directory, parent = self.root)
                 return False
         if directory: # read files from directory
-            self.image_files = [f for f in os.listdir(directory) if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))]
- 
-            # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
+            # ask checkbox if recursive
+            if self.cb_recursive_var.get():
+                recursive = "j"
+            else:
+                recursive = "n"
+            self.dict_source_target, dict_source_target_jpeg, self.dict_source_target_tooold, self.dict_relpath = \
+              DG.dateimeister("JPEG", "JPG, JPEG", directory, "", "n", recursive, False, "", None)
+            # copy result to image_files
+            self.image_files.clear()
+            for i in self.dict_source_target:          
+                self.image_files.append(i)
+            # now make an entry for this indir.
             ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
             this_i = re.sub(r'\\', '/', directory).lower()
             # delete indir-entries from xml if number gt than max from ini, oldest and not existing first. we have to supply the necessary xml-information
@@ -690,6 +710,21 @@ class Diatisch:
             self.update_combobox_indir()
         self.historize_process()
         self.root.lift()
+
+    def close_indir(self):
+        # if list-source is given use it, else ask for dir to open
+        # if list-target is given use it
+        self.list_source_images = []
+        self.dict_source_images = {}
+        self.list_target_images = []
+        self.dict_target_images = {}
+        self.source_canvas.delete("all")
+        self.target_canvas.delete("all")
+        Diatisch.idx_high += 1
+        Diatisch.idx_akt = Diatisch.idx_high
+        Diatisch.dict_filename_images[Diatisch.idx_akt] = {}
+        #self.UR.reset()
+        self.historize_process()
 
     def new_item_in_xml(self, max_items, item_chosen, ts, parent, entry, attrname):
         # if item_chosen does not exist so that a new item has to be created:
