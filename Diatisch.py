@@ -368,11 +368,11 @@ class Diatisch:
 
         # Create the context menues
         self.context_menu_source = tk.Menu(self.source_canvas, tearoff=0)
-        self.context_menu_source.add_command(label="Show"   , command=self.canvas_image_show)    
+        self.context_menu_source.add_command(label="Show"   , command=self.canvas_image_source_show)    
         self.context_menu_source.add_command(label="Copy Selected"   , command=self.copy_selected_source_images)    
         self.context_menu_source.add_command(label="Copy "   , command=self.copy_single_source_image)    
         self.context_menu_target = tk.Menu(self.target_canvas, tearoff=0)
-        self.context_menu_target.add_command(label="Show"   , command=self.canvas_image_show)  
+        self.context_menu_target.add_command(label="Show"   , command=self.canvas_image_target_show)  
         self.context_menu_target.add_command(label="Delete Selected"   , command=self.delete_selected_target_images)    
         self.context_menu_target.add_command(label="Delete "   , command=self.delete_single_target_image)    
 
@@ -860,10 +860,15 @@ class Diatisch:
                     self.tt.update(text)
                     self.tooltiptext_tt = text
                        
-    def canvas_image_show(self):
+    def canvas_image_source_show(self):
         # placeholder for call full screen display of image
-        print("Context menu show")
+        print("Context menu source show")
         #self.canvas_show(self.event)
+    def canvas_image_target_show(self):
+        # placeholder for call full screen display of image
+        print("Context menu target show")
+        #self.canvas_show(self.event)
+
 
 
     def start_drag(self, event):
