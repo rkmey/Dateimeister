@@ -1,4 +1,85 @@
+#! /usr/bin/env python3
+#  -*- coding: utf-8 -*-
+
 # hier speichern wir die full-size-Bilder
+
+import sys
+import os
+import configparser 
+import re
+import locale
+import ctypes
+import time
+import operator
+import threading
+import copy
+import subprocess
+import shutil
+
+import tkinter as tk
+import tkinter.ttk as ttk
+from tkinter.constants import *
+from tkinter import filedialog as fd
+from tkinter import messagebox
+from tkinter import Scrollbar
+from tkinter import ttk
+from tkinter import Frame
+from tkinter import Label
+from tkinter import Canvas
+from tkinter import Menu
+from time import gmtime, strftime
+
+from PIL import Image, ImageTk
+from datetime import datetime, timezone
+
+import Dateimeister
+import dateimeister_video as DV
+
+INCLUDE = 1
+EXCLUDE = 2
+
+
+class Thumbnail:
+    #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
+
+    # The class "constructor" - It's actually an initializer 
+    def __init__(self, image, pmain, file, player, canvas, parent = None):
+        self.main = pmain
+        self.image = image
+        self.file = file
+        self.player = player 
+        self.fsimage = None
+        self.state = INCLUDE
+        self.canvas = canvas
+        self.parent = parent
+        self.setState(self.state)
+        
+    def setState(self, state, caller = None, do_save = True):
+        if state != self.state:
+            state_changed = True
+        else:
+            state_changed = False
+        self.state = state # neuer Status
+        if self.parent is not None:
+            self.parent.setState(state, caller)
+        if self.fsimage is not None:
+            self.fsimage.exclude_call(state) # synchronisiert das FSImge, falls vorhanden
+            print("FSImage Exclude-Call")
+    def getState(self):
+        return self.state   
+
+    def register_FSimage(self, fsimage):
+        self.fsimage = fsimage
+
+    def getPlayer(self):
+        return self.player   
+
+    def __del__(self):
+        if self.player is not None:
+            self.player.pstop()
+            del self.player
+        #print("*** Deleting MyThumbnail-Objekt. " + self.file + " lineno in cmdfile " + str(self.lineno))
+
 class MyFSImage:
 
     # The class "constructor" - It's actually an initializer 
@@ -16,7 +97,7 @@ class MyFSImage:
         self.root2 = tk.Toplevel()
         self.w2 = Dateimeister.Toplevel2(self.root2)
         self.f = self.w2.Canvas_image
-        if self.thumbnail.getState() == state.INCLUDE:
+        if self.thumbnail.getState() == INCLUDE:
             self.w2.Button_exclude.config(text = "Exclude")
             self.w2.Label_status.config(text = "Included")
         else: # toggle to not exclude
@@ -128,19 +209,19 @@ class MyFSImage:
         self.player.setDelay(int(1000 / int(value)))
 
     def exclude_handler(self): # react to own Button, thumbnail can be from main or duplicates
-        if self.thumbnail.getState() == state.INCLUDE:
-            self.thumbnail.setState(state.EXCLUDE)
+        if self.thumbnail.getState() == INCLUDE:
+            self.thumbnail.setState(EXCLUDE)
             self.w2.Button_exclude.config(text = "Include")
             self.w2.Label_status.config(text = "Excluded")
         else: # toggle to not exclude, delete Item
-            self.thumbnail.setState(state.INCLUDE)
+            self.thumbnail.setState(INCLUDE)
             self.w2.Button_exclude.config(text = "Exclude")
             self.w2.Label_status.config(text = "Included")
         self.main.historize_process()
 
     def exclude_call(self, state): # react to request from outside
         print("MyFSImage.Exclude called, State = " + str(state))
-        if state == state.INCLUDE:
+        if state == INCLUDE:
             self.w2.Button_exclude.config(text = "Exclude")
             self.w2.Label_status.config(text = "Included")
         else: # toggle to not exclude, delete Item
