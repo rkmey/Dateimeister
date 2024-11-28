@@ -17,6 +17,8 @@ import configparser
 import Undo_Redo as UR
 import dateimeister_config_xml as DX
 import dateimeister_generator as DG
+import Dateimeister_support as DS
+import Dateimeister_FSimage as FS
 
 from enum import Enum
 class action(Enum):
@@ -121,10 +123,10 @@ class Diatisch:
         # Fenstergröße
         physical_width  = self.root.winfo_screenwidth()
         physical_height = self.root.winfo_screenheight()
-        screen_width  = int(self.root.winfo_screenwidth() * .75) # adjust as needed
-        screen_height = int(self.root.winfo_screenheight() * .5) # adjust as needed
-        print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height) + " physical: " + str(physical_width) + " x " + str(physical_height))
-        v_dim=str(screen_width)+'x'+str(screen_height)
+        self.screen_width  = int(self.root.winfo_screenwidth() * .75) # adjust as needed
+        self.screen_height = int(self.root.winfo_screenheight() * .5) # adjust as needed
+        print("Bildschirm ist " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(physical_width) + " x " + str(physical_height))
+        v_dim=str(self.screen_width)+'x'+str(self.screen_height)
         self.root.geometry(v_dim)
 
         self.m, self.n = 10, 5
@@ -332,6 +334,14 @@ class Diatisch:
         self.target_canvas.bind("<B1-Motion>", self.on_motion)
         self.root.bind("<ButtonPress-1>", self.start_drag)
         self.root.bind("<ButtonRelease-1>", self.drop)
+        
+        # bind doubble / return key to show FSImage
+        self.root.unbind('<Return>')
+        self.source_canvas.bind("<Double-Button-1>", self.canvas_image_source_show)
+        self.source_canvas.bind('<Return>', self.canvas_image_source_show)    # show FSImage for selected thumbnail
+        self.target_canvas.bind("<Double-Button-1>", self.canvas_image_target_show)
+        self.target_canvas.bind('<Return>', self.canvas_image_target_show)    # show FSImage for selected thumbnail
+
 
         # tooltips, context-menu
         self.tooltiptext_st = ""
@@ -368,11 +378,11 @@ class Diatisch:
 
         # Create the context menues
         self.context_menu_source = tk.Menu(self.source_canvas, tearoff=0)
-        self.context_menu_source.add_command(label="Show"   , command=self.canvas_image_source_show)    
+        self.context_menu_source.add_command(label="Show"   , command=self.canvas_image_source_event)    
         self.context_menu_source.add_command(label="Copy Selected"   , command=self.copy_selected_source_images)    
         self.context_menu_source.add_command(label="Copy "   , command=self.copy_single_source_image)    
         self.context_menu_target = tk.Menu(self.target_canvas, tearoff=0)
-        self.context_menu_target.add_command(label="Show"   , command=self.canvas_image_target_show)  
+        self.context_menu_target.add_command(label="Show"   , command=self.canvas_image_target_event)  
         self.context_menu_target.add_command(label="Delete Selected"   , command=self.delete_selected_target_images)    
         self.context_menu_target.add_command(label="Delete "   , command=self.delete_single_target_image)    
 
@@ -406,6 +416,7 @@ class Diatisch:
         self.single_image_to_copy   = None # name of single image selected by menuitem to copy from source to target
         self.single_image_to_delete = None # name of single image selected by menuitem to delete from target
         self.image_files = []
+        self.dict_file_FSImage = {} # dict for keeping track of FS Images
         self.read_ini()
         self.init()
         if list_imagefiles:
@@ -456,6 +467,14 @@ class Diatisch:
         self.max_indirs = config["misc"]["max_indirs_diatisch"]
         self.max_configfiles = config["misc"]["max_configfiles_diatisch"]
         print("Config Files xml from ini is: " + self.config_files_xml)
+
+    def close_child_windows(self): #closes fs-images    
+        # cleanup
+        # delete all fsimage by close-call
+        for t in self.dict_file_FSImage:
+            u = self.dict_file_FSImage[t]
+            u.close_handler_external()
+        self.dict_file_FSImage = {}
 
     def update_combobox_cfg(self):
         # fill cfg combobox and recentmenu cfg
@@ -860,14 +879,39 @@ class Diatisch:
                     self.tt.update(text)
                     self.tooltiptext_tt = text
                        
-    def canvas_image_source_show(self):
+    def canvas_image_source_event(self):
+        #print("Context menu show")
+        self.canvas_image_source_show(self.event)
+    def canvas_image_source_show(self, event):
         # placeholder for call full screen display of image
-        print("Context menu source show")
-        #self.canvas_show(self.event)
-    def canvas_image_target_show(self):
+        print("FSImage source show")
+        # get image
+        canvas_x = self.source_canvas.canvasx(event.x)
+        canvas_y = self.source_canvas.canvasy(event.y)
+        if (closest := self.source_canvas.find_closest(self.source_canvas.canvasx(event.x), self.source_canvas.canvasy(event.y))):
+            image_id = closest[0]
+            img      = self.dict_source_images[image_id]
+            file     = img.get_filename()
+            thumbnail = FS.Thumbnail(img, self, file, None, self.source_canvas, None)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.screen_width, self.screen_height, 20)
+            self.dict_file_FSImage[file] = fs_image
+
+    def canvas_image_target_event(self):
+        #print("Context menu show")
+        self.canvas_image_target_show(self.event)
+    def canvas_image_target_show(self, event):
         # placeholder for call full screen display of image
-        print("Context menu target show")
-        #self.canvas_show(self.event)
+        print("FSImage target show")
+        # get image
+        canvas_x = self.target_canvas.canvasx(self.event.x)
+        canvas_y = self.target_canvas.canvasy(self.event.y)
+        if (closest := self.target_canvas.find_closest(self.target_canvas.canvasx(self.event.x), self.target_canvas.canvasy(self.event.y))):
+            image_id = closest[0]
+            img      = self.dict_target_images[image_id]
+            file     = img.get_filename()
+            thumbnail = FS.Thumbnail(img, self, file, None, self.target_canvas, None)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.screen_width, self.screen_height, 20)
+            self.dict_file_FSImage[file] = fs_image
 
 
 
@@ -1580,6 +1624,7 @@ class Diatisch:
                 #print(i)
                 self.list_result.append(i.get_filename())
             self.callback()
+        self.close_child_windows()
         self.root.destroy()
 
     def donothing(self):

@@ -118,7 +118,7 @@ class MyFSImage:
         self.root2.title(file)
         v_dim=str(screen_width)+'x'+str(screen_height)
         self.root2.geometry(v_dim)
-        self.root2.resizable(False, False)
+        self.root2.resizable(True, True)
 
         # Scrollbars
         self.V_I = Scrollbar(self.f)
