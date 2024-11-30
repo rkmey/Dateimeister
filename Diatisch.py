@@ -281,6 +281,11 @@ class Diatisch:
         self.H_source.config(command=self.source_canvas.xview)
         self.source_canvas.config(xscrollcommand=self.H_source.set)
         self.H_source.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.98, anchor = tk.SW)
+
+        self.source_canvas.bind("<Left>",  lambda event: self.source_canvas.xview(tk.SCROLL, -1, "unit"))
+        self.source_canvas.bind("<Right>", lambda event: self.source_canvas.xview(tk.SCROLL,  1, "unit"))
+        self.source_canvas.bind("<Up>",    lambda event: self.source_canvas.yview(tk.SCROLL, -1, "unit"))
+        self.source_canvas.bind("<Down>",  lambda event: self.source_canvas.yview(tk.SCROLL,  1, "unit"))
  
         # canvas target with scrollbars
         self.target_canvas = ScrollableCanvas(self.Frame_target, bg="darkgrey")
@@ -296,6 +301,11 @@ class Diatisch:
         self.target_canvas.config(xscrollcommand=self.H_target.set)
         self.H_target.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.98, anchor = tk.SW)
         
+        self.target_canvas.bind("<Left>",  lambda event: self.target_canvas.xview(tk.SCROLL, -1, "unit"))
+        self.target_canvas.bind("<Right>", lambda event: self.target_canvas.xview(tk.SCROLL,  1, "unit"))
+        self.target_canvas.bind("<Up>",    lambda event: self.target_canvas.yview(tk.SCROLL, -1, "unit"))
+        self.target_canvas.bind("<Down>",  lambda event: self.target_canvas.yview(tk.SCROLL,  1, "unit"))
+ 
         # source control buttons
         anz_button_source = 5
         buttonpos_source  = 0.0
@@ -335,12 +345,9 @@ class Diatisch:
         self.root.bind("<ButtonPress-1>", self.start_drag)
         self.root.bind("<ButtonRelease-1>", self.drop)
         
-        # bind doubble / return key to show FSImage
-        self.root.unbind('<Return>')
+        # bind double click to show FSImage
         self.source_canvas.bind("<Double-Button-1>", self.canvas_image_source_show)
-        self.source_canvas.bind('<Return>', self.canvas_image_source_show)    # show FSImage for selected thumbnail
         self.target_canvas.bind("<Double-Button-1>", self.canvas_image_target_show)
-        self.target_canvas.bind('<Return>', self.canvas_image_target_show)    # show FSImage for selected thumbnail
 
 
         # tooltips, context-menu
@@ -879,6 +886,10 @@ class Diatisch:
                     self.tt.update(text)
                     self.tooltiptext_tt = text
                        
+    def canvas_focus_source(self, event):
+        print("Return on source vanvas")
+        if self.get_num_selected(self.list_source_images) == 1:
+            self.canvas_image_source_show(event)
     def canvas_image_source_event(self):
         #print("Context menu show")
         self.canvas_image_source_show(self.event)
@@ -896,6 +907,10 @@ class Diatisch:
             fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.screen_width, self.screen_height, 20)
             self.dict_file_FSImage[file] = fs_image
 
+    def canvas_focus_target(self, event):
+        print("Return on target vanvas")
+        if self.get_num_selected(self.list_target_images) == 1:
+            self.canvas_image_target_show(event)
     def canvas_image_target_event(self):
         #print("Context menu show")
         self.canvas_image_target_show(self.event)
@@ -903,9 +918,9 @@ class Diatisch:
         # placeholder for call full screen display of image
         print("FSImage target show")
         # get image
-        canvas_x = self.target_canvas.canvasx(self.event.x)
-        canvas_y = self.target_canvas.canvasy(self.event.y)
-        if (closest := self.target_canvas.find_closest(self.target_canvas.canvasx(self.event.x), self.target_canvas.canvasy(self.event.y))):
+        canvas_x = self.target_canvas.canvasx(event.x)
+        canvas_y = self.target_canvas.canvasy(event.y)
+        if (closest := self.target_canvas.find_closest(self.target_canvas.canvasx(event.x), self.target_canvas.canvasy(event.y))):
             image_id = closest[0]
             img      = self.dict_target_images[image_id]
             file     = img.get_filename()
@@ -1116,7 +1131,9 @@ class Diatisch:
                 print("no image found in source canvas, action = RELEASE")
                 
             print("Drag Done.")
-                
+            self.target_canvas.focus_set()
+            self.target_canvas.bind('<Return>', self.canvas_focus_target)    # show FSImage for selected thumbnail
+               
         elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
             print("Drop Event in source")
             img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, source_rect, self.source_canvas, self.dict_source_images)
@@ -1126,6 +1143,8 @@ class Diatisch:
                 self.selection(event, self.source_canvas, self.dict_source_images, action.RELEASE)
             else: # do nothing
                 print("no image found in source canvas, action = PRESS")
+            self.source_canvas.focus_set()
+            self.source_canvas.bind('<Return>', self.canvas_focus_source)    # show FSImage for selected thumbnail
                 
         else:
             print("Drop-Event not in target canvas")
@@ -1411,6 +1430,13 @@ class Diatisch:
         changed = image.unselect(canvas)
         return changed
 
+    def get_num_selected(self, list_images):
+        num_selected = 0
+        for i in list_images:
+            if i.is_selected():
+                num_selected += 1
+        return num_selected
+        
     def get_root_coordinates_for_widget(self, widget):
         # return rect of widget-coordinates relative to root window
         x1 = widget.winfo_rootx() 
