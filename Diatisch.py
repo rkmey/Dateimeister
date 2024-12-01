@@ -381,7 +381,8 @@ class Diatisch:
         self.historize_process()
         # Undo /Redo control end
 
-        self.event = None
+        self.event_source = None
+        self.event_target = None
 
         # Create the context menues
         self.context_menu_source = tk.Menu(self.source_canvas, tearoff=0)
@@ -800,7 +801,7 @@ class Diatisch:
 
     def show_context_menu_source(self, event):
         # event has to be stored because some functions require x, y
-        self.event = event
+        self.event_source = event
         text = "no image available"
         # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
         canvas_x = self.source_canvas.canvasx(event.x)
@@ -825,7 +826,7 @@ class Diatisch:
     
     def show_context_menu_target(self, event):
         # event has to be stored because some functions require x, y
-        self.event = event
+        self.event_target = event
         text = "no image available"
         # falls wir keine anzeigbare Datei haben, müssen wir show-Item disablen
         canvas_x = self.target_canvas.canvasx(event.x)
@@ -892,7 +893,7 @@ class Diatisch:
             self.canvas_image_source_show(event)
     def canvas_image_source_event(self):
         #print("Context menu show")
-        self.canvas_image_source_show(self.event)
+        self.canvas_image_source_show(self.event_source)
     def canvas_image_source_show(self, event):
         # placeholder for call full screen display of image
         print("FSImage source show")
@@ -913,7 +914,7 @@ class Diatisch:
             self.canvas_image_target_show(event)
     def canvas_image_target_event(self):
         #print("Context menu show")
-        self.canvas_image_target_show(self.event)
+        self.canvas_image_target_show(self.event_target)
     def canvas_image_target_show(self, event):
         # placeholder for call full screen display of image
         print("FSImage target show")
@@ -969,8 +970,13 @@ class Diatisch:
 
     def on_motion(self, event):
         if self.drag_started_in == "target":
-            #print("Drag Motion in Target")
-            True
+            x0 = int(self.target_canvas.canvasx(0))
+            y0 = int(self.target_canvas.canvasy(0))
+            x1 = int(self.target_canvas.canvasx(self.target_canvas.winfo_width()))
+            y1 = int(self.target_canvas.canvasy(self.target_canvas.winfo_height()))
+            if event.y < 0:
+                print("Drag Motion in outside Target, event: " + str(event) + (" x0 = {:d}, y0 = {:d}, x1 = {:d}, y1 = {:d}").format(x0, y0, x1, y1))
+        True
     
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
         # returns True if no further processing required else False (rebuild target-canvas
