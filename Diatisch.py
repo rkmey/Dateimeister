@@ -10,6 +10,7 @@ import time
 from datetime import datetime, timezone
 from time import gmtime, strftime
 import operator
+import argparse
 
 import hashlib
 import re
@@ -112,7 +113,7 @@ class Diatisch:
     idx_akt  = 0 # current index into dict according to history (undo / redo)
     dict_filename_images = {}
     dict_filename_images[idx_akt] = {} # Filename -> MyImage contains all source filenames which is sufficient as target files are a subset of source files
-    def __init__(self, root = None, list_imagefiles = None, list_result = None, callback = None): # if called from own main root will be initialized there
+    def __init__(self, debug, root = None, list_imagefiles = None, list_result = None, callback = None): # if called from own main root will be initialized there
         if root is None:
             self.root = tk.Toplevel()
         else:
@@ -134,6 +135,11 @@ class Diatisch:
         self.row_height  = 200
         self.xpos = 0
         self.ypos = 0
+        
+        if debug == 'Y' or debug == 'J':
+            self.debug = True
+        else:
+            self .debug = False
 
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.width  = 0
@@ -949,47 +955,58 @@ class Diatisch:
             img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, source_rect, self.source_canvas, self.dict_source_images)
             if img_closest_id > 0:
                 self.image_press = self.dict_source_images[img_closest_id]
-                print("image found in source canvas, action = PRESS: ", self.image_press.get_filename())
+                print("image found in source canvas, action = PRESS: ", self.image_press.get_filename()) if self.debug else True
                 self.selection(event, self.source_canvas, self.dict_source_images, action.PRESS)
             else: # do nothing
-                print("no image found in source canvas, action = PRESS")
+                print("no image found in source canvas, action = PRESS") if self.debug else True
         elif (self.check_event_in_rect(event, target_rect)):
             #print("Event in target_canvas")
             self.drag_started_in = "target"
             img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
             if img_closest_id > 0:
                 self.image_press = self.dict_target_images[img_closest_id]
-                print("image found in target canvas, action = PRESS: ", self.image_press.get_filename())
+                print("image found in target canvas, action = PRESS: ", self.image_press.get_filename()) if self.debug else True
                 self.selection(event, self.target_canvas, self.dict_target_images, action.PRESS)
             else: # do nothing
-                print("no image found in target canvas, action = PRESS")
+                print("no image found in target canvas, action = PRESS") if self.debug else True
         else:
             #rint("Event not in canvas")
             self.drag_started_in = ""
             True
 
     def on_motion(self, event):
-        if self.drag_started_in == "target":
-            canvas = self.target_canvas
-            x0 = int(canvas.canvasx(0))
-            y0 = int(canvas.canvasy(0))
-            x1 = int(canvas.canvasx(canvas.winfo_width()))
-            y1 = int(canvas.canvasy(canvas.winfo_height()))
-            canvas_width  = 0
-            canvas_height = 0
-            if canvas.bbox("all") is not None:
-                canvas_width  = canvas.bbox("all")[2] - canvas.bbox("all")[0]
-                canvas_height = canvas.bbox("all")[3] - canvas.bbox("all")[1]
-            str_display = str(event) + (" x0 = {:d}, y0 = {:d}, x1 = {:d}, y1 = {:d}").format(x0, y0, x1, y1) + (" W:{:d}, H:{:d}").format(canvas_width, canvas_height)
-            if event.y + (y0 - canvas.bbox("all")[1]) < y0:
-                print("Drag Motion above Target, ", str_display)
-                #canvas.yview(tk.SCROLL, -1, "unit")
-            if event.y + (y1 - canvas.bbox("all")[3]) > y1:
-                print("Drag Motion below Target, ", str_display)
-            if event.x < x0:
-                print("Drag Motion left outside Target, ", str_display)
-            if event.x > x1:
-                print("Drag Motion right outside Target, ", str_display)
+        #bbox only depends on cumulated size of items
+        # if canvas ist to small to view all items, it is a "window" into the bbox which can be scrolled
+        # event which is bound to canvas has x and y which always refer to bbox refardless of scroll position
+        # so x = -1 ALWAYS means that x is just left outside the canvas and x = canvas-width + 1 (pixel) means the same for the right border
+        # y works in the same way        
+        canvas = self.target_canvas
+        x0 = int(canvas.canvasx(0))
+        y0 = int(canvas.canvasy(0))
+        x1 = int(canvas.canvasx(canvas.winfo_width()))
+        y1 = int(canvas.canvasy(canvas.winfo_height()))
+        canvas_width  = 0
+        canvas_height = 0
+        if canvas.bbox("all") is not None:
+            b_x0 = canvas.bbox("all")[0]
+            b_y0 = canvas.bbox("all")[1]
+            b_x1 = canvas.bbox("all")[2]
+            b_y1 = canvas.bbox("all")[3]
+            canvas_width  = x1 - x0
+            canvas_height = y1 - y0
+        str_display = (" event: x = {:4d}, y = {:4d}, ").format(event.x, event.y) + (" canvas: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(x0, y0, x1, y1) + (" bbox: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(b_x0, b_y0, b_x1, b_y1)
+        if event.x < 0 and x0 > b_x0: # there is room for scrolling
+            print("Drag Motion left outside Target,  ", str_display)
+            canvas.xview(tk.SCROLL, -1, "unit")
+        if event.x > canvas_width and x1 < b_x1: # s.a.
+            print("Drag Motion right outside Target, ", str_display)
+            canvas.xview(tk.SCROLL, 1, "unit")
+        if event.y < 0 and y0 > b_y0: # s.a.
+            print("Drag Motion above Target,         ", str_display)
+            canvas.yview(tk.SCROLL, -1, "unit")
+        if event.y > canvas_height and y1 < b_y1: # s.a.
+            print("Drag Motion below Target,         ", str_display)
+            canvas.yview(tk.SCROLL, 1, "unit")
         True
     
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
@@ -1017,52 +1034,52 @@ class Diatisch:
           ", image press is: " + (self.image_press.get_filename() if self.image_press is not None else "None") + \
           ", image  release: " + (self.image_release.get_filename() if self.image_release is not None else "None") + \
           ", same = "+ str(same)+ ", ctrl_pressed = "+ str(ctrl_pressed), \
-          ", was_selected = " + str(img.was_selected))
+          ", was_selected = " + str(img.was_selected)) if self.debug else True
         if selected:
-            print("Sy")
+            print("Sy") if self.debug else True
             if action == action.PRESS:
-                print("SyP")
+                print("SyP") if self.debug else True
                 img.was_selected = True
                 c = self.select_image(img, canvas) # select because unselect all has unselected this image
                 self.selection_changed = self.check_changed(self.selection_changed, c)
             else: # action.RELEASE:
             # unselect only if actual image is the same as before
-                print("SyR")
+                print("SyR") if self.debug else True
                 if same:
-                    print("SyRSy")
+                    print("SyRSy") if self.debug else True
                     if img.was_selected:
-                        print("SyRSyWy")
+                        print("SyRSyWy") if self.debug else True
                         c = self.unselect_image(img, canvas)
                         self.selection_changed = self.check_changed(self.selection_changed, c)
                     else:
-                        print("SyRSyWn")
+                        print("SyRSyWn") if self.debug else True
                         img.was_selected = True
                         c = self.select_image(img, canvas) # select because unselect all has unselected this image
                         self.selection_changed = self.check_changed(self.selection_changed, c)
                 else:
-                    print("SyRSn")
+                    print("SyRSn") if self.debug else True
                     c = self.select_image(img, canvas)
                     self.selection_changed = self.check_changed(self.selection_changed, c)
                     self.canvas_target_rebuild_required = True # drop image requires action
 
         else: # not selected
-            print("Sn")
+            print("Sn") if self.debug else True
             if action == action.PRESS:
-                print("SnP")
+                print("SnP") if self.debug else True
                 c = self.select_image(img, canvas)
                 self.selection_changed = self.check_changed(self.selection_changed, c)
                 img.was_selected = False
             else: # action.RELEASE:
             # unselect only if actual image is the same as before
-                print("SnR")
+                print("SnR") if self.debug else True
                 if same:
-                    print("SnRSy")
+                    print("SnRSy") if self.debug else True
                     if img.was_selected:
-                        print("SnRSyWy")
+                        print("SnRSyWy") if self.debug else True
                         c = self.unselect_image(img, canvas)
                         self.selection_changed = self.check_changed(self.selection_changed, c)
                     else:
-                        print("SnRSyWn")
+                        print("SnRSyWn") if self.debug else True
                         img.was_selected = True
                         c = self.select_image(img, canvas) # select because unselect all has unselected this image
                         self.selection_changed = self.check_changed(self.selection_changed, c)
@@ -1129,13 +1146,13 @@ class Diatisch:
         self.image_release = None
         changed = False
         if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
-            print("*** Drop Event in target_canvas")
-            print ("Drop event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
-            print ("Target canvasx: ", str(self.target_canvas.canvasx(event.x)), "canvasy: ", str(self.target_canvas.canvasy(event.y)))
+            print("*** Drop Event in target_canvas") if self.debug else True
+            print ("Drop event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y)) if self.debug else True
+            print ("Target canvasx: ", str(self.target_canvas.canvasx(event.x)), "canvasy: ", str(self.target_canvas.canvasy(event.y))) if self.debug else True
             img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
             if img_closest_id > 0:
                 self.image_release = self.dict_target_images[img_closest_id]
-                print("image found in target canvas, action = RELEASE: ", self.image_release.get_filename())
+                print("image found in target canvas, action = RELEASE: ", self.image_release.get_filename()) if self.debug else True
             if self.drag_started_in == "source": # drop images from source
                 #for t in self.list_target_images:
                 #    print("Before Target image: ", t.get_filename())
@@ -1144,30 +1161,30 @@ class Diatisch:
             elif self.drag_started_in == "target": # move images within target
                 # unselect image if it was selected and drop event is on saved image clicked (self.image_clicked)
                 self.selection(event, self.target_canvas, self.dict_target_images, action.RELEASE) 
-                print("canvas_target_rebuild_required = ", str(self.canvas_target_rebuild_required))
+                print("canvas_target_rebuild_required = ", str(self.canvas_target_rebuild_required)) if self.debug else True
                 if self.canvas_target_rebuild_required:
                     changed = self.update_target_canvas(event, self.dict_target_images, target_rect, pt.DROP_FROM_TARGET)
             else: # do nothing
-                print("no image found in source canvas, action = RELEASE")
+                print("no image found in source canvas, action = RELEASE") if self.debug else True
                 
-            print("Drag Done.")
+            print("Drag Done.") if self.debug else True
             self.target_canvas.focus_set()
             self.target_canvas.bind('<Return>', self.canvas_focus_target)    # show FSImage for selected thumbnail
                
         elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
-            print("Drop Event in source")
+            print("Drop Event in source") if self.debug else True
             img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, source_rect, self.source_canvas, self.dict_source_images)
             if img_closest_id > 0:
                 self.image_release = self.dict_source_images[img_closest_id]
-                print("image found in source canvas, action = RELEASE: ", self.image_release.get_filename())
+                print("image found in source canvas, action = RELEASE: ", self.image_release.get_filename()) if self.debug else True
                 self.selection(event, self.source_canvas, self.dict_source_images, action.RELEASE)
             else: # do nothing
-                print("no image found in source canvas, action = PRESS")
+                print("no image found in source canvas, action = PRESS") if self.debug else True
             self.source_canvas.focus_set()
             self.source_canvas.bind('<Return>', self.canvas_focus_source)    # show FSImage for selected thumbnail
                 
         else:
-            print("Drop-Event not in target canvas")
+            print("Drop-Event not in target canvas") if self.debug else True
 
         if  changed or self.selection_changed: 
             self.historize_process()
@@ -1256,7 +1273,7 @@ class Diatisch:
 
             # now insert list of dragged images in target list, before or behind file_at_dragposition
             for i in self.list_target_images:
-                print("Before Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " selected: ", str(i.is_selected()))
+                print("Before Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " selected: ", str(i.is_selected())) if self.debug else True
             list_dragged_images.sort(key=lambda a: int(a.selected))
             #print("list dragged images: " + str(list_dragged_images))
             # we need a SET of dragged filenames
@@ -1314,14 +1331,14 @@ class Diatisch:
                 for i in self.list_target_images:
                     # for convenience we select all dragged images and unselect all others
                     thisfile = i.get_filename()
-                    print("After Target Image: ", thisfile, " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected()))
+                    print("After Target Image: ", thisfile, " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected())) if self.debug else True
                     if thisfile in set_dragged_filenames: # select
                         self.select_image(i, self.target_canvas)
                         print("thisfile: ", thisfile, " sected: ", str(i.is_selected()), " select_ctr: ", str(self.target_canvas.select_ctr))
                     else:
                         self.unselect_image(i, self.target_canvas)
             else:
-                print ("list target images has not changed")
+                print ("list target images has not changed") if self.debug else True
                 #print("list old: ", str(old_list_target_filenames))
                 #print("list new: ", str(new_list_target_filenames))
         self.file_at_dragposition = ""
@@ -1369,7 +1386,7 @@ class Diatisch:
         id = 0
         event_x_pos_in_canvas = event.x_root - rect_canvas[0]
         event_y_pos_in_canvas = event.y_root - rect_canvas[1]
-        print ("event_x_pos_in_canvas is: ", str(event_x_pos_in_canvas), '/', str(event_y_pos_in_canvas))
+        #print ("event_x_pos_in_canvas is: ", str(event_x_pos_in_canvas), '/', str(event_y_pos_in_canvas))
         if canvas.bbox("all") is not None:
             canvas_width  = canvas.bbox("all")[2] - canvas.bbox("all")[0]
             canvas_height = canvas.bbox("all")[3] - canvas.bbox("all")[1]
@@ -1378,8 +1395,8 @@ class Diatisch:
             canvas_height = 0
         current_scroll_x = canvas.xview()[0] * canvas_width
         current_scroll_y = canvas.yview()[0] * canvas_height
-        print("Scroll position x is: ", str(canvas.xview()), " width is: ", str(canvas_width), " xpos: ", str(current_scroll_x))
-        print("Scroll position y is: ", str(canvas.yview()), " height is: ", str(canvas_height), " ypos: ", str(current_scroll_y))
+        print("Scroll position x is: ", str(canvas.xview()), " width is: ", str(canvas_width), " xpos: ", str(current_scroll_x)) if self.debug else True
+        print("Scroll position y is: ", str(canvas.yview()), " height is: ", str(canvas_height), " ypos: ", str(current_scroll_y)) if self.debug else True
         hit = False
         dist_event_left = 0
         dist_event_right = 0
@@ -1434,7 +1451,7 @@ class Diatisch:
         changed = False
         if not image.is_selected():
             canvas.select_ctr += 1
-            print ("--- SELECT CALL")
+            print ("--- SELECT CALL") if self.debug else True
             changed = image.select(canvas, canvas.select_ctr)
         return changed
 
@@ -1649,8 +1666,8 @@ class Diatisch:
         h.str_hashsum_source_selection = hashsum_source_selection.hexdigest()
         hashsum_target_selection.update(str_target_selection.encode(encoding = 'UTF-8', errors = 'strict'))
         h.str_hashsum_target_selection = hashsum_target_selection.hexdigest()
-        print("Hashsum source Filenames is: ", h.str_hashsum_source_filenames, " Hashsum target Filenames is: ", h.str_hashsum_target_filenames)
-        print("Hashsum source Selection is: ", h.str_hashsum_source_selection, "(", str_source_selection, ")", " Hashsum target Selection is: ", h.str_hashsum_target_selection, "(", str_target_selection, ")")
+        #print("Hashsum source Filenames is: ", h.str_hashsum_source_filenames, " Hashsum target Filenames is: ", h.str_hashsum_target_filenames)
+        #print("Hashsum source Selection is: ", h.str_hashsum_source_selection, "(", str_source_selection, ")", " Hashsum target Selection is: ", h.str_hashsum_target_selection, "(", str_target_selection, ")")
         h.idx_akt = Diatisch.idx_akt
         
         self.UR.historize_process()
@@ -1813,6 +1830,15 @@ class HistObj:
 
 
 if __name__ == "__main__":
+    argParser = argparse.ArgumentParser()
+    argParser.add_argument("-d", "--debug", help="Debug Mode")
+    args = argParser.parse_args()
+    print("args=%s" % args)
+    print("args.debug=%s" % args.debug)
+    debug = 'N'
+    if args.debug:
+        debug = args.debug.upper()
+
     root = tk.Tk()
-    app = Diatisch(root, False, False, False)  # when run as main we have no list of image files and no result list, no callback
+    app = Diatisch(debug, root, False, False, False)  # when run as main we have no list of image files and no result list, no callback
     root.mainloop()
