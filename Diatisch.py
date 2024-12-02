@@ -270,7 +270,7 @@ class Diatisch:
 
         # canvas source with scrollbars
         self.source_canvas = ScrollableCanvas(self.Frame_source, bg="yellow")
-        self.source_canvas.place(relx=0.01, rely=0.01, relheight=.92, relwidth=.95)
+        self.source_canvas.place(relx=0.0, rely=0.0, relheight=.98, relwidth=.98)
 
         self.V_source = tk.Scrollbar(self.Frame_source, orient = tk.VERTICAL)
         self.V_source.config(command=self.source_canvas.yview)
@@ -289,7 +289,7 @@ class Diatisch:
  
         # canvas target with scrollbars
         self.target_canvas = ScrollableCanvas(self.Frame_target, bg="darkgrey")
-        self.target_canvas.place(relx=0.01, rely=0.01, relheight=.92, relwidth=.95)
+        self.target_canvas.place(relx=0.0, rely=0.0, relheight=.98, relwidth=.98)
 
         self.V_target = tk.Scrollbar(self.Frame_target, orient = tk.VERTICAL)
         self.V_target.config(command=self.target_canvas.yview)
@@ -970,12 +970,26 @@ class Diatisch:
 
     def on_motion(self, event):
         if self.drag_started_in == "target":
-            x0 = int(self.target_canvas.canvasx(0))
-            y0 = int(self.target_canvas.canvasy(0))
-            x1 = int(self.target_canvas.canvasx(self.target_canvas.winfo_width()))
-            y1 = int(self.target_canvas.canvasy(self.target_canvas.winfo_height()))
-            if event.y < 0:
-                print("Drag Motion in outside Target, event: " + str(event) + (" x0 = {:d}, y0 = {:d}, x1 = {:d}, y1 = {:d}").format(x0, y0, x1, y1))
+            canvas = self.target_canvas
+            x0 = int(canvas.canvasx(0))
+            y0 = int(canvas.canvasy(0))
+            x1 = int(canvas.canvasx(canvas.winfo_width()))
+            y1 = int(canvas.canvasy(canvas.winfo_height()))
+            canvas_width  = 0
+            canvas_height = 0
+            if canvas.bbox("all") is not None:
+                canvas_width  = canvas.bbox("all")[2] - canvas.bbox("all")[0]
+                canvas_height = canvas.bbox("all")[3] - canvas.bbox("all")[1]
+            str_display = str(event) + (" x0 = {:d}, y0 = {:d}, x1 = {:d}, y1 = {:d}").format(x0, y0, x1, y1) + (" W:{:d}, H:{:d}").format(canvas_width, canvas_height)
+            if event.y + (y0 - canvas.bbox("all")[1]) < y0:
+                print("Drag Motion above Target, ", str_display)
+                #canvas.yview(tk.SCROLL, -1, "unit")
+            if event.y + (y1 - canvas.bbox("all")[3]) > y1:
+                print("Drag Motion below Target, ", str_display)
+            if event.x < x0:
+                print("Drag Motion left outside Target, ", str_display)
+            if event.x > x1:
+                print("Drag Motion right outside Target, ", str_display)
         True
     
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
