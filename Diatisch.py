@@ -219,7 +219,7 @@ class Diatisch:
         # combobox for config files
         self.combobox_cfg_var = tk.StringVar()
         self.combobox_cfg = tk.Listbox(self.root)
-        self.combobox_cfg.place(relx=.51, rely=0.87, relheight=0.1, relwidth=0.40)
+        self.combobox_cfg.place(relx=.51, rely=0.87, relheight=0.1, relwidth=0.35)
         self.combobox_cfg.configure(background="white")
         self.combobox_cfg.configure(disabledforeground="#a3a3a3")
         self.combobox_cfg.configure(font="TkFixedFont")
@@ -243,12 +243,12 @@ class Diatisch:
         self.combobox_cfg.bind("<<ListboxSelect>>", lambda event: self.combobox_cfg_check_exist(event))
         # Button
         self.button_apply_cfg = tk.Button(self.root, text="Apply selected", command=self.combobox_cfg_double)
-        self.button_apply_cfg.place(relx=.91, rely=0.87, relheight=0.04, relwidth=0.07)
+        self.button_apply_cfg.place(relx=.88, rely=0.87, relheight=0.04, relwidth=0.1)
 
         # combobox for Indirs
         self.combobox_indir_var = tk.StringVar()
         self.combobox_indir = tk.Listbox(self.root)
-        self.combobox_indir.place(relx=.01, rely=0.87, relheight=0.1, relwidth=0.40)
+        self.combobox_indir.place(relx=.01, rely=0.87, relheight=0.1, relwidth=0.35)
         self.combobox_indir.configure(background="white")
         self.combobox_indir.configure(disabledforeground="#a3a3a3")
         self.combobox_indir.configure(font="TkFixedFont")
@@ -272,7 +272,7 @@ class Diatisch:
         self.combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
         # Button
         self.button_apply_indir = tk.Button(self.root, text="Apply selected", command=self.combobox_indir_double)
-        self.button_apply_indir.place(relx=.41, rely=0.87, relheight=0.04, relwidth=0.07)
+        self.button_apply_indir.place(relx=.38, rely=0.87, relheight=0.04, relwidth=0.1)
 
         # canvas source with scrollbars
         self.source_canvas = ScrollableCanvas(self.Frame_source, bg="yellow")
@@ -402,7 +402,7 @@ class Diatisch:
 
         self.cb_recursive_var = tk.IntVar()
         self.cb_recursive = tk.Checkbutton(self.root)
-        self.cb_recursive.place(relx=.41, rely=0.92, relheight=0.04, relwidth=0.04)
+        self.cb_recursive.place(relx=.38, rely=0.92, relheight=0.04, relwidth=0.08)
         self.cb_recursive.configure(variable=self.cb_recursive_var)
         self.cb_recursive.configure(text='''recursive''')
         self.cb_recursive = TT.ToolTip(self.cb_recursive, '''process  subdirectories''')
