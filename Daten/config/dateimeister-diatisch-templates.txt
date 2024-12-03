@@ -1,0 +1,2 @@
+[copy]echo D|xcopy /Y "<source>" "<target>"[/copy]
+[delete]del /Q "<target>"[/delete]

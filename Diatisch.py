@@ -334,9 +334,13 @@ class Diatisch:
         buttonpos_target += relwidth_target
         self.button_redo = tk.Button(self.Frame_target_ctl, text="Redo", command=self.button_redo_h)
         self.button_redo.place(relx=buttonpos_target, rely=0.01, relheight=0.98, relwidth=relwidth_target)
+        buttonpos_target += relwidth_target
+        self.button_exec = tk.Button(self.Frame_target_ctl, text="Exec", command=self.button_exec_pressed)
+        self.button_exec.place(relx=buttonpos_target, rely=0.01, relheight=0.98, relwidth=relwidth_target)
 
         self.button_undo.config(state = tk.DISABLED)
         self.button_redo.config(state = tk.DISABLED)
+        self.button_exec.config(state = tk.DISABLED)
         self.root.bind('<Control-z>', lambda event: self.process_undo(event))
         self.root.bind('<Control-y>', lambda event: self.process_redo(event))
 
@@ -415,6 +419,16 @@ class Diatisch:
         self.config_file = ""
         self.ctr_targetfiles = 0
         self.indir = ""
+        self.win_messages = None
+        self.imagetype  = "JPEG"
+        self.imagetypes = "JPG, JPEG"
+        self.dict_gen_files = {}
+        self.dict_gen_files_delete = {}
+        self.dict_gen_files_delrelpath = {}
+        self.dict_gen_files[self.imagetype] = {}
+        self.dict_gen_files_delete[self.imagetype] = {}
+        self.dict_gen_files_delrelpath[self.imagetype] = {}
+        self.dict_templates = {}
 
         self.timestamp = datetime.now() 
         self.image_press = None
@@ -468,6 +482,33 @@ class Diatisch:
         self.update_combobox_indir()
         
         #DX.delete_diatisch_item(self.config_files_xml, "indirs", "indir", "name", "e:/fotos/dateimeister")
+        
+        # read the templates and build names for genfiles
+        self.dict_templates = {}
+        self.dict_gen_filenames = {}
+        try:
+            file = open(self.templatefile)
+        except FileNotFoundError:
+            print("File does not exist: " + self.templatefile)
+        templates = file.read().replace('\n', '<<<NL>>>')
+        #print(templates)
+        regpattern = r'\[([^\]]+)\](.*?)\[/\1\]'
+        list_t = re.findall(regpattern, templates)
+        for ii in list_t:
+            templatename = ii[0].upper()
+            file_prefix  = ii[0].lower()
+            template     = ii[1]
+            #print("templatename: " + templatename)
+            #print(template)
+            self.dict_templates[templatename] = template
+            
+            # the associated genfile
+            fn = '_' + file_prefix + '_' + self.imagetype + '_diatisch.cmd'
+            cmd_file_name = os.path.join(self.datadir, self.cmd_files_subdir, fn) # include path
+            self.dict_gen_filenames[templatename] = cmd_file_name
+        
+        templates = re.sub(r'<<<NL>>>', '\n', templates)
+        #print(templates)
 
     def read_ini(self):
         inifile = "Dateimeister.ini" 
@@ -478,9 +519,15 @@ class Diatisch:
         self.config_files_subdir = config["dirs"]["config_files_subdir"]
         self.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
         self.config_files_xml = config["misc"]["config_files_diatisch_xml"]
+        self.templatefile = config["misc"]["templatefile_diatisch"]
         self.max_indirs = config["misc"]["max_indirs_diatisch"]
         self.max_configfiles = config["misc"]["max_configfiles_diatisch"]
+        self.uncomment = config["misc"]["uncomment"] + " "        
         print("Config Files xml from ini is: " + self.config_files_xml)
+        self.platform = config["misc"]["platform"].upper()
+        if self.platform != "UNIX" and self.platform != "WINDOWS":
+            messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + platform)
+            exit()
 
     def close_child_windows(self): #closes fs-images    
         # cleanup
@@ -679,7 +726,7 @@ class Diatisch:
             else:
                 recursive = "n"
             self.dict_source_target, dict_source_target_jpeg, self.dict_source_target_tooold, self.dict_relpath = \
-              DG.dateimeister("JPEG", "JPG, JPEG", directory, "", "n", recursive, False, "", None)
+              DG.dateimeister(self.imagetype, self.imagetypes, directory, "", "n", recursive, False, "", None)
             # copy result to image_files
             self.image_files.clear()
             for i in self.dict_source_target:          
@@ -1328,6 +1375,7 @@ class Diatisch:
                 #for t in self.dict_target_images:
                 #    print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
                 # now select all dragged images
+                ii = 0
                 for i in self.list_target_images:
                     # for convenience we select all dragged images and unselect all others
                     thisfile = i.get_filename()
@@ -1337,6 +1385,9 @@ class Diatisch:
                         print("thisfile: ", thisfile, " sected: ", str(i.is_selected()), " select_ctr: ", str(self.target_canvas.select_ctr))
                     else:
                         self.unselect_image(i, self.target_canvas)
+                    ii += 1
+                if ii > 0: # anz target images > 0    
+                    self.button_exec.config(state = tk.NORMAL)        
             else:
                 print ("list target images has not changed") if self.debug else True
                 #print("list old: ", str(old_list_target_filenames))
@@ -1811,6 +1862,41 @@ class Diatisch:
             self.configmenu.entryconfig(CFG_SAVE_CONFIG,       state=NORMAL)
             self.configmenu.entryconfig(CFG_SAVE_CONFIG_AS,    state=NORMAL)
         
+    def button_exec_pressed(self):
+        # gen cmd files and write to dir            
+        self.write_cmdfile()
+        # show exec window
+        if self.win_messages is not None: # stop MyMessagesWindow-Objekt
+            self.win_messages.close_handler()
+            self.win_messages = None
+        self.win_messages = DS.MyMessagesWindow(self, self.imagetype, self.dict_gen_files[self.imagetype], self.dict_gen_files_delete[self.imagetype], self.dict_gen_files_delrelpath[self.imagetype]) 
+
+    def write_cmdfile(self):
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        header = self.uncomment + ' generated by diatisch / dateimeister ' + ts + '\n'
+
+        # process only files contained in list_target_images
+        for ii in self.dict_templates:
+            template    = self.dict_templates[ii]
+            cmd_file_full = self.dict_gen_filenames[ii] # uses same key as both are filled in init
+            thiscmdfile = open(cmd_file_full, 'w')
+            thiscmdfile.write(header) 
+            for jj in self.list_target_images:
+                targetfile = jj.get_filename()
+                if self.platform == "WINDOWS":
+                    targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
+                elif self.platform == "UNIX":
+                    targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
+                sourcefile =  targetfile
+                print ("Targetfile: " + str(targetfile))
+                comment = ""
+                str_ret = template
+                str_ret = str_ret.replace('<source>', sourcefile)
+                str_ret = str_ret.replace('<target>', targetfile)
+                str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
+                thiscmdfile.write(comment + str_ret + '\n')
+            thiscmdfile.close()
+
 
 class HistObj:
     def __init__(self):
