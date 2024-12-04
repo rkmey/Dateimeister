@@ -144,90 +144,103 @@ class Diatisch:
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.width  = 0
         self.height = 0
-        self.text_font = Font(family="Helvetica", size=8)
+        self.text_font = Font(family="Helvetica", size=6)
 
         self.frame_labels_height = 0.04 # needed for calculation of font size
-        self.label_height = 0.9 # needed for calculation of font size
+        self.label_height = 0.7 # needed for calculation of font size
 
         self.Frame_labels = tk.Frame(self.root)
         self.Frame_labels.place(relx=.01, rely=0.00, relheight=self.frame_labels_height, relwidth=0.98)
-        self.Frame_labels.configure(relief='groove')
-        self.Frame_labels.configure(borderwidth="2")
-        self.Frame_labels.configure(relief="groove")
-        self.Frame_labels.configure(background="#d9d9d9")
-        self.Frame_labels.configure(highlightbackground="#d9d9d9")
-        self.Frame_labels.configure(highlightcolor="black")
+        self.Frame_labels.configure(relief='flat')
+        self.Frame_labels.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.Label_source_ctr = tk.Label(self.Frame_labels)
         self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.3)
         self.Label_source_ctr.configure(anchor=tk.NW)
-        self.Label_source_ctr.configure(background="#d9d9d9")
         self.Label_source_ctr.configure(font=self.text_font)
         self.Label_source_ctr.configure(text='Num Images Source: 0')
 
         self.Label_process_id = tk.Label(self.Frame_labels)
         self.Label_process_id.place(relx=0.35, rely=0.0, relheight=self.label_height, relwidth=0.3)
         self.Label_process_id.configure(anchor=tk.NW)
-        self.Label_process_id.configure(background="#d9d9d9")
         self.Label_process_id.configure(font=self.text_font)
         self.Label_process_id.configure(text='Process ID: 0')
 
         self.Label_target_ctr = tk.Label(self.Frame_labels)
         self.Label_target_ctr.place(relx=.6, rely=0.0, relheight=self.label_height, relwidth=0.3)
         self.Label_target_ctr.configure(anchor=tk.NE)
-        self.Label_target_ctr.configure(background="#d9d9d9")
         self.Label_target_ctr.configure(font=self.text_font)
         self.Label_target_ctr.configure(text='Num Images Target: 0')
 
 
         self.Frame_source = tk.Frame(self.root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.75, relwidth=0.48)
-        self.Frame_source.configure(relief='groove')
-        self.Frame_source.configure(borderwidth="2")
-        self.Frame_source.configure(relief="groove")
-        self.Frame_source.configure(background="#d9d9d9")
-        self.Frame_source.configure(highlightbackground="#d9d9d9")
-        self.Frame_source.configure(highlightcolor="black")
+        self.Frame_source.configure(relief='flat')
+        self.Frame_source.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.Frame_target = tk.Frame(self.root)
         self.Frame_target.place(relx=.51, rely=0.05, relheight=0.75, relwidth=0.48)
-        self.Frame_target.configure(relief='groove')
-        self.Frame_target.configure(borderwidth="2")
-        self.Frame_target.configure(relief="groove")
-        self.Frame_target.configure(background="#d9d9d9")
-        self.Frame_target.configure(highlightbackground="#d9d9d9")
-        self.Frame_target.configure(highlightcolor="black")
+        self.Frame_target.configure(relief='flat')
+        self.Frame_target.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.Frame_source_ctl = tk.Frame(self.root)
         self.Frame_source_ctl.place(relx=.01, rely=0.82, relheight=0.05, relwidth=0.48)
-        self.Frame_source_ctl.configure(relief='groove')
-        self.Frame_source_ctl.configure(borderwidth="2")
-        self.Frame_source_ctl.configure(relief="groove")
-        self.Frame_source_ctl.configure(background="#d9d9d9")
-        self.Frame_source_ctl.configure(highlightbackground="#d9d9d9")
-        self.Frame_source_ctl.configure(highlightcolor="black")
+        self.Frame_source_ctl.configure(relief='flat')
+        self.Frame_source_ctl.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.Frame_target_ctl = tk.Frame(self.root)
         self.Frame_target_ctl.place(relx=.51, rely=0.82, relheight=0.05, relwidth=0.48)
-        self.Frame_target_ctl.configure(relief='groove')
-        self.Frame_target_ctl.configure(borderwidth="2")
-        self.Frame_target_ctl.configure(relief="groove")
-        self.Frame_target_ctl.configure(background="#d9d9d9")
-        self.Frame_target_ctl.configure(highlightbackground="#d9d9d9")
-        self.Frame_target_ctl.configure(highlightcolor="black")
+        self.Frame_target_ctl.configure(relief='flat')
+        self.Frame_target_ctl.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        
+        # frames for comboboxes
+        # indir
+        self.Frame_indir = tk.Frame(self.root)
+        self.Frame_indir.place(relx=.01, rely=0.87, relheight=0.12, relwidth=0.33)
+        self.Frame_indir.configure(relief='flat')
+        self.Frame_indir.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        # cfg
+        self.Frame_cfg = tk.Frame(self.root)
+        self.Frame_cfg.place(relx=.5, rely=0.87, relheight=0.12, relwidth=0.33)
+        self.Frame_cfg.configure(relief='flat')
+        self.Frame_cfg.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+ 
+        # combobox for Indirs
+        self.combobox_indir_var = tk.StringVar()
+        self.combobox_indir = tk.Listbox(self.Frame_indir)
+        self.combobox_indir.place(relx=.0, rely=0, relheight=.8, relwidth=0.75)
+        self.combobox_indir.configure(font=self.text_font)
+        self.combobox_indir.configure(selectmode='single')
+        self.combobox_indir.configure(listvariable=self.combobox_indir_var)
+        # Scrollbars
+        VI_INDIR = tk.Scrollbar(self.Frame_indir, orient= VERTICAL)
+        VI_INDIR.place(relx = 0.75, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
+        VI_INDIR.config(command = self.combobox_indir.yview)
+        self.combobox_indir.config(yscrollcommand = VI_INDIR.set)
+        HI_INDIR = tk.Scrollbar(self.Frame_indir, orient= HORIZONTAL)
+        HI_INDIR.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .75, anchor = tk.NW)
+        HI_INDIR.config(command = self.combobox_indir.xview)
+        self.combobox_indir.config(xscrollcommand = HI_INDIR.set)
+        self.combobox_indir.bind('<Double-1>', self.combobox_indir_double)
+        self.combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
+        # Button
+        self.button_apply_indir = tk.Button(self.Frame_indir, text="Apply selected", command=self.combobox_indir_double)
+        self.button_apply_indir.place(relx=.79, rely=0.0, relheight=0.3, relwidth=0.21)
+        self.button_apply_indir.configure(font=self.text_font)
+        self.cb_recursive_var = tk.IntVar()
+        self.cb_recursive = tk.Checkbutton(self.Frame_indir)
+        self.cb_recursive.place(relx=.79, rely=0.4, relheight=0.2, relwidth=0.21)
+        self.cb_recursive.configure(variable=self.cb_recursive_var)
+        self.cb_recursive.configure(font=self.text_font)
+        self.cb_recursive.configure(text='''recursive''')
+        self.cb_recursive = TT.ToolTip(self.cb_recursive, '''process  subdirectories''')
+
 
         # combobox for config files
         self.combobox_cfg_var = tk.StringVar()
         self.combobox_cfg = tk.Listbox(self.root)
         self.combobox_cfg.place(relx=.51, rely=0.87, relheight=0.1, relwidth=0.35)
-        self.combobox_cfg.configure(background="white")
-        self.combobox_cfg.configure(disabledforeground="#a3a3a3")
-        self.combobox_cfg.configure(font="TkFixedFont")
-        self.combobox_cfg.configure(foreground="black")
-        self.combobox_cfg.configure(highlightbackground="#d9d9d9")
-        self.combobox_cfg.configure(highlightcolor="black")
-        self.combobox_cfg.configure(selectbackground="#c4c4c4")
-        self.combobox_cfg.configure(selectforeground="black")
+        self.combobox_cfg.configure(font=self.text_font)
         self.combobox_cfg.configure(selectmode='single')
         self.combobox_cfg.configure(listvariable=self.combobox_cfg_var)
         # Scrollbars
@@ -244,35 +257,6 @@ class Diatisch:
         # Button
         self.button_apply_cfg = tk.Button(self.root, text="Apply selected", command=self.combobox_cfg_double)
         self.button_apply_cfg.place(relx=.88, rely=0.87, relheight=0.04, relwidth=0.1)
-
-        # combobox for Indirs
-        self.combobox_indir_var = tk.StringVar()
-        self.combobox_indir = tk.Listbox(self.root)
-        self.combobox_indir.place(relx=.01, rely=0.87, relheight=0.1, relwidth=0.35)
-        self.combobox_indir.configure(background="white")
-        self.combobox_indir.configure(disabledforeground="#a3a3a3")
-        self.combobox_indir.configure(font="TkFixedFont")
-        self.combobox_indir.configure(foreground="black")
-        self.combobox_indir.configure(highlightbackground="#d9d9d9")
-        self.combobox_indir.configure(highlightcolor="black")
-        self.combobox_indir.configure(selectbackground="#c4c4c4")
-        self.combobox_indir.configure(selectforeground="black")
-        self.combobox_indir.configure(selectmode='single')
-        self.combobox_indir.configure(listvariable=self.combobox_indir_var)
-        # Scrollbars
-        VI_INDIR = tk.Scrollbar(self.combobox_indir, orient= VERTICAL)
-        VI_INDIR.place(relx = 1, rely = 0, relheight = 1, relwidth = .02, anchor = tk.NE)
-        VI_INDIR.config(command = self.combobox_indir.yview)
-        self.combobox_indir.config(yscrollcommand = VI_INDIR.set)
-        HI_INDIR = tk.Scrollbar(self.combobox_indir, orient= HORIZONTAL)
-        HI_INDIR.place(relx = 0, rely = 1, relheight = 0.1, relwidth = 1, anchor = tk.SW)
-        HI_INDIR.config(command = self.combobox_indir.xview)
-        self.combobox_indir.config(xscrollcommand = HI_INDIR.set)
-        self.combobox_indir.bind('<Double-1>', self.combobox_indir_double)
-        self.combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
-        # Button
-        self.button_apply_indir = tk.Button(self.root, text="Apply selected", command=self.combobox_indir_double)
-        self.button_apply_indir.place(relx=.38, rely=0.87, relheight=0.04, relwidth=0.1)
 
         # canvas source with scrollbars
         self.source_canvas = ScrollableCanvas(self.Frame_source, bg="yellow")
@@ -404,13 +388,6 @@ class Diatisch:
         self.context_menu_target.add_command(label="Delete Selected"   , command=self.delete_selected_target_images)    
         self.context_menu_target.add_command(label="Delete "   , command=self.delete_single_target_image)    
 
-        self.cb_recursive_var = tk.IntVar()
-        self.cb_recursive = tk.Checkbutton(self.root)
-        self.cb_recursive.place(relx=.38, rely=0.92, relheight=0.04, relwidth=0.08)
-        self.cb_recursive.configure(variable=self.cb_recursive_var)
-        self.cb_recursive.configure(text='''recursive''')
-        self.cb_recursive = TT.ToolTip(self.cb_recursive, '''process  subdirectories''')
-
         self.default_indir  = ""
         self.datadir = ""
         self.config_files_xml = ""
@@ -429,6 +406,7 @@ class Diatisch:
         self.dict_gen_files_delete[self.imagetype] = {}
         self.dict_gen_files_delrelpath[self.imagetype] = {}
         self.dict_templates = {}
+        self.default_delay  = 20
 
         self.timestamp = datetime.now() 
         self.image_press = None
@@ -738,7 +716,7 @@ class Diatisch:
             self.new_item_in_xml(self.max_indirs, this_i, ts, "indirs", "indir", "name")
             # now create new indir
             DX.new_dir_diatisch(self.config_files_xml, "indirs", "indir", "name", directory.lower(), ts)
-            DX.new_dir_diatisch(self.config_files_xml, "outdirs", "outdir", "name", directory.lower(), ts)
+            #DX.new_dir_diatisch(self.config_files_xml, "outdirs", "outdir", "name", directory.lower(), ts)
         for img_file in self.image_files:
             tag_no += 1
             if directory:
@@ -959,7 +937,7 @@ class Diatisch:
             img      = self.dict_source_images[image_id]
             file     = img.get_filename()
             thumbnail = FS.Thumbnail(img, self, file, None, self.source_canvas, None)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, 20)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.default_delay)
             self.dict_file_FSImage[file] = fs_image
 
     def canvas_focus_target(self, event):
@@ -980,7 +958,7 @@ class Diatisch:
             img      = self.dict_target_images[image_id]
             file     = img.get_filename()
             thumbnail = FS.Thumbnail(img, self, file, None, self.target_canvas, None)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.screen_width, self.screen_height, 20)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.default_delay)
             self.dict_file_FSImage[file] = fs_image
 
 
@@ -1850,8 +1828,8 @@ class Diatisch:
         
     def endis_menu_items(self):
         self.configmenu.entryconfig(CFG_NEW,               state=DISABLED)
-        self.configmenu.entryconfig(CFG_OPEN_CONFIG,       state=DISABLED)
-        self.configmenu.entryconfig(CFG_OPEN_APPLY_CONFIG, state=DISABLED)
+        self.configmenu.entryconfig(CFG_OPEN_CONFIG,       state=NORMAL)
+        self.configmenu.entryconfig(CFG_OPEN_APPLY_CONFIG, state=NORMAL)
         self.configmenu.entryconfig(CFG_SAVE_CONFIG,       state=DISABLED)
         self.configmenu.entryconfig(CFG_SAVE_CONFIG_AS,    state=DISABLED)
         self.configmenu.entryconfig(CFG_APPLY_CONFIG,      state=DISABLED)
