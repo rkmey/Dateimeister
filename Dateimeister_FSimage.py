@@ -83,7 +83,7 @@ class Thumbnail:
 class MyFSImage:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, file, thumbnail, dict_caller, pmain, screen_width, screen_height, delay_default): # close_handler has to delete self from the dict main or duplicate
+    def __init__(self, file, thumbnail, dict_caller, pmain, delay_default): # close_handler has to delete self from the dict main or duplicate
         self.main = pmain
         self.thumbnail = thumbnail
         self.player = None
@@ -116,7 +116,11 @@ class MyFSImage:
         self.root2.protocol("WM_DELETE_WINDOW", self.close_handler)
 
         self.root2.title(file)
-        v_dim=str(screen_width)+'x'+str(screen_height)
+        screen_width  = int(self.root2.winfo_screenwidth() * 0.9)
+        screen_height = int(self.root2.winfo_screenheight() * 0.8)
+        print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height))
+        width,height=screen_width,screen_height
+        v_dim=str(width)+'x'+str(height)
         self.root2.geometry(v_dim)
         self.root2.resizable(True, True)
 

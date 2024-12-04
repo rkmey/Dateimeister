@@ -18,7 +18,7 @@ import configparser
 import Undo_Redo as UR
 import dateimeister_config_xml as DX
 import dateimeister_generator as DG
-import Dateimeister_support as DS
+import Dateimeister_messages as DM
 import Dateimeister_FSimage as FS
 
 from enum import Enum
@@ -737,7 +737,8 @@ class Diatisch:
             # delete indir-entries from xml if number gt than max from ini, oldest and not existing first. we have to supply the necessary xml-information
             self.new_item_in_xml(self.max_indirs, this_i, ts, "indirs", "indir", "name")
             # now create new indir
-            DX.new_indir_diatisch(self.config_files_xml, directory.lower(), ts)
+            DX.new_dir_diatisch(self.config_files_xml, "indirs", "indir", "name", directory.lower(), ts)
+            DX.new_dir_diatisch(self.config_files_xml, "outdirs", "outdir", "name", directory.lower(), ts)
         for img_file in self.image_files:
             tag_no += 1
             if directory:
@@ -958,7 +959,7 @@ class Diatisch:
             img      = self.dict_source_images[image_id]
             file     = img.get_filename()
             thumbnail = FS.Thumbnail(img, self, file, None, self.source_canvas, None)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.screen_width, self.screen_height, 20)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, 20)
             self.dict_file_FSImage[file] = fs_image
 
     def canvas_focus_target(self, event):
@@ -1869,7 +1870,7 @@ class Diatisch:
         if self.win_messages is not None: # stop MyMessagesWindow-Objekt
             self.win_messages.close_handler()
             self.win_messages = None
-        self.win_messages = DS.MyMessagesWindow(self, self.imagetype, self.dict_gen_files[self.imagetype], self.dict_gen_files_delete[self.imagetype], self.dict_gen_files_delrelpath[self.imagetype]) 
+        self.win_messages = DM.MyMessagesWindow(self, self.datadir, self.cmd_files_subdir, self.imagetype, self.dict_gen_filenames["COPY"], self.dict_gen_filenames["DELETE"], None) 
 
     def write_cmdfile(self):
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
@@ -1888,6 +1889,7 @@ class Diatisch:
                 elif self.platform == "UNIX":
                     targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
                 sourcefile =  targetfile
+                targetfile = os.path.basename(sourcefile)
                 print ("Targetfile: " + str(targetfile))
                 comment = ""
                 str_ret = template

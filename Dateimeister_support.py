@@ -43,6 +43,7 @@ import Diatisch as DIAT
 import dateimeister_generator as DG
 import Undo_Redo as UR
 import Dateimeister_FSimage as FS
+import Dateimeister_messages as DM
 
 #from Dateimeister import ToolTip
 
@@ -361,7 +362,7 @@ class MyDuplicates:
                 fs_image.setPlaystatus('play') # Status, Buttontext
         else: # ein neues Objekt anlegen und in self.dict_file_image eintragen
             print ("FSImage does not exist for file: " + file)
-            fs_image = MyFSImage(file, thumbnail, self.dict_file_image, self.main)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self.main, Globals.delay_default)
             self.dict_file_image[file] = fs_image
 
     def canvas_video_restart(self):
@@ -692,156 +693,6 @@ class MyDuplicates:
     def __del__(self):
         self.a = 1
         print("*** Deleting MyDuplicates-Objekt. Outdir is " + str(Globals.outdir))
-
-# Message Output from generated scripts
-class MyMessagesWindow:
-
-    # The class "constructor" - It's actually an initializer 
-    def __init__(self, pmain, imagetype, copyscript = None, deletescript = None, delrelpathscript = None):
-        self.root = tk.Toplevel()
-        self.main = pmain
-        self.w = Dateimeister.Toplevel_messages(self.root)
-        self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
-
-        self.copyscript = copyscript
-        self.deletescript = deletescript
-        self.delrelpathscript = delrelpathscript
-        self.root.title(imagetype)
-        width,height=Globals.screen_width,Globals.screen_height
-        v_dim=str(width)+'x'+str(height)
-        self.root.geometry(v_dim)
-        self.root.resizable(True, True)
-
-        self.w.cb_delrelpath = self.w.Checkbutton_delrelpath
-        self.w.cb_delrelpath_var.set(0)
-
-        self.w.Button_execute.config(command = self.exec_handler)
-        # Scrollbars
-        # Script
-        parent_width  = self.w.Frame_script.winfo_width()
-        parent_height = self.w.Frame_script.winfo_height()
-        self.VS = Scrollbar(self.w.Frame_script)
-        self.VS.config(command=self.w.Text_script.yview)
-        self.w.Text_script.config(yscrollcommand=self.VS.set) 
-        self.HS = Scrollbar(self.w.Frame_script, orient = HORIZONTAL)
-        self.HS.config(command=self.w.Text_script.xview)
-        self.w.Text_script.config(xscrollcommand=self.HS.set)
-        self.VS.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.04, anchor = tk.NE)
-        self.HS.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.96, anchor = tk.SW)
-
-        #Messages
-        parent_width  = self.w.Frame_messages.winfo_width()
-        parent_height = self.w.Frame_messages.winfo_height()
-        self.VM = Scrollbar(self.w.Frame_messages)
-        self.VM.config(command=self.w.Text_messages.yview)
-        self.w.Text_messages.config(yscrollcommand=self.VM.set)  
-        self.HM = Scrollbar(self.w.Frame_messages, orient = HORIZONTAL)
-        self.HM.config(command=self.w.Text_messages.xview)
-        self.w.Text_messages.config(xscrollcommand=self.HM.set)
-        self.VM.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.02, anchor = tk.NE)
-        self.HM.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.98, anchor = tk.SW)
-        
-        # Errors
-        parent_width  = self.w.Frame_errors.winfo_width()
-        parent_height = self.w.Frame_errors.winfo_height()
-        self.VE = Scrollbar(self.w.Frame_errors)
-        self.VE.config(command=self.w.Text_errors.yview)
-        self.w.Text_errors.config(yscrollcommand=self.VE.set) 
-        self.HE = Scrollbar(self.w.Frame_errors, orient = HORIZONTAL)
-        self.HE.config(command=self.w.Text_errors.xview)
-        self.w.Text_errors.config(xscrollcommand=self.HE.set)
-        self.VE.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.04, anchor = tk.NE)
-        self.HE.place(relx = 0, rely = 1, relheight = 0.02, relwidth = 0.96, anchor = tk.SW)
-        
-        # Radio Buttons for selection of script
-        # control variable
-        self.rb_value = tk.StringVar()
-        # Radiobutton
-        self.w.Radiobutton_copyscript.config(value = "copy", variable = self.rb_value, command = self.script_select)
-        self.w.Radiobutton_deletescript.config(value = "delete", variable = self.rb_value, command = self.script_select)
-        self.w.Radiobutton_delrelpathscript.config(value = "delrelpath", variable = self.rb_value, command = self.script_select)
-        self.w.Radiobutton_copyscript.select()    
-        self.show_script(copyscript)        
-        self.action = "copy"
-        self.w.Label_script.config(text = copyscript)
-        self.w.Checkbutton_delrelpath.config(state = DISABLED)
-        self.w.Label_scripttype.config(text = "Copyscript")
-    def script_select(self):
-        print("Script selected is: " + self.rb_value.get())
-        if self.rb_value.get() == "copy":
-            self.show_script(self.copyscript)
-            self.action = "copy"
-            self.w.Button_execute.config(state = NORMAL)
-            self.w.Label_script.config(text = self.copyscript)
-            self.w.Checkbutton_delrelpath.config(state = DISABLED)
-            self.w.Label_scripttype.config(text = "Copyscript")
-        elif self.rb_value.get() == "delete":
-            self.show_script(self.deletescript)
-            self.action = "delete"
-            self.w.Button_execute.config(state = NORMAL)
-            self.w.Label_script.config(text = self.deletescript)
-            self.w.Checkbutton_delrelpath.config(state = NORMAL)
-            self.w.Label_scripttype.config(text = "Deletescript")
-        elif self.rb_value.get() == "delrelpath":
-            self.show_script(self.delrelpathscript)
-            self.action = "delrelpath"
-            self.w.Button_execute.config(state = DISABLED)
-            self.w.Label_script.config(text = self.delrelpathscript)
-            self.w.Checkbutton_delrelpath.config(state = DISABLED)
-            self.w.Label_scripttype.config(text = "Delrelpathscript")
-        self.w.Button_execute.config(text = self.action)
-
-    def show_script(self, script):        
-        try:
-            file = open(script)
-        except FileNotFoundError:
-            print("File does not exist: " + script)
-        text = file.read()
-        self.w.Text_script.delete(1.0, 'end')
-        self.w.Text_script.insert('end', text)
-        self.w.Text_script.insert('end', "\r\n")
-
-    def show_messages(self, text, b_clear):
-        if b_clear:
-            self.w.Text_messages.delete(1.0, 'end')
-        self.w.Text_messages.insert('end', text)
-        self.w.Text_messages.insert('end', "\r\n")
-
-    def show_errors(self, text, b_clear):
-        if b_clear:
-            self.w.Text_errors.delete(1.0, 'end')
-        self.w.Text_errors.insert('end', text)
-        self.w.Text_errors.insert('end', "\r\n")
-        
-    def exec_handler(self):
-        if self.action == "copy":
-            cmdfile = self.copyscript
-        elif self.action == "delete" or self.action == "delrelpath":
-            cmdfile = self.deletescript
-        self.w.Label_script.config(text = cmdfile)
-        my_cmd = "call " + cmdfile 
-        owndir = os.getcwd()
-        os.chdir(os.path.join(Globals.datadir, Globals.cmd_files_subdir))    
-        my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        (output, error) = my_cmd_output.communicate()
-        self.show_messages(output, True)
-        self.show_errors(error, True)
-        if self.action == "delete" and self.delrelpathscript is not None and self.w.cb_delrelpath_var.get():
-            cmdfile_delrelpath = self.delrelpathscript
-            my_cmd = "call " + cmdfile_delrelpath 
-            my_cmd_output = subprocess.Popen(my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            (output, error) = my_cmd_output.communicate()
-            self.show_messages(output, False)
-            self.show_errors(error, False)
-            self.w.Label_script.config(text = cmdfile + ' + ' + cmdfile_delrelpath)
-        os.chdir(owndir)
-
-    def close_handler(self): #calles when window is closing:
-        self.root.destroy()
-
-    def __del__(self):
-        self.a = 1
-        #print("*** Deleting Camera-Objekt.")
 
 
 # Camera Treeview
@@ -2791,7 +2642,7 @@ class Dateimeister_support:
         if self.win_messages is not None: # stop MyMessagesWindow-Objekt
             self.win_messages.close_handler()
             self.win_messages = None
-        self.win_messages = MyMessagesWindow(self, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], self.dict_gen_files_delrelpath[Globals.imagetype]) 
+        self.win_messages = DM.MyMessagesWindow(self, Globals.datadir, Globals.cmd_files_subdir, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], self.dict_gen_files_delrelpath[Globals.imagetype]) 
 
     def write_cmdfiles(self):
         for imagetype in self.dict_source_target:
@@ -3065,8 +2916,7 @@ class Dateimeister_support:
         else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, Globals.screen_width, Globals.screen_height, Globals.delay_default)
-                #fs_image = MyFSImage(file, thumbnail, self.dict_file_image, self)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, Globals.delay_default)
                 self.dict_file_image[file] = fs_image
 
     def show_context_menu(self, event):

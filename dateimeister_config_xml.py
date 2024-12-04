@@ -532,20 +532,7 @@ def new_subdir(xmlfile, type_name, subdir):
     mytree.write(xmlfile)
     return rc
 
-# return list of Diatisch indirs
-def get_indirs_diatisch(xmlfile):
-    indirs = {}
-    mytree = ET.parse(xmlfile)
-    myroot = mytree.getroot()
-    result1 = myroot.findall("indirs")
-    if result1:
-        for i in result1:
-            result2 = i.findall("indir")
-            for j in result2:
-                indirs[j.attrib['name']] = {}
-                indirs[j.attrib['name']]['usedate'] = j.attrib['usedate']
-    return indirs
-
+# Diatisch
 # return list of Diatisch config files
 def get_cfgfiles_diatisch(xmlfile):
     cfgfiles = {}
@@ -608,33 +595,32 @@ def new_cfgfile_diatisch(xmlfile, config_file, usedate, ctr_source, ctr_target):
         new_node_diatisch(xmlfile, "config_files", usedate)
         new_cfgfile_diatisch(xmlfile, config_file, usedate, ctr_source, ctr_target)
 
-def new_indir_diatisch(xmlfile, indir, usedate):
+def new_dir_diatisch(xmlfile, parent, entrytype, attrname, attrvalue, usedate):
     mytree = ET.parse(xmlfile)
     myroot = mytree.getroot()
-    fstr_cfgf = ("indir[@name=" + '"' + "%s" + "\"]")
-    fstr_cfgf = (fstr_cfgf % indir)
-    #print ("xml search: " + fstr_cfgf)
-    result1 = mytree.findall("indirs")
+    fstr1 = ("{:s}[@{:s}=\"{:s}" + "\"]").format(entrytype, attrname, attrvalue)
+    print ("xml search: " + fstr1)
+    result1 = mytree.findall(parent)
     if result1:
-        # find indir, if exist update usedate else new entry
+        # find dir, if exist update usedate else new entry
         for i in result1:
-            result2 = i.findall(fstr_cfgf)
-            if not result2: # config file does not exist
-                print("new indir, try to create entry for: " + indir)
-                j = ET.SubElement(i, 'indir')
-                j.set("name", indir)
+            result2 = i.findall(fstr1)
+            if not result2: # dir does not exist
+                print(("new {:s}, try to create entry").format(entrytype))
+                j = ET.SubElement(i, entrytype)
+                j.set(attrname, attrvalue)
                 j.set("usedate", usedate)
             else: # update usedate
-                print("indir node alredy exists: " + indir)
+                print(("{:s} node {:s} = {:s} already exists").format(entrytype, attrname, attrvalue))
                 for j in result2:
                     j.set("usedate", usedate)
 
         indent(myroot)
         mytree.write(xmlfile)
     else:
-        print("try to make indirs-node")
-        new_node_diatisch(xmlfile, "indirs", usedate)
-        new_indir_diatisch(xmlfile, indir, usedate)
+        print(("try to make {:s}-node").format(parent))
+        new_node_diatisch(xmlfile, parent, usedate)
+        new_dir_diatisch(xmlfile, parent, entrytype, attrname, attrvalue, usedate)
 
 # make new node  nodename under root, shoul occur only once
 def new_node_diatisch(xmlfile, nodetype, usedate):
