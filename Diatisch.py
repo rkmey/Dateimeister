@@ -37,10 +37,11 @@ CFG_SAVE_CONFIG_AS    = 4
 CFG_APPLY_CONFIG      = 5
 CFG_OPEN_RECENT       = 6
 
-FILE_OPEN             = 0
-FILE_CLOSE            = 1
-FILE_EXIT             = 2
-FILE_OPEN_RECENT      = 3
+NEW_OUTDIR            = 0
+FILE_OPEN             = 1
+FILE_CLOSE            = 2
+FILE_EXIT             = 3
+FILE_OPEN_RECENT      = 4
 
 
 class pt(Enum):
@@ -195,15 +196,26 @@ class Diatisch:
         
         # frames for comboboxes
         # indir
-        self.Frame_indir = tk.Frame(self.root)
-        self.Frame_indir.place(relx=.01, rely=0.87, relheight=0.12, relwidth=0.33)
-        self.Frame_indir.configure(relief='flat')
+        self.Frame_indir = tk.LabelFrame(self.root)
+        self.Frame_indir.place(relx=.01, rely=0.87, relheight=0.12, relwidth=0.4)
+        self.Frame_indir.configure(relief='groove')
+        self.Frame_indir.configure(borderwidth="2")
+        self.Frame_indir.configure(text = "indirs")
         self.Frame_indir.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         # cfg
-        self.Frame_cfg = tk.Frame(self.root)
-        self.Frame_cfg.place(relx=.5, rely=0.87, relheight=0.12, relwidth=0.33)
-        self.Frame_cfg.configure(relief='flat')
+        self.Frame_cfg = tk.LabelFrame(self.root)
+        self.Frame_cfg.place(relx=.41, rely=0.87, relheight=0.12, relwidth=0.4)
+        self.Frame_cfg.configure(relief='groove')
+        self.Frame_cfg.configure(borderwidth="2")
+        self.Frame_cfg.configure(text = "cfg files")
         self.Frame_cfg.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        # outdir
+        self.Frame_outdir = tk.LabelFrame(self.root)
+        self.Frame_outdir.place(relx=.81, rely=0.87, relheight=0.12, relwidth=0.18)
+        self.Frame_outdir.configure(relief='groove')
+        self.Frame_outdir.configure(borderwidth="2")
+        self.Frame_outdir.configure(text = "outdirs")
+        self.Frame_outdir.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
  
         # combobox for Indirs
         self.combobox_indir_var = tk.StringVar()
@@ -238,25 +250,49 @@ class Diatisch:
 
         # combobox for config files
         self.combobox_cfg_var = tk.StringVar()
-        self.combobox_cfg = tk.Listbox(self.root)
-        self.combobox_cfg.place(relx=.51, rely=0.87, relheight=0.1, relwidth=0.35)
+        self.combobox_cfg = tk.Listbox(self.Frame_cfg)
+        self.combobox_cfg.place(relx=.0, rely=0, relheight=.8, relwidth=0.75)
         self.combobox_cfg.configure(font=self.text_font)
         self.combobox_cfg.configure(selectmode='single')
         self.combobox_cfg.configure(listvariable=self.combobox_cfg_var)
         # Scrollbars
-        VI_CFG = tk.Scrollbar(self.combobox_cfg, orient= VERTICAL)
-        VI_CFG.place(relx = 1, rely = 0, relheight = 1, relwidth = .02, anchor = tk.NE)
+        VI_CFG = tk.Scrollbar(self.Frame_cfg, orient= VERTICAL)
+        VI_CFG.place(relx = 0.75, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
         VI_CFG.config(command = self.combobox_cfg.yview)
         self.combobox_cfg.config(yscrollcommand = VI_CFG.set)
-        HI_CFG = tk.Scrollbar(self.combobox_cfg, orient= HORIZONTAL)
-        HI_CFG.place(relx = 0, rely = 1, relheight = 0.1, relwidth = 1, anchor = tk.SW)
+        HI_CFG = tk.Scrollbar(self.Frame_cfg, orient= HORIZONTAL)
+        HI_CFG.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .75, anchor = tk.NW)
         HI_CFG.config(command = self.combobox_cfg.xview)
         self.combobox_cfg.config(xscrollcommand = HI_CFG.set)
         self.combobox_cfg.bind('<Double-1>', self.combobox_cfg_double)
         self.combobox_cfg.bind("<<ListboxSelect>>", lambda event: self.combobox_cfg_check_exist(event))
         # Button
-        self.button_apply_cfg = tk.Button(self.root, text="Apply selected", command=self.combobox_cfg_double)
-        self.button_apply_cfg.place(relx=.88, rely=0.87, relheight=0.04, relwidth=0.1)
+        self.button_apply_cfg = tk.Button(self.Frame_cfg, text="Apply selected", command=self.combobox_cfg_double)
+        self.button_apply_cfg.place(relx=.79, rely=0.0, relheight=0.3, relwidth=0.21)
+        self.button_apply_cfg.configure(font=self.text_font)
+
+        # combobox for outdirs
+        self.combobox_outdir_var = tk.StringVar()
+        self.combobox_outdir = tk.Listbox(self.Frame_outdir)
+        self.combobox_outdir.place(relx=.0, rely=0, relheight=.8, relwidth=0.85)
+        self.combobox_outdir.configure(font=self.text_font)
+        self.combobox_outdir.configure(selectmode='single')
+        self.combobox_outdir.configure(listvariable=self.combobox_outdir_var)
+        # Scrollbars
+        VI_OUTDIR = tk.Scrollbar(self.Frame_outdir, orient= VERTICAL)
+        VI_OUTDIR.place(relx = 0.85, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
+        VI_OUTDIR.config(command = self.combobox_outdir.yview)
+        self.combobox_outdir.config(yscrollcommand = VI_OUTDIR.set)
+        HI_OUTDIR = tk.Scrollbar(self.Frame_outdir, orient= HORIZONTAL)
+        HI_OUTDIR.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .85, anchor = tk.NW)
+        HI_OUTDIR.config(command = self.combobox_outdir.xview)
+        self.combobox_outdir.config(xscrollcommand = HI_OUTDIR.set)
+        self.combobox_outdir.bind("<<ListboxSelect>>", lambda event: self.combobox_outdir_check_exist(event))
+        # Button
+        self.button_apply_outdir = tk.Button(self.Frame_outdir, text="New...", command=self.new_outdir)
+        self.button_apply_outdir.place(relx=.9, rely=0.0, relheight=0.3, relwidth=0.09)
+        self.button_apply_outdir.configure(font=self.text_font)
+
 
         # canvas source with scrollbars
         self.source_canvas = ScrollableCanvas(self.Frame_source, bg="yellow")
@@ -407,6 +443,7 @@ class Diatisch:
         self.dict_gen_files_delrelpath[self.imagetype] = {}
         self.dict_templates = {}
         self.default_delay  = 20
+        self.outdir = None
 
         self.timestamp = datetime.now() 
         self.image_press = None
@@ -435,6 +472,7 @@ class Diatisch:
 
         # The file menu
         self.filemenu = tk.Menu(self.menubar, tearoff=0)
+        self.filemenu.add_command(label="New Outdir", command=self.new_outdir)
         self.filemenu.add_command(label="Open", command=self.load_images)
         self.filemenu.add_command(label="Close", command=self.close_indir)
         self.filemenu.add_separator()
@@ -458,6 +496,7 @@ class Diatisch:
         self.endis_menu_items()
         self.update_combobox_cfg()
         self.update_combobox_indir()
+        self.update_combobox_outdir()
         
         #DX.delete_diatisch_item(self.config_files_xml, "indirs", "indir", "name", "e:/fotos/dateimeister")
         
@@ -498,8 +537,9 @@ class Diatisch:
         self.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
         self.config_files_xml = config["misc"]["config_files_diatisch_xml"]
         self.templatefile = config["misc"]["templatefile_diatisch"]
-        self.max_indirs = config["misc"]["max_indirs_diatisch"]
         self.max_configfiles = config["misc"]["max_configfiles_diatisch"]
+        self.max_indirs  = config["misc"]["max_indirs_diatisch"]
+        self.max_outdirs = config["misc"]["max_outdirs_diatisch"]
         self.uncomment = config["misc"]["uncomment"] + " "        
         print("Config Files xml from ini is: " + self.config_files_xml)
         self.platform = config["misc"]["platform"].upper()
@@ -570,18 +610,21 @@ class Diatisch:
     def combobox_cfg_double(self, event = None): # used also for Button
         # get and apply configfile from listbox
         selected_indices = self.combobox_cfg.curselection()
-        cfgfile = ",".join([self.combobox_cfg.get(i) for i in selected_indices]) # because listbox has single selection
-        print("cfg file selected is: " + cfgfile)
-        self.config_file = cfgfile
-        self.root.title(self.title + ' ' + self.config_file)
-        # build lists of source and target files
-        sourcefiles = DX.get_filenames_diatisch(cfgfile, "sourcefiles", "sourcefile")
-        for i in sourcefiles:
-            print ("sourcefile: " + i)
-        targetfiles = DX.get_filenames_diatisch(cfgfile, "targetfiles", "targetfile")
-        for i in targetfiles:
-            print ("targetfile: " + i)
-        self.load_images(None, sourcefiles, targetfiles)
+        if not selected_indices:
+            messagebox.showwarning("Warning", "Listbox cfg files: nothing selected", parent = self.Frame_cfg)
+        else:
+            cfgfile = ",".join([self.combobox_cfg.get(i) for i in selected_indices]) # because listbox has single selection
+            print("cfg file selected is: " + cfgfile)
+            self.config_file = cfgfile
+            self.root.title(self.title + ' ' + self.config_file)
+            # build lists of source and target files
+            sourcefiles = DX.get_filenames_diatisch(cfgfile, "sourcefiles", "sourcefile")
+            for i in sourcefiles:
+                print ("sourcefile: " + i)
+            targetfiles = DX.get_filenames_diatisch(cfgfile, "targetfiles", "targetfile")
+            for i in targetfiles:
+                print ("targetfile: " + i)
+            self.load_images(None, sourcefiles, targetfiles)
         
         
     def combobox_cfg_check_exist(self, event):
@@ -591,10 +634,10 @@ class Diatisch:
             #print("current selection is: " + sel + " INDEX: " + str(index))
             if not os.path.isfile(sel):
                 self.combobox_cfg.selection_clear(index) # dont select, MessageBox
-                messagebox.showerror("showerror", "Configfile: " + sel + " does not exist, choose another one")
+                messagebox.showerror("error", "Configfile: " + sel + " does not exist, choose another one")
 
     def update_combobox_indir(self):
-        # fill cfg combobox and recentmenu
+        # fill indir combobox and recentmenu
         self.combobox_indir.delete(0, 'end')
         self.recentmenu_file.delete(0, "end")
         result = DX.get_diatisch_items_usedate(self.config_files_xml, "indirs", "indir", "name")
@@ -632,6 +675,42 @@ class Diatisch:
             self.combobox_indir.itemconfig(ii, fg="gray")
             self.recentmenu_file.entryconfig(ii, state = DISABLED)
 
+    def update_combobox_outdir(self):
+        # fill outdir combobox
+        self.combobox_outdir.delete(0, 'end')
+        result = DX.get_diatisch_items_usedate(self.config_files_xml, "outdirs", "outdir", "name")
+        dict_filename_usedate = {}
+        for item in result:
+            #print("outfile: " + item)
+            attribute = result[item]
+            searchattr = 'usedate'
+            for attribut in attribute:
+                print("  " + attribut + " = " + attribute[attribut])
+                if attribut == searchattr:
+                    dict_filename_usedate[item] = attribute[searchattr]
+            
+        # descending by usedate
+        sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
+        # make list
+        ii = 0
+        indexes = []
+        for item in sorted_d:
+            self.combobox_outdir.insert(END, item)
+            usedate = dict_filename_usedate[item]
+            labeltext = item + ' (usedate: ' + usedate + ')'
+            if not os.path.isdir(item):
+                #print("INDIR: " + item + " INDEX: " + str(ii))
+                indexes.append(ii) # list of indizes to grey out because dir does not exist
+            ii += 1
+        if ii > 0:
+            self.combobox_outdir.select_set(0)
+            #self.button_indir_from_list.config(state = NORMAL)
+        else: 
+            #self.button_outdir_from_list.config(state = DISABLED)
+            pass
+        for ii in indexes:
+            self.combobox_outdir.itemconfig(ii, fg="gray")
+
     def recent_config_indir(self, item):
         # get and apply indir from recent-menu
         print("** Menuitem selected: " + item)
@@ -643,10 +722,13 @@ class Diatisch:
 
     def combobox_indir_double(self, event = None):
         selected_indices = self.combobox_indir.curselection()
-        indir = ",".join([self.combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
-        print("indir selected is: " + indir)
-        self.indir = indir
-        self.load_images(self.indir)
+        if not selected_indices:
+            messagebox.showwarning("Warning", "Listbox Indir: nothing selected", parent = self.Frame_indir)
+        else:
+            indir = ",".join([self.combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
+            print("indir selected is: " + indir)
+            self.indir = indir
+            self.load_images(self.indir)
         
     def combobox_indir_check_exist(self, event):
         if self.combobox_indir.curselection():
@@ -655,7 +737,16 @@ class Diatisch:
             #print("current selection is: " + sel + " INDEX: " + str(index))
             if not os.path.isdir(sel):
                 self.combobox_indir.selection_clear(index) # dont select, MessageBox
-                messagebox.showerror("showerror", "Indir: " + sel + " does not exist, choose another one")
+                messagebox.showerror("error", "Indir: " + sel + " does not exist, choose another one", parent = self.Frame_indir)
+
+    def combobox_outdir_check_exist(self, event):
+        if self.combobox_outdir.curselection():
+            index = self.combobox_outdir.curselection()[0]
+            sel   = self.combobox_outdir.get(index) # because listbox has single selection
+            #print("current selection is: " + sel + " INDEX: " + str(index))
+            if not os.path.isdir(sel):
+                self.combobox_outdir.selection_clear(index) # dont select, MessageBox
+                messagebox.showerror("error", "Outdir: " + sel + " does not exist, choose another one")
 
     def on_configure(self, event):
         x = str(event.widget)
@@ -716,7 +807,6 @@ class Diatisch:
             self.new_item_in_xml(self.max_indirs, this_i, ts, "indirs", "indir", "name")
             # now create new indir
             DX.new_dir_diatisch(self.config_files_xml, "indirs", "indir", "name", directory.lower(), ts)
-            #DX.new_dir_diatisch(self.config_files_xml, "outdirs", "outdir", "name", directory.lower(), ts)
         for img_file in self.image_files:
             tag_no += 1
             if directory:
@@ -763,6 +853,8 @@ class Diatisch:
             self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
             self.unselect_all(self.dict_target_images, self.target_canvas)
             self.target_canvas.configure(scrollregion=self.target_canvas.bbox("all")) # update scrollregion
+            if len(self.list_target_images) > 0: # anz target images > 0    
+                self.button_exec.config(state = tk.NORMAL)        
 
         print("LOAD ", directory)
         if directory: 
@@ -1365,13 +1457,13 @@ class Diatisch:
                     else:
                         self.unselect_image(i, self.target_canvas)
                     ii += 1
-                if ii > 0: # anz target images > 0    
-                    self.button_exec.config(state = tk.NORMAL)        
             else:
                 print ("list target images has not changed") if self.debug else True
                 #print("list old: ", str(old_list_target_filenames))
                 #print("list new: ", str(new_list_target_filenames))
         self.file_at_dragposition = ""
+        if len(self.list_target_images) > 0: # anz target images > 0    
+            self.button_exec.config(state = tk.NORMAL)        
         return changed # o historization if false
 
     def delete_target_canvas(self, dict_images, proctype):
@@ -1819,7 +1911,22 @@ class Diatisch:
         # update listbox
         self.update_combobox_cfg()
 
+    def new_outdir(self):
+        # get dir from dir dialog, insert in xml, update listbox-outdirs
+        directory = fd.askdirectory()
+        if not directory: # something went wrong
+            messagebox.showerror("Open", "unable to open: " + directory, parent = self.root)
+            return False
 
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        this_i = re.sub(r'\\', '/', directory).lower()
+        # delete outdir-entries from xml if number gt than max from ini, oldest and not existing first. we have to supply the necessary xml-information
+        self.new_item_in_xml(self.max_outdirs, this_i, ts, "outdirs", "outdir", "name")
+        # now create new outdir
+        DX.new_dir_diatisch(self.config_files_xml, "outdirs", "outdir", "name", this_i, ts)
+        self.update_combobox_outdir()    
+        
+    
     def donothing(self):
         print("Menuitem not yet implemented")
     
@@ -1843,14 +1950,23 @@ class Diatisch:
         
     def button_exec_pressed(self):
         # gen cmd files and write to dir            
-        self.write_cmdfile()
-        # show exec window
-        if self.win_messages is not None: # stop MyMessagesWindow-Objekt
-            self.win_messages.close_handler()
-            self.win_messages = None
-        self.win_messages = DM.MyMessagesWindow(self, self.datadir, self.cmd_files_subdir, self.imagetype, self.dict_gen_filenames["COPY"], self.dict_gen_filenames["DELETE"], None) 
+        # get outdir from listbox
+        selected_indices = self.combobox_outdir.curselection()
+        if not selected_indices:
+            messagebox.showwarning("Warning", "Listbox Outdir: nothing selected", parent = self.Frame_outdir)
+        else:
+            outdir = ",".join([self.combobox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
+            print("outdir selected is: " + outdir)
+            self.outdir = outdir
 
-    def write_cmdfile(self):
+            self.write_cmdfile(self.outdir)
+            # show exec window
+            if self.win_messages is not None: # stop MyMessagesWindow-Objekt
+                self.win_messages.close_handler()
+                self.win_messages = None
+            self.win_messages = DM.MyMessagesWindow(self, self.datadir, self.cmd_files_subdir, self.imagetype, self.dict_gen_filenames["COPY"], self.dict_gen_filenames["DELETE"], None) 
+
+    def write_cmdfile(self, outdir):
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         header = self.uncomment + ' generated by diatisch / dateimeister ' + ts + '\n'
 
@@ -1860,18 +1976,26 @@ class Diatisch:
             cmd_file_full = self.dict_gen_filenames[ii] # uses same key as both are filled in init
             thiscmdfile = open(cmd_file_full, 'w')
             thiscmdfile.write(header) 
+            seqno = 0
             for jj in self.list_target_images:
+                seqno += 1
+                str_seqno = "{:04d}_".format(seqno)
+                
                 targetfile = jj.get_filename()
+                sourcefile = targetfile
+                filename   = str_seqno + os.path.basename(targetfile)
+                targetfile = os.path.join(outdir, os.path.basename(filename))
                 if self.platform == "WINDOWS":
+                    sourcefile = re.sub(r'/', '\\\\', sourcefile) # replace / by \
                     targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
                 elif self.platform == "UNIX":
+                    sourcefile = re.sub(r'\\', '/', sourcefile) # replace \ by /
                     targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
-                sourcefile =  targetfile
-                targetfile = os.path.basename(sourcefile)
-                print ("Targetfile: " + str(targetfile))
+                print ("Sourcefile: {:s}, Targetfile: {:s}".format(sourcefile, targetfile))
                 comment = ""
                 str_ret = template
                 str_ret = str_ret.replace('<source>', sourcefile)
+                str_ret = str_ret.replace('<seqno>',  str_seqno)
                 str_ret = str_ret.replace('<target>', targetfile)
                 str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
                 thiscmdfile.write(comment + str_ret + '\n')
