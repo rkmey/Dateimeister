@@ -224,6 +224,7 @@ class Diatisch:
         self.combobox_indir.configure(font=self.text_font)
         self.combobox_indir.configure(selectmode='single')
         self.combobox_indir.configure(listvariable=self.combobox_indir_var)
+        self.combobox_indir.bind('<Motion>', self.tooltip_lb_indir)    
         # Scrollbars
         VI_INDIR = tk.Scrollbar(self.Frame_indir, orient= VERTICAL)
         VI_INDIR.place(relx = 0.75, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
@@ -255,6 +256,7 @@ class Diatisch:
         self.combobox_cfg.configure(font=self.text_font)
         self.combobox_cfg.configure(selectmode='single')
         self.combobox_cfg.configure(listvariable=self.combobox_cfg_var)
+        self.combobox_cfg.bind('<Motion>', self.tooltip_lb_cfg)    
         # Scrollbars
         VI_CFG = tk.Scrollbar(self.Frame_cfg, orient= VERTICAL)
         VI_CFG.place(relx = 0.75, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
@@ -274,23 +276,24 @@ class Diatisch:
         # combobox for outdirs
         self.combobox_outdir_var = tk.StringVar()
         self.combobox_outdir = tk.Listbox(self.Frame_outdir)
-        self.combobox_outdir.place(relx=.0, rely=0, relheight=.8, relwidth=0.85)
+        self.combobox_outdir.place(relx=.0, rely=0, relheight=.8, relwidth=0.8)
         self.combobox_outdir.configure(font=self.text_font)
         self.combobox_outdir.configure(selectmode='single')
         self.combobox_outdir.configure(listvariable=self.combobox_outdir_var)
+        self.combobox_outdir.bind('<Motion>', self.tooltip_lb_outdir)    
         # Scrollbars
         VI_OUTDIR = tk.Scrollbar(self.Frame_outdir, orient= VERTICAL)
-        VI_OUTDIR.place(relx = 0.85, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
+        VI_OUTDIR.place(relx = 0.8, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
         VI_OUTDIR.config(command = self.combobox_outdir.yview)
         self.combobox_outdir.config(yscrollcommand = VI_OUTDIR.set)
         HI_OUTDIR = tk.Scrollbar(self.Frame_outdir, orient= HORIZONTAL)
-        HI_OUTDIR.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .85, anchor = tk.NW)
+        HI_OUTDIR.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .8, anchor = tk.NW)
         HI_OUTDIR.config(command = self.combobox_outdir.xview)
         self.combobox_outdir.config(xscrollcommand = HI_OUTDIR.set)
         self.combobox_outdir.bind("<<ListboxSelect>>", lambda event: self.combobox_outdir_check_exist(event))
         # Button
         self.button_apply_outdir = tk.Button(self.Frame_outdir, text="New...", command=self.new_outdir)
-        self.button_apply_outdir.place(relx=.9, rely=0.0, relheight=0.3, relwidth=0.09)
+        self.button_apply_outdir.place(relx=.85, rely=0.0, relheight=0.3, relwidth=0.14)
         self.button_apply_outdir.configure(font=self.text_font)
 
 
@@ -390,6 +393,12 @@ class Diatisch:
         #self.target_canvas.bind('<Motion>', lambda event, i = self.target_canvas, j = self.dict_target_images, k = "target": self.tooltip_imagefile(event, i, j, k))    
         self.st = TT.ToolTip(self.source_canvas, "no images available", delay=0, follow = True)
         self.tt = TT.ToolTip(self.target_canvas, "no images available", delay=0, follow = True)
+        self.tooltiptext_lb_indir = ""
+        self.tt_lb_indir = TT.ToolTip(self.combobox_indir, "no item available", delay=0, follow = True)
+        self.tooltiptext_lb_cfg = ""
+        self.tt_lb_cfg = TT.ToolTip(self.combobox_cfg, "no item available", delay=0, follow = True)
+        self.tooltiptext_lb_outdir = ""
+        self.tt_lb_outdir = TT.ToolTip(self.combobox_outdir, "no item available", delay=0, follow = True)
 
         # temporary storage of dragged images while dragging
         self.list_dragged_images = []
@@ -1011,6 +1020,54 @@ class Diatisch:
                     self.tt.update(text)
                     self.tooltiptext_tt = text
                        
+    def tooltip_lb_indir(self, event):
+        tsnow = datetime.now()
+        tdiff = abs(tsnow - self.timestamp)
+        if  tdiff.microseconds > 100000:
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            self.timestamp = tsnow
+        else:
+            return
+        # Tooltip
+        text = "no item available"
+        index = self.combobox_indir.nearest(event.y)
+        text = self.combobox_indir.get(index)
+        if text != self.tooltiptext_lb_indir:
+            self.tt_lb_indir.update(text)
+            self.tooltiptext_lb_indir = text
+
+    def tooltip_lb_cfg(self, event):
+        tsnow = datetime.now()
+        tdiff = abs(tsnow - self.timestamp)
+        if  tdiff.microseconds > 100000:
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            self.timestamp = tsnow
+        else:
+            return
+        # Tooltip
+        text = "no item available"
+        index = self.combobox_cfg.nearest(event.y)
+        text = self.combobox_cfg.get(index)
+        if text != self.tooltiptext_lb_cfg:
+            self.tt_lb_cfg.update(text)
+            self.tooltiptext_lb_cfg = text
+
+    def tooltip_lb_outdir(self, event):
+        tsnow = datetime.now()
+        tdiff = abs(tsnow - self.timestamp)
+        if  tdiff.microseconds > 100000:
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            self.timestamp = tsnow
+        else:
+            return
+        # Tooltip
+        text = "no item available"
+        index = self.combobox_outdir.nearest(event.y)
+        text = self.combobox_outdir.get(index)
+        if text != self.tooltiptext_lb_outdir:
+            self.tt_lb_outdir.update(text)
+            self.tooltiptext_lb_outdir = text
+
     def canvas_focus_source(self, event):
         print("Return on source vanvas")
         if self.get_num_selected(self.list_source_images) == 1:
