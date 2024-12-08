@@ -451,8 +451,12 @@ class Diatisch:
         self.dict_gen_files_delete[self.imagetype] = {}
         self.dict_gen_files_delrelpath[self.imagetype] = {}
         self.dict_templates = {}
-        self.default_delay  = 20
+        self.default_delay  = 20 # just for use of MyFSImage for video player, although never used here
         self.outdir = None
+        self.scroll = False
+        self.delay = 1000
+        self.canvas_to_scroll = None
+        self.scrolltype = ''
 
         self.timestamp = datetime.now() 
         self.image_press = None
@@ -1150,12 +1154,14 @@ class Diatisch:
             True
 
     def on_motion(self, event):
-        #bbox only depends on cumulated size of items
-        # if canvas ist to small to view all items, it is a "window" into the bbox which can be scrolled
-        # event which is bound to canvas has x and y which always refer to bbox refardless of scroll position
+        # bbox only depends on cumulated size of items
+        # if canvas ist to small to view all items, canvas is a "window" into the bbox which can be scrolled
+        # event which is bound to canvas has x and y which always refer to bbox regardless of scroll position
         # so x = -1 ALWAYS means that x is just left outside the canvas and x = canvas-width + 1 (pixel) means the same for the right border
-        # y works in the same way        
+        # y works in the same way
+        self.scroll = False
         canvas = self.target_canvas
+        self.canvas_to_scroll = canvas
         x0 = int(canvas.canvasx(0))
         y0 = int(canvas.canvasy(0))
         x1 = int(canvas.canvasx(canvas.winfo_width()))
@@ -1171,19 +1177,57 @@ class Diatisch:
             canvas_height = y1 - y0
         str_display = (" event: x = {:4d}, y = {:4d}, ").format(event.x, event.y) + (" canvas: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(x0, y0, x1, y1) + (" bbox: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(b_x0, b_y0, b_x1, b_y1)
         if event.x < 0 and x0 > b_x0: # there is room for scrolling
+            self.scroll = True
+            self.scrolltype = 'HL'
+            dist  = -event.x # dist in pixel
+            self.delay = int(self.calc_scroll_delay(dist))
+            self.do_scroll()
             print("Drag Motion left outside Target,  ", str_display)
-            canvas.xview(tk.SCROLL, -1, "unit")
         if event.x > canvas_width and x1 < b_x1: # s.a.
+            self.scroll = True
+            self.scrolltype = 'HR'
+            dist  = event.x - canvas_width # dist in pixel
+            self.delay = int(self.calc_scroll_delay(dist))
+            self.do_scroll()
             print("Drag Motion right outside Target, ", str_display)
-            canvas.xview(tk.SCROLL, 1, "unit")
         if event.y < 0 and y0 > b_y0: # s.a.
+            self.scroll = True
+            self.scrolltype = 'VU'
+            dist  = -event.y # dist in pixel
+            self.delay = int(self.calc_scroll_delay(dist))
+            self.do_scroll()
             print("Drag Motion above Target,         ", str_display)
-            canvas.yview(tk.SCROLL, -1, "unit")
         if event.y > canvas_height and y1 < b_y1: # s.a.
+            self.scroll = True
+            self.scrolltype = 'VD'
+            dist  = event.y - canvas_height # dist in pixel
+            self.delay = int(self.calc_scroll_delay(dist))
+            self.do_scroll()
             print("Drag Motion below Target,         ", str_display)
-            canvas.yview(tk.SCROLL, 1, "unit")
+        #self.scroll = False
         True
     
+    def calc_scroll_delay(self, dist): # calc. scroll interval ms depending on dist of mouse pointer from canvas
+        # leads to 1000 ms is 1 pixel away and 100 ms if 100 pixel away
+        delay = -9.0 * dist + 1010.0
+        delay = max(delay, 1000.0)
+        return delay
+        
+    def do_scroll(self): # scroll
+        if self.scroll: # set by on_motion
+            print("Scroll delay is " + str(self.delay) + " type is " + self.scrolltype)
+            if self.scrolltype == 'HL':
+                self.canvas_to_scroll.xview(tk.SCROLL, -1, "unit")
+            if self.scrolltype == 'HR':
+                self.canvas_to_scroll.xview(tk.SCROLL, 1, "unit")
+            if self.scrolltype == 'VU':
+                self.canvas_to_scroll.yview(tk.SCROLL, -1, "unit")
+            if self.scrolltype == 'VD':
+                self.canvas_to_scroll.yview(tk.SCROLL, 1, "unit")
+            self.root.after(self.delay, self.do_scroll)
+        #else:
+        #    print("Video " + self.video_source + " has finished")
+
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
         # returns True if no further processing required else False (rebuild target-canvas
         if self.image_press is None: # no selection possible
