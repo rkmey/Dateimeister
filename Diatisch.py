@@ -568,45 +568,6 @@ class Diatisch:
             u.close_handler_external()
         self.dict_file_FSImage = {}
 
-    def update_combobox_cfg(self):
-        # fill cfg combobox and recentmenu cfg
-        self.combobox_cfg.delete(0, 'end')
-        self.recentmenu_cfg.delete(0, "end")
-        result = DX.get_diatisch_items_usedate(self.config_files_xml, "config_files", "configfile", "filename")
-        dict_filename_usedate = {}
-        for tfile in result:
-            #print("infile: " + tfile)
-            attribute = result[tfile]
-            searchattr = 'usedate'
-            for attribut in attribute:
-                print("  " + attribut + " = " + attribute[attribut])
-                if attribut == searchattr:
-                    dict_filename_usedate[tfile] = attribute[searchattr]
-            
-        # descending by usedate
-        sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
-        # make list
-        ii = 0
-        indexes = []
-        for item in sorted_d:
-            self.combobox_cfg.insert(END, item)
-            if not os.path.isfile(item):
-                #print("INDIR: " + item + " INDEX: " + str(ii))
-                indexes.append(ii) # list of indizes to grey out because dir does not exist
-            usedate = dict_filename_usedate[item]
-            labeltext = item + ' (usedate: ' + usedate + ')'
-            self.recentmenu_cfg.add_command(label=labeltext, command = lambda item=item: self.recent_config_cfg(item))
-            ii += 1
-        if ii > 0:
-            self.combobox_cfg.select_set(0)
-            #self.button_indir_from_list.config(state = NORMAL)
-        else: 
-            #self.button_indir_from_list.config(state = DISABLED)
-            pass
-        for ii in indexes:
-            self.combobox_cfg.itemconfigure(ii, fg="gray")
-            self.recentmenu_cfg.entryconfig(ii, state = DISABLED)
-
     def recent_config_cfg(self, item):
         # get and apply configfile from recent-menu
         print("** Menuitem selected: " + item)
@@ -649,6 +610,46 @@ class Diatisch:
                 self.combobox_cfg.selection_clear(index) # dont select, MessageBox
                 messagebox.showerror("error", "Configfile: " + sel + " does not exist, choose another one")
 
+    def update_combobox_cfg(self):
+        # fill cfg combobox and recentmenu cfg
+        self.combobox_cfg.delete(0, 'end')
+        self.recentmenu_cfg.delete(0, "end")
+        result = DX.get_diatisch_items_usedate(self.config_files_xml, "config_files", "configfile", "filename")
+        dict_filename_usedate = {}
+        for tfile in result:
+            #print("infile: " + tfile)
+            attribute = result[tfile]
+            searchattr = 'usedate'
+            for attribut in attribute:
+                print("  " + attribut + " = " + attribute[attribut])
+                if attribut == searchattr:
+                    dict_filename_usedate[tfile] = attribute[searchattr]
+            
+        # descending by usedate
+        sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
+        # make list
+        ii = 0
+        indexes = []
+        for item in sorted_d:
+            self.combobox_cfg.insert(END, item)
+            if not os.path.isfile(item):
+                #print("INDIR: " + item + " INDEX: " + str(ii))
+                indexes.append(ii) # list of indizes to grey out because dir does not exist
+            usedate = dict_filename_usedate[item]
+            labeltext = item + ' (usedate: ' + usedate + ')'
+            self.recentmenu_cfg.add_command(label=labeltext, command = lambda item=item: self.recent_config_cfg(item))
+            ii += 1
+        for jj in indexes:
+            self.combobox_cfg.itemconfigure(jj, fg="gray")
+            self.recentmenu_cfg.entryconfig(jj, state = DISABLED)
+        self.combobox_cfg.selection_clear(0, "end")
+        if ii > 0:
+            self.combobox_cfg.selection_set(0)
+            #self.button_cfg_from_list.config(state = NORMAL)
+        else: 
+            #self.button_cfg_from_list.config(state = DISABLED)
+            True
+
     def update_combobox_indir(self):
         # fill indir combobox and recentmenu
         self.combobox_indir.delete(0, 'end')
@@ -678,15 +679,16 @@ class Diatisch:
                 #print("INDIR: " + item + " INDEX: " + str(ii))
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
             ii += 1
+        for jj in indexes:
+            self.combobox_indir.itemconfig(jj, fg="gray")
+            self.recentmenu_file.entryconfig(jj, state = DISABLED)
+        self.combobox_indir.selection_clear(0, "end")
         if ii > 0:
             self.combobox_indir.select_set(0)
             #self.button_indir_from_list.config(state = NORMAL)
         else: 
             #self.button_indir_from_list.config(state = DISABLED)
-            pass
-        for ii in indexes:
-            self.combobox_indir.itemconfig(ii, fg="gray")
-            self.recentmenu_file.entryconfig(ii, state = DISABLED)
+            True
 
     def update_combobox_outdir(self):
         # fill outdir combobox
@@ -715,14 +717,15 @@ class Diatisch:
                 #print("INDIR: " + item + " INDEX: " + str(ii))
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
             ii += 1
+        for jj in indexes:
+            self.combobox_outdir.itemconfig(jj, fg="gray")
+        self.combobox_outdir.selection_clear(0, "end")
         if ii > 0:
             self.combobox_outdir.select_set(0)
             #self.button_indir_from_list.config(state = NORMAL)
         else: 
             #self.button_outdir_from_list.config(state = DISABLED)
-            pass
-        for ii in indexes:
-            self.combobox_outdir.itemconfig(ii, fg="gray")
+            True
 
     def recent_config_indir(self, item):
         # get and apply indir from recent-menu
