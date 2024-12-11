@@ -247,7 +247,7 @@ class Diatisch:
         self.cb_recursive.configure(font=self.text_font)
         self.cb_recursive.configure(text='''recursive''')
         self.cb_recursive = TT.ToolTip(self.cb_recursive, '''process  subdirectories''')
-
+        self.cb_recursive_var.set(1)
 
         # combobox for config files
         self.combobox_cfg_var = tk.StringVar()
@@ -319,6 +319,7 @@ class Diatisch:
         # canvas target with scrollbars
         self.target_canvas = ScrollableCanvas(self.Frame_target, bg="darkgrey")
         self.target_canvas.place(relx=0.0, rely=0.0, relheight=.98, relwidth=.98)
+        self.target_canvas.config(xscrollincrement = 10)
 
         self.V_target = tk.Scrollbar(self.Frame_target, orient = tk.VERTICAL)
         self.V_target.config(command=self.target_canvas.yview)
@@ -459,6 +460,7 @@ class Diatisch:
         self.scrolltype = ''
 
         self.timestamp = datetime.now() 
+        self.timestamp_scroll = datetime.now() 
         self.image_press = None
         self.image_release = None
         
@@ -1162,6 +1164,13 @@ class Diatisch:
         # event which is bound to canvas has x and y which always refer to bbox regardless of scroll position
         # so x = -1 ALWAYS means that x is just left outside the canvas and x = canvas-width + 1 (pixel) means the same for the right border
         # y works in the same way
+        tsnow = datetime.now()
+        tdiff = abs(tsnow - self.timestamp_scroll)
+        if  tdiff.microseconds > 200000:
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            self.timestamp_scroll = tsnow
+        else:
+            return
         self.scroll = False
         canvas = self.target_canvas
         self.canvas_to_scroll = canvas
@@ -1178,58 +1187,83 @@ class Diatisch:
             b_y1 = canvas.bbox("all")[3]
             canvas_width  = x1 - x0
             canvas_height = y1 - y0
-        str_display = (" event: x = {:4d}, y = {:4d}, ").format(event.x, event.y) + (" canvas: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(x0, y0, x1, y1) + (" bbox: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(b_x0, b_y0, b_x1, b_y1)
+        str_display = (" event: x = {:4d}, y = {:4d}, ").format(event.x, event.y) + \
+            (" canvas: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(x0, y0, x1, y1) + \
+            (" bbox: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(b_x0, b_y0, b_x1, b_y1)
         if event.x < 0 and x0 > b_x0: # there is room for scrolling
             self.scroll = True
             self.scrolltype = 'HL'
             dist  = -event.x # dist in pixel
             self.delay = int(self.calc_scroll_delay(dist))
             self.do_scroll()
-            print("Drag Motion left outside Target,  ", str_display)
+            print("Drag Motion left outside Target,  ", str_display) if self.debug else True
         if event.x > canvas_width and x1 < b_x1: # s.a.
             self.scroll = True
             self.scrolltype = 'HR'
             dist  = event.x - canvas_width # dist in pixel
             self.delay = int(self.calc_scroll_delay(dist))
             self.do_scroll()
-            print("Drag Motion right outside Target, ", str_display)
+            print("Drag Motion right outside Target, ", str_display) if self.debug else True
         if event.y < 0 and y0 > b_y0: # s.a.
             self.scroll = True
             self.scrolltype = 'VU'
             dist  = -event.y # dist in pixel
             self.delay = int(self.calc_scroll_delay(dist))
             self.do_scroll()
-            print("Drag Motion above Target,         ", str_display)
+            print("Drag Motion above Target,         ", str_display) if self.debug else True
         if event.y > canvas_height and y1 < b_y1: # s.a.
             self.scroll = True
             self.scrolltype = 'VD'
             dist  = event.y - canvas_height # dist in pixel
             self.delay = int(self.calc_scroll_delay(dist))
             self.do_scroll()
-            print("Drag Motion below Target,         ", str_display)
+            print("Drag Motion below Target,         ", str_display) if self.debug else True
         #self.scroll = False
         True
     
     def calc_scroll_delay(self, dist): # calc. scroll interval ms depending on dist of mouse pointer from canvas
         # leads to 1000 ms is 1 pixel away and 100 ms if 100 pixel away
         delay = -9.0 * dist + 1010.0
-        delay = max(delay, 1000.0)
+        delay = max(delay, 100.0)
         return delay
         
     def do_scroll(self): # scroll
+        canvas = self.canvas_to_scroll
         if self.scroll: # set by on_motion
+            x0 = int(canvas.canvasx(0))
+            y0 = int(canvas.canvasy(0))
+            x1 = int(canvas.canvasx(canvas.winfo_width()))
+            y1 = int(canvas.canvasy(canvas.winfo_height()))
+            b_x0 = canvas.bbox("all")[0]
+            b_y0 = canvas.bbox("all")[1]
+            b_x1 = canvas.bbox("all")[2]
+            b_y1 = canvas.bbox("all")[3]
             print("Scroll delay is " + str(self.delay) + " type is " + self.scrolltype)
             if self.scrolltype == 'HL':
-                self.canvas_to_scroll.xview(tk.SCROLL, -1, "unit")
+                print("  scroll {:s} x0: {:04d}, b_x0: {:04d}".format(self.scrolltype, x0, b_x0)) if self.debug else True
+                if x0 > b_x0:
+                    canvas.xview(tk.SCROLL, -1, "unit")
+                else:
+                    self.scroll = False
             if self.scrolltype == 'HR':
-                self.canvas_to_scroll.xview(tk.SCROLL, 1, "unit")
+                print("  scroll {:s} x1: {:04d}, b_x1: {:04d}".format(self.scrolltype, x1, b_x1)) if self.debug else True
+                if x1 < b_x1:
+                    canvas.xview(tk.SCROLL, 1, "unit")
+                else:
+                    self.scroll = False
             if self.scrolltype == 'VU':
-                self.canvas_to_scroll.yview(tk.SCROLL, -1, "unit")
+                print("  scroll {:s} y0: {:04d}, b_y0: {:04d}".format(self.scrolltype, y0, b_y0)) if self.debug else True
+                if y0 > b_y0:
+                    canvas.yview(tk.SCROLL, -1, "unit")
+                else:
+                    self.scroll = False
             if self.scrolltype == 'VD':
-                self.canvas_to_scroll.yview(tk.SCROLL, 1, "unit")
+                print("  scroll {:s} y1: {:04d}, b_y1: {:04d}".format(self.scrolltype, y1, b_y1)) if self.debug else True
+                if y1 < b_y1:
+                    canvas.yview(tk.SCROLL, 1, "unit")
+                else:
+                    self.scroll = False
             self.root.after(self.delay, self.do_scroll)
-        #else:
-        #    print("Video " + self.video_source + " has finished")
 
     def selection(self, event, canvas, dict_images, action): #select / unselect image(s) from mouse click
         # returns True if no further processing required else False (rebuild target-canvas
@@ -1362,6 +1396,8 @@ class Diatisch:
     def drop(self, event):
         # check if mouse is on target canvas
         #print("Drop")
+        # finish scrolling when button released - of course onla when scrolling
+        self.scroll = False
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
         #print("Target rect is: ", str(target_rect))
