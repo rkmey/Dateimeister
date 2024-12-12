@@ -51,6 +51,7 @@ class pt(Enum):
     COPY_SINGLE       = 4
     DELETE_SELECTED   = 5
     DELETE_SINGLE     = 6
+    COPY_SELECTED_HEAD = 7
     
 
 class ScrollableCanvas(tk.Canvas):
@@ -343,8 +344,11 @@ class Diatisch:
         self.select_all_button = tk.Button(self.Frame_source_ctl, text="Select all", command=self.select_all_source_images)
         self.select_all_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
         buttonpos_source += relwidth_source
-        self.select_all_button = tk.Button(self.Frame_source_ctl, text="Copy selected", command=self.copy_selected_source_images)
-        self.select_all_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
+        self.copy_selected_button = tk.Button(self.Frame_source_ctl, text="Copy selected", command=self.copy_selected_source_images)
+        self.copy_selected_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
+        buttonpos_source += relwidth_source
+        self.copy_head_button = tk.Button(self.Frame_source_ctl, text="Copy Head", command=self.copy_selected_source_images_head)
+        self.copy_head_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
 
         # target control buttons
         anz_button_target = 5
@@ -1366,6 +1370,14 @@ class Diatisch:
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED)
         if changed:
             self.historize_process()        
+    def copy_selected_source_images_head(self): # copy selected images from source to head of target
+        # find last selected target image
+        self.drag_started_in = "source" # must be set for the following functions
+        self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
+        target_rect = []
+        changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED_HEAD)
+        if changed:
+            self.historize_process()        
     def copy_single_source_image(self): # copy image under context menuitem select... from source to target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
@@ -1456,17 +1468,18 @@ class Diatisch:
         for i in self.list_target_images:
             old_list_target_filenames.append(i.get_filename()) 
         changed = False  # init to false
+        print ("PROCTYPE is {:s}".format(str(proctype))) if self.debug else True
             
         # we want to know if filename of dragged images from source_canvas already exist. If so we don't want to drag them
         # may be in the future we will allow this but we have to rename them because Diatisch relies on uniqueness of filenames
         set_target_filenames = set() # create an empty set
         set_target_filenames.clear()
-        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED:
+        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED or proctype == pt.COPY_SELECTED_HEAD:
             for i in self.list_target_images:
                 set_target_filenames.add(i.get_filename())
 
         list_dragged_images = []
-        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED:
+        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED or proctype == pt.COPY_SELECTED_HEAD:
             for i in dict_images:
                 img = dict_images[i]
                 if img.is_selected():
@@ -1525,7 +1538,7 @@ class Diatisch:
                     print("No closest Target")
                     no_target_image = True
                     dragpos = dragposition.BEHIND
-            else: # no event, call is from copy_selected_source_images(Button copy selected)
+            else: # no event, call is from copy_selected_source_images(Button copy selected) or ...HEAD
                 file_at_dragposition = self.file_at_dragposition
                 if file_at_dragposition == "": # no target image selected, append
                     no_target_image = True
@@ -1552,12 +1565,21 @@ class Diatisch:
                     self.list_target_images.append(i)
             elif no_target_image: # drop outside images: start with all images not in list_dragged_images, followed by list_dragged images
                 list_temp = []
-                for i in self.list_target_images:
-                    thisfile = i.get_filename()
-                    if thisfile not in set_dragged_filenames:
-                        list_temp.append(i)
-                for j in list_dragged_images:
-                    list_temp.append(j)
+                if proctype != pt.COPY_SELECTED_HEAD: #behaves as described above
+                    for i in self.list_target_images:
+                        thisfile = i.get_filename()
+                        if thisfile not in set_dragged_filenames:
+                            list_temp.append(i)
+                    for j in list_dragged_images:
+                        list_temp.append(j)
+                else: # copy head: first all selected images which are not in listtarget images, 2nd: all target images
+                    print("COPY HEAD")
+                    for i in list_dragged_images:
+                        thisfile = i.get_filename()
+                        if thisfile not in self.list_target_images:
+                            list_temp.append(j)
+                    for i in self.list_target_images:
+                        list_temp.append(i) # works because existing target files have not been inserted in result
                 self.list_target_images = list_temp    
             else:
                 list_temp = []
@@ -1689,7 +1711,8 @@ class Diatisch:
             self.historize_process()
 
     def delete_selected(self):
-        print("Delete Selected Pressed")
+        #print("Delete Selected Pressed")
+        self.delete_selected_target_images()
 
     def unselect_all(self, dict_images, canvas):
         changed = False
