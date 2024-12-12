@@ -1171,6 +1171,7 @@ class Diatisch:
             self.timestamp_scroll = tsnow
         else:
             return
+        print("on motion dif {:s}".format(str(tdiff)))
         self.scroll = False
         canvas = self.target_canvas
         self.canvas_to_scroll = canvas
@@ -1189,7 +1190,7 @@ class Diatisch:
             canvas_height = y1 - y0
         str_display = (" event: x = {:4d}, y = {:4d}, ").format(event.x, event.y) + \
             (" canvas: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(x0, y0, x1, y1) + \
-            (" bbox: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(b_x0, b_y0, b_x1, b_y1)
+            (" bbox: x0 = {:4d}, y0 = {:4d}, x1 = {:4d}, y1 = {:4d}").format(b_x0, b_y0, b_x1, b_y1) if self.debug else True
         if event.x < 0 and x0 > b_x0: # there is room for scrolling
             self.scroll = True
             self.scrolltype = 'HL'
@@ -1229,6 +1230,7 @@ class Diatisch:
         
     def do_scroll(self): # scroll
         canvas = self.canvas_to_scroll
+        print("scroll")
         if self.scroll: # set by on_motion
             x0 = int(canvas.canvasx(0))
             y0 = int(canvas.canvasy(0))
@@ -1238,7 +1240,7 @@ class Diatisch:
             b_y0 = canvas.bbox("all")[1]
             b_x1 = canvas.bbox("all")[2]
             b_y1 = canvas.bbox("all")[3]
-            print("Scroll delay is " + str(self.delay) + " type is " + self.scrolltype)
+            print("Scroll delay is " + str(self.delay) + " type is " + self.scrolltype)  if self.debug else True
             if self.scrolltype == 'HL':
                 print("  scroll {:s} x0: {:04d}, b_x0: {:04d}".format(self.scrolltype, x0, b_x0)) if self.debug else True
                 if x0 > b_x0:
