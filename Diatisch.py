@@ -1373,7 +1373,9 @@ class Diatisch:
     def copy_selected_source_images_head(self): # copy selected images from source to head of target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
-        self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
+        # unselect all, otherwise update target canvas will append the list to last selected instead of front of canvas
+        self.unselect_all(self.dict_target_images, self.target_canvas)
+        self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images) # will return empty string
         target_rect = []
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED_HEAD)
         if changed:
@@ -1577,7 +1579,7 @@ class Diatisch:
                     for i in list_dragged_images:
                         thisfile = i.get_filename()
                         if thisfile not in self.list_target_images:
-                            list_temp.append(j)
+                            list_temp.append(i)
                     for i in self.list_target_images:
                         list_temp.append(i) # works because existing target files have not been inserted in result
                 self.list_target_images = list_temp    
