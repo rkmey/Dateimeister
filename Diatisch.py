@@ -52,6 +52,7 @@ class pt(Enum):
     DELETE_SELECTED   = 5
     DELETE_SINGLE     = 6
     COPY_SELECTED_HEAD = 7
+    COPY_SELECTED_TAIL = 8
     
 
 class ScrollableCanvas(tk.Canvas):
@@ -349,6 +350,9 @@ class Diatisch:
         buttonpos_source += relwidth_source
         self.copy_head_button = tk.Button(self.Frame_source_ctl, text="Copy Head", command=self.copy_selected_source_images_head)
         self.copy_head_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
+        buttonpos_source += relwidth_source
+        self.copy_tail_button = tk.Button(self.Frame_source_ctl, text="Copy Tail", command=self.copy_selected_source_images_tail)
+        self.copy_tail_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
 
         # target control buttons
         anz_button_target = 5
@@ -1374,11 +1378,21 @@ class Diatisch:
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
         # unselect all, otherwise update target canvas will append the list to last selected instead of front of canvas
-        self.unselect_all(self.dict_target_images, self.target_canvas)
+        c = self.unselect_all(self.dict_target_images, self.target_canvas)
         self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images) # will return empty string
         target_rect = []
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED_HEAD)
-        if changed:
+        if changed or c: # if selection or canvas changed
+            self.historize_process()        
+    def copy_selected_source_images_tail(self): # copy selected images from source to tail of target
+        # find last selected target image
+        self.drag_started_in = "source" # must be set for the following functions
+        # unselect all, we dont want old images selected after copying new from source
+        c = self.unselect_all(self.dict_target_images, self.target_canvas)
+        self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images) # will return empty string
+        target_rect = []
+        changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED_TAIL)
+        if changed or c: # if selection or canvas changed
             self.historize_process()        
     def copy_single_source_image(self): # copy image under context menuitem select... from source to target
         # find last selected target image
@@ -1476,12 +1490,12 @@ class Diatisch:
         # may be in the future we will allow this but we have to rename them because Diatisch relies on uniqueness of filenames
         set_target_filenames = set() # create an empty set
         set_target_filenames.clear()
-        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED or proctype == pt.COPY_SELECTED_HEAD:
+        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED or proctype == pt.COPY_SELECTED_HEAD or proctype == pt.COPY_SELECTED_TAIL:
             for i in self.list_target_images:
                 set_target_filenames.add(i.get_filename())
 
         list_dragged_images = []
-        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED or proctype == pt.COPY_SELECTED_HEAD:
+        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED or proctype == pt.COPY_SELECTED_HEAD or proctype == pt.COPY_SELECTED_TAIL:
             for i in dict_images:
                 img = dict_images[i]
                 if img.is_selected():
@@ -1565,25 +1579,31 @@ class Diatisch:
             if self.list_target_images == []: #initial drag from source
                 for i in list_dragged_images:
                     self.list_target_images.append(i)
-            elif no_target_image: # drop outside images: start with all images not in list_dragged_images, followed by list_dragged images
+            elif no_target_image: # no target image selected, copy HEAD or TAIL
                 list_temp = []
-                if proctype != pt.COPY_SELECTED_HEAD: #behaves as described above
+                if proctype == pt.COPY_SELECTED_TAIL: # existing target images followed by copied images
                     for i in self.list_target_images:
                         thisfile = i.get_filename()
                         if thisfile not in set_dragged_filenames:
                             list_temp.append(i)
                     for j in list_dragged_images:
                         list_temp.append(j)
-                else: # copy head: first all selected images which are not in listtarget images, 2nd: all target images
-                    print("COPY HEAD")
+                elif proctype == pt.COPY_SELECTED_HEAD: # copied images followed by target images
                     for i in list_dragged_images:
                         thisfile = i.get_filename()
                         if thisfile not in self.list_target_images:
                             list_temp.append(i)
                     for i in self.list_target_images:
                         list_temp.append(i) # works because existing target files have not been inserted in result
+                else: # same as COPY TAIL
+                    for i in self.list_target_images:
+                        thisfile = i.get_filename()
+                        if thisfile not in set_dragged_filenames:
+                            list_temp.append(i)
+                    for j in list_dragged_images:
+                        list_temp.append(j)
                 self.list_target_images = list_temp    
-            else:
+            else: # we have target image of which at least one is selected
                 list_temp = []
                 for i in self.list_target_images:
                     thisfile = i.get_filename()
