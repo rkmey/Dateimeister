@@ -1102,8 +1102,8 @@ class Diatisch:
             image_id = closest[0]
             img      = self.dict_source_images[image_id]
             file     = img.get_filename()
-            thumbnail = FS.Thumbnail(img, self, file, None, self.source_canvas, None)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.default_delay)
+            thumbnail = FS.Thumbnail(img, self, file, None, self.source_canvas, self.debug, None)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.default_delay, self.debug)
             self.dict_file_FSImage[file] = fs_image
 
     def canvas_focus_target(self, event):
@@ -1123,8 +1123,8 @@ class Diatisch:
             image_id = closest[0]
             img      = self.dict_target_images[image_id]
             file     = img.get_filename()
-            thumbnail = FS.Thumbnail(img, self, file, None, self.target_canvas, None)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.default_delay)
+            thumbnail = FS.Thumbnail(img, self, file, None, self.target_canvas, self.debug, None)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.default_delay, self.debug)
             self.dict_file_FSImage[file] = fs_image
 
 

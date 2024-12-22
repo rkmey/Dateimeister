@@ -17,6 +17,7 @@ import threading
 import copy
 import subprocess
 import shutil
+import argparse
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -46,9 +47,6 @@ import Dateimeister_FSimage as FS
 import Dateimeister_messages as DM
 
 #from Dateimeister import ToolTip
-
-_debug = True # False to eliminate debug printing from callback functions.
-
 
 from enum import Enum
 
@@ -362,7 +360,7 @@ class MyDuplicates:
                 fs_image.setPlaystatus('play') # Status, Buttontext
         else: # ein neues Objekt anlegen und in self.dict_file_image eintragen
             print ("FSImage does not exist for file: " + file)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self.main, Globals.delay_default)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self.main, Globals.delay_default, False)
             self.dict_file_image[file] = fs_image
 
     def canvas_video_restart(self):
@@ -1371,7 +1369,7 @@ class MyCameraTreeview:
 
 
 class Dateimeister_support:
-    def __init__(self, root):
+    def __init__(self, root, debug):
         self.root = root
         self.root.protocol( 'WM_DELETE_WINDOW' , self.root.destroy)
         # Creates a toplevel widget.
@@ -1385,6 +1383,10 @@ class Dateimeister_support:
         self.context_menu = None
         self.timestamp = datetime.now()
         self.use_camera_prefix = True
+        if debug == 'Y' or debug == 'J':
+            self.debug = True
+        else:
+            self .debug = False
 
         # Undo /Redo control
         self.UR = UR.Undo_Redo_Dateimeister()
@@ -2001,21 +2003,12 @@ class Dateimeister_support:
         #print("Window resized to width: " + str(width) + " height: " + str(height))
 
     def Press_indir(self, *args):
-        if _debug:
-            print('Dateimeister_support.Press_indir')
-            for arg in args:
-                # print ('    another arg:', arg)
-                pass
-            sys.stdout.flush()
         indir = fd.askdirectory() 
         print ("indir %s" % indir)
         #self.clear_textbox(self.combobox_indir)
         self.label_indir.config(text = indir)
 
     def Press_outdir(self, *args):
-        if _debug:
-            print('Dateimeister_support.Press_outdir')
-            sys.stdout.flush()
         #outdir = fd.askopenindir() 
         outdir = fd.askdirectory() 
         print ("outdir %s" % outdir)
@@ -2023,11 +2016,6 @@ class Dateimeister_support:
         self.label_outdir.config(text = outdir)
 
     def B_camera_press(self, *args):
-        if _debug:
-            print('Dateimeister_support.B_camera_press')
-            for arg in args:
-                #print ('    another arg:', arg)
-                sys.stdout.flush()
         # get selected indices
         selected_indices = self.lb_camera.curselection()
         thiscamera = ",".join([self.lb_camera.get(i) for i in selected_indices]) # because we have a single choice listbox
@@ -2056,13 +2044,6 @@ class Dateimeister_support:
             Globals.list_result_diatisch = None
 
     def Press_generate(self, *args):
-        if _debug:
-            print('Dateimeister_support.B_camera_press')
-            for arg in args:
-                #print ('    another arg:', arg)
-                pass
-            sys.stdout.flush()
-        
         # cleanup
         self.close_child_windows()
         # reset all process-states
@@ -2263,13 +2244,6 @@ class Dateimeister_support:
         self.write_cmdfiles()
     
     def Button_be_pressed(self, *args):
-        if _debug:
-            print('Dateimeister_support.Press_be_out')
-            for arg in args:
-                #print ('    another arg:', arg)
-                pass
-            sys.stdout.flush()
-
         # reset all process-states
         self.UR.reset()
         self.button_undo.config(state = DISABLED)    
@@ -2916,7 +2890,7 @@ class Dateimeister_support:
         else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, Globals.delay_default)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, Globals.delay_default, self.debug)
                 self.dict_file_image[file] = fs_image
 
     def show_context_menu(self, event):
@@ -3344,8 +3318,16 @@ class Dateimeister_support:
 # #############################################################
 if __name__ == '__main__':
     '''Main entry point for the application.'''
+    argParser = argparse.ArgumentParser()
+    argParser.add_argument("-d", "--debug", help="Debug Mode")
+    args = argParser.parse_args()
+    print("args=%s" % args)
+    print("args.debug=%s" % args.debug)
+    debug = 'N'
+    if args.debug:
+        debug = args.debug.upper()
     root = tk.Tk()
-    app = Dateimeister_support(root)
+    app = Dateimeister_support(root, debug)
 
  
 

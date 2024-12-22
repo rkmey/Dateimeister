@@ -41,9 +41,8 @@ EXCLUDE = 2
 
 class Thumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
-
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, image, pmain, file, player, canvas, parent = None):
+    def __init__(self, image, pmain, file, player, canvas, debug, parent = None):
         self.main = pmain
         self.image = image
         self.file = file
@@ -52,9 +51,11 @@ class Thumbnail:
         self.state = INCLUDE
         self.canvas = canvas
         self.parent = parent
+        self.debug = debug
         self.setState(self.state)
         
     def setState(self, state, caller = None, do_save = True):
+        print("Thumbnail.setState, state = {:d}".format(state)) if self.debug else True
         if state != self.state:
             state_changed = True
         else:
@@ -64,7 +65,6 @@ class Thumbnail:
             self.parent.setState(state, caller)
         if self.fsimage is not None:
             self.fsimage.exclude_call(state) # synchronisiert das FSImge, falls vorhanden
-            print("FSImage Exclude-Call")
     def getState(self):
         return self.state   
 
@@ -83,10 +83,11 @@ class Thumbnail:
 class MyFSImage:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, file, thumbnail, dict_caller, pmain, delay_default): # close_handler has to delete self from the dict main or duplicate
+    def __init__(self, file, thumbnail, dict_caller, pmain, delay_default, debug): # close_handler has to delete self from the dict main or duplicate
         self.main = pmain
         self.thumbnail = thumbnail
         self.player = None
+        self.debug = debug
         if thumbnail.getPlayer() is None: # still image
             self.image  = Image.open(file)
         self.file = file
@@ -224,7 +225,7 @@ class MyFSImage:
         self.main.historize_process()
 
     def exclude_call(self, state): # react to request from outside
-        print("MyFSImage.Exclude called, State = " + str(state))
+        print("MyFSImage.exclude_call, state = {:d}".format(state)) if self.debug else True
         if state == INCLUDE:
             self.w2.Button_exclude.config(text = "Exclude")
             self.w2.Label_status.config(text = "Included")
