@@ -43,7 +43,6 @@ FILE_CLOSE            = 2
 FILE_EXIT             = 3
 FILE_OPEN_RECENT      = 4
 
-
 class pt(Enum):
     DROP_FROM_SOURCE  = 1
     DROP_FROM_TARGET  = 2
@@ -107,6 +106,48 @@ class MyImage:
         return self.tag
         
      
+class Thumbnail:
+    #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
+    # The class "constructor" - It's actually an initializer 
+    def __init__(self, image, pmain, file, player, canvas, debug, parent = None):
+        self.main = pmain
+        self.image = image
+        self.file = file
+        self.player = player 
+        self.fsimage = None
+        self.state = FS.INCLUDE
+        self.canvas = canvas
+        self.parent = parent
+        self.debug = debug
+        #self.setState(self.state)
+        
+    def setState(self, state, caller = None, do_save = True):
+        print("Thumbnail.setState, state = {:d}".format(state)) if self.debug else True
+        if state != self.state:
+            state_changed = True
+        else:
+            state_changed = False
+        self.state = state # neuer Status
+        if self.parent is not None: #call parent.setState if exists
+            self.parent.setState(state, caller, self.image)
+        if self.fsimage is not None: #call fsimage.exclude_call
+            self.fsimage.exclude_call(state) # synchronisiert das FSImge, falls vorhanden
+    def getState(self):
+        return self.state   
+
+    def register_FSimage(self, fsimage):
+        self.fsimage = fsimage
+
+    def getPlayer(self):
+        return self.player   
+
+    def __del__(self):
+        if self.player is not None:
+            self.player.pstop()
+            del self.player
+        #print("*** Deleting MyThumbnail-Objekt. " + self.file + " lineno in cmdfile " + str(self.lineno))
+
+
 class Diatisch:
     line_width = 5
     line_color = "red"
@@ -1102,7 +1143,7 @@ class Diatisch:
             image_id = closest[0]
             img      = self.dict_source_images[image_id]
             file     = img.get_filename()
-            thumbnail = FS.Thumbnail(img, self, file, None, self.source_canvas, self.debug, None)
+            thumbnail = Thumbnail(img, self, file, None, self.source_canvas, self.debug, self)
             fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.default_delay, self.debug)
             self.dict_file_FSImage[file] = fs_image
 
@@ -1123,7 +1164,7 @@ class Diatisch:
             image_id = closest[0]
             img      = self.dict_target_images[image_id]
             file     = img.get_filename()
-            thumbnail = FS.Thumbnail(img, self, file, None, self.target_canvas, self.debug, None)
+            thumbnail = Thumbnail(img, self, file, None, self.target_canvas, self.debug, self)
             fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.default_delay, self.debug)
             self.dict_file_FSImage[file] = fs_image
 
@@ -1409,6 +1450,10 @@ class Diatisch:
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SINGLE)
         self.historize_process()        
 
+    def setState(self, state, caller, image):
+        # this function is called if FSImage Exclude Button is pressed.
+        print("Diatisch.setState, state = {:d}, imagefile is {:s}".format(state, image.get_filename())) if self.debug else True
+    
     def find_last_selected_target_image(self, list_images): # helper function for finding last selected target (as insert point for copy)
         # find last selected target image
         ii = 0
@@ -1457,7 +1502,7 @@ class Diatisch:
                 
             print("Drag Done.") if self.debug else True
             self.target_canvas.focus_set()
-            self.target_canvas.bind('<Return>', self.canvas_focus_target)    # show FSImage for selected thumbnail
+            self.target_canvas.bind('<Return>', self.canvas_focus_target)    # show FSImage for selected image
                
         elif (self.check_event_in_rect(event, source_rect)): # finish drag and drop mode
             print("Drop Event in source") if self.debug else True
@@ -1469,7 +1514,7 @@ class Diatisch:
             else: # do nothing
                 print("no image found in source canvas, action = PRESS") if self.debug else True
             self.source_canvas.focus_set()
-            self.source_canvas.bind('<Return>', self.canvas_focus_source)    # show FSImage for selected thumbnail
+            self.source_canvas.bind('<Return>', self.canvas_focus_source)    # show FSImage for selected image
                 
         else:
             print("Drop-Event not in target canvas") if self.debug else True

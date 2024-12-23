@@ -39,47 +39,6 @@ INCLUDE = 1
 EXCLUDE = 2
 
 
-class Thumbnail:
-    #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
-    # The class "constructor" - It's actually an initializer 
-    def __init__(self, image, pmain, file, player, canvas, debug, parent = None):
-        self.main = pmain
-        self.image = image
-        self.file = file
-        self.player = player 
-        self.fsimage = None
-        self.state = INCLUDE
-        self.canvas = canvas
-        self.parent = parent
-        self.debug = debug
-        self.setState(self.state)
-        
-    def setState(self, state, caller = None, do_save = True):
-        print("Thumbnail.setState, state = {:d}".format(state)) if self.debug else True
-        if state != self.state:
-            state_changed = True
-        else:
-            state_changed = False
-        self.state = state # neuer Status
-        if self.parent is not None:
-            self.parent.setState(state, caller)
-        if self.fsimage is not None:
-            self.fsimage.exclude_call(state) # synchronisiert das FSImge, falls vorhanden
-    def getState(self):
-        return self.state   
-
-    def register_FSimage(self, fsimage):
-        self.fsimage = fsimage
-
-    def getPlayer(self):
-        return self.player   
-
-    def __del__(self):
-        if self.player is not None:
-            self.player.pstop()
-            del self.player
-        #print("*** Deleting MyThumbnail-Objekt. " + self.file + " lineno in cmdfile " + str(self.lineno))
-
 class MyFSImage:
 
     # The class "constructor" - It's actually an initializer 
@@ -214,6 +173,7 @@ class MyFSImage:
         self.player.setDelay(int(1000 / int(value)))
 
     def exclude_handler(self): # react to own Button, thumbnail can be from main or duplicates
+        # Button -> this method -> thumbnail.setstate -> exclude_call
         if self.thumbnail.getState() == INCLUDE:
             self.thumbnail.setState(EXCLUDE)
             self.w2.Button_exclude.config(text = "Include")
