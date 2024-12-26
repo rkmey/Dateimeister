@@ -128,8 +128,7 @@ class Thumbnail:
         else:
             state_changed = False
         self.state = state # neuer Status
-        if self.parent is not None: #call parent.setState if exists
-            self.parent.setState(state, caller, self.image)
+        # call not from here like in Dateimeister_support, instead on delete object
         if self.fsimage is not None: #call fsimage.exclude_call
             self.fsimage.exclude_call(state) # synchronisiert das FSImge, falls vorhanden
     def getState(self):
@@ -145,7 +144,9 @@ class Thumbnail:
         if self.player is not None:
             self.player.pstop()
             del self.player
-        #print("*** Deleting MyThumbnail-Objekt. " + self.file + " lineno in cmdfile " + str(self.lineno))
+        print("*** Deleting MyThumbnail-Objekt. " + self.file)
+        if self.parent is not None: #call parent.setState if exists
+            self.parent.setState(self.state, self.parent, self.image)
 
 
 class Diatisch:
@@ -523,7 +524,8 @@ class Diatisch:
         self.single_image_to_copy   = None # name of single image selected by menuitem to copy from source to target
         self.single_image_to_delete = None # name of single image selected by menuitem to delete from target
         self.image_files = []
-        self.dict_file_FSImage = {} # dict for keeping track of FS Images
+        self.dict_file_FSImage_source = {} # dict for keeping track of FS Images
+        self.dict_file_FSImage_target = {} # dict for keeping track of FS Images
         self.read_ini()
         self.init()
         if list_imagefiles:
@@ -614,10 +616,14 @@ class Diatisch:
     def close_child_windows(self): #closes fs-images    
         # cleanup
         # delete all fsimage by close-call
-        for t in self.dict_file_FSImage:
-            u = self.dict_file_FSImage[t]
+        for t in self.dict_file_FSImage_source:
+            u = self.dict_file_FSImage_source[t]
             u.close_handler_external()
-        self.dict_file_FSImage = {}
+        self.dict_file_FSImage_source = {}
+        for t in self.dict_file_FSImage_target:
+            u = self.dict_file_FSImage_target[t]
+            u.close_handler_external()
+        self.dict_file_FSImage_target = {}
 
     def recent_config_cfg(self, item):
         # get and apply configfile from recent-menu
@@ -1143,9 +1149,12 @@ class Diatisch:
             image_id = closest[0]
             img      = self.dict_source_images[image_id]
             file     = img.get_filename()
-            thumbnail = Thumbnail(img, self, file, None, self.source_canvas, self.debug, self)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.default_delay, self.debug)
-            self.dict_file_FSImage[file] = fs_image
+            if file in self.dict_file_FSImage_source: #dont display twice
+                print ("FSImage Source exists for file: " + file)
+            else:
+                thumbnail = Thumbnail(img, self, file, None, self.source_canvas, self.debug, self)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, self.debug)
+                self.dict_file_FSImage_source[file] = fs_image
 
     def canvas_focus_target(self, event):
         print("Return on target vanvas")
@@ -1164,9 +1173,12 @@ class Diatisch:
             image_id = closest[0]
             img      = self.dict_target_images[image_id]
             file     = img.get_filename()
-            thumbnail = Thumbnail(img, self, file, None, self.target_canvas, self.debug, self)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage, self, self.default_delay, self.debug)
-            self.dict_file_FSImage[file] = fs_image
+            if file in self.dict_file_FSImage_target: #dont display twice
+                print ("FSImage Target exists for file: " + file)
+            else:
+                thumbnail = Thumbnail(img, self, file, None, self.target_canvas, self.debug, self)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, self.debug)
+                self.dict_file_FSImage_target[file] = fs_image
 
 
 
