@@ -128,7 +128,7 @@ class Thumbnail:
         else:
             state_changed = False
         self.state = state # neuer Status
-        # call not from here like in Dateimeister_support, instead on delete object
+        # call parent not from here like in Dateimeister_support, instead on register_FSimage if fsimage is none
         if self.fsimage is not None: #call fsimage.exclude_call
             self.fsimage.exclude_call(state) # synchronisiert das FSImge, falls vorhanden
     def getState(self):
@@ -136,6 +136,8 @@ class Thumbnail:
 
     def register_FSimage(self, fsimage):
         self.fsimage = fsimage
+        if fsimage is None and self.parent is not None: #call parent.setState if exists and fsimage is none
+            self.parent.setState(self.state, self.parent, self.image)
 
     def getPlayer(self):
         return self.player   
@@ -145,8 +147,6 @@ class Thumbnail:
             self.player.pstop()
             del self.player
         print("*** Deleting MyThumbnail-Objekt. " + self.file)
-        if self.parent is not None: #call parent.setState if exists
-            self.parent.setState(self.state, self.parent, self.image)
 
 
 class Diatisch:
@@ -1155,6 +1155,8 @@ class Diatisch:
                 thumbnail = Thumbnail(img, self, file, None, self.source_canvas, self.debug, self)
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, self.debug)
                 self.dict_file_FSImage_source[file] = fs_image
+                fs_image.attributes('-topmost', True)
+                fs_image.lift()
 
     def canvas_focus_target(self, event):
         print("Return on target vanvas")
@@ -1179,8 +1181,8 @@ class Diatisch:
                 thumbnail = Thumbnail(img, self, file, None, self.target_canvas, self.debug, self)
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, self.debug)
                 self.dict_file_FSImage_target[file] = fs_image
-
-
+                fs_image.attributes('-topmost', True)
+                fs_image.lift()
 
     def start_drag(self, event):
         # as we have a transaction of 2 steps (press / release) we have to keep the change attributes as member variables
@@ -1465,6 +1467,13 @@ class Diatisch:
     def setState(self, state, caller, image):
         # this function is called if FSImage Exclude Button is pressed.
         print("Diatisch.setState, state = {:d}, imagefile is {:s}".format(state, image.get_filename())) if self.debug else True
+        if state == FS.EXCLUDE:
+            if messagebox.askyesnocancel("Delete", "Delete image {:s}?".format(image.get_filename())) == True:
+                print("delete")
+                self.single_image_to_delete = image
+                self.delete_single_target_image()
+            else:
+                print("don't delete")
     
     def find_last_selected_target_image(self, list_images): # helper function for finding last selected target (as insert point for copy)
         # find last selected target image
