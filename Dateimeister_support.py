@@ -360,7 +360,7 @@ class MyDuplicates:
                 fs_image.setPlaystatus('play') # Status, Buttontext
         else: # ein neues Objekt anlegen und in self.dict_file_image eintragen
             print ("FSImage does not exist for file: " + file)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self.main, Globals.delay_default, False)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self.main, Globals.delay_default, "", "Include", "Exclude", "Included", "Excluded", self.debug)
             self.dict_file_image[file] = fs_image
 
     def canvas_video_restart(self):
@@ -2890,7 +2890,7 @@ class Dateimeister_support:
         else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, Globals.delay_default, self.debug)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, Globals.delay_default, "", "Include", "Exclude", "Included", "Excluded", self.debug)
                 self.dict_file_image[file] = fs_image
 
     def show_context_menu(self, event):

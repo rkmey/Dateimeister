@@ -42,10 +42,14 @@ EXCLUDE = 2
 class MyFSImage:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, file, thumbnail, dict_caller, pmain, delay_default, debug): # close_handler has to delete self from the dict main or duplicate
+    def __init__(self, file, thumbnail, dict_caller, pmain, delay_default, str_title_prefix, str_include, str_exclude, str_included, str_excluded, debug): 
         self.main = pmain
         self.thumbnail = thumbnail
         self.player = None
+        self.str_include = str_include
+        self.str_exclude = str_exclude
+        self.str_included = str_included
+        self.str_excluded = str_excluded
         self.debug = debug
         if thumbnail.getPlayer() is None: # still image
             self.image  = Image.open(file)
@@ -58,11 +62,11 @@ class MyFSImage:
         self.w2 = Dateimeister.Toplevel2(self.root2)
         self.f = self.w2.Canvas_image
         if self.thumbnail.getState() == INCLUDE:
-            self.w2.Button_exclude.config(text = "Exclude")
-            self.w2.Label_status.config(text = "Included")
+            self.w2.Button_exclude.config(text = self.str_exclude)
+            self.w2.Label_status.config(text = self.str_included)
         else: # toggle to not exclude
-            self.w2.Button_exclude.config(text = "Include")
-            self.w2.Label_status.config(text = "Excluded")
+            self.w2.Button_exclude.config(text = self.str_include)
+            self.w2.Label_status.config(text = self.str_excluded)
         # zur Behandlung von Events brauchen wir den Imagefile-Namen. Darüber kommen wir an das Window und
         # das Image selbst. Das ist erforderlich, weil wir ja mehrere Fenster haben können
         # kurz gesagt: mit dieser Methode kann man Parameter an den Handler übergeben
@@ -75,7 +79,7 @@ class MyFSImage:
         self.f.bind("<MouseWheel>", self.mousewheel_handler)
         self.root2.protocol("WM_DELETE_WINDOW", self.close_handler)
 
-        self.root2.title(file)
+        self.root2.title(str_title_prefix + file)
         screen_width  = int(self.root2.winfo_screenwidth() * 0.9)
         screen_height = int(self.root2.winfo_screenheight() * 0.8)
         print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height))
@@ -176,22 +180,22 @@ class MyFSImage:
         # Button -> this method -> thumbnail.setstate -> exclude_call
         if self.thumbnail.getState() == INCLUDE:
             self.thumbnail.setState(EXCLUDE)
-            self.w2.Button_exclude.config(text = "Include")
-            self.w2.Label_status.config(text = "Excluded")
+            self.w2.Button_exclude.config(text = self.str_include)
+            self.w2.Label_status.config(text = self.str_excluded)
         else: # toggle to not exclude, delete Item
             self.thumbnail.setState(INCLUDE)
-            self.w2.Button_exclude.config(text = "Exclude")
-            self.w2.Label_status.config(text = "Included")
+            self.w2.Button_exclude.config(text = self.str_exclude)
+            self.w2.Label_status.config(text = self.str_included)
         self.main.historize_process()
 
     def exclude_call(self, state): # react to request from outside
         print("MyFSImage.exclude_call, state = {:d}".format(state)) if self.debug else True
         if state == INCLUDE:
-            self.w2.Button_exclude.config(text = "Exclude")
-            self.w2.Label_status.config(text = "Included")
+            self.w2.Button_exclude.config(text = self.str_exclude)
+            self.w2.Label_status.config(text = self.str_included)
         else: # toggle to not exclude, delete Item
-            self.w2.Button_exclude.config(text = "Include")
-            self.w2.Label_status.config(text = "Excluded")
+            self.w2.Button_exclude.config(text = self.str_include)
+            self.w2.Label_status.config(text = self.str_excluded)
     
     def close_handler(self): #calles when window is closing: delete player and fsimage, remove from dict_file_image
         t = self.dict_caller[self.file]

@@ -109,7 +109,7 @@ class MyImage:
 class Thumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, image, pmain, file, player, canvas, debug, parent = None):
+    def __init__(self, image, pmain, file, player, canvas, debug, canvas_type, parent = None):
         self.main = pmain
         self.image = image
         self.file = file
@@ -119,6 +119,7 @@ class Thumbnail:
         self.canvas = canvas
         self.parent = parent
         self.debug = debug
+        self.canvas_type = canvas_type
         #self.setState(self.state)
         
     def setState(self, state, caller = None, do_save = True):
@@ -137,7 +138,7 @@ class Thumbnail:
     def register_FSimage(self, fsimage):
         self.fsimage = fsimage
         if fsimage is None and self.parent is not None: #call parent.setState if exists and fsimage is none
-            self.parent.setState(self.state, self.parent, self.image)
+            self.parent.setState(self.canvas_type, self, self.state, self.parent, self.image)
 
     def getPlayer(self):
         return self.player   
@@ -502,7 +503,7 @@ class Diatisch:
         self.dict_gen_files_delete[self.imagetype] = {}
         self.dict_gen_files_delrelpath[self.imagetype] = {}
         self.dict_templates = {}
-        self.default_delay  = 20 # just for use of MyFSImage for video player, although never used here
+        self.default_delay  = 20 # just for use of class for video player, although never used here
         self.outdir = None
         self.scroll = False
         self.delay = 1000
@@ -1152,11 +1153,9 @@ class Diatisch:
             if file in self.dict_file_FSImage_source: #dont display twice
                 print ("FSImage Source exists for file: " + file)
             else:
-                thumbnail = Thumbnail(img, self, file, None, self.source_canvas, self.debug, self)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, self.debug)
+                thumbnail = Thumbnail(img, self, file, None, self.source_canvas, self.debug, "Source", self)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Keep", "Delete", "To keep", "To delete", self.debug)
                 self.dict_file_FSImage_source[file] = fs_image
-                fs_image.attributes('-topmost', True)
-                fs_image.lift()
 
     def canvas_focus_target(self, event):
         print("Return on target vanvas")
@@ -1178,11 +1177,9 @@ class Diatisch:
             if file in self.dict_file_FSImage_target: #dont display twice
                 print ("FSImage Target exists for file: " + file)
             else:
-                thumbnail = Thumbnail(img, self, file, None, self.target_canvas, self.debug, self)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, self.debug)
+                thumbnail = Thumbnail(img, self, file, None, self.target_canvas, self.debug, "Target", self)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, "Target ", "Keep", "Delete", "To keep", "To delete", self.debug)
                 self.dict_file_FSImage_target[file] = fs_image
-                fs_image.attributes('-topmost', True)
-                fs_image.lift()
 
     def start_drag(self, event):
         # as we have a transaction of 2 steps (press / release) we have to keep the change attributes as member variables
@@ -1464,11 +1461,13 @@ class Diatisch:
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SINGLE)
         self.historize_process()        
 
-    def setState(self, state, caller, image):
+    def setState(self, canvas_type, thumbnail, state, caller, image):
         # this function is called if FSImage Exclude Button is pressed.
-        print("Diatisch.setState, state = {:d}, imagefile is {:s}".format(state, image.get_filename())) if self.debug else True
+        # find out whether thumbnail belongs to source or target
+        filename = image.get_filename()
+        print("Diatisch.setState, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)) if self.debug else True
         if state == FS.EXCLUDE:
-            if messagebox.askyesnocancel("Delete", "Delete image {:s}?".format(image.get_filename())) == True:
+            if messagebox.askyesnocancel("Delete", "Delete image {:s}?".format(filename)) == True:
                 print("delete")
                 self.single_image_to_delete = image
                 self.delete_single_target_image()
