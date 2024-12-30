@@ -109,17 +109,17 @@ class MyImage:
 class Thumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, image, pmain, file, player, canvas, debug, canvas_type, parent = None):
-        self.main = pmain
+    def __init__(self, image, file, player, canvas, debug, canvas_type, fs_close, fs_button):
         self.image = image
         self.file = file
         self.player = player 
         self.fsimage = None
         self.state = FS.INCLUDE
         self.canvas = canvas
-        self.parent = parent
         self.debug = debug
         self.canvas_type = canvas_type
+        self.fs_close = fs_close # called on unregister = close
+        self.fs_button = fs_button # called on button pressed
         #self.setState(self.state)
         
     def setState(self, state, caller = None, do_save = True):
@@ -129,16 +129,18 @@ class Thumbnail:
         else:
             state_changed = False
         self.state = state # neuer Status
-        # call parent not from here like in Dateimeister_support, instead on register_FSimage if fsimage is none
         if self.fsimage is not None: #call fsimage.exclude_call
             self.fsimage.exclude_call(state) # synchronisiert das FSImge, falls vorhanden
+            if self.fs_button is not None: #call button-method if exists and fsimage is none
+                self.fs_button(self.canvas_type, self, self.state, self.image)
+
     def getState(self):
         return self.state   
 
     def register_FSimage(self, fsimage):
         self.fsimage = fsimage
-        if fsimage is None and self.parent is not None: #call parent.setState if exists and fsimage is none
-            self.parent.setState(self.canvas_type, self, self.state, self.parent, self.image)
+        if fsimage is None and self.fs_close is not None: #call close-method if exists and fsimage is none
+            self.fs_close(self.canvas_type, self, self.state, self.image)
 
     def getPlayer(self):
         return self.player   
@@ -840,6 +842,8 @@ class Diatisch:
     def load_images(self, p_indir = None, p_imagefiles_source = None, p_imagefiles_target = None):
         # if list-source is given use it, else ask for dir to open
         # if list-target is given use it
+        # close all FSImage-Windows
+        self.close_child_windows()
         self.list_source_images = []
         self.dict_source_images = {}
         self.list_target_images = []
@@ -1153,7 +1157,7 @@ class Diatisch:
             if file in self.dict_file_FSImage_source: #dont display twice
                 print ("FSImage Source exists for file: " + file)
             else:
-                thumbnail = Thumbnail(img, self, file, None, self.source_canvas, self.debug, "Source", self)
+                thumbnail = Thumbnail(img, file, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Keep", "Delete", "To keep", "To delete", self.debug)
                 self.dict_file_FSImage_source[file] = fs_image
 
@@ -1177,7 +1181,7 @@ class Diatisch:
             if file in self.dict_file_FSImage_target: #dont display twice
                 print ("FSImage Target exists for file: " + file)
             else:
-                thumbnail = Thumbnail(img, self, file, None, self.target_canvas, self.debug, "Target", self)
+                thumbnail = Thumbnail(img, file, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, "Target ", "Keep", "Delete", "To keep", "To delete", self.debug)
                 self.dict_file_FSImage_target[file] = fs_image
 
@@ -1461,11 +1465,17 @@ class Diatisch:
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SINGLE)
         self.historize_process()        
 
-    def setState(self, canvas_type, thumbnail, state, caller, image):
+    def fs_button(self, canvas_type, thumbnail, state, image):
         # this function is called if FSImage Exclude Button is pressed.
         # find out whether thumbnail belongs to source or target
         filename = image.get_filename()
-        print("Diatisch.setState, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)) if self.debug else True
+        print("Diatisch.fs_button, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)) if self.debug else True
+
+    def fs_close(self, canvas_type, thumbnail, state, image):
+        # this function is called if FSImage Exclude Button is pressed.
+        # find out whether thumbnail belongs to source or target
+        filename = image.get_filename()
+        print("Diatisch.fs_close, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)) if self.debug else True
         if state == FS.EXCLUDE:
             if messagebox.askyesnocancel("Delete", "Delete image {:s}?".format(filename)) == True:
                 print("delete")
@@ -1948,7 +1958,7 @@ class Diatisch:
 
 
     def apply_process_id(self, process_id, processid_predecessor):
-        print("apply_process_id, id to apply is: ", str(process_id), " processid was: ", str(processid_predecessor))
+        print("apply_process_id, id to apply is: ", str(process_id), " processid was: ", str(processid_predecessor)) if self.debug else True
         
         h = self.dict_processid_histobj[process_id]
         Diatisch.idx_akt = h.idx_akt            
