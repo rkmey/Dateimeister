@@ -1158,7 +1158,7 @@ class Diatisch:
                 print ("FSImage Source exists for file: " + file)
             else:
                 thumbnail = Thumbnail(img, file, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Keep", "Delete", "To keep", "To delete", self.debug)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "To copy", "To delete", self.debug)
                 self.dict_file_FSImage_source[file] = fs_image
 
     def canvas_focus_target(self, event):
@@ -1470,13 +1470,24 @@ class Diatisch:
         # find out whether thumbnail belongs to source or target
         filename = image.get_filename()
         print("Diatisch.fs_button, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)) if self.debug else True
+        if canvas_type == "Source": # copy Image and close
+            self.single_image_to_copy = image
+            self.copy_single_source_image()
+            if filename in self.dict_file_FSImage_source:
+                self.dict_file_FSImage_source[filename].close_handler_external()
+        elif canvas_type == "Target": # delete Image and close
+            self.single_image_to_delete = image
+            self.delete_single_target_image()
+            if filename in self.dict_file_FSImage_target:
+                self.dict_file_FSImage_target[filename].close_handler_external()
 
     def fs_close(self, canvas_type, thumbnail, state, image):
         # this function is called if FSImage Exclude Button is pressed.
         # find out whether thumbnail belongs to source or target
         filename = image.get_filename()
         print("Diatisch.fs_close, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)) if self.debug else True
-        if state == FS.EXCLUDE:
+        #if state == FS.EXCLUDE:
+        if 0 == 1:
             if messagebox.askyesnocancel("Delete", "Delete image {:s}?".format(filename)) == True:
                 print("delete")
                 self.single_image_to_delete = image

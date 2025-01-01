@@ -179,13 +179,13 @@ class MyFSImage:
     def exclude_handler(self): # react to own Button, thumbnail can be from main or duplicates
         # Button -> this method -> thumbnail.setstate -> exclude_call
         if self.thumbnail.getState() == INCLUDE:
-            self.thumbnail.setState(EXCLUDE)
             self.w2.Button_exclude.config(text = self.str_include)
             self.w2.Label_status.config(text = self.str_excluded)
+            self.thumbnail.setState(EXCLUDE)
         else: # toggle to not exclude, delete Item
-            self.thumbnail.setState(INCLUDE)
             self.w2.Button_exclude.config(text = self.str_exclude)
             self.w2.Label_status.config(text = self.str_included)
+            self.thumbnail.setState(INCLUDE)
         self.main.historize_process()
 
     def exclude_call(self, state): # react to request from outside
