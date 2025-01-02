@@ -1158,7 +1158,7 @@ class Diatisch:
                 print ("FSImage Source exists for file: " + file)
             else:
                 thumbnail = Thumbnail(img, file, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "To copy", "To delete", self.debug)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
                 self.dict_file_FSImage_source[file] = fs_image
 
     def canvas_focus_target(self, event):
@@ -1182,7 +1182,7 @@ class Diatisch:
                 print ("FSImage Target exists for file: " + file)
             else:
                 thumbnail = Thumbnail(img, file, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, "Target ", "Keep", "Delete", "To keep", "To delete", self.debug)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, "Target ", "Delete", "Delete", "", "", self.debug)
                 self.dict_file_FSImage_target[file] = fs_image
 
     def start_drag(self, event):
