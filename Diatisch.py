@@ -462,6 +462,8 @@ class Diatisch:
         self.dict_target_images = {} # ID -> MyImage
         self.list_source_images = []
         self.list_target_images = []
+        self.dict_file_FSImage_source = {}
+        self.dict_file_FSImage_target = {}
         self.list_result = list_result  # reference given from caller
         self.callback = None
         if callback:
@@ -949,6 +951,7 @@ class Diatisch:
         self.dict_target_images = {}
         self.source_canvas.delete("all")
         self.target_canvas.delete("all")
+        self.close_child_windows()
         Diatisch.idx_high += 1
         Diatisch.idx_akt = Diatisch.idx_high
         Diatisch.dict_filename_images[Diatisch.idx_akt] = {}
@@ -2032,6 +2035,10 @@ class Diatisch:
         hashsum_target_selection = hashlib.md5()
         str_source_selection = ""
         str_target_selection = ""
+        # FSImages
+        hashsum_file_FSImage_source = hashlib.md5()
+        hashsum_file_FSImage_target = hashlib.md5()
+
         for i in self.list_source_images:
             #print("* H Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
             newcopy = MyImage(i.get_filename(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
@@ -2045,10 +2052,13 @@ class Diatisch:
             h.list_target_images.append(newcopy)
             hashsum_target_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
             str_target_selection += str(i.selected)
-        #for i in self.dict_source_images:
-        #    h.dict_source_images[i] = self.dict_source_images[i]
-        #for i in self.dict_target_images:
-        #    h.dict_target_images[i] = self.dict_target_images[i]
+        #FSImages
+        for file in self.dict_file_FSImage_source: # we dont need copies because we dont have attributes to historize
+            h.dict_file_FSImage_source[file] = self.dict_file_FSImage_source[file]
+            hashsum_file_FSImage_source.update(file.encode(encoding = 'UTF-8', errors = 'strict'))
+        for file in self.dict_file_FSImage_target: # we dont need copies because we dont have attributes to historize
+            h.dict_file_FSImage_target[file] = self.dict_file_FSImage_target[file]
+            hashsum_file_FSImage_target.update(file.encode(encoding = 'UTF-8', errors = 'strict'))
         
         h.source_select_ctr = self.source_canvas.select_ctr
         h.target_select_ctr = self.target_canvas.select_ctr
@@ -2056,6 +2066,9 @@ class Diatisch:
         # historize hashsums
         h.str_hashsum_source_filenames = hashsum_source_filenames.hexdigest()
         h.str_hashsum_target_filenames = hashsum_target_filenames.hexdigest()
+        # FSImage
+        h.str_hashsum_file_FSImage_source = hashsum_file_FSImage_source.hexdigest()
+        h.str_hashsum_file_FSImage_target = hashsum_file_FSImage_target.hexdigest()
 
         hashsum_source_selection.update(str_source_selection.encode(encoding = 'UTF-8', errors = 'strict'))
         h.str_hashsum_source_selection = hashsum_source_selection.hexdigest()
@@ -2285,11 +2298,17 @@ class HistObj:
         self.list_target_images = []
         self.source_select_ctr = 0
         self.target_select_ctr = 0
+
         self.str_hashsum_source_filenames = ""
         self.str_hashsum_target_filenames = ""
         self.str_hashsum_source_selection = ""
         self.str_hashsum_target_selection = ""
         idx_akt = 0 # Index into Diatisch.dict
+        #FsImages
+        self.dict_file_FSImage_source = {}
+        self.dict_file_FSImage_target = {}
+        self.str_hashsum_file_FSImage_source = ""
+        self.str_hashsum_file_FSImage_target = ""
 
 
 if __name__ == "__main__":
