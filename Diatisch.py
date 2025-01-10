@@ -2025,6 +2025,22 @@ class Diatisch:
         labeltext = self.Label_process_id.cget('text')
         labeltext = re.sub(r"\d+$", f"{str(process_id)}", labeltext) # replace num by processid
         self.Label_process_id.config(text = labeltext)
+        if h.str_hashsum_file_FSImage_source != self.dict_processid_histobj[processid_predecessor].str_hashsum_file_FSImage_source: # rebuild FSImages Source
+            print("restore FSImages")
+            # if FSImage for processid to apply already exists, do nothing
+            # if not: create FSImage and inssert into dict
+            # finally delete existing FSImages which are not in processid to apply
+            for i in h.dict_file_FSImage_source:
+                if i not in self.dict_file_FSImage_source:
+                    img = h.dict_file_FSImage_source[i]
+                    thumbnail = Thumbnail(img, i, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
+                    fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
+                    self.dict_file_FSImage_source[i] = fs_image
+            for i in self.dict_file_FSImage_source:
+                if i not in h.dict_file_FSImage_source: #delete
+                    fsimage = self.dict_file_FSImage_source[i]
+                    fsimage.close_handler_external()
+                   
         
     def historize_process(self):
         h = HistObj()
