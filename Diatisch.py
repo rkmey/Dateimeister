@@ -1487,7 +1487,8 @@ class Diatisch:
     def fs_close(self, canvas_type, thumbnail, state, image):
         # this function is called if FSImage Exclude Button is pressed.
         # find out whether thumbnail belongs to source or target
-        filename = image.get_filename()
+        #filename = image.get_filename()
+        filename = "FILENAME"
         print("Diatisch.fs_close, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)) if self.debug else True
         #if state == FS.EXCLUDE:
         if 0 == 1:
@@ -2027,20 +2028,19 @@ class Diatisch:
         self.Label_process_id.config(text = labeltext)
         if h.str_hashsum_file_FSImage_source != self.dict_processid_histobj[processid_predecessor].str_hashsum_file_FSImage_source: # rebuild FSImages Source
             print("restore FSImages")
+            # delete all FSImages currently open
+            for i in self.dict_file_FSImage_source:
+                fsimage = self.dict_file_FSImage_source[i]
+                fsimage.close_handler_external()
             # if FSImage for processid to apply already exists, do nothing
             # if not: create FSImage and inssert into dict
             # finally delete existing FSImages which are not in processid to apply
             for i in h.dict_file_FSImage_source:
-                if i not in self.dict_file_FSImage_source:
-                    img = h.dict_file_FSImage_source[i]
-                    thumbnail = Thumbnail(img, i, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
-                    fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
-                    self.dict_file_FSImage_source[i] = fs_image
-            for i in self.dict_file_FSImage_source:
-                if i not in h.dict_file_FSImage_source: #delete
-                    fsimage = self.dict_file_FSImage_source[i]
-                    fsimage.close_handler_external()
-                   
+                img = h.dict_file_FSImage_source[i]
+                thumbnail = Thumbnail(img, i, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
+                fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
+                self.dict_file_FSImage_source[i] = fs_image
+                    
         
     def historize_process(self):
         h = HistObj()
