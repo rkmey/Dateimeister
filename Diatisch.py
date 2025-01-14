@@ -1163,6 +1163,7 @@ class Diatisch:
                 thumbnail = Thumbnail(img, file, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
                 self.dict_file_FSImage_source[file] = fs_image
+                self.historize_process()
 
     def canvas_focus_target(self, event):
         print("Return on target vanvas")
@@ -1187,6 +1188,7 @@ class Diatisch:
                 thumbnail = Thumbnail(img, file, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, "Target ", "Delete", "Delete", "", "", self.debug)
                 self.dict_file_FSImage_target[file] = fs_image
+                self.historize_process()
 
     def start_drag(self, event):
         # as we have a transaction of 2 steps (press / release) we have to keep the change attributes as member variables
@@ -1487,9 +1489,10 @@ class Diatisch:
     def fs_close(self, canvas_type, thumbnail, state, image):
         # this function is called if FSImage Exclude Button is pressed.
         # find out whether thumbnail belongs to source or target
-        #filename = image.get_filename()
+        filename = image.get_filename()
         filename = "FILENAME"
         print("Diatisch.fs_close, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)) if self.debug else True
+        #self.historize_process()
         #if state == FS.EXCLUDE:
         if 0 == 1:
             if messagebox.askyesnocancel("Delete", "Delete image {:s}?".format(filename)) == True:
@@ -1973,7 +1976,7 @@ class Diatisch:
 
 
     def apply_process_id(self, process_id, processid_predecessor):
-        print("apply_process_id, id to apply is: ", str(process_id), " processid was: ", str(processid_predecessor)) if self.debug else True
+        print("apply process_id, id to apply is: ", str(process_id), " processid was: ", str(processid_predecessor)) if self.debug else True
         
         h = self.dict_processid_histobj[process_id]
         Diatisch.idx_akt = h.idx_akt            
@@ -2026,7 +2029,7 @@ class Diatisch:
         labeltext = self.Label_process_id.cget('text')
         labeltext = re.sub(r"\d+$", f"{str(process_id)}", labeltext) # replace num by processid
         self.Label_process_id.config(text = labeltext)
-        if h.str_hashsum_file_FSImage_source != self.dict_processid_histobj[processid_predecessor].str_hashsum_file_FSImage_source: # rebuild FSImages Source
+        if h.str_hashsum_file_thumbnail_source != self.dict_processid_histobj[processid_predecessor].str_hashsum_file_thumbnail_source: # rebuild FSImages Source
             print("restore FSImages")
             # delete all FSImages currently open
             for i in self.dict_file_FSImage_source:
@@ -2035,8 +2038,8 @@ class Diatisch:
             # if FSImage for processid to apply already exists, do nothing
             # if not: create FSImage and inssert into dict
             # finally delete existing FSImages which are not in processid to apply
-            for i in h.dict_file_FSImage_source:
-                img = h.dict_file_FSImage_source[i]
+            for i in h.dict_file_thumbnail_source:
+                img = h.dict_file_thumbnail_source[i].image
                 thumbnail = Thumbnail(img, i, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
                 fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
                 self.dict_file_FSImage_source[i] = fs_image
@@ -2069,12 +2072,16 @@ class Diatisch:
             hashsum_target_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
             str_target_selection += str(i.selected)
         #FSImages
-        for file in self.dict_file_FSImage_source: # we dont need copies because we dont have attributes to historize
-            h.dict_file_FSImage_source[file] = self.dict_file_FSImage_source[file]
-            hashsum_file_FSImage_source.update(file.encode(encoding = 'UTF-8', errors = 'strict'))
-        for file in self.dict_file_FSImage_target: # we dont need copies because we dont have attributes to historize
-            h.dict_file_FSImage_target[file] = self.dict_file_FSImage_target[file]
-            hashsum_file_FSImage_target.update(file.encode(encoding = 'UTF-8', errors = 'strict'))
+        for i in self.dict_file_FSImage_source: # save copy
+            img = self.dict_file_FSImage_source[i].thumbnail.image
+            thumbnail = Thumbnail(img, i, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
+            h.dict_file_thumbnail_source[i] = thumbnail
+            hashsum_file_FSImage_source.update(i.encode(encoding = 'UTF-8', errors = 'strict'))
+        for i in self.dict_file_FSImage_target: # save copy
+            img = self.dict_file_FSImage_target[i].thumbnail.image
+            thumbnail = Thumbnail(img, i, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
+            h.dict_file_thumbnail_target[i] = thumbnail
+            hashsum_file_FSImage_target.update(i.encode(encoding = 'UTF-8', errors = 'strict'))
         
         h.source_select_ctr = self.source_canvas.select_ctr
         h.target_select_ctr = self.target_canvas.select_ctr
@@ -2083,8 +2090,8 @@ class Diatisch:
         h.str_hashsum_source_filenames = hashsum_source_filenames.hexdigest()
         h.str_hashsum_target_filenames = hashsum_target_filenames.hexdigest()
         # FSImage
-        h.str_hashsum_file_FSImage_source = hashsum_file_FSImage_source.hexdigest()
-        h.str_hashsum_file_FSImage_target = hashsum_file_FSImage_target.hexdigest()
+        h.str_hashsum_file_thumbnail_source = hashsum_file_FSImage_source.hexdigest()
+        h.str_hashsum_file_thumbnail_target = hashsum_file_FSImage_target.hexdigest()
 
         hashsum_source_selection.update(str_source_selection.encode(encoding = 'UTF-8', errors = 'strict'))
         h.str_hashsum_source_selection = hashsum_source_selection.hexdigest()
@@ -2321,10 +2328,10 @@ class HistObj:
         self.str_hashsum_target_selection = ""
         idx_akt = 0 # Index into Diatisch.dict
         #FsImages
-        self.dict_file_FSImage_source = {}
-        self.dict_file_FSImage_target = {}
-        self.str_hashsum_file_FSImage_source = ""
-        self.str_hashsum_file_FSImage_target = ""
+        self.dict_file_thumbnail_source = {}
+        self.dict_file_thumbnail_target = {}
+        self.str_hashsum_file_thumbnail_source = ""
+        self.str_hashsum_file_thumbnail_target = ""
 
 
 if __name__ == "__main__":
