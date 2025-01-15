@@ -632,7 +632,7 @@ class Diatisch:
 
     def recent_config_cfg(self, item):
         # get and apply configfile from recent-menu
-        print("** Menuitem selected: " + item)
+        print("** Menuitem selected: " + item) if self.debug else True
         self.config_file = item
         self.filemenu.entryconfig(CFG_SAVE_CONFIG, state=NORMAL)
         self.root.title(self.title + ' ' + self.config_file)
@@ -650,16 +650,16 @@ class Diatisch:
             messagebox.showwarning("Warning", "Listbox cfg files: nothing selected", parent = self.Frame_cfg)
         else:
             cfgfile = ",".join([self.combobox_cfg.get(i) for i in selected_indices]) # because listbox has single selection
-            print("cfg file selected is: " + cfgfile)
+            print("cfg file selected is: " + cfgfile) if self.debug else True
             self.config_file = cfgfile
             self.root.title(self.title + ' ' + self.config_file)
             # build lists of source and target files
             sourcefiles = DX.get_filenames_diatisch(cfgfile, "sourcefiles", "sourcefile")
             for i in sourcefiles:
-                print ("sourcefile: " + i)
+                print ("sourcefile: " + i) if self.debug else True
             targetfiles = DX.get_filenames_diatisch(cfgfile, "targetfiles", "targetfile")
             for i in targetfiles:
-                print ("targetfile: " + i)
+                print ("targetfile: " + i) if self.debug else True
             self.load_images(None, sourcefiles, targetfiles)
         
         
@@ -667,7 +667,7 @@ class Diatisch:
         if self.combobox_cfg.curselection():
             index = self.combobox_cfg.curselection()[0]
             sel   = self.combobox_cfg.get(index) # because listbox has single selection
-            #print("current selection is: " + sel + " INDEX: " + str(index))
+            #print("current selection is: " + sel + " INDEX: " + str(index)) if self.debug else True
             if not os.path.isfile(sel):
                 self.combobox_cfg.selection_clear(index) # dont select, MessageBox
                 messagebox.showerror("error", "Configfile: " + sel + " does not exist, choose another one")
@@ -679,11 +679,11 @@ class Diatisch:
         result = DX.get_diatisch_items_usedate(self.config_files_xml, "config_files", "configfile", "filename")
         dict_filename_usedate = {}
         for tfile in result:
-            #print("infile: " + tfile)
+            #print("infile: " + tfile) if self.debug else True
             attribute = result[tfile]
             searchattr = 'usedate'
             for attribut in attribute:
-                print("  " + attribut + " = " + attribute[attribut])
+                print("  " + attribut + " = " + attribute[attribut]) if self.debug else True
                 if attribut == searchattr:
                     dict_filename_usedate[tfile] = attribute[searchattr]
             
@@ -695,7 +695,7 @@ class Diatisch:
         for item in sorted_d:
             self.combobox_cfg.insert(END, item)
             if not os.path.isfile(item):
-                #print("INDIR: " + item + " INDEX: " + str(ii))
+                #print("INDIR: " + item + " INDEX: " + str(ii)) if self.debug else True
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
             usedate = dict_filename_usedate[item]
             labeltext = item + ' (usedate: ' + usedate + ')'
@@ -719,11 +719,11 @@ class Diatisch:
         result = DX.get_diatisch_items_usedate(self.config_files_xml, "indirs", "indir", "name")
         dict_filename_usedate = {}
         for item in result:
-            #print("infile: " + item)
+            #print("infile: " + item) if self.debug else True
             attribute = result[item]
             searchattr = 'usedate'
             for attribut in attribute:
-                print("  " + attribut + " = " + attribute[attribut])
+                print("  " + attribut + " = " + attribute[attribut]) if self.debug else True
                 if attribut == searchattr:
                     dict_filename_usedate[item] = attribute[searchattr]
             
@@ -738,7 +738,7 @@ class Diatisch:
             labeltext = item + ' (usedate: ' + usedate + ')'
             self.recentmenu_file.add_command(label=labeltext, command = lambda item=item: self.recent_config_indir(item))
             if not os.path.isdir(item):
-                #print("INDIR: " + item + " INDEX: " + str(ii))
+                #print("INDIR: " + item + " INDEX: " + str(ii)) if self.debug else True
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
             ii += 1
         for jj in indexes:
@@ -758,11 +758,11 @@ class Diatisch:
         result = DX.get_diatisch_items_usedate(self.config_files_xml, "outdirs", "outdir", "name")
         dict_filename_usedate = {}
         for item in result:
-            #print("outfile: " + item)
+            #print("outfile: " + item) if self.debug else True
             attribute = result[item]
             searchattr = 'usedate'
             for attribut in attribute:
-                print("  " + attribut + " = " + attribute[attribut])
+                print("  " + attribut + " = " + attribute[attribut]) if self.debug else True
                 if attribut == searchattr:
                     dict_filename_usedate[item] = attribute[searchattr]
             
@@ -776,7 +776,7 @@ class Diatisch:
             usedate = dict_filename_usedate[item]
             labeltext = item + ' (usedate: ' + usedate + ')'
             if not os.path.isdir(item):
-                #print("INDIR: " + item + " INDEX: " + str(ii))
+                #print("INDIR: " + item + " INDEX: " + str(ii)) if self.debug else True
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
             ii += 1
         for jj in indexes:
@@ -791,7 +791,7 @@ class Diatisch:
 
     def recent_config_indir(self, item):
         # get and apply indir from recent-menu
-        print("** Menuitem selected: " + item)
+        print("** Menuitem selected: " + item) if self.debug else True
         self.indir = item
         self.root.title(self.title + ' ' + self.indir)
         
@@ -804,7 +804,7 @@ class Diatisch:
             messagebox.showwarning("Warning", "Listbox Indir: nothing selected", parent = self.Frame_indir)
         else:
             indir = ",".join([self.combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
-            print("indir selected is: " + indir)
+            print("indir selected is: " + indir) if self.debug else True
             self.indir = indir
             self.load_images(self.indir)
         
@@ -812,7 +812,7 @@ class Diatisch:
         if self.combobox_indir.curselection():
             index = self.combobox_indir.curselection()[0]
             sel   = self.combobox_indir.get(index) # because listbox has single selection
-            #print("current selection is: " + sel + " INDEX: " + str(index))
+            #print("current selection is: " + sel + " INDEX: " + str(index)) if self.debug else True
             if not os.path.isdir(sel):
                 self.combobox_indir.selection_clear(index) # dont select, MessageBox
                 messagebox.showerror("error", "Indir: " + sel + " does not exist, choose another one", parent = self.Frame_indir)
@@ -821,7 +821,7 @@ class Diatisch:
         if self.combobox_outdir.curselection():
             index = self.combobox_outdir.curselection()[0]
             sel   = self.combobox_outdir.get(index) # because listbox has single selection
-            #print("current selection is: " + sel + " INDEX: " + str(index))
+            #print("current selection is: " + sel + " INDEX: " + str(index)) if self.debug else True
             if not os.path.isdir(sel):
                 self.combobox_outdir.selection_clear(index) # dont select, MessageBox
                 messagebox.showerror("error", "Outdir: " + sel + " does not exist, choose another one")
@@ -831,13 +831,13 @@ class Diatisch:
         if x == ".": # . is toplevel window
             if (self.width != event.width):
                 self.width = event.width
-                #print(f"The width of Toplevel is {self.width}")        
+                #print(f"The width of Toplevel is {self.width}") if self.debug else True
             if (self.height != event.height):
                 self.height = event.height
                 self.Label_source_ctr.update()
                 l_height = self.Label_source_ctr.winfo_height()
                 fontsize_use = int(.8 * min(12.0, l_height * .75))
-                print(f"The height of Toplevel is {self.height}, label height is {l_height} set fontsize to {fontsize_use}")
+                print(f"The height of Toplevel is {self.height}, label height is {l_height} set fontsize to {fontsize_use}") if self.debug else True
                 self.text_font.configure(size=fontsize_use)                
                 
 
@@ -897,7 +897,7 @@ class Diatisch:
             img = Image.open(filename)
             image_width_orig, image_height_orig = img.size
             faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
-            #print("Image " + filename + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
+            #print("Image " + filename + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor)) if self.debug else True
             display_width  = int(image_width_orig * faktor)
             display_height = int(image_height_orig * faktor)
             newsize = (display_width, display_height)
@@ -919,7 +919,7 @@ class Diatisch:
                 img = Image.open(filename)
                 image_width_orig, image_height_orig = img.size
                 faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
-                #print("Image " + filename + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor))
+                #print("Image " + filename + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor)) if self.debug else True
                 display_width  = int(image_width_orig * faktor)
                 display_height = int(image_height_orig * faktor)
                 newsize = (display_width, display_height)
@@ -968,7 +968,7 @@ class Diatisch:
         if item_chosen in d:
             do_del = False # existing item, no cleanup
         # delete item(s) from xml file only if a new one has been selected
-        print("do_del: " + str(do_del) + " item_chosen: " + item_chosen)
+        print("do_del: " + str(do_del) + " item_chosen: " + item_chosen) if self.debug else True
         if do_del: # 2 pass: in the first we delete entries with not existing item, in the second existing items (if necessary)
             for loop in range(1,3): # 3 is excluded
                 d = DX.get_diatisch_items_usedate(self.config_files_xml, parent, entry, attrname)
@@ -982,7 +982,7 @@ class Diatisch:
                     list_items.append(tdir)
                 num_to_delete = len(list_items) - int(max_items) + 1 # +1 for we will make a new item later. already deleted items are no more in get-items 
                 if loop == 1:
-                    print("loop is " + str(loop))
+                    print("loop is " + str(loop)) if self.debug else True
                     # delete only not existing items
                     if num_to_delete > 0:
                         ii = 0
@@ -1058,7 +1058,7 @@ class Diatisch:
         tsnow = datetime.now()
         tdiff = abs(tsnow - self.timestamp)
         if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
             self.timestamp = tsnow
         else:
             return
@@ -1077,7 +1077,7 @@ class Diatisch:
         tsnow = datetime.now()
         tdiff = abs(tsnow - self.timestamp)
         if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
             self.timestamp = tsnow
         else:
             return
@@ -1096,7 +1096,7 @@ class Diatisch:
         tsnow = datetime.now()
         tdiff = abs(tsnow - self.timestamp)
         if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
             self.timestamp = tsnow
         else:
             return
@@ -1112,7 +1112,7 @@ class Diatisch:
         tsnow = datetime.now()
         tdiff = abs(tsnow - self.timestamp)
         if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
             self.timestamp = tsnow
         else:
             return
@@ -1128,7 +1128,7 @@ class Diatisch:
         tsnow = datetime.now()
         tdiff = abs(tsnow - self.timestamp)
         if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
             self.timestamp = tsnow
         else:
             return
@@ -1141,15 +1141,15 @@ class Diatisch:
             self.tooltiptext_lb_outdir = text
 
     def canvas_focus_source(self, event):
-        print("Return on source vanvas")
+        print("Return on source vanvas") if self.debug else True
         if self.get_num_selected(self.list_source_images) == 1:
             self.canvas_image_source_show(event)
     def canvas_image_source_event(self):
-        #print("Context menu show")
+        #print("Context menu show") if self.debug else True
         self.canvas_image_source_show(self.event_source)
     def canvas_image_source_show(self, event):
         # placeholder for call full screen display of image
-        print("FSImage source show")
+        print("FSImage source show") if self.debug else True
         # get image
         canvas_x = self.source_canvas.canvasx(event.x)
         canvas_y = self.source_canvas.canvasy(event.y)
@@ -1158,7 +1158,7 @@ class Diatisch:
             img      = self.dict_source_images[image_id]
             file     = img.get_filename()
             if file in self.dict_file_FSImage_source: #dont display twice
-                print ("FSImage Source exists for file: " + file)
+                print ("FSImage Source exists for file: " + file) if self.debug else True
             else:
                 thumbnail = Thumbnail(img, file, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
@@ -1166,15 +1166,15 @@ class Diatisch:
                 self.historize_process()
 
     def canvas_focus_target(self, event):
-        print("Return on target vanvas")
+        print("Return on target vanvas") if self.debug else True
         if self.get_num_selected(self.list_target_images) == 1:
             self.canvas_image_target_show(event)
     def canvas_image_target_event(self):
-        #print("Context menu show")
+        #print("Context menu show") if self.debug else True
         self.canvas_image_target_show(self.event_target)
     def canvas_image_target_show(self, event):
         # placeholder for call full screen display of image
-        print("FSImage target show")
+        print("FSImage target show") if self.debug else True
         # get image
         canvas_x = self.target_canvas.canvasx(event.x)
         canvas_y = self.target_canvas.canvasy(event.y)
@@ -1183,7 +1183,7 @@ class Diatisch:
             img      = self.dict_target_images[image_id]
             file     = img.get_filename()
             if file in self.dict_file_FSImage_target: #dont display twice
-                print ("FSImage Target exists for file: " + file)
+                print ("FSImage Target exists for file: " + file) if self.debug else True
             else:
                 thumbnail = Thumbnail(img, file, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, "Target ", "Delete", "Delete", "", "", self.debug)
@@ -1197,13 +1197,13 @@ class Diatisch:
         # check where mouse is 
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
-        #print ("source_canvas: ", str(source_rect))
-        #print ("target_canvas: ", str(target_rect))
-        #print ("event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y))
-        #print ("Source canvasx: ", str(self.source_canvas.canvasx(event.x)), "canvasy: ", str(self.source_canvas.canvasy(event.y)))
+        #print ("source_canvas: ", str(source_rect)) if self.debug else True
+        #print ("target_canvas: ", str(target_rect)) if self.debug else True
+        #print ("event: ", " x_root: ", str(event.x_root), " y_root: ", str(event.y_root), " x: ", str(event.x), " y: ", str(event.y)) if self.debug else True
+        #print ("Source canvasx: ", str(self.source_canvas.canvasx(event.x)), "canvasy: ", str(self.source_canvas.canvasy(event.y))) if self.debug else True
         self.image_press = None
         if (self.check_event_in_rect(event, source_rect)): # select Image(s)
-            #print("Event in source_canvas")
+            #print("Event in source_canvas") if self.debug else True
             self.drag_started_in = "source"
             img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, source_rect, self.source_canvas, self.dict_source_images)
             if img_closest_id > 0:
@@ -1213,7 +1213,7 @@ class Diatisch:
             else: # do nothing
                 print("no image found in source canvas, action = PRESS") if self.debug else True
         elif (self.check_event_in_rect(event, target_rect)):
-            #print("Event in target_canvas")
+            #print("Event in target_canvas") if self.debug else True
             self.drag_started_in = "target"
             img_closest_id, dist_event_left, dist_event_right = self.find_closest_item(event, target_rect, self.target_canvas, self.dict_target_images)
             if img_closest_id > 0:
@@ -1236,11 +1236,11 @@ class Diatisch:
         tsnow = datetime.now()
         tdiff = abs(tsnow - self.timestamp_scroll)
         if  tdiff.microseconds > 200000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
             self.timestamp_scroll = tsnow
         else:
             return
-        print("on motion dif {:s}".format(str(tdiff)))
+        print("on motion dif {:s}".format(str(tdiff))) if self.debug else True
         self.scroll = False
         canvas = self.target_canvas
         self.canvas_to_scroll = canvas
@@ -1299,7 +1299,7 @@ class Diatisch:
         
     def do_scroll(self): # scroll
         canvas = self.canvas_to_scroll
-        print("scroll")
+        print("scroll") if self.debug else True
         if self.scroll: # set by on_motion
             x0 = int(canvas.canvasx(0))
             y0 = int(canvas.canvasy(0))
@@ -1354,7 +1354,7 @@ class Diatisch:
         else:
             selected = False
         if ctrl_pressed == False:
-            #print("unselect all: ", str(dict_images))
+            #print("unselect all: ", str(dict_images)) if self.debug else True
             c = self.unselect_all(dict_images, canvas)
             self.selection_changed = self.check_changed(self.selection_changed, c)
         print ("***** Action is: "+ str(action)+ ", Selected = "+ str(selected)+ ", actual image is: "+ str(img.get_filename())+ \
@@ -1411,7 +1411,7 @@ class Diatisch:
                         c = self.select_image(img, canvas) # select because unselect all has unselected this image
                         self.selection_changed = self.check_changed(self.selection_changed, c)
                 else:
-                    print("SnRSn")
+                    print("SnRSn") if self.debug else True
                     c = self.select_image(img, canvas)
                     self.selection_changed = self.check_changed(self.selection_changed, c)
                     self.canvas_target_rebuild_required = True # drop image requires action
@@ -1480,28 +1480,28 @@ class Diatisch:
             self.copy_single_source_image()
             if filename in self.dict_file_FSImage_source:
                 self.dict_file_FSImage_source[filename].close_handler_external()
+                self.dict_file_FSImage_source.pop(filename)
         elif canvas_type == "Target": # delete Image and close
             self.single_image_to_delete = image
             self.delete_single_target_image()
             if filename in self.dict_file_FSImage_target:
                 self.dict_file_FSImage_target[filename].close_handler_external()
+                self.dict_file_FSImage_target.pop(filename)
 
     def fs_close(self, canvas_type, thumbnail, state, image):
         # this function is called if FSImage Exclude Button is pressed.
         # find out whether thumbnail belongs to source or target
         filename = image.get_filename()
-        filename = "FILENAME"
         print("Diatisch.fs_close, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)) if self.debug else True
-        #self.historize_process()
+        self.historize_process()
         #if state == FS.EXCLUDE:
         if 0 == 1:
             if messagebox.askyesnocancel("Delete", "Delete image {:s}?".format(filename)) == True:
-                print("delete")
+                print("delete") if self.debug else True
                 self.single_image_to_delete = image
                 self.delete_single_target_image()
             else:
-                print("don't delete")
-    
+                print("don't delete") if self.debug else True
     def find_last_selected_target_image(self, list_images): # helper function for finding last selected target (as insert point for copy)
         # find last selected target image
         ii = 0
@@ -1510,20 +1510,20 @@ class Diatisch:
         for i in list_images:
             if i.is_selected():
                 filename_of_last_selected = i.get_filename()
-                print("find selected target images, is_selected: ", filename_of_last_selected)
+                print("find selected target images, is_selected: ", filename_of_last_selected) if self.debug else True
                 index = ii
             ii += 1
-        print("find selected target images, index of last selected = ", str(index))
+        print("find selected target images, index of last selected = ", str(index)) if self.debug else True
         return filename_of_last_selected
 
     def drop(self, event):
         # check if mouse is on target canvas
-        #print("Drop")
+        #print("Drop") if self.debug else True
         # finish scrolling when button released - of course onla when scrolling
         self.scroll = False
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
         source_rect = self.get_root_coordinates_for_widget(self.source_canvas)
-        #print("Target rect is: ", str(target_rect))
+        #print("Target rect is: ", str(target_rect)) if self.debug else True
         self.image_release = None
         changed = False
         if (self.check_event_in_rect(event, target_rect)): # there could be image(s) to drag
@@ -1536,7 +1536,7 @@ class Diatisch:
                 print("image found in target canvas, action = RELEASE: ", self.image_release.get_filename()) if self.debug else True
             if self.drag_started_in == "source": # drop images from source
                 #for t in self.list_target_images:
-                #    print("Before Target image: ", t.get_filename())
+                #    print("Before Target image: ", t.get_filename()) if self.debug else True
                 # fill list of dragged images by checking if selected
                 changed = self.update_target_canvas(event, self.dict_source_images, target_rect, pt.DROP_FROM_SOURCE)
             elif self.drag_started_in == "target": # move images within target
@@ -1596,11 +1596,11 @@ class Diatisch:
                         newcopy = MyImage(img.get_filename(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
                         newcopy.selected = img.selected
                         t = newcopy
-                        #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
+                        #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected())) if self.debug else True
                         list_dragged_images.append(t)
-                        print("appended to list_dragged_images: ", t.get_filename(), " selected: ", str(t.is_selected())) 
+                        print("appended to list_dragged_images: ", t.get_filename(), " selected: ", str(t.is_selected())) if self.debug else True
                     else:
-                        print("Dragged image: ", img.get_filename(), " skipped because it already exists")
+                        print("Dragged image: ", img.get_filename(), " skipped because it already exists") if self.debug else True
         elif proctype == pt.DROP_FROM_TARGET:
             for i in dict_images:
                 img = dict_images[i]
@@ -1608,10 +1608,9 @@ class Diatisch:
                     if img.get_filename() not in set_target_filenames: # skip if already exists
                         t = img
                         list_dragged_images.append(t)
-                        print("appended to list_dragged_images: ", t.get_filename(), " selected: ", str(t.is_selected())) 
+                        print("appended to list_dragged_images: ", t.get_filename(), " selected: ", str(t.is_selected())) if self.debug else True
                     else:
-                        print("Dragged image: ", img.get_filename(), " skipped because it already exists")
-
+                        print("Dragged image: ", img.get_filename(), " skipped because it already exists") if self.debug else True
         elif proctype == pt.COPY_SINGLE:
             if self.single_image_to_copy is None:
                 messagebox.showerror(str(proctype), "Internal error single image to copy is None.", parent = self.root)
@@ -1621,11 +1620,11 @@ class Diatisch:
                 newcopy = MyImage(img.get_filename(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
                 newcopy.selected = img.selected
                 t = newcopy
-                #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected()))
+                #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected())) if self.debug else True
                 list_dragged_images.append(t)
-                print("appended to list_dragged_images: ", t.get_filename(), " selected: ", str(t.is_selected())) 
+                print("appended to list_dragged_images: ", t.get_filename(), " selected: ", str(t.is_selected())) if self.debug else True
             else:
-                print("Dragged image: ", img.get_filename(), " skipped because it already exists")
+                print("Dragged image: ", img.get_filename(), " skipped because it already exists") if self.debug else True
             self.single_image_to_copy = None # reset because update_target_canvas checks if None
 
         if list_dragged_images:# true when not empty
@@ -1644,7 +1643,7 @@ class Diatisch:
                     print("closest Target Image has ID: ", img_closest_id, " Filename: " + file_at_dragposition, \
                     " dist left: ", str(dist_event_left), " dist right: ", str(dist_event_right), " dragposition: ", str(dragpos))
                 else: # no closest image, append dragged images to existing list
-                    print("No closest Target")
+                    print("No closest Target") if self.debug else True
                     no_target_image = True
                     dragpos = dragposition.BEHIND
             else: # no event, call is from copy_selected_source_images(Button copy selected) or ...HEAD
@@ -1657,7 +1656,7 @@ class Diatisch:
             for i in self.list_target_images:
                 print("Before Target Image: ", i.get_filename(), " In list_dragged_images: ", str(i in list_dragged_images), " selected: ", str(i.is_selected())) if self.debug else True
             list_dragged_images.sort(key=lambda a: int(a.selected))
-            #print("list dragged images: " + str(list_dragged_images))
+            #print("list dragged images: " + str(list_dragged_images)) if self.debug else True
             # we need a SET of dragged filenames
             set_dragged_filenames.clear()
             for i in list_dragged_images:
@@ -1715,7 +1714,7 @@ class Diatisch:
                         list_temp.append(i)
                 
                 self.list_target_images = list_temp
-            #print("list_target_images: ", str(self.list_target_images))
+            #print("list_target_images: ", str(self.list_target_images)) if self.debug else True
             # rebuild target canvas, refresh dicts
             for i in self.list_target_images:
                 new_list_target_filenames.append(i.get_filename()) 
@@ -1723,7 +1722,7 @@ class Diatisch:
             if changed:
                 self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
                 #for t in self.dict_target_images:
-                #    print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename())
+                #    print("dict_target_images id: ", t, " Filename: ", self.dict_target_images[t].get_filename()) if self.debug else True
                 # now select all dragged images
                 ii = 0
                 for i in self.list_target_images:
@@ -1732,14 +1731,14 @@ class Diatisch:
                     print("After Target Image: ", thisfile, " In list_dragged_images: ", str(i in list_dragged_images), " sected: ", str(i.is_selected())) if self.debug else True
                     if thisfile in set_dragged_filenames: # select
                         self.select_image(i, self.target_canvas)
-                        print("thisfile: ", thisfile, " sected: ", str(i.is_selected()), " select_ctr: ", str(self.target_canvas.select_ctr))
+                        print("thisfile: ", thisfile, " sected: ", str(i.is_selected()), " select_ctr: ", str(self.target_canvas.select_ctr)) if self.debug else True
                     else:
                         self.unselect_image(i, self.target_canvas)
                     ii += 1
             else:
                 print ("list target images has not changed") if self.debug else True
-                #print("list old: ", str(old_list_target_filenames))
-                #print("list new: ", str(new_list_target_filenames))
+                #print("list old: ", str(old_list_target_filenames)) if self.debug else True
+                #print("list new: ", str(new_list_target_filenames)) if self.debug else True
         self.file_at_dragposition = ""
         if len(self.list_target_images) > 0: # anz target images > 0    
             self.button_exec.config(state = tk.NORMAL)        
@@ -1787,7 +1786,7 @@ class Diatisch:
         id = 0
         event_x_pos_in_canvas = event.x_root - rect_canvas[0]
         event_y_pos_in_canvas = event.y_root - rect_canvas[1]
-        #print ("event_x_pos_in_canvas is: ", str(event_x_pos_in_canvas), '/', str(event_y_pos_in_canvas))
+        #print ("event_x_pos_in_canvas is: ", str(event_x_pos_in_canvas), '/', str(event_y_pos_in_canvas)) if self.debug else True
         if canvas.bbox("all") is not None:
             canvas_width  = canvas.bbox("all")[2] - canvas.bbox("all")[0]
             canvas_height = canvas.bbox("all")[3] - canvas.bbox("all")[1]
@@ -1802,13 +1801,13 @@ class Diatisch:
         dist_event_left = 0
         dist_event_right = 0
         for id in dict_images:
-            #print("Dict Id: ", id, " BBOX: ", str(canvas.bbox(id)))
+            #print("Dict Id: ", id, " BBOX: ", str(canvas.bbox(id))) if self.debug else True
             pos_border_left   = canvas.bbox(id)[0] - current_scroll_x
             pos_border_right  = canvas.bbox(id)[2] - current_scroll_x
             pos_border_top    = canvas.bbox(id)[1] - current_scroll_y
             pos_border_bottom = canvas.bbox(id)[3] - current_scroll_y
             if pos_border_left <= event_x_pos_in_canvas <= pos_border_right and pos_border_top <= event_y_pos_in_canvas <= pos_border_bottom:
-                #print("Hit!")
+                #print("Hit!") if self.debug else True
                 hit = True
                 # distance to left / right border of image:
                 dist_event_left  = event_x_pos_in_canvas - pos_border_left
@@ -1820,20 +1819,20 @@ class Diatisch:
         return id, dist_event_left, dist_event_right
 
     def select_all_source_images(self):
-        print("select_all_source_images Pressed")
+        print("select_all_source_images Pressed") if self.debug else True
         changed = self.select_all(self.list_source_images, self.source_canvas)
         if changed:
             self.historize_process()
 
     def delete_selected(self):
-        #print("Delete Selected Pressed")
+        #print("Delete Selected Pressed") if self.debug else True
         self.delete_selected_target_images()
 
     def unselect_all(self, dict_images, canvas):
         changed = False
         for i in dict_images:
             image = dict_images[i]
-            #print("Unselect: ", str(image.get_filename()))
+            #print("Unselect: ", str(image.get_filename())) if self.debug else True
             c = image.unselect(canvas)
             changed = self.check_changed(changed, c)
         #reset counter
@@ -1901,7 +1900,7 @@ class Diatisch:
         dict_images = {}
         for i in list_obj:
             filename = i.get_filename()
-            #print("try to show image: " , filename)
+            #print("try to show image: " , filename) if self.debug else True
             photo = i.get_image()
             img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
             display_width, display_height = photo.width(), photo.height()
@@ -1915,7 +1914,7 @@ class Diatisch:
             line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = Diatisch.line_color, width = Diatisch.line_width, tags=i.get_tag())
             line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = Diatisch.line_color, width = Diatisch.line_width, tags=i.get_tag())
             dict_images[img_id] = i
-            #print("   Insert into dict key: ", str(img_id), " filename: " , obj.get_filename())
+            #print("   Insert into dict key: ", str(img_id), " filename: " , obj.get_filename()) if self.debug else True
             ctr += 1
             xpos += display_width
             col += 1
@@ -1928,7 +1927,7 @@ class Diatisch:
         canvas.configure(scrollregion=canvas.bbox("all"))
         #for t in dict_images:
         #    f = dict_images[t].get_filename() 
-        #    print("    dict_images id: ", str(t), " filename: " , f)
+        #    print("    dict_images id: ", str(t), " filename: " , f) if self.debug else True
         labeltext = label_ctr.cget('text')
         labeltext = re.sub(r"\d+$", f"{str(ctr)}", labeltext)
         label_ctr.config(text = labeltext)
@@ -1938,7 +1937,7 @@ class Diatisch:
 
     # Undo /Redo functions
     def process_undo(self, event):
-        print("ctrl_z pressed.")
+        print("ctrl_z pressed.") if self.debug else True
         rc, p_now, p_before = self.UR.process_undo()
         if not rc: # undo was not possible
             messagebox.showinfo("UNDO", "no further processes which can be undone", parent = self.root)
@@ -1947,7 +1946,7 @@ class Diatisch:
             self.endis_buttons()
 
     def process_redo(self, event):
-        print("ctrl_y pressed.")
+        print("ctrl_y pressed.") if self.debug else True
         rc, p_now, p_before = self.UR.process_redo()
         if not rc:
             messagebox.showinfo("REDO", "no further processes which can be redone", parent = self.root)
@@ -1956,11 +1955,11 @@ class Diatisch:
             self.endis_buttons()
 
     def button_undo_h(self, event = None):
-        print("Button Undo pressed")
+        print("Button Undo pressed") if self.debug else True
         self.process_undo(event)
         
     def button_redo_h(self, event = None):
-        print("Button Redo pressed")
+        print("Button Redo pressed") if self.debug else True
         self.process_redo(event)
 
     def endis_buttons(self): # disable / enable buttons depending on processids
@@ -2010,7 +2009,7 @@ class Diatisch:
             # list_obj and self.list_source_images have same structure, so we can use an index to access the elements of self.list_source_images
             ii = 0
             for i in list_obj_source:
-                # print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
+                # print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag) if self.debug else True
                 if i.is_selected():
                     self.list_source_images[ii].select(self.source_canvas, i.get_ctr())
                 else:
@@ -2020,7 +2019,7 @@ class Diatisch:
             # list_obj and self.list_target_images have same structure, so we can use an index to access the elements of self.list_source_images
             ii = 0
             for i in list_obj_target:
-                #print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
+                #print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag) if self.debug else True
                 if i.is_selected():
                     self.list_target_images[ii].select(self.target_canvas, i.get_ctr())
                 else:
@@ -2030,11 +2029,13 @@ class Diatisch:
         labeltext = re.sub(r"\d+$", f"{str(process_id)}", labeltext) # replace num by processid
         self.Label_process_id.config(text = labeltext)
         if h.str_hashsum_file_thumbnail_source != self.dict_processid_histobj[processid_predecessor].str_hashsum_file_thumbnail_source: # rebuild FSImages Source
-            print("restore FSImages")
+            print("restore FSImages") if self.debug else True
             # delete all FSImages currently open
             for i in self.dict_file_FSImage_source:
                 fsimage = self.dict_file_FSImage_source[i]
+                fsimage.thumbnail.fs_close = None # otherwise fs_close would historize which close for each FSImage, which is only necessary if user closes the window 
                 fsimage.close_handler_external()
+            self.dict_file_FSImage_source = {}
             # if FSImage for processid to apply already exists, do nothing
             # if not: create FSImage and inssert into dict
             # finally delete existing FSImages which are not in processid to apply
@@ -2059,7 +2060,7 @@ class Diatisch:
         hashsum_file_FSImage_target = hashlib.md5()
 
         for i in self.list_source_images:
-            #print("* H Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag)
+            #print("* H Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag) if self.debug else True
             newcopy = MyImage(i.get_filename(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_source_images.append(newcopy)
@@ -2097,8 +2098,8 @@ class Diatisch:
         h.str_hashsum_source_selection = hashsum_source_selection.hexdigest()
         hashsum_target_selection.update(str_target_selection.encode(encoding = 'UTF-8', errors = 'strict'))
         h.str_hashsum_target_selection = hashsum_target_selection.hexdigest()
-        #print("Hashsum source Filenames is: ", h.str_hashsum_source_filenames, " Hashsum target Filenames is: ", h.str_hashsum_target_filenames)
-        #print("Hashsum source Selection is: ", h.str_hashsum_source_selection, "(", str_source_selection, ")", " Hashsum target Selection is: ", h.str_hashsum_target_selection, "(", str_target_selection, ")")
+        #print("Hashsum source Filenames is: ", h.str_hashsum_source_filenames, " Hashsum target Filenames is: ", h.str_hashsum_target_filenames) if self.debug else True
+        #print("Hashsum source Selection is: ", h.str_hashsum_source_selection, "(", str_source_selection, ")", " Hashsum target Selection is: ", h.str_hashsum_target_selection, "(", str_target_selection, ")") if self.debug else True
         h.idx_akt = Diatisch.idx_akt
         
         self.UR.historize_process()
@@ -2112,18 +2113,17 @@ class Diatisch:
 
 
     def close_handler(self): #calles when window is closing
-        print("Diatisch: call callback when window is closed")
+        print("Diatisch: call callback when window is closed") if self.debug else True
         if self.callback:
             for i in self.list_target_images:
-                #print(i)
+                #print(i) if self.debug else True
                 self.list_result.append(i.get_filename())
             self.callback()
         self.close_child_windows()
         self.root.destroy()
 
     def donothing(self):
-        print("Menuitem not yet implemented")
-    
+        print("Menuitem not yet implemented") if self.debug else True
     def open_config(self):
         # get config_files for source / target images
         
@@ -2237,11 +2237,11 @@ class Diatisch:
         
     
     def donothing(self):
-        print("Menuitem not yet implemented")
-    
+        print("Menuitem not yet implemented") if self.debug else True
+
     def apply_config(self):
-        print("Menuitem not yet implemented")
-        
+        print("Menuitem not yet implemented") if self.debug else True
+
     def endis_menu_items(self):
         self.configmenu.entryconfig(CFG_NEW,               state=DISABLED)
         self.configmenu.entryconfig(CFG_OPEN_CONFIG,       state=NORMAL)
@@ -2265,7 +2265,7 @@ class Diatisch:
             messagebox.showwarning("Warning", "Listbox Outdir: nothing selected", parent = self.Frame_outdir)
         else:
             outdir = ",".join([self.combobox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
-            print("outdir selected is: " + outdir)
+            print("outdir selected is: " + outdir) if self.debug else True
             self.outdir = outdir
 
             self.write_cmdfile(self.outdir)
@@ -2300,7 +2300,7 @@ class Diatisch:
                 elif self.platform == "UNIX":
                     sourcefile = re.sub(r'\\', '/', sourcefile) # replace \ by /
                     targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
-                print ("Sourcefile: {:s}, Targetfile: {:s}".format(sourcefile, targetfile))
+                print ("Sourcefile: {:s}, Targetfile: {:s}".format(sourcefile, targetfile)) if self.debug else True
                 comment = ""
                 str_ret = template
                 str_ret = str_ret.replace('<source>', sourcefile)
