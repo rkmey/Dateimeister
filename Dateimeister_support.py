@@ -782,7 +782,7 @@ class MyCameraTreeview:
         self.entry_subdir.config(state = DISABLED)                  
 
         # Undo /Redo control
-        self.UR = UR.Undo_Redo_Camera()
+        self.UR = UR.Undo_Redo_Camera(self.main.debug)
         self.dict_processid_xmlfile = {}
         # historize initial state
         self.historize_process()
@@ -1389,7 +1389,7 @@ class Dateimeister_support:
             self .debug = False
 
         # Undo /Redo control
-        self.UR = UR.Undo_Redo_Dateimeister()
+        self.UR = UR.Undo_Redo_Dateimeister(self.debug)
         # Undo /Redo control end
 
         self.win_messages = None

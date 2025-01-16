@@ -34,7 +34,7 @@ class Undo_Redo:
             self.stack_processids.append(processid_undone)
             self.list_processids.pop() # removes last element
             self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" UNDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids) + " apply processid: " + str(self.processid_akt))
+            print (" UNDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids) + " apply processid: " + str(self.processid_akt)) if self.debug else True
             rc = True
         return rc, self.processid_akt, processid_undone
 
@@ -53,7 +53,7 @@ class Undo_Redo:
             self.list_processids.append(processid_redone)
             self.stack_processids.pop() # removes last element
             self.processid_akt = self.list_processids[-1] # "new" last element
-            print (" REDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids) + " apply processid: " + str(self.processid_akt))
+            print (" REDO List Processids: " + str(self.list_processids) + " REDO Stack Processids: " + str(self.stack_processids) + " apply processid: " + str(self.processid_akt)) if self.debug else True
             rc = True
         return rc, self.processid_akt, processid_predecessor
 
@@ -69,25 +69,37 @@ class Undo_Redo:
         return rc_undo, rc_redo
         
 class Undo_Redo_Diatisch(Undo_Redo):
+    def __init__(self, debug):
+        super().__init__()
+        self.debug = debug
+        
     def historize_process(self):
         self.processid_high += self.processid_incr
         self.processid_akt = self.processid_high
         self.list_processids.append(self.processid_akt)
-        print (" Historize Diatisch: Processid_akt is now: " + str(self.processid_akt))
+        print (" Historize Diatisch: Processid_akt is now: " + str(self.processid_akt)) if self.debug else True
         
 class Undo_Redo_Dateimeister(Undo_Redo):
+    def __init__(self, debug):
+        super().__init__()
+        self.debug = debug
+        
     def historize_process(self):
         self.processid_high += self.processid_incr
         self.processid_akt = self.processid_high
         self.list_processids.append(self.processid_akt)
-        print (" Historize Dateimeister: Processid_akt is now: " + str(self.processid_akt))
+        print (" Historize Dateimeister: Processid_akt is now: " + str(self.processid_akt)) if self.debug else True
     
 class Undo_Redo_Camera(Undo_Redo):
+    def __init__(self, debug):
+        super().__init__()
+        self.debug = debug
+        
     def historize_process(self):
         self.processid_high += self.processid_incr
         self.processid_akt = self.processid_high
         self.list_processids.append(self.processid_akt)
-        print (" Historize Camera: Processid_akt is now: " + str(self.processid_akt))
+        print (" Historize Camera: Processid_akt is now: " + str(self.processid_akt)) if self.debug else True
 
 
 

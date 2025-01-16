@@ -470,7 +470,7 @@ class Diatisch:
             self.callback = callback
         
         # Undo /Redo control
-        self.UR = UR.Undo_Redo_Diatisch()
+        self.UR = UR.Undo_Redo_Diatisch(self.debug)
         self.dict_processid_histobj = {} # key processid to be applied value: histobj
         # historize initial state
         self.historize_process()
@@ -2033,17 +2033,29 @@ class Diatisch:
             # delete all FSImages currently open
             for i in self.dict_file_FSImage_source:
                 fsimage = self.dict_file_FSImage_source[i]
-                fsimage.thumbnail.fs_close = None # otherwise fs_close would historize which close for each FSImage, which is only necessary if user closes the window 
+                fsimage.thumbnail.fs_close = None # otherwise fs_close would historize close for each FSImage, which is only necessary if user closes the window 
                 fsimage.close_handler_external()
             self.dict_file_FSImage_source = {}
-            # if FSImage for processid to apply already exists, do nothing
-            # if not: create FSImage and inssert into dict
-            # finally delete existing FSImages which are not in processid to apply
+            # create FSImage and insert into dict
             for i in h.dict_file_thumbnail_source:
                 img = h.dict_file_thumbnail_source[i].image
                 thumbnail = Thumbnail(img, i, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
                 fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
                 self.dict_file_FSImage_source[i] = fs_image
+        if h.str_hashsum_file_thumbnail_target != self.dict_processid_histobj[processid_predecessor].str_hashsum_file_thumbnail_target: # rebuild FSImages target
+            print("restore FSImages") if self.debug else True
+            # delete all FSImages currently open
+            for i in self.dict_file_FSImage_target:
+                fsimage = self.dict_file_FSImage_target[i]
+                fsimage.thumbnail.fs_close = None # otherwise fs_close would historize close for each FSImage, which is only necessary if user closes the window 
+                fsimage.close_handler_external()
+            self.dict_file_FSImage_target = {}
+            # create FSImage and insert into dict
+            for i in h.dict_file_thumbnail_target:
+                img = h.dict_file_thumbnail_target[i].image
+                thumbnail = Thumbnail(img, i, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
+                fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, "Target ", "Delete", "Delete", "", "", self.debug)
+                self.dict_file_FSImage_target[i] = fs_image
                     
         
     def historize_process(self):
