@@ -1747,17 +1747,22 @@ class Diatisch:
     def delete_target_canvas(self, dict_images, proctype):
         # delete 1 single or all selected Images from target_canvas
         self.list_target_images = [] 
+        list_FSImages_to_delete = []
         for i in dict_images:
             img = dict_images[i]
             if proctype == pt.DELETE_SELECTED: # we insert all images which are not selected (because we wish to delete all which are selected)
                 if not img.is_selected():
                     self.list_target_images.append(img)
+                else: # we keep track of images to delete, for those we will later FSImage (if existing)
+                    list_FSImages_to_delete.append(img.get_filename())
             elif proctype == pt.DELETE_SINGLE: # we insert all images which are not image_to_delete (because we wish to delete all which are selected)
                 if self.single_image_to_delete is None:
                     messagebox.showerror(str(proctype), "Internal error single image to delete is None.", parent = self.root)
                     return
                 if img.get_filename() != self.single_image_to_delete.get_filename():
                     self.list_target_images.append(img)
+                else: # we keep track of images to delete, for those we will later FSImage (if existing)
+                    list_FSImages_to_delete.append(img.get_filename())
         # rebuild target canvas, refresh dicts
         self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
         # now select / unselect, remember: display image objects always shows selecttion frame because it is drawn last!
@@ -1767,6 +1772,17 @@ class Diatisch:
                 self.select_image(i, self.target_canvas)
             else:
                 self.unselect_image(i, self.target_canvas)
+                
+        # now delete FSImages if existing
+        print(str(self.dict_file_FSImage_target))
+        print(str(list_FSImages_to_delete))
+        for filename in list_FSImages_to_delete:
+            if filename in self.dict_file_FSImage_target:
+                self.dict_file_FSImage_target[filename].thumbnail.fs_close = None # otherwise fs_close would historize close for each FSImage, which is only necessary if user closes the window 
+                self.dict_file_FSImage_target[filename].close_handler_external()
+                self.dict_file_FSImage_target.pop(filename)
+        
+        # reset to none
         self.single_image_to_delete = None
 
     def lists_equal(self, l1, l2):
