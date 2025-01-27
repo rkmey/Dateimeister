@@ -73,33 +73,45 @@ class Undo_Redo_Diatisch(Undo_Redo):
         super().__init__()
         self.debug = debug
         
-    def historize_process(self):
+    def historize_process(self, text = None):
         self.processid_high += self.processid_incr
         self.processid_akt = self.processid_high
         self.list_processids.append(self.processid_akt)
-        print (" Historize Diatisch: Processid_akt is now: " + str(self.processid_akt)) if self.debug else True
+        if text:
+            t = text
+        else:
+            t = ""
+        print (" Historize Diatisch: Processid_akt is now: {:d} text: {:s}".format(self.processid_akt, t)) if self.debug else True
         
 class Undo_Redo_Dateimeister(Undo_Redo):
     def __init__(self, debug):
         super().__init__()
         self.debug = debug
         
-    def historize_process(self):
+    def historize_process(self, text = None):
         self.processid_high += self.processid_incr
         self.processid_akt = self.processid_high
         self.list_processids.append(self.processid_akt)
-        print (" Historize Dateimeister: Processid_akt is now: " + str(self.processid_akt)) if self.debug else True
+        if text:
+            t = text
+        else:
+            t = ""
+        print (" Historize Dateimeister: Processid_akt is now: {:d} text: {:s}".format(self.processid_akt, t)) if self.debug else True
     
 class Undo_Redo_Camera(Undo_Redo):
     def __init__(self, debug):
         super().__init__()
         self.debug = debug
         
-    def historize_process(self):
+    def historize_process(self, text = None):
         self.processid_high += self.processid_incr
         self.processid_akt = self.processid_high
         self.list_processids.append(self.processid_akt)
-        print (" Historize Camera: Processid_akt is now: " + str(self.processid_akt)) if self.debug else True
+        if text:
+            t = text
+        else:
+            t = ""
+        print (" Historize Camera: Processid_akt is now: {:d} text: {:s}".format(self.processid_akt, t)) if self.debug else True
 
 
 

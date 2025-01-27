@@ -473,7 +473,7 @@ class Diatisch:
         self.UR = UR.Undo_Redo_Diatisch(self.debug)
         self.dict_processid_histobj = {} # key processid to be applied value: histobj
         # historize initial state
-        self.historize_process()
+        self.historize_process("initial")
         # Undo /Redo control end
 
         self.event_source = None
@@ -939,7 +939,7 @@ class Diatisch:
         print("LOAD ", directory)
         if directory: 
             self.update_combobox_indir()
-        self.historize_process()
+        self.historize_process("load directory {:s}".format(directory))
         self.root.lift()
 
     def close_indir(self):
@@ -956,7 +956,7 @@ class Diatisch:
         Diatisch.idx_akt = Diatisch.idx_high
         Diatisch.dict_filename_images[Diatisch.idx_akt] = {}
         #self.UR.reset()
-        self.historize_process()
+        self.historize_process("close directory {:s}".format(self.indir))
 
     def new_item_in_xml(self, max_items, item_chosen, ts, parent, entry, attrname):
         # if item_chosen does not exist so that a new item has to be created:
@@ -2074,7 +2074,7 @@ class Diatisch:
                 self.dict_file_FSImage_target[i] = fs_image
                     
         
-    def historize_process(self):
+    def historize_process(self, text = None):
         h = HistObj()
         # for quick compare if lists of two historized states is equal we need the checksums
         hashsum_source_filenames = hashlib.md5()
@@ -2130,12 +2130,15 @@ class Diatisch:
         #print("Hashsum source Selection is: ", h.str_hashsum_source_selection, "(", str_source_selection, ")", " Hashsum target Selection is: ", h.str_hashsum_target_selection, "(", str_target_selection, ")") if self.debug else True
         h.idx_akt = Diatisch.idx_akt
         
-        self.UR.historize_process()
+        self.UR.historize_process(text)
         self.dict_processid_histobj[self.UR.get_processid_akt()] = h
         self.endis_buttons()
         labeltext = self.Label_process_id.cget('text')
         labeltext = re.sub(r"\d+$", f"{str(self.UR.get_processid_akt())}", labeltext) # replace num by processid
         self.Label_process_id.config(text = labeltext)
+        
+        if text:
+            h.text = text
 
     # Ende undo /redo-Funktionen
 
@@ -2360,6 +2363,8 @@ class HistObj:
         self.dict_file_thumbnail_target = {}
         self.str_hashsum_file_thumbnail_source = ""
         self.str_hashsum_file_thumbnail_target = ""
+        
+        self.text = ""
 
 
 if __name__ == "__main__":
