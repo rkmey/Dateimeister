@@ -1163,7 +1163,7 @@ class Diatisch:
                 thumbnail = Thumbnail(img, file, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
                 self.dict_file_FSImage_source[file] = fs_image
-                self.historize_process()
+                self.historize_process("show source FSImage {:s}".format(file))
 
     def canvas_focus_target(self, event):
         print("Return on target vanvas") if self.debug else True
@@ -1188,7 +1188,7 @@ class Diatisch:
                 thumbnail = Thumbnail(img, file, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, "Target ", "Delete", "Delete", "", "", self.debug)
                 self.dict_file_FSImage_target[file] = fs_image
-                self.historize_process()
+                self.historize_process("show target FSImage {:s}".format(file))
 
     def start_drag(self, event):
         # as we have a transaction of 2 steps (press / release) we have to keep the change attributes as member variables
