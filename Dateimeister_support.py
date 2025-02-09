@@ -782,7 +782,7 @@ class MyCameraTreeview:
         self.entry_subdir.config(state = DISABLED)                  
 
         # Undo /Redo control
-        self.UR = UR.Undo_Redo_Camera(self.main.debug)
+        self.UR = UR.Undo_Redo_Camera(self.main.debug_p)
         self.dict_processid_xmlfile = {}
         # historize initial state
         self.historize_process()
@@ -1383,13 +1383,21 @@ class Dateimeister_support:
         self.context_menu = None
         self.timestamp = datetime.now()
         self.use_camera_prefix = True
-        if debug == 'Y' or debug == 'J':
-            self.debug = True
+        if debug == 'Y' or debug == 'y':
+            self.debug   = True # debug all
+            self.debug_p = True # debug process history
+        elif debug == 'N' or debug == 'n':
+            self.debug   = False # no debug all
+            self.debug_p = False # no debug process history
+        elif debug == 'P' or debug == 'p':
+            self.debug   = False # no debug all
+            self.debug_p = True  # debug process history
         else:
-            self .debug = False
+            print("Debug parameter {:s} not allowed, only j, n or p".format(debug))
+            exit(-1)
 
         # Undo /Redo control
-        self.UR = UR.Undo_Redo_Dateimeister(self.debug)
+        self.UR = UR.Undo_Redo_Dateimeister(self.debug_p)
         # Undo /Redo control end
 
         self.win_messages = None

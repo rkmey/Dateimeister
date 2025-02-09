@@ -184,10 +184,18 @@ class Diatisch:
         self.xpos = 0
         self.ypos = 0
         
-        if debug == 'Y' or debug == 'J':
-            self.debug = True
+        if debug == 'Y' or debug == 'y':
+            self.debug   = True # debug all
+            self.debug_p = True # debug process history
+        elif debug == 'N' or debug == 'n':
+            self.debug   = False # no debug all
+            self.debug_p = False # no debug process history
+        elif debug == 'P' or debug == 'p':
+            self.debug   = False # no debug all
+            self.debug_p = True  # debug process history
         else:
-            self .debug = False
+            print("Debug parameter {:s} not allowed, only j, n or p".format(debug))
+            exit(-1)
 
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.width  = 0
@@ -470,7 +478,7 @@ class Diatisch:
             self.callback = callback
         
         # Undo /Redo control
-        self.UR = UR.Undo_Redo_Diatisch(self.debug)
+        self.UR = UR.Undo_Redo_Diatisch(self.debug_p)
         self.dict_processid_histobj = {} # key processid to be applied value: histobj
         # historize initial state
         self.historize_process("initial")
@@ -1991,7 +1999,7 @@ class Diatisch:
 
 
     def apply_process_id(self, process_id, processid_predecessor):
-        print("apply process_id, id to apply is: ", str(process_id), " processid was: ", str(processid_predecessor)) if self.debug else True
+        print("apply process_id, id to apply is: ", str(process_id), " processid was: ", str(processid_predecessor)) if self.debug_p else True
         
         h = self.dict_processid_histobj[process_id]
         Diatisch.idx_akt = h.idx_akt            
