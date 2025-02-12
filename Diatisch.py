@@ -1440,9 +1440,14 @@ class Diatisch:
         self.drag_started_in = "source" # must be set for the following functions
         self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
+        # save filename as update will reset them to None
+        if self.file_at_dragposition:
+            targetfile = self.file_at_dragposition
+        else:
+            targetfile = "no target selected"
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED)
         if changed:
-            self.historize_process()        
+            self.historize_process("copy selected source images beside {:s}".format(targetfile))        
     def copy_selected_source_images_head(self): # copy selected images from source to head of target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
@@ -1452,7 +1457,7 @@ class Diatisch:
         target_rect = []
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED_HEAD)
         if changed or c: # if selection or canvas changed
-            self.historize_process()        
+            self.historize_process("copy selected source images HEAD")        
     def copy_selected_source_images_tail(self): # copy selected images from source to tail of target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
@@ -1462,15 +1467,25 @@ class Diatisch:
         target_rect = []
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED_TAIL)
         if changed or c: # if selection or canvas changed
-            self.historize_process()        
+            self.historize_process("copy selected source images TAIL")        
     def copy_single_source_image(self): # copy image under context menuitem select... from source to target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
         self.file_at_dragposition = self.find_last_selected_target_image(self.list_target_images)
         target_rect = self.get_root_coordinates_for_widget(self.target_canvas)
+        # save filenames as update will reset them to None
+        if self.single_image_to_copy:
+            sourcefile = self.single_image_to_copy.get_filename()
+        else:
+            sourcefile = "no source selected"
+        if self.file_at_dragposition:
+            targetfile = self.file_at_dragposition
+        else:
+            targetfile = "no target selected"
+        #print("sourcefile: " + sourcefile + " targetfile: " + targetfile)
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SINGLE)
         if changed:
-            self.historize_process()        
+            self.historize_process("copy selected source image {:s} beside {:s}".format(sourcefile, targetfile))        
     def delete_selected_target_images(self): # delete selected images from target
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SELECTED)
         self.historize_process()        
