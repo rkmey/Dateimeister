@@ -1447,7 +1447,7 @@ class Diatisch:
             targetfile = "no target selected"
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SELECTED)
         if changed:
-            self.historize_process("copy selected source images beside {:s}".format(targetfile))        
+            self.historize_process("copy selected source images next to {:s}".format(targetfile))        
     def copy_selected_source_images_head(self): # copy selected images from source to head of target
         # find last selected target image
         self.drag_started_in = "source" # must be set for the following functions
@@ -1485,7 +1485,7 @@ class Diatisch:
         #print("sourcefile: " + sourcefile + " targetfile: " + targetfile)
         changed = self.update_target_canvas(None, self.dict_source_images, target_rect, pt.COPY_SINGLE)
         if changed:
-            self.historize_process("copy selected source image {:s} beside {:s}".format(sourcefile, targetfile))        
+            self.historize_process("copy selected source image {:s} next to {:s}".format(sourcefile, targetfile))        
     def delete_selected_target_images(self): # delete selected images from target
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SELECTED)
         self.historize_process()        
@@ -1606,7 +1606,7 @@ class Diatisch:
         # may be in the future we will allow this but we have to rename them because Diatisch relies on uniqueness of filenames
         set_target_filenames = set() # create an empty set
         set_target_filenames.clear()
-        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED or proctype == pt.COPY_SELECTED_HEAD or proctype == pt.COPY_SELECTED_TAIL:
+        if proctype == pt.DROP_FROM_SOURCE or proctype == pt.COPY_SELECTED or proctype == pt.COPY_SELECTED_HEAD or proctype == pt.COPY_SELECTED_TAIL or proctype == pt.COPY_SINGLE:
             for i in self.list_target_images:
                 set_target_filenames.add(i.get_filename())
 
