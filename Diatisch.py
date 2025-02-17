@@ -1488,10 +1488,10 @@ class Diatisch:
             self.historize_process("copy selected source image {:s} next to {:s}".format(sourcefile, targetfile))        
     def delete_selected_target_images(self): # delete selected images from target
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SELECTED)
-        self.historize_process()        
+        self.historize_process("delete selected target images")        
     def delete_single_target_image(self): # delete image under context menuitem delete... from target
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SINGLE)
-        self.historize_process()        
+        self.historize_process("delete target image {:s}".format(self.single_image_to_delete.get_filename()))        
 
     def fs_button(self, canvas_type, thumbnail, state, image):
         # this function is called if FSImage Exclude Button is pressed.
@@ -1797,8 +1797,8 @@ class Diatisch:
                 self.unselect_image(i, self.target_canvas)
                 
         # now delete FSImages if existing
-        print(str(self.dict_file_FSImage_target))
-        print(str(list_FSImages_to_delete))
+        print(str(self.dict_file_FSImage_target)) if self.debug else True
+        print(str(list_FSImages_to_delete)) if self.debug else True
         for filename in list_FSImages_to_delete:
             if filename in self.dict_file_FSImage_target:
                 self.dict_file_FSImage_target[filename].thumbnail.fs_close = None # otherwise fs_close would historize close for each FSImage, which is only necessary if user closes the window 
