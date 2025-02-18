@@ -1490,8 +1490,9 @@ class Diatisch:
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SELECTED)
         self.historize_process("delete selected target images")        
     def delete_single_target_image(self): # delete image under context menuitem delete... from target
+        temp_filename = self.single_image_to_delete.get_filename() # because  the following delete sets filename to None
         self.delete_target_canvas(self.dict_target_images, pt.DELETE_SINGLE)
-        self.historize_process("delete target image {:s}".format(self.single_image_to_delete.get_filename()))        
+        self.historize_process("delete target image {:s}".format(temp_filename))        
 
     def fs_button(self, canvas_type, thumbnail, state, image):
         # this function is called if FSImage Exclude Button is pressed.
@@ -1515,8 +1516,9 @@ class Diatisch:
         # this function is called if FSImage Exclude Button is pressed.
         # find out whether thumbnail belongs to source or target
         filename = image.get_filename()
-        print("Diatisch.fs_close, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)) if self.debug else True
-        self.historize_process()
+        message = "Diatisch.fs_close, type is {:s} state = {:d}, imagefile is {:s}".format(canvas_type, state, filename)
+        print(message) if self.debug else True
+        self.historize_process(message)
         #if state == FS.EXCLUDE:
         if 0 == 1:
             if messagebox.askyesnocancel("Delete", "Delete image {:s}?".format(filename)) == True:
