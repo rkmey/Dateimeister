@@ -1593,7 +1593,7 @@ class Diatisch:
             print("Drop-Event not in target canvas") if self.debug else True
 
         if  changed or self.selection_changed: 
-            self.historize_process()
+            self.historize_process("drop changed = {:s}, selectionchanged = {:s}".format('True' if changed else 'False', 'True' if self.selection_changed else 'False'))
         self.drag_started_in = ""
 
     def update_target_canvas(self, event, dict_images, target_rect, proctype):
@@ -1666,7 +1666,7 @@ class Diatisch:
                     if dist_event_left > dist_event_right:
                         dragpos = dragposition.BEHIND # insert BEHIND hit image
                     print("closest Target Image has ID: ", img_closest_id, " Filename: " + file_at_dragposition, \
-                    " dist left: ", str(dist_event_left), " dist right: ", str(dist_event_right), " dragposition: ", str(dragpos))
+                    " dist left: ", str(dist_event_left), " dist right: ", str(dist_event_right), " dragposition: ", str(dragpos)) if self.debug else True
                 else: # no closest image, append dragged images to existing list
                     print("No closest Target") if self.debug else True
                     no_target_image = True
@@ -1863,7 +1863,7 @@ class Diatisch:
         print("select_all_source_images Pressed") if self.debug else True
         changed = self.select_all(self.list_source_images, self.source_canvas)
         if changed:
-            self.historize_process()
+            self.historize_process("select all source images")
 
     def delete_selected(self):
         #print("Delete Selected Pressed") if self.debug else True
