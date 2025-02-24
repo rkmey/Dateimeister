@@ -20,6 +20,7 @@ import dateimeister_config_xml as DX
 import dateimeister_generator as DG
 import Dateimeister_messages as DM
 import Dateimeister_FSimage as FS
+import Dateimeister_processlist as DP 
 
 from enum import Enum
 class action(Enum):
@@ -420,6 +421,9 @@ class Diatisch:
         self.button_redo = tk.Button(self.Frame_target_ctl, text="Redo", command=self.button_redo_h)
         self.button_redo.place(relx=buttonpos_target, rely=0.01, relheight=0.98, relwidth=relwidth_target)
         buttonpos_target += relwidth_target
+        self.button_processlist = tk.Button(self.Frame_target_ctl, text="Process List", command=self.button_processlist_pressed)
+        self.button_processlist.place(relx=buttonpos_target, rely=0.01, relheight=0.98, relwidth=relwidth_target)
+        buttonpos_target += relwidth_target
         self.button_exec = tk.Button(self.Frame_target_ctl, text="Exec", command=self.button_exec_pressed)
         self.button_exec.place(relx=buttonpos_target, rely=0.01, relheight=0.98, relwidth=relwidth_target)
 
@@ -506,6 +510,7 @@ class Diatisch:
         self.ctr_targetfiles = 0
         self.indir = ""
         self.win_messages = None
+        self.win_processlist = None
         self.imagetype  = "JPEG"
         self.imagetypes = "JPG, JPEG"
         self.dict_gen_files = {}
@@ -2330,6 +2335,13 @@ class Diatisch:
                 self.win_messages.close_handler()
                 self.win_messages = None
             self.win_messages = DM.MyMessagesWindow(self, self.datadir, self.cmd_files_subdir, self.imagetype, self.dict_gen_filenames["COPY"], self.dict_gen_filenames["DELETE"], None) 
+
+    def button_processlist_pressed(self):
+        # show process window            
+        if self.win_processlist is not None: # stop Window-Objekt
+            self.win_processlist.close_handler()
+            self.win_processlist = None
+        self.win_processlist = DP.MyProcesslistWindow(self, self.dict_processid_histobj, self.debug) 
 
     def write_cmdfile(self, outdir):
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
