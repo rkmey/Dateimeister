@@ -31,6 +31,7 @@ class MyProcesslistWindow:
     def __init__(self, pmain, dict_processlist, debug):
         self.root = tk.Toplevel()
         self.main = pmain
+        self.initialized = False
         
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
@@ -81,19 +82,27 @@ class MyProcesslistWindow:
         self.listbox_procsteps.configure(listvariable=self.listbox_procsteps_var)
 
         # Scrollbars
-        VI_PROCSTEPS = tk.Scrollbar(self.Frame_process_list, orient= VERTICAL)
-        VI_PROCSTEPS.place(relx = self.listbox_procsteps_relwidth, rely = 0, relheight = self.listbox_procsteps_relheight, relwidth = .01, anchor = tk.NW)
-        VI_PROCSTEPS.config(command = self.listbox_procsteps.yview)
-        self.listbox_procsteps.config(yscrollcommand = VI_PROCSTEPS.set)
-        HI_PROCSTEPS = tk.Scrollbar(self.Frame_process_list, orient= HORIZONTAL)
-        HI_PROCSTEPS.place(relx = 0, rely = self.listbox_procsteps_relheight, relheight = 0.03, relwidth = self.listbox_procsteps_relwidth, anchor = tk.NW)
-        HI_PROCSTEPS.config(command = self.listbox_procsteps.xview)
-        self.listbox_procsteps.config(xscrollcommand = HI_PROCSTEPS.set)
+        self.Frame_process_list.update()
+        w = self.Frame_process_list.winfo_width()
+        h = self.Frame_process_list.winfo_height()
+        b = w / 50000
+        r = w / h
+        print("frame width / height = {:d}, {:d}".format(w, h)) if self.debug else True
+        self.VI_PROCSTEPS = tk.Scrollbar(self.Frame_process_list, orient= VERTICAL)
+        self.VI_PROCSTEPS.place(relx = self.listbox_procsteps_relwidth, rely = 0, relheight = self.listbox_procsteps_relheight, relwidth = min(max(b, 0.005), .03), anchor = tk.NW)
+        self.VI_PROCSTEPS.config(command = self.listbox_procsteps.yview)
+        self.listbox_procsteps.config(yscrollcommand = self.VI_PROCSTEPS.set)
+        self.HI_PROCSTEPS = tk.Scrollbar(self.Frame_process_list, orient= HORIZONTAL)
+        self.HI_PROCSTEPS.place(relx = 0, rely = self.listbox_procsteps_relheight, relheight = min(max(b * r, 0.005 * r), .03 * r), relwidth = self.listbox_procsteps_relwidth, anchor = tk.NW)
+        self.HI_PROCSTEPS.config(command = self.listbox_procsteps.xview)
+        self.listbox_procsteps.config(xscrollcommand = self.HI_PROCSTEPS.set)
         self.listbox_procsteps.bind('<Double-1>', self.listbox_procsteps_double)
+        self.initialized = True
 
     def on_configure(self, event):
         x = str(event.widget)
-        if x == ".": # . is toplevel window
+        #print(" x is: " + str(x))
+        if x == ".!toplevel": # . is toplevel window
             if (self.width != event.width):
                 self.width = event.width
                 #print(f"The width of Toplevel is {self.width}") if self.debug else True
@@ -104,6 +113,17 @@ class MyProcesslistWindow:
                 fontsize_use = int(.8 * min(12.0, l_height * .75))
                 print(f"The height of Toplevel is {self.height}, label height is {l_height} set fontsize to {fontsize_use}") if self.debug else True
                 self.text_font.configure(size=fontsize_use)                
+            if self.initialized:
+                # configure scrollbars
+                self.Frame_process_list.update()
+                w = self.Frame_process_list.winfo_width()
+                h = self.Frame_process_list.winfo_height()
+                b = w / 50000
+                r = w / h
+                print("frame width / height = {:d}, {:d}".format(w, h)) if self.debug else True
+                self.VI_PROCSTEPS.place(relx = self.listbox_procsteps_relwidth, rely = 0, relheight = self.listbox_procsteps_relheight, relwidth = min(max(b, 0.005), .02), anchor = tk.NW)
+                self.HI_PROCSTEPS.place(relx = 0, rely = self.listbox_procsteps_relheight, relheight = min(max(b * r, 0.005* r), .02 * r), relwidth = self.listbox_procsteps_relwidth, anchor = tk.NW)
+        
 
     def listbox_procsteps_double(self, event = None):
         selected_indices = self.listbox_procsteps_double.curselection()
