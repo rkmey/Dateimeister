@@ -67,7 +67,7 @@ class MyProcesslistWindow:
         self.Label_proc_ctr.configure(text='Num Procteps: 0')
 
         self.Frame_process_list = tk.Frame(self.root)
-        self.Frame_process_list.place(relx=.01, rely= self.frame_labels_height + .01, relheight= 1 - self.frame_labels_height -.02, relwidth=0.98)
+        self.Frame_process_list.place(relx=.01, rely= self.frame_labels_height + .01, relheight= 1 - self.frame_labels_height -.02, relwidth=0.32)
         self.Frame_process_list.configure(relief='flat')
         self.Frame_process_list.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
@@ -85,15 +85,16 @@ class MyProcesslistWindow:
         self.Frame_process_list.update()
         w = self.Frame_process_list.winfo_width()
         h = self.Frame_process_list.winfo_height()
-        b = w / 50000
+        f = 4000 / w # for 4k screen appr. 1
+        b = f * w / 50000
         r = w / h
         print("frame width / height = {:d}, {:d}".format(w, h)) if self.debug else True
         self.VI_PROCSTEPS = tk.Scrollbar(self.Frame_process_list, orient= VERTICAL)
-        self.VI_PROCSTEPS.place(relx = self.listbox_procsteps_relwidth, rely = 0, relheight = self.listbox_procsteps_relheight, relwidth = min(max(b, 0.005), .03), anchor = tk.NW)
+        self.VI_PROCSTEPS.place(relx = self.listbox_procsteps_relwidth, rely = 0, relheight = self.listbox_procsteps_relheight, relwidth = min(max(b, 0.005 * f), .03), anchor = tk.NW)
         self.VI_PROCSTEPS.config(command = self.listbox_procsteps.yview)
         self.listbox_procsteps.config(yscrollcommand = self.VI_PROCSTEPS.set)
         self.HI_PROCSTEPS = tk.Scrollbar(self.Frame_process_list, orient= HORIZONTAL)
-        self.HI_PROCSTEPS.place(relx = 0, rely = self.listbox_procsteps_relheight, relheight = min(max(b * r, 0.005 * r), .03 * r), relwidth = self.listbox_procsteps_relwidth, anchor = tk.NW)
+        self.HI_PROCSTEPS.place(relx = 0, rely = self.listbox_procsteps_relheight, relheight = min(max(b * r, 0.005 * f * r), .03 * r), relwidth = self.listbox_procsteps_relwidth, anchor = tk.NW)
         self.HI_PROCSTEPS.config(command = self.listbox_procsteps.xview)
         self.listbox_procsteps.config(xscrollcommand = self.HI_PROCSTEPS.set)
         self.listbox_procsteps.bind('<Double-1>', self.listbox_procsteps_double)
@@ -118,11 +119,12 @@ class MyProcesslistWindow:
                 self.Frame_process_list.update()
                 w = self.Frame_process_list.winfo_width()
                 h = self.Frame_process_list.winfo_height()
-                b = w / 50000
+                f = 4000 / w # for 4k screen appr. 1
+                b = f * w / 50000
                 r = w / h
                 print("frame width / height = {:d}, {:d}".format(w, h)) if self.debug else True
-                self.VI_PROCSTEPS.place(relx = self.listbox_procsteps_relwidth, rely = 0, relheight = self.listbox_procsteps_relheight, relwidth = min(max(b, 0.005), .02), anchor = tk.NW)
-                self.HI_PROCSTEPS.place(relx = 0, rely = self.listbox_procsteps_relheight, relheight = min(max(b * r, 0.005* r), .02 * r), relwidth = self.listbox_procsteps_relwidth, anchor = tk.NW)
+                self.VI_PROCSTEPS.place(relx = self.listbox_procsteps_relwidth, rely = 0, relheight = self.listbox_procsteps_relheight, relwidth = min(max(b, 0.005 * f), .02), anchor = tk.NW)
+                self.HI_PROCSTEPS.place(relx = 0, rely = self.listbox_procsteps_relheight, relheight = min(max(b * r, 0.005* f * r), .02 * r), relwidth = self.listbox_procsteps_relwidth, anchor = tk.NW)
         
 
     def listbox_procsteps_double(self, event = None):
