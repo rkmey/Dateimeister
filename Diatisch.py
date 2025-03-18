@@ -250,7 +250,7 @@ class Diatisch:
         self.Frame_target_ctl.configure(relief='flat')
         self.Frame_target_ctl.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         
-        # frames for comboboxes
+        # frames for listboxes
         # indir
         self.Frame_indir = tk.LabelFrame(self.root)
         self.Frame_indir.place(relx=.01, rely=0.87, relheight=0.12, relwidth=0.4)
@@ -273,27 +273,27 @@ class Diatisch:
         self.Frame_outdir.configure(text = "outdirs")
         self.Frame_outdir.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
  
-        # combobox for Indirs
-        self.combobox_indir_var = tk.StringVar()
-        self.combobox_indir = tk.Listbox(self.Frame_indir)
-        self.combobox_indir.place(relx=.0, rely=0, relheight=.8, relwidth=0.75)
-        self.combobox_indir.configure(font=self.text_font)
-        self.combobox_indir.configure(selectmode='single')
-        self.combobox_indir.configure(listvariable=self.combobox_indir_var)
-        self.combobox_indir.bind('<Motion>', self.tooltip_lb_indir)    
+        # listbox for Indirs
+        self.listbox_indir_var = tk.StringVar()
+        self.listbox_indir = tk.Listbox(self.Frame_indir)
+        self.listbox_indir.place(relx=.0, rely=0, relheight=.8, relwidth=0.75)
+        self.listbox_indir.configure(font=self.text_font)
+        self.listbox_indir.configure(selectmode='single')
+        self.listbox_indir.configure(listvariable=self.listbox_indir_var)
+        self.listbox_indir.bind('<Motion>', self.tooltip_lb_indir)    
         # Scrollbars
         VI_INDIR = tk.Scrollbar(self.Frame_indir, orient= VERTICAL)
         VI_INDIR.place(relx = 0.75, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
-        VI_INDIR.config(command = self.combobox_indir.yview)
-        self.combobox_indir.config(yscrollcommand = VI_INDIR.set)
+        VI_INDIR.config(command = self.listbox_indir.yview)
+        self.listbox_indir.config(yscrollcommand = VI_INDIR.set)
         HI_INDIR = tk.Scrollbar(self.Frame_indir, orient= HORIZONTAL)
         HI_INDIR.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .75, anchor = tk.NW)
-        HI_INDIR.config(command = self.combobox_indir.xview)
-        self.combobox_indir.config(xscrollcommand = HI_INDIR.set)
-        self.combobox_indir.bind('<Double-1>', self.combobox_indir_double)
-        self.combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
+        HI_INDIR.config(command = self.listbox_indir.xview)
+        self.listbox_indir.config(xscrollcommand = HI_INDIR.set)
+        self.listbox_indir.bind('<Double-1>', self.listbox_indir_double)
+        self.listbox_indir.bind("<<ListboxSelect>>", lambda event: self.listbox_indir_check_exist(event))
         # Button
-        self.button_apply_indir = tk.Button(self.Frame_indir, text="Apply selected", command=self.combobox_indir_double)
+        self.button_apply_indir = tk.Button(self.Frame_indir, text="Apply selected", command=self.listbox_indir_double)
         self.button_apply_indir.place(relx=.79, rely=0.0, relheight=0.3, relwidth=0.21)
         self.button_apply_indir.configure(font=self.text_font)
         self.cb_recursive_var = tk.IntVar()
@@ -305,48 +305,48 @@ class Diatisch:
         self.cb_recursive = TT.ToolTip(self.cb_recursive, '''process  subdirectories''')
         self.cb_recursive_var.set(1)
 
-        # combobox for config files
-        self.combobox_cfg_var = tk.StringVar()
-        self.combobox_cfg = tk.Listbox(self.Frame_cfg)
-        self.combobox_cfg.place(relx=.0, rely=0, relheight=.8, relwidth=0.75)
-        self.combobox_cfg.configure(font=self.text_font)
-        self.combobox_cfg.configure(selectmode='single')
-        self.combobox_cfg.configure(listvariable=self.combobox_cfg_var)
-        self.combobox_cfg.bind('<Motion>', self.tooltip_lb_cfg)    
+        # listbox for config files
+        self.listbox_cfg_var = tk.StringVar()
+        self.listbox_cfg = tk.Listbox(self.Frame_cfg)
+        self.listbox_cfg.place(relx=.0, rely=0, relheight=.8, relwidth=0.75)
+        self.listbox_cfg.configure(font=self.text_font)
+        self.listbox_cfg.configure(selectmode='single')
+        self.listbox_cfg.configure(listvariable=self.listbox_cfg_var)
+        self.listbox_cfg.bind('<Motion>', self.tooltip_lb_cfg)    
         # Scrollbars
         VI_CFG = tk.Scrollbar(self.Frame_cfg, orient= VERTICAL)
         VI_CFG.place(relx = 0.75, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
-        VI_CFG.config(command = self.combobox_cfg.yview)
-        self.combobox_cfg.config(yscrollcommand = VI_CFG.set)
+        VI_CFG.config(command = self.listbox_cfg.yview)
+        self.listbox_cfg.config(yscrollcommand = VI_CFG.set)
         HI_CFG = tk.Scrollbar(self.Frame_cfg, orient= HORIZONTAL)
         HI_CFG.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .75, anchor = tk.NW)
-        HI_CFG.config(command = self.combobox_cfg.xview)
-        self.combobox_cfg.config(xscrollcommand = HI_CFG.set)
-        self.combobox_cfg.bind('<Double-1>', self.combobox_cfg_double)
-        self.combobox_cfg.bind("<<ListboxSelect>>", lambda event: self.combobox_cfg_check_exist(event))
+        HI_CFG.config(command = self.listbox_cfg.xview)
+        self.listbox_cfg.config(xscrollcommand = HI_CFG.set)
+        self.listbox_cfg.bind('<Double-1>', self.listbox_cfg_double)
+        self.listbox_cfg.bind("<<ListboxSelect>>", lambda event: self.listbox_cfg_check_exist(event))
         # Button
-        self.button_apply_cfg = tk.Button(self.Frame_cfg, text="Apply selected", command=self.combobox_cfg_double)
+        self.button_apply_cfg = tk.Button(self.Frame_cfg, text="Apply selected", command=self.listbox_cfg_double)
         self.button_apply_cfg.place(relx=.79, rely=0.0, relheight=0.3, relwidth=0.21)
         self.button_apply_cfg.configure(font=self.text_font)
 
-        # combobox for outdirs
-        self.combobox_outdir_var = tk.StringVar()
-        self.combobox_outdir = tk.Listbox(self.Frame_outdir)
-        self.combobox_outdir.place(relx=.0, rely=0, relheight=.8, relwidth=0.8)
-        self.combobox_outdir.configure(font=self.text_font)
-        self.combobox_outdir.configure(selectmode='single')
-        self.combobox_outdir.configure(listvariable=self.combobox_outdir_var)
-        self.combobox_outdir.bind('<Motion>', self.tooltip_lb_outdir)    
+        # listbox for outdirs
+        self.listbox_outdir_var = tk.StringVar()
+        self.listbox_outdir = tk.Listbox(self.Frame_outdir)
+        self.listbox_outdir.place(relx=.0, rely=0, relheight=.8, relwidth=0.8)
+        self.listbox_outdir.configure(font=self.text_font)
+        self.listbox_outdir.configure(selectmode='single')
+        self.listbox_outdir.configure(listvariable=self.listbox_outdir_var)
+        self.listbox_outdir.bind('<Motion>', self.tooltip_lb_outdir)    
         # Scrollbars
         VI_OUTDIR = tk.Scrollbar(self.Frame_outdir, orient= VERTICAL)
         VI_OUTDIR.place(relx = 0.8, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
-        VI_OUTDIR.config(command = self.combobox_outdir.yview)
-        self.combobox_outdir.config(yscrollcommand = VI_OUTDIR.set)
+        VI_OUTDIR.config(command = self.listbox_outdir.yview)
+        self.listbox_outdir.config(yscrollcommand = VI_OUTDIR.set)
         HI_OUTDIR = tk.Scrollbar(self.Frame_outdir, orient= HORIZONTAL)
         HI_OUTDIR.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .8, anchor = tk.NW)
-        HI_OUTDIR.config(command = self.combobox_outdir.xview)
-        self.combobox_outdir.config(xscrollcommand = HI_OUTDIR.set)
-        self.combobox_outdir.bind("<<ListboxSelect>>", lambda event: self.combobox_outdir_check_exist(event))
+        HI_OUTDIR.config(command = self.listbox_outdir.xview)
+        self.listbox_outdir.config(xscrollcommand = HI_OUTDIR.set)
+        self.listbox_outdir.bind("<<ListboxSelect>>", lambda event: self.listbox_outdir_check_exist(event))
         # Button
         self.button_apply_outdir = tk.Button(self.Frame_outdir, text="New...", command=self.new_outdir)
         self.button_apply_outdir.place(relx=.85, rely=0.0, relheight=0.3, relwidth=0.14)
@@ -460,11 +460,11 @@ class Diatisch:
         self.st = TT.ToolTip(self.source_canvas, "no images available", delay=0, follow = True)
         self.tt = TT.ToolTip(self.target_canvas, "no images available", delay=0, follow = True)
         self.tooltiptext_lb_indir = ""
-        self.tt_lb_indir = TT.ToolTip(self.combobox_indir, "no item available", delay=0, follow = True)
+        self.tt_lb_indir = TT.ToolTip(self.listbox_indir, "no item available", delay=0, follow = True)
         self.tooltiptext_lb_cfg = ""
-        self.tt_lb_cfg = TT.ToolTip(self.combobox_cfg, "no item available", delay=0, follow = True)
+        self.tt_lb_cfg = TT.ToolTip(self.listbox_cfg, "no item available", delay=0, follow = True)
         self.tooltiptext_lb_outdir = ""
-        self.tt_lb_outdir = TT.ToolTip(self.combobox_outdir, "no item available", delay=0, follow = True)
+        self.tt_lb_outdir = TT.ToolTip(self.listbox_outdir, "no item available", delay=0, follow = True)
 
         # temporary storage of dragged images while dragging
         self.list_dragged_images = []
@@ -578,9 +578,9 @@ class Diatisch:
         self.configmenu.add_cascade(label="Open Recent", menu=self.recentmenu_cfg)
 
         self.endis_menu_items()
-        self.update_combobox_cfg()
-        self.update_combobox_indir()
-        self.update_combobox_outdir()
+        self.update_listbox_cfg()
+        self.update_listbox_indir()
+        self.update_listbox_outdir()
         
         #DX.delete_diatisch_item(self.config_files_xml, "indirs", "indir", "name", "e:/fotos/dateimeister")
         
@@ -656,13 +656,13 @@ class Diatisch:
         targetfiles = DX.get_filenames_diatisch(self.config_file, "targetfiles", "targetfile")
         self.load_images(None, sourcefiles, targetfiles)
     
-    def combobox_cfg_double(self, event = None): # used also for Button
+    def listbox_cfg_double(self, event = None): # used also for Button
         # get and apply configfile from listbox
-        selected_indices = self.combobox_cfg.curselection()
+        selected_indices = self.listbox_cfg.curselection()
         if not selected_indices:
             messagebox.showwarning("Warning", "Listbox cfg files: nothing selected", parent = self.Frame_cfg)
         else:
-            cfgfile = ",".join([self.combobox_cfg.get(i) for i in selected_indices]) # because listbox has single selection
+            cfgfile = ",".join([self.listbox_cfg.get(i) for i in selected_indices]) # because listbox has single selection
             print("cfg file selected is: " + cfgfile) if self.debug else True
             self.config_file = cfgfile
             self.root.title(self.title + ' ' + self.config_file)
@@ -676,18 +676,18 @@ class Diatisch:
             self.load_images(None, sourcefiles, targetfiles)
         
         
-    def combobox_cfg_check_exist(self, event):
-        if self.combobox_cfg.curselection():
-            index = self.combobox_cfg.curselection()[0]
-            sel   = self.combobox_cfg.get(index) # because listbox has single selection
+    def listbox_cfg_check_exist(self, event):
+        if self.listbox_cfg.curselection():
+            index = self.listbox_cfg.curselection()[0]
+            sel   = self.listbox_cfg.get(index) # because listbox has single selection
             #print("current selection is: " + sel + " INDEX: " + str(index)) if self.debug else True
             if not os.path.isfile(sel):
-                self.combobox_cfg.selection_clear(index) # dont select, MessageBox
+                self.listbox_cfg.selection_clear(index) # dont select, MessageBox
                 messagebox.showerror("error", "Configfile: " + sel + " does not exist, choose another one")
 
-    def update_combobox_cfg(self):
-        # fill cfg combobox and recentmenu cfg
-        self.combobox_cfg.delete(0, 'end')
+    def update_listbox_cfg(self):
+        # fill cfg listbox and recentmenu cfg
+        self.listbox_cfg.delete(0, 'end')
         self.recentmenu_cfg.delete(0, "end")
         result = DX.get_diatisch_items_usedate(self.config_files_xml, "config_files", "configfile", "filename")
         dict_filename_usedate = {}
@@ -706,7 +706,7 @@ class Diatisch:
         ii = 0
         indexes = []
         for item in sorted_d:
-            self.combobox_cfg.insert(END, item)
+            self.listbox_cfg.insert(END, item)
             if not os.path.isfile(item):
                 #print("INDIR: " + item + " INDEX: " + str(ii)) if self.debug else True
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
@@ -715,19 +715,19 @@ class Diatisch:
             self.recentmenu_cfg.add_command(label=labeltext, command = lambda item=item: self.recent_config_cfg(item))
             ii += 1
         for jj in indexes:
-            self.combobox_cfg.itemconfigure(jj, fg="gray")
+            self.listbox_cfg.itemconfigure(jj, fg="gray")
             self.recentmenu_cfg.entryconfig(jj, state = DISABLED)
-        self.combobox_cfg.selection_clear(0, "end")
+        self.listbox_cfg.selection_clear(0, "end")
         if ii > 0:
-            self.combobox_cfg.selection_set(0)
+            self.listbox_cfg.selection_set(0)
             #self.button_cfg_from_list.config(state = NORMAL)
         else: 
             #self.button_cfg_from_list.config(state = DISABLED)
             True
 
-    def update_combobox_indir(self):
-        # fill indir combobox and recentmenu
-        self.combobox_indir.delete(0, 'end')
+    def update_listbox_indir(self):
+        # fill indir listbox and recentmenu
+        self.listbox_indir.delete(0, 'end')
         self.recentmenu_file.delete(0, "end")
         result = DX.get_diatisch_items_usedate(self.config_files_xml, "indirs", "indir", "name")
         dict_filename_usedate = {}
@@ -746,7 +746,7 @@ class Diatisch:
         ii = 0
         indexes = []
         for item in sorted_d:
-            self.combobox_indir.insert(END, item)
+            self.listbox_indir.insert(END, item)
             usedate = dict_filename_usedate[item]
             labeltext = item + ' (usedate: ' + usedate + ')'
             self.recentmenu_file.add_command(label=labeltext, command = lambda item=item: self.recent_config_indir(item))
@@ -755,19 +755,19 @@ class Diatisch:
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
             ii += 1
         for jj in indexes:
-            self.combobox_indir.itemconfig(jj, fg="gray")
+            self.listbox_indir.itemconfig(jj, fg="gray")
             self.recentmenu_file.entryconfig(jj, state = DISABLED)
-        self.combobox_indir.selection_clear(0, "end")
+        self.listbox_indir.selection_clear(0, "end")
         if ii > 0:
-            self.combobox_indir.select_set(0)
+            self.listbox_indir.select_set(0)
             #self.button_indir_from_list.config(state = NORMAL)
         else: 
             #self.button_indir_from_list.config(state = DISABLED)
             True
 
-    def update_combobox_outdir(self):
-        # fill outdir combobox
-        self.combobox_outdir.delete(0, 'end')
+    def update_listbox_outdir(self):
+        # fill outdir listbox
+        self.listbox_outdir.delete(0, 'end')
         result = DX.get_diatisch_items_usedate(self.config_files_xml, "outdirs", "outdir", "name")
         dict_filename_usedate = {}
         for item in result:
@@ -785,7 +785,7 @@ class Diatisch:
         ii = 0
         indexes = []
         for item in sorted_d:
-            self.combobox_outdir.insert(END, item)
+            self.listbox_outdir.insert(END, item)
             usedate = dict_filename_usedate[item]
             labeltext = item + ' (usedate: ' + usedate + ')'
             if not os.path.isdir(item):
@@ -793,10 +793,10 @@ class Diatisch:
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
             ii += 1
         for jj in indexes:
-            self.combobox_outdir.itemconfig(jj, fg="gray")
-        self.combobox_outdir.selection_clear(0, "end")
+            self.listbox_outdir.itemconfig(jj, fg="gray")
+        self.listbox_outdir.selection_clear(0, "end")
         if ii > 0:
-            self.combobox_outdir.select_set(0)
+            self.listbox_outdir.select_set(0)
             #self.button_indir_from_list.config(state = NORMAL)
         else: 
             #self.button_outdir_from_list.config(state = DISABLED)
@@ -811,32 +811,32 @@ class Diatisch:
         # load indir
         self.load_images(self.indir)
 
-    def combobox_indir_double(self, event = None):
-        selected_indices = self.combobox_indir.curselection()
+    def listbox_indir_double(self, event = None):
+        selected_indices = self.listbox_indir.curselection()
         if not selected_indices:
             messagebox.showwarning("Warning", "Listbox Indir: nothing selected", parent = self.Frame_indir)
         else:
-            indir = ",".join([self.combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
+            indir = ",".join([self.listbox_indir.get(i) for i in selected_indices]) # because listbox has single selection
             print("indir selected is: " + indir) if self.debug else True
             self.indir = indir
             self.load_images(self.indir)
         
-    def combobox_indir_check_exist(self, event):
-        if self.combobox_indir.curselection():
-            index = self.combobox_indir.curselection()[0]
-            sel   = self.combobox_indir.get(index) # because listbox has single selection
+    def listbox_indir_check_exist(self, event):
+        if self.listbox_indir.curselection():
+            index = self.listbox_indir.curselection()[0]
+            sel   = self.listbox_indir.get(index) # because listbox has single selection
             #print("current selection is: " + sel + " INDEX: " + str(index)) if self.debug else True
             if not os.path.isdir(sel):
-                self.combobox_indir.selection_clear(index) # dont select, MessageBox
+                self.listbox_indir.selection_clear(index) # dont select, MessageBox
                 messagebox.showerror("error", "Indir: " + sel + " does not exist, choose another one", parent = self.Frame_indir)
 
-    def combobox_outdir_check_exist(self, event):
-        if self.combobox_outdir.curselection():
-            index = self.combobox_outdir.curselection()[0]
-            sel   = self.combobox_outdir.get(index) # because listbox has single selection
+    def listbox_outdir_check_exist(self, event):
+        if self.listbox_outdir.curselection():
+            index = self.listbox_outdir.curselection()[0]
+            sel   = self.listbox_outdir.get(index) # because listbox has single selection
             #print("current selection is: " + sel + " INDEX: " + str(index)) if self.debug else True
             if not os.path.isdir(sel):
-                self.combobox_outdir.selection_clear(index) # dont select, MessageBox
+                self.listbox_outdir.selection_clear(index) # dont select, MessageBox
                 messagebox.showerror("error", "Outdir: " + sel + " does not exist, choose another one")
 
     def on_configure(self, event):
@@ -950,9 +950,11 @@ class Diatisch:
                 self.button_exec.config(state = tk.NORMAL)        
 
         print("LOAD ", directory)
+        display_dir = "n.a."
         if directory: 
-            self.update_combobox_indir()
-        self.historize_process("load directory {:s}".format(directory))
+            self.update_listbox_indir()
+            display_dir = directory
+        self.historize_process("load directory {:s}".format(display_dir))
         self.root.lift()
 
     def close_indir(self):
@@ -1115,8 +1117,8 @@ class Diatisch:
             return
         # Tooltip
         text = "no item available"
-        index = self.combobox_indir.nearest(event.y)
-        text = self.combobox_indir.get(index)
+        index = self.listbox_indir.nearest(event.y)
+        text = self.listbox_indir.get(index)
         if text != self.tooltiptext_lb_indir:
             self.tt_lb_indir.update(text)
             self.tooltiptext_lb_indir = text
@@ -1131,8 +1133,8 @@ class Diatisch:
             return
         # Tooltip
         text = "no item available"
-        index = self.combobox_cfg.nearest(event.y)
-        text = self.combobox_cfg.get(index)
+        index = self.listbox_cfg.nearest(event.y)
+        text = self.listbox_cfg.get(index)
         if text != self.tooltiptext_lb_cfg:
             self.tt_lb_cfg.update(text)
             self.tooltiptext_lb_cfg = text
@@ -1147,8 +1149,8 @@ class Diatisch:
             return
         # Tooltip
         text = "no item available"
-        index = self.combobox_outdir.nearest(event.y)
-        text = self.combobox_outdir.get(index)
+        index = self.listbox_outdir.nearest(event.y)
+        text = self.listbox_outdir.get(index)
         if text != self.tooltiptext_lb_outdir:
             self.tt_lb_outdir.update(text)
             self.tooltiptext_lb_outdir = text
@@ -2279,7 +2281,7 @@ class Diatisch:
         # create new xml-entry for file
         DX.new_cfgfile_diatisch(self.config_files_xml, filename, ts, ctr_source, ctr_target)
         # update listbox
-        self.update_combobox_cfg()
+        self.update_listbox_cfg()
 
     def new_outdir(self):
         # get dir from dir dialog, insert in xml, update listbox-outdirs
@@ -2294,7 +2296,7 @@ class Diatisch:
         self.new_item_in_xml(self.max_outdirs, this_i, ts, "outdirs", "outdir", "name")
         # now create new outdir
         DX.new_dir_diatisch(self.config_files_xml, "outdirs", "outdir", "name", this_i, ts)
-        self.update_combobox_outdir()    
+        self.update_listbox_outdir()    
         
     
     def donothing(self):
@@ -2321,11 +2323,11 @@ class Diatisch:
     def button_exec_pressed(self):
         # gen cmd files and write to dir            
         # get outdir from listbox
-        selected_indices = self.combobox_outdir.curselection()
+        selected_indices = self.listbox_outdir.curselection()
         if not selected_indices:
             messagebox.showwarning("Warning", "Listbox Outdir: nothing selected", parent = self.Frame_outdir)
         else:
-            outdir = ",".join([self.combobox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
+            outdir = ",".join([self.listbox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
             print("outdir selected is: " + outdir) if self.debug else True
             self.outdir = outdir
 
