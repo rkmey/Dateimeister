@@ -202,6 +202,14 @@ class MyProcesslistWindow:
                 self.hi_process_undo.place(relx = 0, rely = self.listbox_process_hist_relheight, relheight = min(max(b * r, 0.005* f * r), .02 * r), relwidth = self.listbox_process_hist_relwidth, anchor = tk.NW)
        
 
+    def update_listbox_process_hist(self, dict_p):
+        # fill listbox_process_hist
+        self.listbox_process_hist.delete(0, 'end')
+        for tkey in dict_p:
+            tvalue = dict_p[tkey]
+            tline = "{:03d} {:s}".format(tkey, tvalue.text)
+            self.listbox_process_hist.insert(END, tline)
+
     def listbox_process_hist_double(self, event = None):
         selected_indices = self.listbox_process_hist_double.curselection()
         if not selected_indices:
