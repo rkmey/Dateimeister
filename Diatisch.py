@@ -484,8 +484,6 @@ class Diatisch:
         # Undo /Redo control
         self.UR = UR.Undo_Redo_Diatisch(self.debug_p)
         self.dict_processid_histobj = {} # key processid to be applied value: histobj
-        # historize initial state
-        self.historize_process("initial")
         # Undo /Redo control end
 
         self.event_source = None
@@ -546,6 +544,8 @@ class Diatisch:
         self.dict_file_FSImage_target = {} # dict for keeping track of FS Images
         self.read_ini()
         self.init()
+        # historize initial state
+        self.historize_process("initial")
         if list_imagefiles:
             self.load_images(None, list_imagefiles)
 
@@ -2172,6 +2172,9 @@ class Diatisch:
         if text:
             h.text = text
 
+        # update process window if open           
+        self.win_processlist.update_listbox_process_hist(self.dict_processid_histobj) if self.win_processlist else True
+
     # Ende undo /redo-Funktionen
 
 
@@ -2343,8 +2346,11 @@ class Diatisch:
         if self.win_processlist is not None: # stop Window-Objekt
             self.win_processlist.close_handler()
             self.win_processlist = None
-        self.win_processlist = DP.MyProcesslistWindow(self, self.dict_processid_histobj, self.debug)
+        self.win_processlist = DP.MyProcesslistWindow(self.processlist_close, self.dict_processid_histobj, self.debug)
         self.win_processlist.update_listbox_process_hist(self.dict_processid_histobj)
+        
+    def processlist_close(self):
+        self.win_processlist = None
 
     def write_cmdfile(self, outdir):
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())

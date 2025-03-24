@@ -28,9 +28,9 @@ import Dateimeister
 class MyProcesslistWindow:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, pmain, dict_processlist, debug):
+    def __init__(self, caller_close_function, dict_processlist, debug):
         self.root = tk.Toplevel()
-        self.main = pmain
+        self.pf_close = caller_close_function
         self.initialized = False
         
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
@@ -242,6 +242,8 @@ class MyProcesslistWindow:
 
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
+        if self.pf_close:
+            self.pf_close()
 
     def __del__(self):
         self.a = 1
