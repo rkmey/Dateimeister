@@ -205,10 +205,13 @@ class MyProcesslistWindow:
     def update_listbox_process_hist(self, dict_p):
         # fill listbox_process_hist
         self.listbox_process_hist.delete(0, 'end')
+        ii = 0
         for tkey in dict_p:
             tvalue = dict_p[tkey]
             tline = "{:03d} {:s}".format(tkey, tvalue.text)
             self.listbox_process_hist.insert(END, tline)
+            ii += 1
+        self.Label_proc_ctr.configure(text = "Num Procteps: {:d}".format(ii))
 
     def listbox_process_hist_double(self, event = None):
         selected_indices = self.listbox_process_hist_double.curselection()
