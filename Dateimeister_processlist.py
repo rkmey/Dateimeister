@@ -35,7 +35,6 @@ class MyProcesslistWindow:
         
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
-        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         screen_width  = int(self.root.winfo_screenwidth() * 0.7)
         screen_height = int(self.root.winfo_screenheight() * 0.5)
         print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height))
@@ -168,6 +167,7 @@ class MyProcesslistWindow:
         self.listbox_process_undo.config(xscrollcommand = self.hi_process_undo.set)
         self.listbox_process_undo.bind('<Double-1>', self.listbox_process_undo_double)
 
+        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.initialized = True
 
     def on_configure(self, event):
