@@ -1992,6 +1992,9 @@ class Diatisch:
         else:
             self.apply_process_id(p_now, p_before)
             self.endis_buttons()
+            # show list/ stack after undo redo if open
+            self.win_processlist.update_listbox_process_list(self.dict_processid_histobj, self.UR.list_processids) if self.win_processlist else True
+            self.win_processlist.update_listbox_process_undo(self.dict_processid_histobj, self.UR.stack_processids) if self.win_processlist else True
 
     def process_redo(self, event):
         print("ctrl_y pressed.") if self.debug else True
@@ -2001,6 +2004,9 @@ class Diatisch:
         else:
             self.apply_process_id(p_now, p_before)
             self.endis_buttons()
+            # show list/ stack after undo redo if open
+            self.win_processlist.update_listbox_process_list(self.dict_processid_histobj, self.UR.list_processids) if self.win_processlist else True
+            self.win_processlist.update_listbox_process_undo(self.dict_processid_histobj, self.UR.stack_processids) if self.win_processlist else True
 
     def button_undo_h(self, event = None):
         print("Button Undo pressed") if self.debug else True
@@ -2174,6 +2180,7 @@ class Diatisch:
 
         # update process window if open           
         self.win_processlist.update_listbox_process_hist(self.dict_processid_histobj) if self.win_processlist else True
+        self.win_processlist.update_listbox_process_list(self.dict_processid_histobj, self.UR.list_processids) if self.win_processlist else True
 
     # Ende undo /redo-Funktionen
 
@@ -2348,6 +2355,8 @@ class Diatisch:
             self.win_processlist = None
         self.win_processlist = DP.MyProcesslistWindow(self.processlist_close, self.dict_processid_histobj, self.debug)
         self.win_processlist.update_listbox_process_hist(self.dict_processid_histobj)
+        self.win_processlist.update_listbox_process_list(self.dict_processid_histobj, self.UR.list_processids) if self.win_processlist else True
+        self.win_processlist.update_listbox_process_undo(self.dict_processid_histobj, self.UR.stack_processids) if self.win_processlist else True
         
     def processlist_close(self):
         self.win_processlist = None

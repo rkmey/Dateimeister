@@ -59,11 +59,29 @@ class MyProcesslistWindow:
         self.Frame_labels.configure(relief='flat')
         self.Frame_labels.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
-        self.Label_proc_ctr = tk.Label(self.Frame_labels)
-        self.Label_proc_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.3)
-        self.Label_proc_ctr.configure(anchor=tk.NW)
-        self.Label_proc_ctr.configure(font=self.text_font)
-        self.Label_proc_ctr.configure(text='Num Procteps: 0')
+        self.Label_hist_ctr = tk.Label(self.Frame_labels)
+        self.Label_hist_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.25)
+        self.Label_hist_ctr.configure(anchor=tk.NW)
+        self.Label_hist_ctr.configure(font=self.text_font)
+        self.Label_hist_ctr_text = "Num Hist: {:d}"
+        st = self.Label_hist_ctr_text.format(0)
+        self.Label_hist_ctr.configure(text = st)
+
+        self.Label_list_ctr = tk.Label(self.Frame_labels)
+        self.Label_list_ctr.place(relx=0.34, rely=0.0, relheight=self.label_height, relwidth=0.25)
+        self.Label_list_ctr.configure(anchor=tk.NW)
+        self.Label_list_ctr.configure(font=self.text_font)
+        self.Label_list_ctr_text = "Num List: {:d}"
+        st = self.Label_list_ctr_text.format(0)
+        self.Label_list_ctr.configure(text = st)
+
+        self.Label_undo_ctr = tk.Label(self.Frame_labels)
+        self.Label_undo_ctr.place(relx=0.68, rely=0.0, relheight=self.label_height, relwidth=0.25)
+        self.Label_undo_ctr.configure(anchor=tk.NW)
+        self.Label_undo_ctr.configure(font=self.text_font)
+        self.Label_undo_ctr_text = "Num Undo: {:d}"
+        st = self.Label_undo_ctr_text.format(0)
+        self.Label_undo_ctr.configure(text = st)
 
         # Frame for process_hist
         self.Frame_process_hist = tk.Frame(self.root)
@@ -173,18 +191,17 @@ class MyProcesslistWindow:
     def on_configure(self, event):
         x = str(event.widget)
         #print(" x is: " + str(x))
-        if x == ".!toplevel": # . is toplevel window
+        if x == ".!toplevel" and self.initialized: # . is toplevel window
             if (self.width != event.width):
                 self.width = event.width
                 #print(f"The width of Toplevel is {self.width}") if self.debug else True
             if (self.height != event.height):
                 self.height = event.height
-                self.Label_proc_ctr.update()
-                l_height = self.Label_proc_ctr.winfo_height()
+                self.Label_hist_ctr.update()
+                l_height = self.Label_hist_ctr.winfo_height()
                 fontsize_use = int(.8 * min(12.0, l_height * .75))
                 print(f"The height of Toplevel is {self.height}, label height is {l_height} set fontsize to {fontsize_use}") if self.debug else True
                 self.text_font.configure(size=fontsize_use)                
-            if self.initialized:
                 # configure scrollbars
                 self.Frame_process_hist.update()
                 # the following parameters are the same for all listboxes in processlist window
@@ -203,7 +220,7 @@ class MyProcesslistWindow:
        
 
     def update_listbox_process_hist(self, dict_p):
-        # fill listbox_process_hist
+        # fill listbox_process_hist, we use the dict of historized processids directly
         self.listbox_process_hist.delete(0, 'end')
         ii = 0
         for tkey in dict_p:
@@ -211,7 +228,29 @@ class MyProcesslistWindow:
             tline = "{:03d} {:s}".format(tkey, tvalue.text)
             self.listbox_process_hist.insert(END, tline)
             ii += 1
-        self.Label_proc_ctr.configure(text = "Num Procteps: {:d}".format(ii))
+        self.Label_hist_ctr.configure(text = self.Label_hist_ctr_text.format(ii))
+
+    def update_listbox_process_list(self, dict_p, list_p):
+        # fill listbox_process_list, we have a list of processids which we use as key in callers dict_processid_histobj
+        self.listbox_process_list.delete(0, 'end')
+        ii = 0
+        for tkey in list_p:
+            tvalue = dict_p[tkey]
+            tline = "{:03d} {:s}".format(tkey, tvalue.text)
+            self.listbox_process_list.insert(END, tline)
+            ii += 1
+        self.Label_list_ctr.configure(text = self.Label_list_ctr_text.format(ii))
+
+    def update_listbox_process_undo(self, dict_p, list_p):
+        # fill listbox_process_undo, we have a list of processids which we use as key in callers dict_processid_histobj
+        self.listbox_process_undo.delete(0, 'end')
+        ii = 0
+        for tkey in list_p:
+            tvalue = dict_p[tkey]
+            tline = "{:03d} {:s}".format(tkey, tvalue.text)
+            self.listbox_process_undo.insert(END, tline)
+            ii += 1
+        self.Label_undo_ctr.configure(text = self.Label_undo_ctr_text.format(ii))
 
     def listbox_process_hist_double(self, event = None):
         selected_indices = self.listbox_process_hist_double.curselection()
