@@ -28,9 +28,10 @@ import Dateimeister
 class MyProcesslistWindow:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, caller_close_function, dict_processlist, debug):
+    def __init__(self, caller_close_function, caller_display_function, dict_processlist, debug):
         self.root = tk.Toplevel()
-        self.pf_close = caller_close_function
+        self.pf_close   = caller_close_function
+        self.pf_display = caller_display_function
         self.initialized = False
         
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
@@ -46,6 +47,7 @@ class MyProcesslistWindow:
         self.dict_processlist = dict_processlist
         self.debug = debug
         self.procstep_selected = None
+        self.dict_text_processid = {}
 
         # resizable font
         self.text_font = Font(family="Helvetica", size=6)
@@ -223,11 +225,13 @@ class MyProcesslistWindow:
         # fill listbox_process_hist, we use the dict of historized processids directly
         self.listbox_process_hist.delete(0, 'end')
         ii = 0
+        self.dict_text_processid = {}
         for tkey in dict_p:
             tvalue = dict_p[tkey]
             tline = "{:03d} {:s}".format(tkey, tvalue.text)
             self.listbox_process_hist.insert(END, tline)
             ii += 1
+            self.dict_text_processid[tline] = tkey
         self.Label_hist_ctr.configure(text = self.Label_hist_ctr_text.format(ii))
 
     def update_listbox_process_list(self, dict_p, list_p):
@@ -253,32 +257,33 @@ class MyProcesslistWindow:
         self.Label_undo_ctr.configure(text = self.Label_undo_ctr_text.format(ii))
 
     def listbox_process_hist_double(self, event = None):
-        selected_indices = self.listbox_process_hist_double.curselection()
+        selected_indices = self.listbox_process_hist.curselection()
         if not selected_indices:
             self.procstep_selected = None
             messagebox.showwarning("Warning", "Listbox process_hist: nothing selected", parent = self.Frame_process_hist)
         else:
-            procstep = ",".join([self.listbox_process_hist_double.get(i) for i in selected_indices]) # because listbox has single selection
+            procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
             print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
+            self.pf_display(self.dict_text_processid[procstep])
 
     def listbox_process_list_double(self, event = None):
-        selected_indices = self.listbox_process_list_double.curselection()
+        selected_indices = self.listbox_process_list.curselection()
         if not selected_indices:
             self.procstep_selected = None
             messagebox.showwarning("Warning", "Listbox process_list: nothing selected", parent = self.Frame_process_list)
         else:
-            procstep = ",".join([self.listbox_process_list_double.get(i) for i in selected_indices]) # because listbox has single selection
+            procstep = ",".join([self.listbox_process_list.get(i) for i in selected_indices]) # because listbox has single selection
             print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
 
     def listbox_process_undo_double(self, event = None):
-        selected_indices = self.listbox_process_list_double.curselection()
+        selected_indices = self.listbox_process_undo.curselection()
         if not selected_indices:
             self.procstep_selected = None
             messagebox.showwarning("Warning", "Listbox process_undo: nothing selected", parent = self.Frame_process_undo)
         else:
-            procstep = ",".join([self.listbox_process_list_double.get(i) for i in selected_indices]) # because listbox has single selection
+            procstep = ",".join([self.listbox_process_undo.get(i) for i in selected_indices]) # because listbox has single selection
             print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
 

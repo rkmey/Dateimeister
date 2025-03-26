@@ -2353,13 +2353,16 @@ class Diatisch:
         if self.win_processlist is not None: # stop Window-Objekt
             self.win_processlist.close_handler()
             self.win_processlist = None
-        self.win_processlist = DP.MyProcesslistWindow(self.processlist_close, self.dict_processid_histobj, self.debug)
+        self.win_processlist = DP.MyProcesslistWindow(self.processlist_close, self.processlist_display, self.dict_processid_histobj, self.debug)
         self.win_processlist.update_listbox_process_hist(self.dict_processid_histobj)
         self.win_processlist.update_listbox_process_list(self.dict_processid_histobj, self.UR.list_processids) if self.win_processlist else True
         self.win_processlist.update_listbox_process_undo(self.dict_processid_histobj, self.UR.stack_processids) if self.win_processlist else True
         
     def processlist_close(self):
         self.win_processlist = None
+
+    def processlist_display(self, process_id):
+        print("called by processlist window, processid selected is: {:d}".format(process_id)) if self.debug else True
 
     def write_cmdfile(self, outdir):
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
