@@ -266,7 +266,7 @@ class MyProcesslistWindow:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
             print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
-            self.pf_display(self.dict_text_processid[procstep])
+            self.pf_display(self.dict_text_processid[procstep], "double click")
 
     def listbox_process_hist_selection_changed(self, event = None):
         selected_indices = event.widget.curselection()
@@ -274,7 +274,7 @@ class MyProcesslistWindow:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
             print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
-            self.pf_display(self.dict_text_processid[procstep])
+            self.pf_display(self.dict_text_processid[procstep], "selection changed")
 
     def listbox_process_list_double(self, event = None):
         selected_indices = self.listbox_process_list.curselection()
