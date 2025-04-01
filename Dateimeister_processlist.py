@@ -118,6 +118,7 @@ class MyProcesslistWindow:
         self.hi_process_hist.config(command = self.listbox_process_hist.xview)
         self.listbox_process_hist.config(xscrollcommand = self.hi_process_hist.set)
         self.listbox_process_hist.bind('<Double-1>', self.listbox_process_hist_double)
+        self.listbox_process_hist.bind("<<ListboxSelect>>", self.listbox_process_hist_selection_changed)
 
         # Frame for process_list
         self.Frame_process_list = tk.Frame(self.root)
@@ -262,6 +263,14 @@ class MyProcesslistWindow:
             self.procstep_selected = None
             messagebox.showwarning("Warning", "Listbox process_hist: nothing selected", parent = self.Frame_process_hist)
         else:
+            procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
+            print("procstep selected is: " + procstep) if self.debug else True
+            self.procstep_selected = procstep
+            self.pf_display(self.dict_text_processid[procstep])
+
+    def listbox_process_hist_selection_changed(self, event = None):
+        selected_indices = event.widget.curselection()
+        if selected_indices:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
             print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
