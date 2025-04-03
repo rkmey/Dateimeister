@@ -188,6 +188,7 @@ class MyProcesslistWindow:
         self.listbox_process_undo.config(xscrollcommand = self.hi_process_undo.set)
         self.listbox_process_undo.bind('<Double-1>', self.listbox_process_undo_double)
 
+        self.timestamp = None 
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.initialized = True
 
@@ -269,6 +270,30 @@ class MyProcesslistWindow:
             self.pf_display(self.dict_text_processid[procstep], "double click")
 
     def listbox_process_hist_selection_changed(self, event = None):
+        # as double click always generates single click (from selection of entry) we want to react only if there was no double click
+        tsnow = datetime.now()
+        double_c = False
+        tdiff = 0
+        if self.timestamp: # not None
+            tdiff = abs(tsnow - self.timestamp)
+            if  tdiff.microseconds < 500000: # this is a double click
+                print("double click, microsecons is: ", tdiff.microseconds) if self.debug else True
+                double_c = True
+                self.timestamp = None
+            else:
+                print("single click, microsecons is: ", tdiff.microseconds) if self.debug else True
+                self.timestamp = tsnow
+                double_c = False
+        else: # timestamp was not set  
+            self.timestamp = tsnow
+            double_c = False
+        if double_c:
+            print("** Double diff = {:d}".format(tdiff.microseconds)) if self.debug else True
+        else:
+            print("** Single") if self.debug else True
+        
+            
+            
         selected_indices = event.widget.curselection()
         if selected_indices:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
