@@ -28,7 +28,7 @@ import Dateimeister
 class MyProcesslistWindow:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, caller_close_function, caller_display_function, dict_processlist, debug):
+    def __init__(self, caller_close_function, caller_display_function, dict_processlist, debug, debug_p):
         self.root = tk.Toplevel()
         self.pf_close   = caller_close_function
         self.pf_display = caller_display_function
@@ -45,7 +45,8 @@ class MyProcesslistWindow:
         self.root.resizable(True, True)
 
         self.dict_processlist = dict_processlist
-        self.debug = debug
+        self.debug   = debug
+        self.debug_p = debug_p
         self.procstep_selected = None
         self.dict_text_processid = {}
 
@@ -118,6 +119,7 @@ class MyProcesslistWindow:
         self.hi_process_hist.config(command = self.listbox_process_hist.xview)
         self.listbox_process_hist.config(xscrollcommand = self.hi_process_hist.set)
         self.listbox_process_hist.bind('<Double-1>', self.listbox_process_hist_double)
+        self.listbox_process_hist.bind('<ButtonPress-1>', self.listbox_process_hist_button_press_1)
         self.listbox_process_hist.bind("<<ListboxSelect>>", self.listbox_process_hist_selection_changed)
 
         # Frame for process_list
@@ -188,7 +190,7 @@ class MyProcesslistWindow:
         self.listbox_process_undo.config(xscrollcommand = self.hi_process_undo.set)
         self.listbox_process_undo.bind('<Double-1>', self.listbox_process_undo_double)
 
-        self.timestamp = None 
+        self.timestamp = datetime.now() 
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.initialized = True
 
@@ -265,34 +267,34 @@ class MyProcesslistWindow:
             messagebox.showwarning("Warning", "Listbox process_hist: nothing selected", parent = self.Frame_process_hist)
         else:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
-            print("procstep selected is: " + procstep) if self.debug else True
+            print("*** double click procstep selected is: " + procstep) if self.debug_p else True
             self.procstep_selected = procstep
             self.pf_display(self.dict_text_processid[procstep], "double click")
 
+    def listbox_process_hist_button_press_1(self, event = None):
+        # called when left button was pressed
+        selected_indices = self.listbox_process_hist.curselection()
+        if not selected_indices:
+            self.procstep_selected = None
+            messagebox.showwarning("Warning", "Listbox process_hist: nothing selected", parent = self.Frame_process_hist)
+        else:
+            procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
+            print("*** left button pressed, procstep selected is: " + procstep) if self.debug_p else True
+            self.procstep_selected = procstep
+            self.pf_display(self.dict_text_processid[procstep], "double click")
+    
     def listbox_process_hist_selection_changed(self, event = None):
         # as double click always generates single click (from selection of entry) we want to react only if there was no double click
+        # single click event comes first, double click next. 
         tsnow = datetime.now()
-        double_c = False
-        tdiff = 0
-        if self.timestamp: # not None
-            tdiff = abs(tsnow - self.timestamp)
-            if  tdiff.microseconds < 500000: # this is a double click
-                print("double click, microsecons is: ", tdiff.microseconds) if self.debug else True
-                double_c = True
-                self.timestamp = None
-            else:
-                print("single click, microsecons is: ", tdiff.microseconds) if self.debug else True
-                self.timestamp = tsnow
-                double_c = False
-        else: # timestamp was not set  
-            self.timestamp = tsnow
-            double_c = False
-        if double_c:
-            print("** Double diff = {:d}".format(tdiff.microseconds)) if self.debug else True
+        tdiff = abs(tsnow - self.timestamp)
+        milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
+        if  milliseconds < 500: # this is a double click
+            print("*** double click, diff is: ", str(milliseconds)) if self.debug_p else True
         else:
-            print("** Single") if self.debug else True
+            print("*** single click, diff is: ", str(milliseconds)) if self.debug_p else True
         
-            
+        self.timestamp = tsnow    
             
         selected_indices = event.widget.curselection()
         if selected_indices:
