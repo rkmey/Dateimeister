@@ -121,6 +121,9 @@ class MyProcesslistWindow:
         self.listbox_process_hist.bind('<Double-1>', self.listbox_process_hist_double)
         self.listbox_process_hist.bind('<ButtonPress-1>', self.listbox_process_hist_button_press_1)
         self.listbox_process_hist.bind("<<ListboxSelect>>", self.listbox_process_hist_selection_changed)
+        self.listbox_process_hist.bind("<Down>", self.listbox_process_hist_arrow_down)
+        self.listbox_process_hist.bind("<Up>", self.listbox_process_hist_arrow_up)
+        self.listbox_process_hist_selection = 0
 
         # Frame for process_list
         self.Frame_process_list = tk.Frame(self.root)
@@ -267,6 +270,7 @@ class MyProcesslistWindow:
             messagebox.showwarning("Warning", "Listbox process_hist: nothing selected", parent = self.Frame_process_hist)
         else:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
+            self.listbox_process_hist_selection = selected_indices[0]
             print("*** double click procstep selected is: " + procstep) if self.debug_p else True
             self.procstep_selected = procstep
             self.pf_display(self.dict_text_processid[procstep], "double click")
@@ -279,10 +283,31 @@ class MyProcesslistWindow:
             messagebox.showwarning("Warning", "Listbox process_hist: nothing selected", parent = self.Frame_process_hist)
         else:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
+            self.listbox_process_hist_selection = selected_indices[0]
             print("*** left button pressed, procstep selected is: " + procstep) if self.debug_p else True
             self.procstep_selected = procstep
             self.pf_display(self.dict_text_processid[procstep], "double click")
     
+    def listbox_process_hist_arrow_down(self, event = None):
+        if self.listbox_process_hist_selection < self.listbox_process_hist.size()-1:
+            self.listbox_process_hist.select_clear(self.listbox_process_hist_selection)
+            self.listbox_process_hist_selection += 1
+            self.listbox_process_hist.select_set(self.listbox_process_hist_selection)
+            procstep = self.listbox_process_hist.get(self.listbox_process_hist_selection)
+            #print("procstep selected is: " + procstep) if self.debug else True
+            self.procstep_selected = procstep
+            self.pf_display(self.dict_text_processid[procstep], "selection changed by arrow down")
+
+    def listbox_process_hist_arrow_up(self, event = None):
+        if self.listbox_process_hist_selection > 0:
+            self.listbox_process_hist.select_clear(self.listbox_process_hist_selection)
+            self.listbox_process_hist_selection -= 1
+            self.listbox_process_hist.select_set(self.listbox_process_hist_selection)    
+            procstep = self.listbox_process_hist.get(self.listbox_process_hist_selection)
+            #print("procstep selected is: " + procstep) if self.debug else True
+            self.procstep_selected = procstep
+            self.pf_display(self.dict_text_processid[procstep], "selection changed by arrow up")
+        
     def listbox_process_hist_selection_changed(self, event = None):
         # as double click always generates single click (from selection of entry) we want to react only if there was no double click
         # single click event comes first, double click next. 
@@ -299,6 +324,7 @@ class MyProcesslistWindow:
         selected_indices = event.widget.curselection()
         if selected_indices:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
+            self.listbox_process_hist_selection = selected_indices[0]
             print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
             self.pf_display(self.dict_text_processid[procstep], "selection changed")
