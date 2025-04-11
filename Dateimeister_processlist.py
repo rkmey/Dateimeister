@@ -271,22 +271,19 @@ class MyProcesslistWindow:
         else:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
             self.listbox_process_hist_selection = selected_indices[0]
-            print("*** double click procstep selected is: " + procstep) if self.debug_p else True
+            #print("*** double click procstep selected is: " + procstep) if self.debug_p else True
             self.procstep_selected = procstep
             self.pf_display(self.dict_text_processid[procstep], "double click")
 
     def listbox_process_hist_button_press_1(self, event = None):
         # called when left button was pressed
         selected_indices = self.listbox_process_hist.curselection()
-        if not selected_indices:
-            self.procstep_selected = None
-            messagebox.showwarning("Warning", "Listbox process_hist: nothing selected", parent = self.Frame_process_hist)
-        else:
+        if selected_indices:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
             self.listbox_process_hist_selection = selected_indices[0]
-            print("*** left button pressed, procstep selected is: " + procstep) if self.debug_p else True
+            #print("*** left button pressed, procstep selected is: " + procstep) if self.debug_p else True
             self.procstep_selected = procstep
-            self.pf_display(self.dict_text_processid[procstep], "double click")
+            self.pf_display(self.dict_text_processid[procstep], "left click")
     
     def listbox_process_hist_arrow_down(self, event = None):
         if self.listbox_process_hist_selection < self.listbox_process_hist.size()-1:
