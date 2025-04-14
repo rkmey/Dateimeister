@@ -2366,7 +2366,8 @@ class Diatisch:
         self.win_processlist = None
 
     def processlist_display(self, process_id, infotext):
-        print("called by processlist window, action: {:s} processid selected is: {:d}".format(infotext, process_id)) if self.debug_p else True
+        print("called by processlist window, action: {:s} processid selected is: {:d}, actual processid is: {:d}".format(infotext, process_id, self.UR.get_processid_akt())) if self.debug_p else True
+        self.apply_process_id(process_id, self.UR.get_processid_akt())
 
     def write_cmdfile(self, outdir):
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
