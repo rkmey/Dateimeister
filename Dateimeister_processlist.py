@@ -56,6 +56,7 @@ class MyProcesslistWindow:
         self.height = 0
         self.frame_labels_height = 0.04 # needed for calculation of font size
         self.label_height = 0.7 # needed for calculation of font size
+        self.frame_canvas_height = 0.5 # neeeded for calculation of frames for proc (subtracted) and canvas (relative height)
 
         self.Frame_labels = tk.Frame(self.root)
         self.Frame_labels.place(relx=.01, rely=0.00, relheight=self.frame_labels_height, relwidth=0.98)
@@ -88,7 +89,7 @@ class MyProcesslistWindow:
 
         # Frame for process_hist
         self.Frame_process_hist = tk.Frame(self.root)
-        self.Frame_process_hist.place(relx=.01, rely= self.frame_labels_height + .01, relheight= 1 - self.frame_labels_height -.02, relwidth=0.32)
+        self.Frame_process_hist.place(relx=.01, rely= self.frame_labels_height + .01, relheight= 1 - self.frame_labels_height - self.frame_canvas_height, relwidth=0.32)
         self.Frame_process_hist.configure(relief='flat')
         self.Frame_process_hist.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
@@ -127,7 +128,7 @@ class MyProcesslistWindow:
 
         # Frame for process_list
         self.Frame_process_list = tk.Frame(self.root)
-        self.Frame_process_list.place(relx=.34, rely= self.frame_labels_height + .01, relheight= 1 - self.frame_labels_height -.02, relwidth=0.32)
+        self.Frame_process_list.place(relx=.34, rely= self.frame_labels_height + .01, relheight= 1 - self.frame_labels_height - self.frame_canvas_height, relwidth=0.32)
         self.Frame_process_list.configure(relief='flat')
         self.Frame_process_list.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
@@ -161,7 +162,7 @@ class MyProcesslistWindow:
 
         # Frame for process_undo
         self.Frame_process_undo = tk.Frame(self.root)
-        self.Frame_process_undo.place(relx=.67, rely= self.frame_labels_height + .01, relheight= 1 - self.frame_labels_height -.02, relwidth=0.32)
+        self.Frame_process_undo.place(relx=.67, rely= self.frame_labels_height + .01, relheight= 1 - self.frame_labels_height - self.frame_canvas_height, relwidth=0.32)
         self.Frame_process_undo.configure(relief='flat')
         self.Frame_process_undo.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 

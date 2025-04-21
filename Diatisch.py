@@ -546,6 +546,7 @@ class Diatisch:
         self.init()
         # historize initial state
         self.historize_process("initial")
+        self.processid_displayed = self.UR.get_processid_akt() # used for keep track of predecessor of processid to be displayed from selection in procell_list, initialized to actual processid
         if list_imagefiles:
             self.load_images(None, list_imagefiles)
 
@@ -2367,7 +2368,9 @@ class Diatisch:
 
     def processlist_display(self, process_id, infotext):
         print("called by processlist window, action: {:s} processid selected is: {:d}, actual processid is: {:d}".format(infotext, process_id, self.UR.get_processid_akt())) if self.debug_p else True
-        self.apply_process_id(process_id, self.UR.get_processid_akt())
+        if process_id != self.processid_displayed:
+            self.apply_process_id(process_id, self.processid_displayed)
+            self.processid_displayed = process_id
 
     def write_cmdfile(self, outdir):
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
