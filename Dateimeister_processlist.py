@@ -194,6 +194,12 @@ class MyProcesslistWindow:
         self.listbox_process_undo.config(xscrollcommand = self.hi_process_undo.set)
         self.listbox_process_undo.bind('<Double-1>', self.listbox_process_undo_double)
 
+        # Frame for canvas
+        self.Frame_canvas = tk.Frame(self.root)
+        self.Frame_canvas.place(relx=.01, rely= 1 - self.frame_canvas_height + .01, relheight= self.frame_canvas_height - .02, relwidth=0.98)
+        self.Frame_canvas.configure(relief='flat')
+        self.Frame_canvas.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        
         self.timestamp = datetime.now() 
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.initialized = True
