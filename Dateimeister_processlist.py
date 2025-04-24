@@ -25,9 +25,18 @@ from datetime import datetime, timezone
 
 import Dateimeister
 
-class MyProcesslistWindow:
+class ScrollableCanvas(tk.Canvas):
+    def __init__(self, master, **kwargs):
+        super().__init__(master, **kwargs)
+        self.bind("<Configure>", self.on_configure)
+        self.select_ctr = 0
 
-    # The class "constructor" - It's actually an initializer 
+    def on_configure(self, event):
+        self.configure(scrollregion=self.bbox("all"))
+        #print ("<Configure> called")
+
+class MyProcesslistWindow:
+   # The class "constructor" - It's actually an initializer 
     def __init__(self, caller_close_function, caller_display_function, dict_processlist, debug, debug_p):
         self.root = tk.Toplevel()
         self.pf_close   = caller_close_function
@@ -194,12 +203,31 @@ class MyProcesslistWindow:
         self.listbox_process_undo.config(xscrollcommand = self.hi_process_undo.set)
         self.listbox_process_undo.bind('<Double-1>', self.listbox_process_undo_double)
 
-        # Frame for canvas
-        self.Frame_canvas = tk.Frame(self.root)
-        self.Frame_canvas.place(relx=.01, rely= 1 - self.frame_canvas_height + .01, relheight= self.frame_canvas_height - .02, relwidth=0.98)
-        self.Frame_canvas.configure(relief='flat')
-        self.Frame_canvas.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        # Frame for source canvas
+        self.Frame_source = tk.Frame(self.root)
+        self.Frame_source.place(relx=.01, rely= 1 - self.frame_canvas_height + .01, relheight= self.frame_canvas_height - .05, relwidth=0.48)
+        self.Frame_source.configure(relief='flat')
+        self.Frame_source.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         
+        # canvas source with scrollbars
+        self.source_canvas = ScrollableCanvas(self.Frame_source, bg="yellow")
+        self.source_canvas.place(relx=0.0, rely=0.0, relheight=.98, relwidth=.98)
+
+        self.V_source = tk.Scrollbar(self.Frame_source, orient = tk.VERTICAL)
+        self.V_source.config(command=self.source_canvas.yview)
+        self.source_canvas.config(yscrollcommand=self.V_source.set)
+        self.V_source.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.02, anchor = tk.NE)        
+
+        self.H_source = tk.Scrollbar(self.Frame_source, orient = tk.HORIZONTAL)
+        self.H_source.config(command=self.source_canvas.xview)
+        self.source_canvas.config(xscrollcommand=self.H_source.set)
+        self.H_source.place(relx = 0, rely = 1, relheight = 0.04, relwidth = 0.98, anchor = tk.SW)
+
+        self.source_canvas.bind("<Left>",  lambda event: self.source_canvas.xview(tk.SCROLL, -1, "unit"))
+        self.source_canvas.bind("<Right>", lambda event: self.source_canvas.xview(tk.SCROLL,  1, "unit"))
+        self.source_canvas.bind("<Up>",    lambda event: self.source_canvas.yview(tk.SCROLL, -1, "unit"))
+        self.source_canvas.bind("<Down>",  lambda event: self.source_canvas.yview(tk.SCROLL,  1, "unit"))
+
         self.timestamp = datetime.now() 
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.initialized = True
