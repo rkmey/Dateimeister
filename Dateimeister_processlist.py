@@ -23,8 +23,6 @@ from tkinter.font import Font
 from time import gmtime, strftime
 from datetime import datetime, timezone
 
-import Dateimeister
-
 class ScrollableCanvas(tk.Canvas):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
@@ -36,6 +34,8 @@ class ScrollableCanvas(tk.Canvas):
         #print ("<Configure> called")
 
 class MyProcesslistWindow:
+    line_width = 5
+    line_color = "red"
    # The class "constructor" - It's actually an initializer 
     def __init__(self, caller_close_function, caller_display_function, dict_processlist, debug, debug_p):
         self.root = tk.Toplevel()
@@ -65,6 +65,7 @@ class MyProcesslistWindow:
         self.height = 0
         self.frame_labels_height = 0.04 # needed for calculation of font size
         self.label_height = 0.7 # needed for calculation of font size
+        self.frame_labels_canvas_height = 0.04
         self.frame_canvas_height = 0.5 # neeeded for calculation of frames for proc (subtracted) and canvas (relative height)
 
         self.Frame_labels = tk.Frame(self.root)
@@ -203,9 +204,27 @@ class MyProcesslistWindow:
         self.listbox_process_undo.config(xscrollcommand = self.hi_process_undo.set)
         self.listbox_process_undo.bind('<Double-1>', self.listbox_process_undo_double)
 
+        # Frame for canvas labels
+        self.Frame_labels_canvas = tk.Frame(self.root)
+        self.Frame_labels_canvas.place(relx=.01, rely=1 - self.frame_canvas_height + .01, relheight=self.frame_labels_canvas_height, relwidth=0.98)
+        self.Frame_labels_canvas.configure(relief='flat')
+        self.Frame_labels_canvas.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+
+        self.Label_source_ctr = tk.Label(self.Frame_labels_canvas)
+        self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.3)
+        self.Label_source_ctr.configure(anchor=tk.NW)
+        self.Label_source_ctr.configure(font=self.text_font)
+        self.Label_source_ctr.configure(text='Num Images Source: 0')
+
+        self.Label_target_ctr = tk.Label(self.Frame_labels_canvas)
+        self.Label_target_ctr.place(relx=.5, rely=0.0, relheight=self.label_height, relwidth=0.3)
+        self.Label_target_ctr.configure(anchor=tk.NW)
+        self.Label_target_ctr.configure(font=self.text_font)
+        self.Label_target_ctr.configure(text='Num Images Target: 0')
+
         # Frame for source canvas
         self.Frame_source = tk.Frame(self.root)
-        self.Frame_source.place(relx=.01, rely= 1 - self.frame_canvas_height + .01, relheight= self.frame_canvas_height - .05, relwidth=0.48)
+        self.Frame_source.place(relx=.01, rely= 1 - self.frame_canvas_height + self.frame_labels_canvas_height + .01, relheight= self.frame_canvas_height - .08, relwidth=0.48)
         self.Frame_source.configure(relief='flat')
         self.Frame_source.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         
@@ -227,6 +246,41 @@ class MyProcesslistWindow:
         self.source_canvas.bind("<Right>", lambda event: self.source_canvas.xview(tk.SCROLL,  1, "unit"))
         self.source_canvas.bind("<Up>",    lambda event: self.source_canvas.yview(tk.SCROLL, -1, "unit"))
         self.source_canvas.bind("<Down>",  lambda event: self.source_canvas.yview(tk.SCROLL,  1, "unit"))
+
+        # Frame for target canvas
+        self.Frame_target = tk.Frame(self.root)
+        self.Frame_target.place(relx=.5, rely= 1 - self.frame_canvas_height + self.frame_labels_canvas_height + .01, relheight= self.frame_canvas_height - .08, relwidth=0.48)
+        self.Frame_target.configure(relief='flat')
+        self.Frame_target.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        
+        # canvas target with scrollbars
+        self.target_canvas = ScrollableCanvas(self.Frame_target, bg="yellow")
+        self.target_canvas.place(relx=0.0, rely=0.0, relheight=.98, relwidth=.98)
+
+        self.V_target = tk.Scrollbar(self.Frame_target, orient = tk.VERTICAL)
+        self.V_target.config(command=self.target_canvas.yview)
+        self.target_canvas.config(yscrollcommand=self.V_target.set)
+        self.V_target.place(relx = 1, rely = 0,     relheight = 0.98, relwidth = 0.02, anchor = tk.NE)        
+
+        self.H_target = tk.Scrollbar(self.Frame_target, orient = tk.HORIZONTAL)
+        self.H_target.config(command=self.target_canvas.xview)
+        self.target_canvas.config(xscrollcommand=self.H_target.set)
+        self.H_target.place(relx = 0, rely = 1, relheight = 0.04, relwidth = 0.98, anchor = tk.SW)
+
+        self.target_canvas.bind("<Left>",  lambda event: self.target_canvas.xview(tk.SCROLL, -1, "unit"))
+        self.target_canvas.bind("<Right>", lambda event: self.target_canvas.xview(tk.SCROLL,  1, "unit"))
+        self.target_canvas.bind("<Up>",    lambda event: self.target_canvas.yview(tk.SCROLL, -1, "unit"))
+        self.target_canvas.bind("<Down>",  lambda event: self.target_canvas.yview(tk.SCROLL,  1, "unit"))
+
+
+        self.dist_frame = 20 # distance of dotted select frame from border in Pixels
+        self.m, self.n = 10, 5
+        self.row_height  = 200
+        self.processid_displayed = None
+        self.list_source_images = []
+        self.dict_source_images = {}
+        self.list_target_images = []
+        self.dict_target_images = {}
 
         self.timestamp = datetime.now() 
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
@@ -359,7 +413,61 @@ class MyProcesslistWindow:
             self.listbox_process_hist_selection = selected_indices[0]
             print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
-            self.pf_display(self.dict_text_processid[procstep], "selection changed")
+            if self.procstep_selected != self.processid_displayed:
+                processid = self.dict_text_processid[self.procstep_selected] # get process_id from text
+                self.apply_process_id(processid, self.processid_displayed)
+                self.processid_displayed = processid
+            #self.pf_display(self.dict_text_processid[procstep], "selection changed")
+
+    def apply_process_id(self, process_id, processid_predecessor):
+        print("apply process_id, id to apply is: ", str(process_id), " processid was: ", str(processid_predecessor)) if self.debug_p else True
+        
+        h = self.dict_processlist[process_id]
+        list_obj_source = h.list_source_images
+        list_obj_target = h.list_target_images
+        source_new = False
+        target_new = False
+        if not processid_predecessor or h.str_hashsum_source_filenames != self.dict_processlist[processid_predecessor].str_hashsum_source_filenames:
+            source_new = True
+        if not processid_predecessor or h.str_hashsum_target_filenames != self.dict_processlist[processid_predecessor].str_hashsum_target_filenames:
+            target_new = True
+        if source_new:
+            # rebuild list of source images
+            self.list_source_images = []
+            self.dict_source_images = {}
+            for i in list_obj_source:
+                self.list_source_images.append(i)
+            self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
+ 
+        if target_new:
+            # rebuild list of target images
+            self.list_target_images = []
+            self.dict_target_images = {}
+            for i in list_obj_target:
+                self.list_target_images.append(i)
+            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
+
+        # apply selection if canvas has changed or hashsums for selection are not equal
+        if source_new or h.str_hashsum_source_selection != self.dict_processlist[processid_predecessor].str_hashsum_source_selection:
+            # list_obj and self.list_source_images have same structure, so we can use an index to access the elements of self.list_source_images
+            ii = 0
+            for i in list_obj_source:
+                # print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag) if self.debug else True
+                if i.is_selected():
+                    self.list_source_images[ii].select(self.source_canvas, i.get_ctr())
+                else:
+                    self.list_source_images[ii].unselect(self.source_canvas)
+                ii += 1
+        if target_new or h.str_hashsum_target_selection != self.dict_processlist[processid_predecessor].str_hashsum_target_selection:
+            # list_obj and self.list_target_images have same structure, so we can use an index to access the elements of self.list_source_images
+            ii = 0
+            for i in list_obj_target:
+                #print("* H TARGET Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag) if self.debug else True
+                if i.is_selected():
+                    self.list_target_images[ii].select(self.target_canvas, i.get_ctr())
+                else:
+                    self.list_target_images[ii].unselect(self.target_canvas)
+                ii += 1
 
     def listbox_process_list_double(self, event = None):
         selected_indices = self.listbox_process_list.curselection()
@@ -380,6 +488,43 @@ class MyProcesslistWindow:
             procstep = ",".join([self.listbox_process_undo.get(i) for i in selected_indices]) # because listbox has single selection
             print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
+
+    def display_image_objects(self, list_obj, canvas, label_ctr): # display list of images on canvas, use already converted photos in objects, better performance
+        xpos = 0
+        ypos = 0
+        row  = 0
+        col  = 0
+        ctr  = 0
+        canvas.delete("all")
+        for i in list_obj:
+            filename = i.get_filename()
+            #print("try to show image: " , filename) if self.debug else True
+            photo = i.get_image()
+            img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
+            display_width, display_height = photo.width(), photo.height()
+            # draw rect consisting of 4 dotted lines because create rectagle does not support dotted lines
+            north_west = (xpos + self.dist_frame, ypos + self.dist_frame)
+            north_east = (xpos + display_width - self.dist_frame, ypos + self.dist_frame)
+            south_west = (xpos + self.dist_frame, ypos + display_height - self.dist_frame)
+            south_east = (xpos + display_width - self.dist_frame, ypos + display_height - self.dist_frame)
+            line_north = canvas.create_line(north_west, north_east, dash=(1, 1), fill = MyProcesslistWindow.line_color, width = MyProcesslistWindow.line_width, tags=i.get_tag())
+            line_east  = canvas.create_line(north_east, south_east, dash=(1, 1), fill = MyProcesslistWindow.line_color, width = MyProcesslistWindow.line_width, tags=i.get_tag())
+            line_south = canvas.create_line(south_west, south_east, dash=(1, 1), fill = MyProcesslistWindow.line_color, width = MyProcesslistWindow.line_width, tags=i.get_tag())
+            line_west  = canvas.create_line(north_west, south_west, dash=(1, 1), fill = MyProcesslistWindow.line_color, width = MyProcesslistWindow.line_width, tags=i.get_tag())
+            #print("   Insert into dict key: ", str(img_id), " filename: " , obj.get_filename()) if self.debug else True
+            ctr += 1
+            xpos += display_width
+            col += 1
+            if col >= self.n:
+                col = 0
+                row += 1
+                xpos = 0
+                ypos += self.row_height
+        canvas.update()
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        labeltext = label_ctr.cget('text')
+        labeltext = re.sub(r"\d+$", f"{str(ctr)}", labeltext)
+        label_ctr.config(text = labeltext)
 
     def close_handler(self): #calles when window is closing:
         self.root.destroy()
