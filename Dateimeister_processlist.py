@@ -437,7 +437,7 @@ class MyProcesslistWindow:
             self.dict_source_images = {}
             for i in list_obj_source:
                 self.list_source_images.append(i)
-            self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
+            self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr, h.idx_akt)
  
         if target_new:
             # rebuild list of target images
@@ -445,7 +445,7 @@ class MyProcesslistWindow:
             self.dict_target_images = {}
             for i in list_obj_target:
                 self.list_target_images.append(i)
-            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
+            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr, h.idx_akt)
 
         # apply selection if canvas has changed or hashsums for selection are not equal
         if source_new or h.str_hashsum_source_selection != self.dict_processlist[processid_predecessor].str_hashsum_source_selection:
@@ -489,7 +489,8 @@ class MyProcesslistWindow:
             print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
 
-    def display_image_objects(self, list_obj, canvas, label_ctr): # display list of images on canvas, use already converted photos in objects, better performance
+    def display_image_objects(self, list_obj, canvas, label_ctr, index): # display list of images on canvas, use already converted photos in objects, better performance
+        # we have to retrieve images from historized process, index is supplied by caller
         xpos = 0
         ypos = 0
         row  = 0
@@ -499,7 +500,7 @@ class MyProcesslistWindow:
         for i in list_obj:
             filename = i.get_filename()
             #print("try to show image: " , filename) if self.debug else True
-            photo = i.get_image()
+            photo = i.get_image_from_index(index)
             img_id = canvas.create_image(xpos, ypos, anchor='nw', image = photo, tags = 'images')
             display_width, display_height = photo.width(), photo.height()
             # draw rect consisting of 4 dotted lines because create rectagle does not support dotted lines

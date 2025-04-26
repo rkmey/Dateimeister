@@ -77,6 +77,8 @@ class MyImage:
         return self.filename
     def get_image(self):
         return Diatisch.dict_filename_images[Diatisch.idx_akt][self.filename]
+    def get_image_from_index(self, index): # used for process_list which gets index from historized process
+        return Diatisch.dict_filename_images[index][self.filename]
     def get_ctr(self):
         return self.selected
     def select(self, canvas, ctr):
