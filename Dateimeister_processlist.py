@@ -412,9 +412,9 @@ class MyProcesslistWindow:
             procstep = ",".join([self.listbox_process_hist.get(i) for i in selected_indices]) # because listbox has single selection
             self.listbox_process_hist_selection = selected_indices[0]
             print("procstep selected is: " + procstep) if self.debug else True
-            self.procstep_selected = procstep
-            if self.procstep_selected != self.processid_displayed:
-                processid = self.dict_text_processid[self.procstep_selected] # get process_id from text
+            self.procstep_selected = procstep # process text
+            processid = self.dict_text_processid[self.procstep_selected] # get process_id from text
+            if processid != self.processid_displayed:
                 self.apply_process_id(processid, self.processid_displayed)
                 self.processid_displayed = processid
             #self.pf_display(self.dict_text_processid[procstep], "selection changed")
@@ -427,9 +427,18 @@ class MyProcesslistWindow:
         list_obj_target = h.list_target_images
         source_new = False
         target_new = False
-        if not processid_predecessor or h.str_hashsum_source_filenames != self.dict_processlist[processid_predecessor].str_hashsum_source_filenames:
+        str_hashsum_source_filenames_predecessor = ""
+        str_hashsum_target_filenames_predecessor = ""
+        str_hashsum_source_selection_predecessor = ""
+        str_hashsum_target_selection_predecessor = ""
+        if processid_predecessor:
+            str_hashsum_source_filenames_predecessor = self.dict_processlist[processid_predecessor].str_hashsum_source_filenames
+            str_hashsum_target_filenames_predecessor = self.dict_processlist[processid_predecessor].str_hashsum_target_filenames
+            str_hashsum_source_selection_predecessor = self.dict_processlist[processid_predecessor].str_hashsum_source_selection
+            str_hashsum_target_selection_predecessor = self.dict_processlist[processid_predecessor].str_hashsum_target_selection
+        if not processid_predecessor or h.str_hashsum_source_filenames != str_hashsum_source_filenames_predecessor:
             source_new = True
-        if not processid_predecessor or h.str_hashsum_target_filenames != self.dict_processlist[processid_predecessor].str_hashsum_target_filenames:
+        if not processid_predecessor or h.str_hashsum_target_filenames != str_hashsum_target_filenames_predecessor:
             target_new = True
         if source_new:
             # rebuild list of source images
@@ -448,17 +457,17 @@ class MyProcesslistWindow:
             self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr, h.idx_akt)
 
         # apply selection if canvas has changed or hashsums for selection are not equal
-        if source_new or h.str_hashsum_source_selection != self.dict_processlist[processid_predecessor].str_hashsum_source_selection:
+        if source_new or h.str_hashsum_source_selection != str_hashsum_source_selection_predecessor:
             # list_obj and self.list_source_images have same structure, so we can use an index to access the elements of self.list_source_images
             ii = 0
-            for i in list_obj_source:
+             for i in list_obj_source:
                 # print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag) if self.debug else True
                 if i.is_selected():
                     self.list_source_images[ii].select(self.source_canvas, i.get_ctr())
                 else:
                     self.list_source_images[ii].unselect(self.source_canvas)
                 ii += 1
-        if target_new or h.str_hashsum_target_selection != self.dict_processlist[processid_predecessor].str_hashsum_target_selection:
+        if target_new or h.str_hashsum_target_selection != str_hashsum_target_selection_predecessor:
             # list_obj and self.list_target_images have same structure, so we can use an index to access the elements of self.list_source_images
             ii = 0
             for i in list_obj_target:
