@@ -460,7 +460,7 @@ class MyProcesslistWindow:
         if source_new or h.str_hashsum_source_selection != str_hashsum_source_selection_predecessor:
             # list_obj and self.list_source_images have same structure, so we can use an index to access the elements of self.list_source_images
             ii = 0
-             for i in list_obj_source:
+            for i in list_obj_source:
                 # print("* H SOURCE Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag) if self.debug else True
                 if i.is_selected():
                     self.list_source_images[ii].select(self.source_canvas, i.get_ctr())

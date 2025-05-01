@@ -83,8 +83,8 @@ class MyImage:
         return self.selected
     def select(self, canvas, ctr):
         #print("  find with tag ", self.tag, ": ", str(self.canvas.find_withtag(self.tag)))
-        for i in self.canvas.find_withtag(self.tag):
-            self.canvas.itemconfigure(i, state = 'normal')
+        for i in canvas.find_withtag(self.tag):
+            canvas.itemconfigure(i, state = 'normal')
         if not self.is_selected(): 
             changed = True
         else:
@@ -92,8 +92,8 @@ class MyImage:
         self.selected = ctr
         return changed # True if prior state was not selected, False otherwise
     def unselect(self, canvas):
-        for i in self.canvas.find_withtag(self.tag):
-            self.canvas.itemconfigure(i, state = 'hidden')
+        for i in canvas.find_withtag(self.tag):
+            canvas.itemconfigure(i, state = 'hidden')
         if not self.is_selected(): 
             changed = False
         else:
