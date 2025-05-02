@@ -14,3 +14,6 @@ git tag
 Vergleich remote / local file:
 git diff master:Diatisch.py -- Diatisch.py
 git diff master:Dateimeister_support.py -- Dateimeister_support.py
+
+lokal geänderte Datei auf Stand des letzten Commits zurücksetzen:
+git restore Dateimeister_processlist.py
