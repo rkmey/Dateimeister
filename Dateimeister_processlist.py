@@ -362,7 +362,7 @@ class MyProcesslistWindow:
             self.listbox_process_hist_selection = selected_indices[0]
             #print("*** double click procstep selected is: " + procstep) if self.debug_p else True
             self.procstep_selected = procstep
-            self.pf_display(self.dict_text_processid[procstep], "double click")
+            #self.pf_display(self.dict_text_processid[procstep], "double click")
 
     def listbox_process_hist_button_press_1(self, event = None):
         # called when left button was pressed
@@ -372,7 +372,7 @@ class MyProcesslistWindow:
             self.listbox_process_hist_selection = selected_indices[0]
             #print("*** left button pressed, procstep selected is: " + procstep) if self.debug_p else True
             self.procstep_selected = procstep
-            self.pf_display(self.dict_text_processid[procstep], "left click")
+            #self.pf_display(self.dict_text_processid[procstep], "left click")
     
     def listbox_process_hist_arrow_down(self, event = None):
         if self.listbox_process_hist_selection < self.listbox_process_hist.size()-1:
@@ -382,7 +382,7 @@ class MyProcesslistWindow:
             procstep = self.listbox_process_hist.get(self.listbox_process_hist_selection)
             #print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
-            self.pf_display(self.dict_text_processid[procstep], "selection changed by arrow down")
+            #self.pf_display(self.dict_text_processid[procstep], "selection changed by arrow down")
 
     def listbox_process_hist_arrow_up(self, event = None):
         if self.listbox_process_hist_selection > 0:
@@ -392,7 +392,7 @@ class MyProcesslistWindow:
             procstep = self.listbox_process_hist.get(self.listbox_process_hist_selection)
             #print("procstep selected is: " + procstep) if self.debug else True
             self.procstep_selected = procstep
-            self.pf_display(self.dict_text_processid[procstep], "selection changed by arrow up")
+            #self.pf_display(self.dict_text_processid[procstep], "selection changed by arrow up")
         
     def listbox_process_hist_selection_changed(self, event = None):
         # as double click always generates single click (from selection of entry) we want to react only if there was no double click

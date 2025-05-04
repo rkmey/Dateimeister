@@ -214,22 +214,38 @@ class Diatisch:
         self.Frame_labels.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.Label_source_ctr = tk.Label(self.Frame_labels)
-        self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.3)
+        self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.1)
         self.Label_source_ctr.configure(anchor=tk.NW)
         self.Label_source_ctr.configure(font=self.text_font)
         self.Label_source_ctr.configure(text='Num Images Source: 0')
 
         self.Label_process_id = tk.Label(self.Frame_labels)
-        self.Label_process_id.place(relx=0.35, rely=0.0, relheight=self.label_height, relwidth=0.3)
+        self.Label_process_id.place(relx=0.5, rely=0.0, relheight=self.label_height, relwidth=0.1)
         self.Label_process_id.configure(anchor=tk.NW)
         self.Label_process_id.configure(font=self.text_font)
         self.Label_process_id.configure(text='Process ID: 0')
 
         self.Label_target_ctr = tk.Label(self.Frame_labels)
-        self.Label_target_ctr.place(relx=.6, rely=0.0, relheight=self.label_height, relwidth=0.3)
+        self.Label_target_ctr.place(relx=.88, rely=0.0, relheight=self.label_height, relwidth=0.1)
         self.Label_target_ctr.configure(anchor=tk.NE)
         self.Label_target_ctr.configure(font=self.text_font)
         self.Label_target_ctr.configure(text='Num Images Target: 0')
+
+        # source control buttons for sorting on label frame
+        anz_button_source = 4
+        buttonpos_source  = 0.1
+        relwidth_source   = (.4 - buttonpos_source) / anz_button_source
+        self.order_name_asc_button = tk.Button(self.Frame_labels, text="name asc", command=self.order_name_asc)
+        self.order_name_asc_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
+        buttonpos_source += relwidth_source
+        self.order_name_desc_button = tk.Button(self.Frame_labels, text="name desc", command=self.order_name_desc)
+        self.order_name_desc_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
+        buttonpos_source += relwidth_source
+        self.order_date_asc_button = tk.Button(self.Frame_labels, text="date asc", command=self.order_date_asc)
+        self.order_date_asc_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
+        buttonpos_source += relwidth_source
+        self.order_date_desc_button = tk.Button(self.Frame_labels, text="date desc", command=self.order_date_desc)
+        self.order_date_desc_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
 
 
         self.Frame_source = tk.Frame(self.root)
@@ -893,9 +909,11 @@ class Diatisch:
             self.dict_source_target, dict_source_target_jpeg, self.dict_source_target_tooold, self.dict_relpath = \
               DG.dateimeister(self.imagetype, self.imagetypes, directory, "", "n", recursive, False, "", None)
             # copy result to image_files
-            self.image_files.clear()
+            tfiles = []
             for i in self.dict_source_target:          
-                self.image_files.append(i)
+                tfiles.append(i)
+            self.image_files.clear()
+            self.image_files = sorted(tfiles)
             # now make an entry for this indir.
             ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
             this_i = re.sub(r'\\', '/', directory).lower()
@@ -2408,6 +2426,32 @@ class Diatisch:
                 str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
                 thiscmdfile.write(comment + str_ret + '\n')
             thiscmdfile.close()
+
+    def order_name_asc(self): # order images on source canvas by name asc
+        self.list_source_images = sorted(self.list_source_images, key=lambda x: x.get_filename(), reverse=False)
+        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
+        self.apply_selections(self.list_source_images, self.source_canvas)
+    def order_name_desc(self): # order images on source canvas by name desc
+        self.list_source_images = sorted(self.list_source_images, key=lambda x: x.get_filename(), reverse=True)
+        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
+        self.apply_selections(self.list_source_images, self.source_canvas)
+    def order_date_asc(self): # order images on source canvas by date asc
+        self.list_source_images = sorted(self.list_source_images, key=lambda x: os.path.getmtime(x.get_filename()), reverse=False)
+        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
+        self.apply_selections(self.list_source_images, self.source_canvas)
+    def order_date_desc(self): # order images on source canvas by date desc
+        self.list_source_images = sorted(self.list_source_images, key=lambda x: os.path.getmtime(x.get_filename()), reverse=True)
+        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
+        self.apply_selections(self.list_source_images, self.source_canvas)
+
+    def apply_selections(self, list_images, canvas):
+        # now select / unselect, remember: display image objects always shows selecttion frame because it is drawn last!
+        for i in list_images:
+            # we selected all images which were selected before the delete action and unselect the others
+            if i.is_selected(): # select
+                self.select_image(i, canvas)
+            else:
+                self.unselect_image(i, canvas)
 
 
 class HistObj:
