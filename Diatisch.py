@@ -22,6 +22,9 @@ import Dateimeister_messages as DM
 import Dateimeister_FSimage as FS
 import Dateimeister_processlist as DP 
 
+import cv2
+import matplotlib.pyplot as plt
+
 from enum import Enum
 class action(Enum):
     PRESS   = 1
@@ -187,10 +190,11 @@ class Diatisch:
         self.xpos = 0
         self.ypos = 0
         
+        print("Diatisch Debug is: ", debug)
         if debug == 'Y' or debug == 'y':
             self.debug   = True # debug all
             self.debug_p = True # debug process history
-        elif debug == 'N' or debug == 'n':
+        elif debug == 'N' or debug == 'n' or not debug:
             self.debug   = False # no debug all
             self.debug_p = False # no debug process history
         elif debug == 'P' or debug == 'p':
@@ -935,7 +939,8 @@ class Diatisch:
             display_width  = int(image_width_orig * faktor)
             display_height = int(image_height_orig * faktor)
             newsize = (display_width, display_height)
-            r_img = img.resize(newsize, Image.Resampling.NEAREST)
+            r_img = img
+            r_img.thumbnail(newsize)
             photo = ImageTk.PhotoImage(r_img)
             # insert into self.list_source_images
             i = MyImage(filename, self.source_canvas, tag_prefix + str(tag_no))
@@ -957,7 +962,8 @@ class Diatisch:
                 display_width  = int(image_width_orig * faktor)
                 display_height = int(image_height_orig * faktor)
                 newsize = (display_width, display_height)
-                r_img = img.resize(newsize, Image.Resampling.NEAREST)
+                r_img = img
+                r_img.thumbnail(newsize)
                 photo = ImageTk.PhotoImage(r_img)
                 # insert into self.list_target_images
                 i = MyImage(filename, self.target_canvas, tag_prefix + str(tag_no))

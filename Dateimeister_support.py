@@ -3091,7 +3091,7 @@ class Dateimeister_support:
                         list_diatisch.append(i)
                 if list_diatisch:
                     Globals.list_result_diatisch = []
-                    self.win_diatisch = DIAT.Diatisch(None, 'Y', list_diatisch, Globals.list_result_diatisch, self.diatisch_callback) # Y is for debug yes
+                    self.win_diatisch = DIAT.Diatisch(self.debug, None, list_diatisch, Globals.list_result_diatisch, self.diatisch_callback) # Y is for debug yes
                 else:
                     messagebox.showinfo("Diatisch", "no images available for Diatisch")
             else:
