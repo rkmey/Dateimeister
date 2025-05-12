@@ -547,7 +547,11 @@ class Diatisch:
         self.canvas_to_scroll = None
         self.scrolltype = ''
 
-        self.timestamp = datetime.now() 
+        self.timestamp1 = datetime.now() 
+        self.timestamp2 = datetime.now() 
+        self.timestamp3 = datetime.now() 
+        self.timestamp4 = datetime.now() 
+        self.timestamp5 = datetime.now() 
         self.timestamp_scroll = datetime.now() 
         self.image_press = None
         self.image_release = None
@@ -1098,10 +1102,11 @@ class Diatisch:
 
     def tooltip_imagefile_source(self, event):
         tsnow = datetime.now()
-        tdiff = abs(tsnow - self.timestamp)
-        if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
-            self.timestamp = tsnow
+        tdiff = abs(tsnow - self.timestamp1)
+        milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
+        if  milliseconds > 200:
+            #print("Timer has finished, milliseconds is: ", milliseconds) if self.debug else True
+            self.timestamp1 = tsnow
         else:
             return
         # Tooltip
@@ -1117,10 +1122,12 @@ class Diatisch:
 
     def tooltip_imagefile_target(self, event):
         tsnow = datetime.now()
-        tdiff = abs(tsnow - self.timestamp)
-        if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
-            self.timestamp = tsnow
+        tdiff = abs(tsnow - self.timestamp2)
+        milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
+        if  milliseconds > 200:
+            #print("Timer has finished, milliseconds is: ", milliseconds) if self.debug else True
+            self.timestamp2 = tsnow
+
         else:
             return
         # Tooltip
@@ -1136,10 +1143,11 @@ class Diatisch:
                        
     def tooltip_lb_indir(self, event):
         tsnow = datetime.now()
-        tdiff = abs(tsnow - self.timestamp)
-        if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
-            self.timestamp = tsnow
+        tdiff = abs(tsnow - self.timestamp3)
+        milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
+        if  milliseconds > 200:
+            #print("Timer has finished, milliseconds is: ", milliseconds) if self.debug else True
+            self.timestamp3 = tsnow
         else:
             return
         # Tooltip
@@ -1152,10 +1160,11 @@ class Diatisch:
 
     def tooltip_lb_cfg(self, event):
         tsnow = datetime.now()
-        tdiff = abs(tsnow - self.timestamp)
-        if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
-            self.timestamp = tsnow
+        tdiff = abs(tsnow - self.timestamp4)
+        milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
+        if  milliseconds > 200:
+            #print("Timer has finished, milliseconds is: ", milliseconds) if self.debug else True
+            self.timestamp4 = tsnow
         else:
             return
         # Tooltip
@@ -1168,10 +1177,11 @@ class Diatisch:
 
     def tooltip_lb_outdir(self, event):
         tsnow = datetime.now()
-        tdiff = abs(tsnow - self.timestamp)
-        if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
-            self.timestamp = tsnow
+        tdiff = abs(tsnow - self.timestamp5)
+        milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
+        if  milliseconds > 200:
+            #print("Timer has finished, milliseconds is: ", milliseconds) if self.debug else True
+            self.timestamp5 = tsnow
         else:
             return
         # Tooltip
@@ -1277,8 +1287,9 @@ class Diatisch:
         # y works in the same way
         tsnow = datetime.now()
         tdiff = abs(tsnow - self.timestamp_scroll)
-        if  tdiff.microseconds > 200000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds) if self.debug else True
+        milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
+        if  milliseconds > 200:
+            #print("Timer has finished, milliseconds is: ", milliseconds) if self.debug else True
             self.timestamp_scroll = tsnow
         else:
             return

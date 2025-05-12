@@ -282,7 +282,7 @@ class MyProcesslistWindow:
         self.list_target_images = []
         self.dict_target_images = {}
 
-        self.timestamp = datetime.now() 
+        self.timestamp1 = datetime.now() 
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.initialized = True
 
@@ -398,14 +398,14 @@ class MyProcesslistWindow:
         # as double click always generates single click (from selection of entry) we want to react only if there was no double click
         # single click event comes first, double click next. 
         tsnow = datetime.now()
-        tdiff = abs(tsnow - self.timestamp)
+        tdiff = abs(tsnow - self.timestamp1)
         milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
         if  milliseconds < 500: # this is a double click
             print("*** double click, diff is: ", str(milliseconds)) if self.debug_p else True
         else:
             print("*** single click, diff is: ", str(milliseconds)) if self.debug_p else True
         
-        self.timestamp = tsnow    
+        self.timestamp1 = tsnow    
             
         selected_indices = event.widget.curselection()
         if selected_indices:
