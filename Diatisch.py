@@ -1125,7 +1125,6 @@ class Diatisch:
         tdiff = abs(tsnow - self.timestamp2)
         milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
         if  milliseconds > 200:
-            #print("Timer has finished, milliseconds is: ", milliseconds) if self.debug else True
             self.timestamp2 = tsnow
 
         else:

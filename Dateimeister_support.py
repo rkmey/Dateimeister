@@ -398,8 +398,9 @@ class MyDuplicates:
     def tooltip_imagefile(self, event):
         tsnow = datetime.now()
         tdiff = abs(tsnow - self.timestamp)
-        if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+        milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
+        if  milliseconds > 200:
+            #print("Timer has finished, milliseconds is: ", milliseconds) if self.debug else True
             self.timestamp = tsnow
         else:
             return
@@ -1963,9 +1964,9 @@ class Dateimeister_support:
     def tooltip_imagefile(self, event):
         tsnow = datetime.now()
         tdiff = abs(tsnow - self.timestamp)
-        #print("*** Timer has finished, microsecons is: ", tdiff.microseconds)
-        if  tdiff.microseconds > 100000:
-            #print("Timer has finished, microsecons is: ", tdiff.microseconds)
+        milliseconds = tdiff.days * 86400 * 1000 + tdiff.seconds * 1000 + tdiff.microseconds / 1000
+        if  milliseconds > 200:
+            #print("Timer has finished, milliseconds is: ", milliseconds) if self.debug else True
             self.timestamp = tsnow
         else:
             return
