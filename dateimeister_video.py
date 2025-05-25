@@ -19,8 +19,7 @@ class VideoPlayer:
         self.do_update = True
         self.frames_total = self.vid.getFrameCount()
         self.frames_till_now = 0
-        #player = MediaPlayer(video_source)
-        #self.getFrame()
+        self.audio_player = MediaPlayer(video_source)
     def get_pimg(self): # get 1 Photoimage
         # Get a frame from the video source
         ret, new_w, new_h, frame = self.vid.get_frame(self.canvas_width, self.canvas_height)
@@ -53,6 +52,7 @@ class VideoPlayer:
                 self.window.after(self.delay, self.update)
         else:
             print("Video " + self.video_source + " has finished")
+            self.audio_player.set_pause(True)
     def restart(self): # restart from begin
         self.do_update = True
         #self.vid = MyVideoCapture(self.video_source)
@@ -62,8 +62,14 @@ class VideoPlayer:
     def pstart(self):
         self.do_update = True
         self.update()
+        #audio
+        audio_frame, val = self.audio_player.get_frame()
+        if val != 'eof' and audio_frame is not None:
+            img, t = audio_frame
+        self.audio_player.set_pause(False)
     def pstop(self):
         self.do_update = False
+        self.audio_player.set_pause(True)
     def getRun(self):
         return self.do_update
     def getFPS(self):

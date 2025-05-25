@@ -546,7 +546,8 @@ class MyDuplicates:
                     image_width_orig, image_height_orig = img.size
                     faktor = canvas_height / image_height_orig
                     newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
-                    r_img = img.resize(newsize, Image.Resampling.NEAREST)
+                    r_img = img
+                    r_img.thumbnail(newsize)
                     image_width, image_height = r_img.size
                     print("try to print " + showfile + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
                        + " factor is " + str(faktor))
@@ -2366,7 +2367,8 @@ class Dateimeister_support:
                     image_width_orig, image_height_orig = img.size
                     faktor = canvas_height / image_height_orig
                     newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
-                    r_img = img.resize(newsize, Image.Resampling.NEAREST)
+                    r_img = img
+                    r_img.thumbnail(newsize)
                     image_width, image_height = r_img.size
                     #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
                     #   + " factor is " + str(faktor))
