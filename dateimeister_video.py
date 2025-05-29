@@ -19,7 +19,9 @@ class VideoPlayer:
         self.do_update = True
         self.frames_total = self.vid.getFrameCount()
         self.frames_till_now = 0
-        self.audio_player = MediaPlayer(video_source)
+        
+        ff_opts={'an':False, 'sync':'video','thread_lib':'SDL','infbuf':True}
+        self.audio_player = MediaPlayer(video_source, ff_opts = ff_opts)
     def get_pimg(self): # get 1 Photoimage
         # Get a frame from the video source
         ret, new_w, new_h, frame = self.vid.get_frame(self.canvas_width, self.canvas_height)
