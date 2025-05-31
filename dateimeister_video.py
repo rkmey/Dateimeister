@@ -20,7 +20,7 @@ class VideoPlayer:
         self.frames_total = self.vid.getFrameCount()
         self.frames_till_now = 0
         
-        ff_opts={'an':False, 'sync':'video','thread_lib':'SDL','infbuf':True}
+        ff_opts={'an':False, 'sync':'video','thread_lib':'SDL','infbuf':True, 'autoexit':True}
         self.audio_player = MediaPlayer(video_source, ff_opts = ff_opts)
     def get_pimg(self): # get 1 Photoimage
         # Get a frame from the video source
@@ -60,15 +60,16 @@ class VideoPlayer:
         #self.vid = MyVideoCapture(self.video_source)
         self.vid.setFrame(0)
         self.frames_till_now = 0
+        self.audio_player.seek(0)
         self.update()
     def pstart(self):
         self.do_update = True
+        self.audio_player.set_pause(False)
         self.update()
         #audio
         audio_frame, val = self.audio_player.get_frame()
         if val != 'eof' and audio_frame is not None:
             img, t = audio_frame
-        self.audio_player.set_pause(False)
     def pstop(self):
         self.do_update = False
         self.audio_player.set_pause(True)
@@ -89,6 +90,7 @@ class VideoPlayer:
         self.canvas_id = id
     def __del__(self):
         print("*** Deleting VideoPlayer-Objekt. " + self.video_source)
+        self.audio_player.close_player()
 
 
 class MyVideoCapture:
