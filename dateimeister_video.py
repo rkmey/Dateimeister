@@ -2,6 +2,8 @@ import tkinter
 import cv2
 import PIL.Image, PIL.ImageTk
 import time
+import kivy
+from kivy.weakmethod import WeakMethod
 #import numpy as np
 from ffpyplayer.player import MediaPlayer
 class VideoPlayer:
@@ -21,7 +23,11 @@ class VideoPlayer:
         self.frames_till_now = 0
         
         ff_opts={'an':False, 'sync':'video','thread_lib':'SDL','infbuf':True, 'autoexit':True}
-        self.audio_player = MediaPlayer(video_source, ff_opts = ff_opts)
+        self.callback_ref = WeakMethod(self.audio_callback)
+        self.audio_player = MediaPlayer(video_source, callback = self.callback_ref, ff_opts = ff_opts)
+    def audio_callback(self, a, b):
+        print("AUDIO CALLBACK called with parms {:s} - {:s}".format(str(a), str(b)))
+    
     def get_pimg(self): # get 1 Photoimage
         # Get a frame from the video source
         ret, new_w, new_h, frame = self.vid.get_frame(self.canvas_width, self.canvas_height)
@@ -61,6 +67,7 @@ class VideoPlayer:
         self.vid.setFrame(0)
         self.frames_till_now = 0
         self.audio_player.seek(0)
+        self.audio_player.set_pause(False)
         self.update()
     def pstart(self):
         self.do_update = True
