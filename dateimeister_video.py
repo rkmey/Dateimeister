@@ -60,6 +60,7 @@ class VideoPlayer:
                 self.window.after(self.delay, self.update)
         else:
             print("Video " + self.video_source + " has finished")
+            self.audio_player.seek(0)
             self.audio_player.set_pause(True)
     def restart(self): # restart from begin
         self.do_update = True
