@@ -2,8 +2,8 @@ import tkinter
 import cv2
 import PIL.Image, PIL.ImageTk
 import time
-import kivy
-from kivy.weakmethod import WeakMethod
+#import kivy
+#from kivy.weakmethod import WeakMethod
 #import numpy as np
 from ffpyplayer.player import MediaPlayer
 class VideoPlayer:
@@ -16,14 +16,15 @@ class VideoPlayer:
         self.start = start
         self.vid = MyVideoCapture(self.video_source)
         # After it is called once, the update method will be automatically called every delay milliseconds
-        self.delay = 10
+        self.delay = 20
         self.liney = 0.95
         self.do_update = True
         self.frames_total = self.vid.getFrameCount()
         self.frames_till_now = 0
         
         ff_opts={'an':False, 'sync':'video','thread_lib':'SDL','infbuf':True, 'autoexit':True}
-        self.callback_ref = WeakMethod(self.audio_callback)
+        #self.callback_ref = WeakMethod(self.audio_callback)
+        self.callback_ref = self.audio_callback
         self.audio_player = MediaPlayer(video_source, callback = self.callback_ref, ff_opts = ff_opts)
     def audio_callback(self, a, b):
         print("AUDIO CALLBACK called with parms {:s} - {:s}".format(str(a), str(b)))
