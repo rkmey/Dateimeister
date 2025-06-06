@@ -42,7 +42,7 @@ EXCLUDE = 2
 class MyFSImage:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, file, thumbnail, dict_caller, pmain, delay_default, str_title_prefix, str_include, str_exclude, str_included, str_excluded, debug): 
+    def __init__(self, file, thumbnail, dict_caller, pmain, str_title_prefix, str_include, str_exclude, str_included, str_excluded, debug): 
         self.main = pmain
         self.thumbnail = thumbnail
         self.player = None
@@ -129,8 +129,9 @@ class MyFSImage:
             self.f.tag_raise("line")
             self.player.setId(self.id)
             self.player.pstart()
-            self.player.setDelay(delay_default)
-            self.w2.Scale_fps.set(1000 / delay_default)
+            fps = self.player.getFPS()
+            self.player.setDelay(int(1000 / fps))
+            self.w2.Scale_fps.set(int(1000 / fps))
             self.playerstatus = 'play'
             self.w2.Button_pp.config(text = 'pause')
     def getPlayer(self):

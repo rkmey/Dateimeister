@@ -64,7 +64,6 @@ class Globals:
     config_files_xml    = None
     config_files_subdir = None
     cmd_files_subdir    = None
-    delay_default = 20 #ToDo: Ini
     datadir = ""
     dict_thumbnails = {}
     dict_duplicates = {}
@@ -360,7 +359,7 @@ class MyDuplicates:
                 fs_image.setPlaystatus('play') # Status, Buttontext
         else: # ein neues Objekt anlegen und in self.dict_file_image eintragen
             print ("FSImage does not exist for file: " + file)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self.main, Globals.delay_default, "", "Include", "Exclude", "Included", "Excluded", self.main.debug)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self.main, "", "Include", "Exclude", "Included", "Excluded", self.main.debug)
             self.dict_file_image[file] = fs_image
 
     def canvas_video_restart(self):
@@ -424,8 +423,8 @@ class MyDuplicates:
                     player = thumbnail.getPlayer()
                     if player is not None: # this is a video
                         player.pstart()
-                        player.setDelay(Globals.delay_default)
                         fps   = player.getFPS()
+                        player.setDelay(int(1000 / fps))
                         fc    = player.getFrameCount()
                         delay = player.getDelay()
                         frames_per_second = 1000 / delay
@@ -470,7 +469,7 @@ class MyDuplicates:
             player = thumbnail.getPlayer()
             if player is not None: # a video
                 delay = player.getDelay()
-                player.setDelay(Globals.delay_default)
+                player.setDelay(int(1000 / player.getFPS()))
                 
     def lb_double(self, event):
         cs = self.w3.Listbox_dupl.curselection()
@@ -1990,8 +1989,8 @@ class Dateimeister_support:
                     player = thumbnail.getPlayer()
                     if player is not None: # this is a video
                         player.pstart()
-                        player.setDelay(Globals.delay_default)
                         fps   = player.getFPS()
+                        player.setDelay(int(1000 / fps))
                         fc    = player.getFrameCount()
                         delay = player.getDelay()
                         frames_per_second = 1000 / delay
@@ -2684,8 +2683,7 @@ class Dateimeister_support:
         if thumbnail is not None:
             player = thumbnail.getPlayer()
             if player is not None: # a video
-                delay = player.getDelay()
-                player.setDelay(Globals.delay_default)
+                player.setDelay(int(1000 / player.getFPS()))
 
     def xview(self, *args):
         #print (*args)
@@ -2901,7 +2899,7 @@ class Dateimeister_support:
         else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, Globals.delay_default, "", "Include", "Exclude", "Included", "Excluded", self.debug)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, "", "Include", "Exclude", "Included", "Excluded", self.debug)
                 self.dict_file_image[file] = fs_image
 
     def show_context_menu(self, event):

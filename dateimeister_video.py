@@ -17,6 +17,7 @@ class VideoPlayer:
         self.vid = MyVideoCapture(self.video_source)
         # After it is called once, the update method will be automatically called every delay milliseconds
         self.delay = 20
+        self.delay = int(1000 / self.getFPS())
         self.liney = 0.95
         self.do_update = True
         self.frames_total = self.vid.getFrameCount()
