@@ -1627,8 +1627,8 @@ class Dateimeister_support:
         self.button_indir_from_list.config(command = self.combobox_indir_double)  
         self.button_outdir_from_list.config(command = self.combobox_outdir_double)  
         
-        self.label_indir.config(text = default_indir)
-        self.label_outdir.config(text = default_outdir)
+        self.label_indir.config(text = default_indir)   # may be overridden later with first listbox entry
+        self.label_outdir.config(text = default_outdir) # may be overridden later with first listbox entry
         self.l_label1.config(text = "Messages")
         self.label_num.config(text = "0")
         self.dict_gen_files = {}
@@ -1702,11 +1702,16 @@ class Dateimeister_support:
         # make list
         ii = 0
         indexes = []
+        use_as_dir = True
         for tfile in sorted_d:
             self.combobox_indir.insert(END, tfile)
             if not os.path.isdir(tfile):
                 #print("INDIR: " + tfile + " INDEX: " + str(ii))
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
+            else:
+                if use_as_dir: 
+                    self.label_indir.config(text = tfile) # first entry is last used
+                    use_as_dir = False
             ii += 1
         if ii > 0:
             self.combobox_indir.select_set(0)
@@ -1733,11 +1738,16 @@ class Dateimeister_support:
         # make list
         ii = 0
         indexes = []
+        use_as_dir = True
         for tfile in sorted_d:
             self.combobox_outdir.insert(END, tfile)
             if not os.path.isdir(tfile):
                 print("OUTDIR: " + tfile + " INDEX: " + str(ii))
                 indexes.append(ii) # list of indizes to disable because dir does not exist
+            else:
+                if use_as_dir: 
+                    self.label_outdir.config(text = tfile) # first entry is last used
+                    use_as_dir = False
             ii += 1
         if ii > 0:
             self.combobox_outdir.select_set(0)
