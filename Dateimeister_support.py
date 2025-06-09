@@ -74,13 +74,14 @@ class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, image, pmain, start, end, file, showfile, id, text_id, rect_id, frameids, lineno, player, duplicate, canvas, targetfile, \
+    def __init__(self, image, pmain, start, end, file, mts, showfile, id, text_id, rect_id, frameids, lineno, player, duplicate, canvas, targetfile, \
       text = None, parent = None, tooold = False):
         self.main = pmain
         self.image = image
         self.start = start
         self.end   = end
         self.file = file
+        self.mts  = mts
         self.showfile = showfile
         self.image_id = id
         self.state_id_text = text_id
@@ -572,7 +573,8 @@ class MyDuplicates:
                 if player is not None:
                     player.setId(id)
                 # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
-                myimage = MyThumbnail(pimg, self.main, self.lastposition, self.lastposition + image_width, showfile, showfile, id, \
+                mts = os.stat(showfile).st_mtime
+                myimage = MyThumbnail(pimg, self.main, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
                     text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 myimage.setState(state)
@@ -596,7 +598,8 @@ class MyDuplicates:
                 frameids = (line_north, line_east, line_south, line_west)
                 self.f.tag_raise("text")
                 #self.f.tag_raise("imageframe")
-                myimage = MyThumbnail(0, self.main, self.lastposition, self.lastposition + image_width, showfile, showfile, id, \
+                mts = os.stat(showfile).st_mtime
+                myimage = MyThumbnail(0, self.main, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
                     text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage
@@ -2402,7 +2405,8 @@ class Dateimeister_support:
                 
                 if player is not None:
                     player.setId(id)
-                myimage = MyThumbnail(pimg, self, self.lastposition, self.lastposition + image_width, file, showfile, id, \
+                mts = os.stat(file).st_mtime
+                myimage = MyThumbnail(pimg, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
                     text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE, None, False)
@@ -2438,7 +2442,8 @@ class Dateimeister_support:
                 line_south = self.canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
                 line_west  = self.canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
                 frameids = (line_north, line_east, line_south, line_west)
-                myimage = MyThumbnail(0, self, self.lastposition, self.lastposition + image_width, file, showfile, id, \
+                mts = os.stat(file).st_mtime
+                myimage = MyThumbnail(0, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
                     text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE, None, False)

@@ -69,8 +69,9 @@ class ScrollableCanvas(tk.Canvas):
         #print ("<Configure> called")
 
 class MyImage:
-    def __init__(self, filename, canvas, tag):
+    def __init__(self, filename, mts, canvas, tag):
         self.filename = filename
+        self.mts = mts
         self.tag = tag
         self.canvas = canvas
         self.selected = 0
@@ -78,6 +79,8 @@ class MyImage:
         
     def get_filename(self):
         return self.filename
+    def get_mts(self):
+        return self.mts
     def get_image(self):
         return Diatisch.dict_filename_images[Diatisch.idx_akt][self.filename]
     def get_image_from_index(self, index): # used for process_list which gets index from historized process
@@ -540,7 +543,6 @@ class Diatisch:
         self.dict_gen_files_delete[self.imagetype] = {}
         self.dict_gen_files_delrelpath[self.imagetype] = {}
         self.dict_templates = {}
-        self.default_delay  = 20 # just for use of class for video player, although never used here
         self.outdir = None
         self.scroll = False
         self.delay = 1000
@@ -947,7 +949,7 @@ class Diatisch:
             r_img.thumbnail(newsize)
             photo = ImageTk.PhotoImage(r_img)
             # insert into self.list_source_images
-            i = MyImage(filename, self.source_canvas, tag_prefix + str(tag_no))
+            i = MyImage(filename, os.stat(filename).st_mtime, self.source_canvas, tag_prefix + str(tag_no))
             self.list_source_images.append(i)
             Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = photo
             
@@ -970,7 +972,7 @@ class Diatisch:
                 r_img.thumbnail(newsize)
                 photo = ImageTk.PhotoImage(r_img)
                 # insert into self.list_target_images
-                i = MyImage(filename, self.target_canvas, tag_prefix + str(tag_no))
+                i = MyImage(filename, os.stat(filename).st_mtime, self.target_canvas, tag_prefix + str(tag_no))
                 self.list_target_images.append(i)
                 #Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = photo
             
@@ -1212,7 +1214,7 @@ class Diatisch:
                 print ("FSImage Source exists for file: " + file) if self.debug else True
             else:
                 thumbnail = Thumbnail(img, file, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, "Source ", "Copy", "Copy", "", "", self.debug)
                 self.dict_file_FSImage_source[file] = fs_image
                 self.historize_process("show source FSImage {:s}".format(file))
 
@@ -1237,7 +1239,7 @@ class Diatisch:
                 print ("FSImage Target exists for file: " + file) if self.debug else True
             else:
                 thumbnail = Thumbnail(img, file, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, "Target ", "Delete", "Delete", "", "", self.debug)
+                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, "Target ", "Delete", "Delete", "", "", self.debug)
                 self.dict_file_FSImage_target[file] = fs_image
                 self.historize_process("show target FSImage {:s}".format(file))
 
@@ -1666,7 +1668,7 @@ class Diatisch:
                 img = dict_images[i]
                 if img.is_selected():
                     if img.get_filename() not in set_target_filenames: # skip if already exists
-                        newcopy = MyImage(img.get_filename(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
+                        newcopy = MyImage(img.get_filename(), img.get_mts(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
                         newcopy.selected = img.selected
                         t = newcopy
                         #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected())) if self.debug else True
@@ -1690,7 +1692,7 @@ class Diatisch:
                 return
             img = self.single_image_to_copy
             if img.get_filename() not in set_target_filenames: # skip if already exists
-                newcopy = MyImage(img.get_filename(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
+                newcopy = MyImage(img.get_filename(), img.get_mts(), self.target_canvas, img.get_tag()) # make a copy of the original source image because we need some independent attributes like selected 
                 newcopy.selected = img.selected
                 t = newcopy
                 #print("new image", " orig: ", str(img), " copy: ", str(t), " selected: ", str(t.is_selected())) if self.debug else True
@@ -2135,7 +2137,7 @@ class Diatisch:
             for i in h.dict_file_thumbnail_source:
                 img = h.dict_file_thumbnail_source[i].image
                 thumbnail = Thumbnail(img, i, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_source, self, self.default_delay, "Source ", "Copy", "Copy", "", "", self.debug)
+                fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_source, self, "Source ", "Copy", "Copy", "", "", self.debug)
                 self.dict_file_FSImage_source[i] = fs_image
         if h.str_hashsum_file_thumbnail_target != self.dict_processid_histobj[processid_predecessor].str_hashsum_file_thumbnail_target: # rebuild FSImages target
             print("restore FSImages") if self.debug else True
@@ -2149,7 +2151,7 @@ class Diatisch:
             for i in h.dict_file_thumbnail_target:
                 img = h.dict_file_thumbnail_target[i].image
                 thumbnail = Thumbnail(img, i, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_target, self, self.default_delay, "Target ", "Delete", "Delete", "", "", self.debug)
+                fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_target, self, "Target ", "Delete", "Delete", "", "", self.debug)
                 self.dict_file_FSImage_target[i] = fs_image
                     
         
@@ -2168,13 +2170,13 @@ class Diatisch:
 
         for i in self.list_source_images:
             #print("* H Filename / select_ctr / selected / tag: ", i.filename, ' / ' , i.selected, ' / ', str(i.is_selected()), ' / ', i.tag) if self.debug else True
-            newcopy = MyImage(i.get_filename(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
+            newcopy = MyImage(i.get_filename(), i.get_mts(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_source_images.append(newcopy)
             hashsum_source_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
             str_source_selection += str(i.selected)
         for i in self.list_target_images:
-            newcopy = MyImage(i.get_filename(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
+            newcopy = MyImage(i.get_filename(), i.get_mts(), i.canvas, i.tag) # make a copy of the original source image because we need some independent attributes like selected 
             newcopy.selected = i.selected
             h.list_target_images.append(newcopy)
             hashsum_target_filenames.update(i.filename.encode(encoding = 'UTF-8', errors = 'strict'))
