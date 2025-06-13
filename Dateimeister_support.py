@@ -1387,6 +1387,7 @@ class Dateimeister_support:
         self.context_menu = None
         self.timestamp = datetime.now()
         self.use_camera_prefix = True
+        self.sort_method = 4
         if debug == 'Y' or debug == 'y':
             self.debug   = True # debug all
             self.debug_p = True # debug process history
@@ -2153,7 +2154,7 @@ class Dateimeister_support:
             self.dict_source_target[dateityp] = {}
             self.dict_relpath[dateityp] = {}
             self.dict_source_target[dateityp], dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp], self.dict_relpath[dateityp] = \
-              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch)
+              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, self.sort_method, self.debug)
             self.dict_relpath[dateityp] = dict(reversed(list(self.dict_relpath[dateityp].items())))
             for ii in self.dict_relpath[dateityp]:
                 print(" > ", ii, " files: ", self.dict_relpath[dateityp][ii])

@@ -5,9 +5,29 @@ import sys
 import os.path
 import re
 from datetime import datetime, timezone
+import functools
+
+# sort functions
+def compare_name(a, b):
+    if a.name < b.name:
+        return -1
+    elif a.name ==  b.name:
+        return 0
+    else:
+        return 1
+
+def compare_mts(a, b):
+    am = os.stat(a).st_mtime
+    bm = os.stat(b).st_mtime
+    if am < bm:
+        return -1
+    elif am ==  bm:
+        return 0
+    else:
+        return 1
 
 # we have 3 procesing types: 1) list of full filenames (path/file), 2) directory not recursive, 3) directory recursive
-def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, target_prefix, select_list):
+def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, target_prefix, select_list, sort_method, debug):
     global dict_result, dict_result_all, dict_result_tooold, dict_relpath
     # List all files and directories in the specified path, returns list
     #print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
@@ -73,6 +93,7 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
         # für rekursive Aufrufe scheint os.walk besser geeignet, schneller und nimmt einem die Arbeit ab, selbst zu navigieren
         print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
         for root, dirs, files in os.walk(indir, topdown=True):
+            print("Dateimeister_generator DIRS {:s}".format(str(dirs))) if debug else True
             for filename in files:
                 filename = re.sub(r"\\", "/", filename) # replace single backslash by slash
                 fullname = os.path.join(root, filename)
@@ -84,7 +105,36 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
                     dict_result[sourcefile] = targetfile
                 if docopy == "o": # too old
                     dict_result_tooold[sourcefile] = targetfile
-    return dict_result, dict_result_all, dict_result_tooold, dict_relpath
+    # now sort results according to sort param
+    dict_1 = {}
+    dict_2 = {}
+    dict_3 = {}
+    if sort_method == 1:
+        dict_1 = dict(sorted(dict_result.items(), key = lambda x:x[0], reverse = False))
+        dict_2 = dict(sorted(dict_result_all.items(), key = lambda x:x[0], reverse = False))
+        dict_3 = dict(sorted(dict_result_tooold.items(), key = lambda x:x[0], reverse = False))
+    elif sort_method == 2:
+        dict_1 = dict(sorted(dict_result.items(), key = lambda x:x[0], reverse = True))
+        dict_2 = dict(sorted(dict_result_all.items(), key = lambda x:x[0], reverse = True))
+        dict_3 = dict(sorted(dict_result_tooold.items(), key = lambda x:x[0], reverse = True))
+    elif sort_method == 3:
+        dict_1 = dict(sorted(dict_result.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = False))
+        dict_2 = dict(sorted(dict_result_all.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = False))
+        dict_3 = dict(sorted(dict_result_tooold.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = False))
+    elif sort_method == 4:
+        dict_1 = dict(sorted(dict_result.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = True))
+        dict_2 = dict(sorted(dict_result_all.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = True))
+        dict_3 = dict(sorted(dict_result_tooold.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = True))
+    else: #no sort
+        dict_1 = dict_result
+        dict_2 = dict_result_all
+        dict_3 = dict_result_tooold
+    if debug:
+        for i in dict_1:
+            print("E: {:32s} - {:32s} - {:s}".format(i, dict_1[i], str(datetime.fromtimestamp(os.stat(i).st_mtime))))
+        
+  
+    return dict_1, dict_2, dict_3, dict_relpath
     
 def process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixes, addrelpath, newer, target_prefix):
     global dict_result, dict_result_all, dict_result_tooold, dict_relpath

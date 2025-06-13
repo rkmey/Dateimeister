@@ -570,6 +570,7 @@ class Diatisch:
         self.image_files = []
         self.dict_file_FSImage_source = {} # dict for keeping track of FS Images
         self.dict_file_FSImage_target = {} # dict for keeping track of FS Images
+        self.sort_method = 0
         self.read_ini()
         self.init()
         # historize initial state
@@ -917,7 +918,7 @@ class Diatisch:
             else:
                 recursive = "n"
             self.dict_source_target, dict_source_target_jpeg, self.dict_source_target_tooold, self.dict_relpath = \
-              DG.dateimeister(self.imagetype, self.imagetypes, directory, "", "n", recursive, False, "", None)
+              DG.dateimeister(self.imagetype, self.imagetypes, directory, "", "n", recursive, False, "", None, self.sort_method, self.debug)
             # copy result to image_files
             tfiles = []
             for i in self.dict_source_target:          
