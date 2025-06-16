@@ -30,6 +30,8 @@ from tkinter import Frame
 from tkinter import Label
 from tkinter import Canvas
 from tkinter import Menu
+from tkinter.font import Font
+
 from time import gmtime, strftime
 
 import xml.etree.ElementTree as ET
@@ -1761,9 +1763,63 @@ class Dateimeister_support:
         for ii in indexes:
             self.combobox_outdir.itemconfig(ii, fg="gray")
         
+        # we need a frame for sort method radio buttons. we want to place them above the right upper corner of the canvas
+        # x2, y2 shall be the coordinates of the upper right corner of canvas, which are the coordintes of low right corner of frame
+
+        self.width  = 0
+        self.height = 0
+        self.text_font = Font(family="Helvetica", size=6)
+
+        self.root.update()
+        parent_height = self.root.winfo_height()
+        parent_width  = self.root.winfo_width()
+        x2 = self.canvas_gallery.winfo_x() + self.canvas_gallery.winfo_width()
+        y2 = self.canvas_gallery.winfo_y()
+        # to calc x1 we substract min of 80, x2 - dictance from right edge of exec-button
+        x1 = x2 - min(int(parent_width / 4), x2 - (self.button_exec.winfo_x() + self.button_exec.winfo_width()))
+        # to calc y1 we sutract the height of the exec button
+        y1 = y2 - self.button_exec.winfo_height()
+        print("x, y of upper left corner of frame above canvas is {:d}, {:d}, lower right corner is {:d}, {:d}".format(x1, y1, x2, y2)) if self.debug else True      
+        # the frame
+        relx1 = x1 / parent_width
+        rely1 = y1 / parent_height
+        relh = (y2 - y1) / parent_height
+        relw  = (x2 - x1) / parent_width
+        print("Frame relx, rely, relw, relh is {:f}, {:f} {:f}, {:f}".format(relx1, rely1, relw, relh)) if self.debug else True      
+        self.Frame_sortbuttons = tk.Frame(self.root)
+        self.Frame_sortbuttons.place(relx = relx1, rely = rely1, relheight = relh, relwidth = relw)
+        self.Frame_sortbuttons.configure(relief='flat')
+        self.Frame_sortbuttons.configure(background="#d9d9d9") if not self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_sortbuttons.update()
+        
+        self.rbvalue = tk.StringVar()
+        dict_rbtext = {"1": "sort name asc", "2": "sort name desc", "3": "sort mod. asc.", "4": "sort mod. desc"}
+        for i in dict_rbtext:
+            rb = tk.Radiobutton(self.Frame_sortbuttons, text = dict_rbtext[i], value = i, variable = self.rbvalue, command = self.rb_sort, indicatoron = 0)
+            rb.place(relx = (int(i) - 1) / 4, rely=0.0, relheight=1.0, relwidth = 0.25)
+            rb.configure(font=self.text_font)
+        self.rbvalue.set("1")
+
+    def rb_sort(self, event = None):
+        print("Radiobutton pressed, value = {:s}".format(self.rbvalue.get()))
+
     def donothing(self):
         print("Menuitem not yet implemented")
     
+    def on_configure(self, event):
+        x = str(event.widget)
+        if x == ".": # . is toplevel window
+            if (self.width != event.width):
+                self.width = event.width
+                #print(f"The width of Toplevel is {self.width}") if self.debug else True
+            if (self.height != event.height):
+                self.height = event.height
+                self.Frame_sortbuttons.update()
+                l_height = self.Frame_sortbuttons.winfo_height()
+                fontsize_use = int(.8 * min(12.0, l_height * .75))
+                print(f"The height of Toplevel is {self.height}, label height is {l_height} set fontsize to {fontsize_use}") if self.debug else True
+                self.text_font.configure(size=fontsize_use)                
+
     def timer_end(self):
         print("Timer has elapsed")
 
