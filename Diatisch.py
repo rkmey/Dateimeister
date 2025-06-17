@@ -238,22 +238,18 @@ class Diatisch:
         self.Label_target_ctr.configure(font=self.text_font)
         self.Label_target_ctr.configure(text='Num Images Target: 0')
 
-        # source control buttons for sorting on label frame
+        # source radio buttons for sorting on label frame
         anz_button_source = 4
-        buttonpos_source  = 0.1
-        relwidth_source   = (.4 - buttonpos_source) / anz_button_source
-        self.order_name_asc_button = tk.Button(self.Frame_labels, text="name asc", command=self.order_name_asc)
-        self.order_name_asc_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
-        buttonpos_source += relwidth_source
-        self.order_name_desc_button = tk.Button(self.Frame_labels, text="name desc", command=self.order_name_desc)
-        self.order_name_desc_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
-        buttonpos_source += relwidth_source
-        self.order_date_asc_button = tk.Button(self.Frame_labels, text="date asc", command=self.order_date_asc)
-        self.order_date_asc_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
-        buttonpos_source += relwidth_source
-        self.order_date_desc_button = tk.Button(self.Frame_labels, text="date desc", command=self.order_date_desc)
-        self.order_date_desc_button.place(relx=buttonpos_source, rely=0.01, relheight=0.98, relwidth=relwidth_source)
-
+        buttonpos_source  = 0.15
+        relwidth_source   = (.3) / anz_button_source
+        self.rbvalue = tk.StringVar()
+        dict_rbtext = {"1": "sort name asc", "2": "sort name desc", "3": "sort mod. asc.", "4": "sort mod. desc"}
+        for i in dict_rbtext:
+            rb = tk.Radiobutton(self.Frame_labels, text = dict_rbtext[i], value = i, variable = self.rbvalue, command = self.rb_sort, indicatoron = 0)
+            relx_i = buttonpos_source + (int(i) - 1) * relwidth_source
+            rb.place(relx = relx_i, rely=0.0, relheight=1.0, relwidth = relwidth_source)
+            rb.configure(font=self.text_font)
+        self.rbvalue.set("1")
 
         self.Frame_source = tk.Frame(self.root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.75, relwidth=0.48)
@@ -2446,6 +2442,17 @@ class Diatisch:
                 thiscmdfile.write(comment + str_ret + '\n')
             thiscmdfile.close()
 
+    def rb_sort(self):
+        i = int(self.rbvalue.get())
+        if i == 1:
+            self.order_name_asc()
+        elif i == 2:
+            self.order_name_desc()
+        elif i == 3:
+            self.order_date_asc()
+        elif i == 4:
+            self.order_date_desc()
+            
     def order_name_asc(self): # order images on source canvas by name asc
         self.list_source_images = sorted(self.list_source_images, key=lambda x: x.get_filename(), reverse=False)
         self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
