@@ -984,6 +984,8 @@ class Diatisch:
         if directory: 
             self.update_listbox_indir()
             display_dir = directory
+        # sort images according to radiobuttons
+        self.rb_sort()
         self.historize_process("load directory {:s}".format(display_dir))
         self.root.lift()
 
