@@ -1389,7 +1389,6 @@ class Dateimeister_support:
         self.context_menu = None
         self.timestamp = datetime.now()
         self.use_camera_prefix = True
-        self.sort_method = 4
         if debug == 'Y' or debug == 'y':
             self.debug   = True # debug all
             self.debug_p = True # debug process history
@@ -1793,6 +1792,7 @@ class Dateimeister_support:
         self.Frame_sortbuttons.update()
         
         self.rbvalue = tk.StringVar()
+        self.dict_sort_method = {} # here we keep type(JPEG...) -> sort method(1...4)
         dict_rbtext = {"1": "sort name asc", "2": "sort name desc", "3": "sort mod. asc.", "4": "sort mod. desc"}
         for i in dict_rbtext:
             rb = tk.Radiobutton(self.Frame_sortbuttons, text = dict_rbtext[i], value = i, variable = self.rbvalue, command = self.rb_sort, indicatoron = 0)
@@ -2181,6 +2181,7 @@ class Dateimeister_support:
         self.dict_gen_files_delrelpath = {}
         self.dict_firstname_fullname = {}
         self.dict_outdirs = {}
+        self.dict_sort_method = {}
 
         # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
@@ -2209,8 +2210,15 @@ class Dateimeister_support:
                 target_prefix = ''
             self.dict_source_target[dateityp] = {}
             self.dict_relpath[dateityp] = {}
+            # get sort method. if value exists in dict_sort_method use it. it has been set when images are displayed. Otherwise use value of the radio button
+            if self.dict_sort_method.get(dateityp):
+                sort_method = self.dict_sort_method.get(dateityp)
+                print("generate sort method for {:s} is {:s}".format(dateityp, sort_method))
+            else:
+                sort_method = self.rbvalue.get()
+                print("generate sort method is {:s}".format(sort_method))
             self.dict_source_target[dateityp], dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp], self.dict_relpath[dateityp] = \
-              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, self.sort_method, self.debug)
+              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, int(sort_method), self.debug)
             self.dict_relpath[dateityp] = dict(reversed(list(self.dict_relpath[dateityp].items())))
             for ii in self.dict_relpath[dateityp]:
                 print(" > ", ii, " files: ", self.dict_relpath[dateityp][ii])
