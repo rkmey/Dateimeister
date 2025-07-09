@@ -58,6 +58,7 @@ EXCLUDE = 2
 # variables used by more than 1 class
 class Globals:
     imagetype = ""
+    use_imagetype = False # set to true by sort radiobauttons: we just want to sort new and redisplay the selected imagetype
     screen_width = 0
     screen_height = 0
     uncomment = ""
@@ -2341,17 +2342,16 @@ class Dateimeister_support:
         self.clear_text(self.t_text1)
         self.canvas_gallery.delete("all")
 
-        if not self.lb_gen.curselection() == ():
-            selected_indices = self.lb_gen.curselection()
-        else:
-            messagebox.showerror("showerror", "no Imagetype selected")
-            self.lb_gen.focus_set()
-            return None
-        thistype = ",".join([self.lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
-        #print("self.dict_gen_files: ", str(self.dict_gen_files))
-        filename = self.dict_gen_files[thistype]
-        imagetype = thistype
-        Globals.imagetype = imagetype # auch in globaler Variable festhalten, da wir das an vielen Stellen brauchen
+        if not Globals.use_imagetype: # the "normal case": get imagetype from listbox, else after new sort re-use Globals.imagetype
+            if not self.lb_gen.curselection() == ():
+                selected_indices = self.lb_gen.curselection()
+            else:
+                messagebox.showerror("showerror", "no Imagetype selected")
+                self.lb_gen.focus_set()
+                return None
+            Globals.imagetype = ",".join([self.lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
+        imagetype = Globals.imagetype
+        filename = self.dict_gen_files[imagetype]
         subdir = self.dict_subdirs[imagetype]
         Globals.outdir = self.dict_outdirs[imagetype] # for setting title of duplicate-window
         self.stop_all_players() # should not continue running 
@@ -2589,6 +2589,7 @@ class Dateimeister_support:
             self.win_messages.close_handler()
             self.win_messages = None
         self.canvas_gallery.xview('moveto', 0)
+        Globals.use_imagetype = False # only true if new sort from the radiobuttons required
 
     def state_gen_required(self):
         self.button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
