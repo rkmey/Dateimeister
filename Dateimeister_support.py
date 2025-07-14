@@ -1803,6 +1803,9 @@ class Dateimeister_support:
 
     def rb_sort(self, event = None):
         print("Radiobutton pressed, value = {:s}".format(self.rbvalue.get()))
+        Globals.use_imagetype = True # generate will not read imagetype from listbox and wil generate only the selected imagetype
+        self.Press_generate()
+        self.Button_be_pressed(event)
 
     def donothing(self):
         print("Menuitem not yet implemented")
@@ -2124,16 +2127,6 @@ class Dateimeister_support:
             Globals.list_result_diatisch = None
 
     def Press_generate(self, *args):
-        # cleanup
-        self.close_child_windows()
-        # reset all process-states
-        self.UR.reset()
-        self.button_undo.config(state = DISABLED)    
-        self.button_redo.config(state = DISABLED)
-        
-        self.clear_text(self.t_text1)
-        self.canvas_gallery.delete("all")
-
         # get indir, outdir, camera
         indir  = self.label_indir.cget('text')
         outdir = self.label_outdir.cget('text')
@@ -2164,47 +2157,59 @@ class Dateimeister_support:
             addrelpath  = "n"
         print ("INDIR is  " + indir)
         
+        self.clear_text(self.t_text1)
+        self.canvas_gallery.delete("all")
+       
+        owndir = os.getcwd()
+
         # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
         # Just correct it and run generate again
         self.get_templates() # read them into dict_templates (instance variable)
-        
-        self.clear_text(self.t_text1)
-        self.clear_textbox(self.lb_gen)
+        # cleanup
+        # only if new generate not if we just shall sort images
+        if not Globals.use_imagetype:        
+            self.close_child_windows()
+            # reset all process-states
+            self.UR.reset()
+            self.button_undo.config(state = DISABLED)    
+            self.button_redo.config(state = DISABLED)
+            
+            self.clear_textbox(self.lb_gen)
 
-        Globals.dict_duplicates = {}
-        owndir = os.getcwd()
-        self.dict_gen_files = {}
-        self.dict_gen_files_delete = {}
-        self.dict_source_target = {}
-        dict_source_target_jpeg = {}
-        self.dict_source_target_tooold = {}
-        self.dict_relpath = {}
-        self.dict_gen_files_delrelpath = {}
-        self.dict_firstname_fullname = {}
-        self.dict_outdirs = {}
-        self.dict_sort_method = {}
+            self.dict_gen_files = {}
+            self.dict_gen_files_delete = {}
+            self.dict_source_target = {}
+            dict_source_target_jpeg = {}
+            self.dict_source_target_tooold = {}
+            self.dict_relpath = {}
+            self.dict_gen_files_delrelpath = {}
+            self.dict_firstname_fullname = {}
+            self.dict_outdirs = {}
+            self.dict_sort_method = {}
 
-        # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
-        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+            # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
+            ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
 
-        this_i = re.sub(r'\\', '/', indir).lower()
-        # delete indir-entries from xml if number gt than max from ini, oldest first
-        self.new_dir_in_xml('indir', self.max_indirs, this_i, ts)
+            this_i = re.sub(r'\\', '/', indir).lower()
+            # delete indir-entries from xml if number gt than max from ini, oldest first
+            self.new_dir_in_xml('indir', self.max_indirs, this_i, ts)
 
-        this_o = re.sub(r'\\', '/', outdir).lower()
-        # delete outdir-entries from xml if number gt than max from ini, oldest first
-        self.new_dir_in_xml('outdir', self.max_outdirs, this_o, ts)
+            this_o = re.sub(r'\\', '/', outdir).lower()
+            # delete outdir-entries from xml if number gt than max from ini, oldest first
+            self.new_dir_in_xml('outdir', self.max_outdirs, this_o, ts)
 
         for dateityp in self.dict_cameras[thiscamera]:
-            # cleanup
-            self.clear_dict_2nd(Globals.thumbnails, dateityp)
-            # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
-            Globals.thumbnails[dateityp] = []
-
             subdir = self.dict_subdirs[dateityp]
             thisoutdir = outdir + "/" + subdir
             self.dict_outdirs[dateityp] = thisoutdir
             endung= self.dict_cameras[thiscamera][dateityp]
+            # cleanup
+            if Globals.use_imagetype and dateityp != Globals.imagetype:
+                return None
+            self.clear_dict_2nd(Globals.thumbnails, dateityp)
+            # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
+            Globals.thumbnails[dateityp] = []
+
             if self.use_camera_prefix:
                 target_prefix = thiscamera + '_'
             else:
