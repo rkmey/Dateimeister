@@ -2162,6 +2162,7 @@ class Dateimeister_support:
        
         owndir = os.getcwd()
 
+        dict_source_target_jpeg = {}
         # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
         # Just correct it and run generate again
         self.get_templates() # read them into dict_templates (instance variable)
@@ -2179,7 +2180,6 @@ class Dateimeister_support:
             self.dict_gen_files = {}
             self.dict_gen_files_delete = {}
             self.dict_source_target = {}
-            dict_source_target_jpeg = {}
             self.dict_source_target_tooold = {}
             self.dict_relpath = {}
             self.dict_gen_files_delrelpath = {}
