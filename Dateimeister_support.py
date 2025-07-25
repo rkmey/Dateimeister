@@ -2205,7 +2205,7 @@ class Dateimeister_support:
             endung= self.dict_cameras[thiscamera][dateityp]
             # cleanup
             if Globals.use_imagetype and dateityp != Globals.imagetype:
-                return None
+                continue
             self.clear_dict_2nd(Globals.thumbnails, dateityp)
             # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
             Globals.thumbnails[dateityp] = []
