@@ -59,6 +59,7 @@ EXCLUDE = 2
 class Globals:
     imagetype = ""
     use_imagetype = False # set to true by sort radiobauttons: we just want to sort new and redisplay the selected imagetype
+    generated = False # set to true if generated, set to false after selection of camera
     screen_width = 0
     screen_height = 0
     uncomment = ""
@@ -1644,7 +1645,7 @@ class Dateimeister_support:
         self.dict_image_lineno = {}
         self.title = self.root.title()
         self.oldcamera = ""
-
+        self.dict_source_target_jpeg = {}
         
         # Fenstergröße
         Globals.screen_width  = int(self.root.winfo_screenwidth() * 0.9)
@@ -1803,9 +1804,10 @@ class Dateimeister_support:
 
     def rb_sort(self, event = None):
         print("Radiobutton pressed, value = {:s}".format(self.rbvalue.get()))
-        Globals.use_imagetype = True # generate will not read imagetype from listbox and wil generate only the selected imagetype
-        self.Press_generate()
-        self.Button_be_pressed(event)
+        if Globals.generated: 
+            Globals.use_imagetype = True # generate will not read imagetype from listbox and wil generate only the selected imagetype
+            self.Press_generate()
+            self.Button_be_pressed(event)
 
     def donothing(self):
         print("Menuitem not yet implemented")
@@ -2122,6 +2124,7 @@ class Dateimeister_support:
             self.oldcamera = thiscamera
             self.clear_dict_2nd(Globals.thumbnails, Globals.imagetype)
             self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
+            Globals.generated = False
         if Globals.list_result_diatisch:
             Globals.list_result_diatisch.clear()
             Globals.list_result_diatisch = None
@@ -2162,7 +2165,7 @@ class Dateimeister_support:
        
         owndir = os.getcwd()
 
-        dict_source_target_jpeg = {}
+        Globals
         # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
         # Just correct it and run generate again
         self.get_templates() # read them into dict_templates (instance variable)
@@ -2174,7 +2177,6 @@ class Dateimeister_support:
             self.UR.reset()
             self.button_undo.config(state = DISABLED)    
             self.button_redo.config(state = DISABLED)
-            
             self.clear_textbox(self.lb_gen)
 
             self.dict_gen_files = {}
@@ -2187,6 +2189,7 @@ class Dateimeister_support:
             self.dict_outdirs = {}
             self.dict_sort_method = {}
 
+            self.dict_source_target_jpeg = {}
             # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
             ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
 
@@ -2223,7 +2226,7 @@ class Dateimeister_support:
             else:
                 sort_method = self.rbvalue.get()
                 print("generate sort method is {:s}".format(sort_method))
-            self.dict_source_target[dateityp], dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp], self.dict_relpath[dateityp] = \
+            self.dict_source_target[dateityp], self.dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp], self.dict_relpath[dateityp] = \
               DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, int(sort_method), self.debug)
             self.dict_relpath[dateityp] = dict(reversed(list(self.dict_relpath[dateityp].items())))
             for ii in self.dict_relpath[dateityp]:
@@ -2294,8 +2297,8 @@ class Dateimeister_support:
         regpattern_source = r'"([^"]+)"' # Sourcefile
         target_file = ""
         source_file = ""
-        #print("JPEGs: " + str(dict_source_target_jpeg["JPEG"]))
-        for this_sourcefile in dict_source_target_jpeg["JPEG"]:
+        #print("JPEGs: " + str(self.dict_source_target_jpeg["JPEG"]))
+        for this_sourcefile in self.dict_source_target_jpeg["JPEG"]:
             lineno += 1
             b_match = False
             match = re.search(regpattern, this_sourcefile)
@@ -2321,18 +2324,20 @@ class Dateimeister_support:
 
         self.l_label1.config(text = "Output from Dateimeister")
                 
-        # die generierten Dateien in die Listbox eintragen
-        for key in self.dict_gen_files:
-            self.lb_gen.insert(END, key)
-        self.lb_gen.select_set(0)
-        if self.lb_gen.size() > 0:
-            self.button_be.config(state = NORMAL)
+        # die generierten Dateien in die Listbox eintragen, nur wenn neu generiert wurde
+        if not Globals.use_imagetype:
+            for key in self.dict_gen_files:
+                self.lb_gen.insert(END, key)
+            self.lb_gen.select_set(0)
+            if self.lb_gen.size() > 0:
+                self.button_be.config(state = NORMAL)
         self.filemenu.entryconfig(1, state=DISABLED)
         self.button_exclude.config(state = DISABLED)
         self.button_include.config(state = DISABLED)
         self.button_exec.config(state = DISABLED)
         Globals.button_duplicates.config(state = DISABLED)
         self.label_num.config(text = "0")
+        Globals.generated = True
         os.chdir(owndir)
         self.write_cmdfiles()
     
