@@ -58,7 +58,6 @@ EXCLUDE = 2
 # variables used by more than 1 class
 class Globals:
     imagetype = ""
-    use_imagetype = False # set to true by sort radiobauttons: we just want to sort new and redisplay the selected imagetype
     generated = False # set to true if generated, set to false after selection of camera
     screen_width = 0
     screen_height = 0
@@ -1616,7 +1615,7 @@ class Dateimeister_support:
         self.canvas_gallery.bind('-', lambda event: self.delay_incr(event))
         self.canvas_gallery.bind('0', lambda event: self.delay_deflt(event))
         self.canvas_gallery.bind('<FocusOut>', self.focus_out)
-        self.lb_gen.bind('<Double-1>', self.lb_gen_double)
+        self.lb_gen.bind('<Double-1>', self.Button_be_pressed)
         self.lb_camera.bind('<Double-1>', self.lb_camera_double)
 
         self.t_text1.bind('<Double-1>', self.text1_double)  # show FSImage for selected line
@@ -1803,11 +1802,35 @@ class Dateimeister_support:
         self.rbvalue.set("1")
 
     def rb_sort(self, event = None):
-        print("Radiobutton pressed, value = {:s}".format(self.rbvalue.get()))
-        if Globals.generated: 
-            Globals.use_imagetype = True # generate will not read imagetype from listbox and wil generate only the selected imagetype
+        sort_method = self.rbvalue.get()
+        print("Radiobutton pressed, value = {:s}".format(sort_method))
+        if Globals.imagetype != "": # new sort of existing images
+            self.dict_sort_method[Globals.imagetype] = sort_method
             self.Press_generate()
-            self.Button_be_pressed(event)
+            self.display_images(Globals.imagetype)
+
+    def Button_be_pressed(self, *args):
+        # reset all process-states
+        self.UR.reset()
+        self.button_undo.config(state = DISABLED)    
+        self.button_redo.config(state = DISABLED)
+        self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
+        self.root.title(self.title)
+        
+        self.clear_text(self.t_text1)
+        self.canvas_gallery.delete("all")
+        
+        Globals.generated = False
+
+        # get imagetype to display from listbox
+        if not self.lb_gen.curselection() == ():
+            selected_indices = self.lb_gen.curselection()
+        else:
+            messagebox.showerror("showerror", "no Imagetype selected")
+            self.lb_gen.focus_set()
+            return None
+        Globals.imagetype = ",".join([self.lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
+        self.display_images(Globals.imagetype)
 
     def donothing(self):
         print("Menuitem not yet implemented")
@@ -1829,9 +1852,6 @@ class Dateimeister_support:
     def timer_end(self):
         print("Timer has elapsed")
 
-    def lb_gen_double(self, event):
-        self.Button_be_pressed(event)
-    
     def lb_camera_double(self, event):
         self.B_camera_press(event)
 
@@ -2125,6 +2145,7 @@ class Dateimeister_support:
             self.clear_dict_2nd(Globals.thumbnails, Globals.imagetype)
             self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
             Globals.generated = False
+            Globals.imagetype = ""
         if Globals.list_result_diatisch:
             Globals.list_result_diatisch.clear()
             Globals.list_result_diatisch = None
@@ -2165,13 +2186,12 @@ class Dateimeister_support:
        
         owndir = os.getcwd()
 
-        Globals
         # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
         # Just correct it and run generate again
         self.get_templates() # read them into dict_templates (instance variable)
         # cleanup
         # only if new generate not if we just shall sort images
-        if not Globals.use_imagetype:        
+        if not Globals.generated:        
             self.close_child_windows()
             # reset all process-states
             self.UR.reset()
@@ -2206,8 +2226,8 @@ class Dateimeister_support:
             thisoutdir = outdir + "/" + subdir
             self.dict_outdirs[dateityp] = thisoutdir
             endung= self.dict_cameras[thiscamera][dateityp]
-            # cleanup
-            if Globals.use_imagetype and dateityp != Globals.imagetype:
+            # if already generated (only new sort required) process only the selected imagetype
+            if Globals.generated and dateityp != Globals.imagetype:
                 continue
             self.clear_dict_2nd(Globals.thumbnails, dateityp)
             # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
@@ -2325,7 +2345,7 @@ class Dateimeister_support:
         self.l_label1.config(text = "Output from Dateimeister")
                 
         # die generierten Dateien in die Listbox eintragen, nur wenn neu generiert wurde
-        if not Globals.use_imagetype:
+        if not Globals.generated:
             for key in self.dict_gen_files:
                 self.lb_gen.insert(END, key)
             self.lb_gen.select_set(0)
@@ -2341,26 +2361,8 @@ class Dateimeister_support:
         os.chdir(owndir)
         self.write_cmdfiles()
     
-    def Button_be_pressed(self, *args):
-        # reset all process-states
-        self.UR.reset()
-        self.button_undo.config(state = DISABLED)    
-        self.button_redo.config(state = DISABLED)
-        self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
-        self.root.title(self.title)
-        
-        self.clear_text(self.t_text1)
-        self.canvas_gallery.delete("all")
-
-        if not Globals.use_imagetype: # the "normal case": get imagetype from listbox, else after new sort re-use Globals.imagetype
-            if not self.lb_gen.curselection() == ():
-                selected_indices = self.lb_gen.curselection()
-            else:
-                messagebox.showerror("showerror", "no Imagetype selected")
-                self.lb_gen.focus_set()
-                return None
-            Globals.imagetype = ",".join([self.lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
-        imagetype = Globals.imagetype
+    # display images of given type
+    def display_images(self, imagetype):
         filename = self.dict_gen_files[imagetype]
         subdir = self.dict_subdirs[imagetype]
         Globals.outdir = self.dict_outdirs[imagetype] # for setting title of duplicate-window
@@ -2599,7 +2601,6 @@ class Dateimeister_support:
             self.win_messages.close_handler()
             self.win_messages = None
         self.canvas_gallery.xview('moveto', 0)
-        Globals.use_imagetype = False # only true if new sort from the radiobuttons required
 
     def state_gen_required(self):
         self.button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
