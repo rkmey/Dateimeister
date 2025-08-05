@@ -1820,8 +1820,6 @@ class Dateimeister_support:
         self.clear_text(self.t_text1)
         self.canvas_gallery.delete("all")
         
-        Globals.generated = False
-
         # get imagetype to display from listbox
         if not self.lb_gen.curselection() == ():
             selected_indices = self.lb_gen.curselection()
@@ -2221,6 +2219,7 @@ class Dateimeister_support:
             # delete outdir-entries from xml if number gt than max from ini, oldest first
             self.new_dir_in_xml('outdir', self.max_outdirs, this_o, ts)
 
+        sort_method = ""
         for dateityp in self.dict_cameras[thiscamera]:
             subdir = self.dict_subdirs[dateityp]
             thisoutdir = outdir + "/" + subdir
@@ -2246,6 +2245,7 @@ class Dateimeister_support:
             else:
                 sort_method = self.rbvalue.get()
                 print("generate sort method is {:s}".format(sort_method))
+                self.dict_sort_method[dateityp] = sort_method
             self.dict_source_target[dateityp], self.dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp], self.dict_relpath[dateityp] = \
               DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, int(sort_method), self.debug)
             self.dict_relpath[dateityp] = dict(reversed(list(self.dict_relpath[dateityp].items())))
@@ -2373,6 +2373,7 @@ class Dateimeister_support:
         Globals.thumbnails[imagetype] = []
         # cleanup
         self.close_child_windows()
+        self.rbvalue.set(self.dict_sort_method[imagetype])
         
         self.l_label1.config(text = "Output from Dateimeister : " + filename)
         self.dict_image_lineno[imagetype] = {} # in Python muss das sein, sonst gehts in der nächsten Ebene nicht
