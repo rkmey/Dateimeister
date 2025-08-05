@@ -1805,9 +1805,10 @@ class Dateimeister_support:
         sort_method = self.rbvalue.get()
         print("Radiobutton pressed, value = {:s}".format(sort_method))
         if Globals.imagetype != "": # new sort of existing images
-            self.dict_sort_method[Globals.imagetype] = sort_method
-            self.Press_generate()
-            self.display_images(Globals.imagetype)
+            if sort_method != self.dict_sort_method[Globals.imagetype]: # do something only if sort method is new
+                self.dict_sort_method[Globals.imagetype] = sort_method
+                self.Press_generate()
+                self.display_images(Globals.imagetype)
 
     def Button_be_pressed(self, *args):
         # reset all process-states
