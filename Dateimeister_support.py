@@ -3207,6 +3207,8 @@ class Dateimeister_support:
         self.lb_camera.selection_set(idx_diatisch)
         self.clear_textbox(self.o_camera)
         self.insert_text(self.o_camera, self.diatisch_camera_name)
+        
+        Globals.generated = False
         self.generate()
         self.win_diatisch = None
 
