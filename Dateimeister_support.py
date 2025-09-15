@@ -1829,6 +1829,8 @@ class Dateimeister_support:
             self.lb_gen.focus_set()
             return None
         Globals.imagetype = ",".join([self.lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
+        self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
+        Globals.dict_thumbnails[Globals.imagetype] = {} # necessary to initialize first level
         self.display_images(Globals.imagetype)
 
     def Button_generate_pressed(self, *args): # event handler for button Generate
@@ -2410,7 +2412,6 @@ class Dateimeister_support:
         canvas_width  = self.canvas_gallery.winfo_width()
         self.canvas_gallery_width_visible = self.canvas_gallery.winfo_width() # Fensterbreite
         self.lastposition = 0
-        Globals.dict_thumbnails[imagetype] = {}
         self.dict_thumbnails_lineno[imagetype] = {}
         self.num_images = 0
         for file in self.dict_source_target[imagetype]:
@@ -2490,14 +2491,19 @@ class Dateimeister_support:
                 if player is not None:
                     player.setId(id)
                 mts = os.stat(file).st_mtime
-                myimage = MyThumbnail(pimg, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
-                    text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
+                # if request is from new ordering use existing thumbnail
+                if file in Globals.dict_thumbnails[imagetype]:
+                    myimage = Globals.dict_thumbnails[imagetype][file]
+                    print("Reuse existing thumbnail for file {:s}".format(file)) if self.debug else True
+                else:
+                    myimage = MyThumbnail(pimg, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
+                        text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
+                    Globals.dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE, None, False)
                     myimage.set_tooold(True)
                     self.canvas_gallery.itemconfig(text_id, text="EXC OVW")
                 Globals.thumbnails[imagetype].append(myimage)
-                Globals.dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
                 self.dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
                 self.lastposition += image_width + Globals.gap 
                 if myimage.getDuplicate() == 'j':
