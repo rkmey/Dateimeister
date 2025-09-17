@@ -2458,18 +2458,24 @@ class Dateimeister_support:
             dist_text  = 10
             # distance from border for image-frame
             dist_frame = 20
+            img_opened = False
             if  process_type != "none": 
                 if process_type != 'VIDEO': # we have to convert image to photoimage
-                    img  = Image.open(showfile)
-                    image_width_orig, image_height_orig = img.size
-                    faktor = canvas_height / image_height_orig
-                    newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
-                    r_img = img
-                    r_img.thumbnail(newsize)
-                    image_width, image_height = r_img.size
-                    #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
-                    #   + " factor is " + str(faktor))
-                    pimg = ImageTk.PhotoImage(r_img)
+                    if file in Globals.dict_thumbnails[imagetype]:
+                        pimg = Globals.dict_thumbnails[imagetype][file].getImage()
+                        image_width, image_height = pimg.width(), pimg.height()
+                    else:
+                        img  = Image.open(showfile)
+                        image_width_orig, image_height_orig = img.size
+                        faktor = canvas_height / image_height_orig
+                        newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
+                        r_img = img
+                        r_img.thumbnail(newsize)
+                        image_width, image_height = r_img.size
+                        #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
+                        #   + " factor is " + str(faktor))
+                        pimg = ImageTk.PhotoImage(r_img)
+                        img_opened = True
                 # an den Thumbnails führen wir einige Attribute, außerdem sorgt die Liste dafür, dass der Garbage-Kollektor das Bild nicht löscht.
                 # indem wir es in eine Liste einfügen, bleibt der Referenz-Count > 0
                 id = self.canvas_gallery.create_image(self.lastposition, 0, anchor='nw',image = pimg, tags = 'images')
@@ -2512,7 +2518,7 @@ class Dateimeister_support:
                     text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(self.dict_image_lineno[imagetype][file]))
-                if process_type != 'VIDEO':
+                if process_type != 'VIDEO' and img_opened:
                     img.close()
             else: # wir haben kein Bild, ein Rechteck einfügen
                 image_height = canvas_height
