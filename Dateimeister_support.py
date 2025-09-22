@@ -103,6 +103,11 @@ class MyThumbnail:
         self.tooold = tooold
         self.setState(self.state)
         
+    def updateIds(self, text_id, rect_id, frameids): #necessary after sort when thumbnail is reused, but items in canvas are created new
+        self.state_id_text = text_id
+        self.state_id_rect = rect_id
+        self.frameids = frameids
+
     def getImage(self):
         #print("*** retrieve Image ")
         return self.image    
@@ -2452,18 +2457,23 @@ class Dateimeister_support:
                 duplicate = 'j'
             else:
                 duplicate = 'n'
-            #print ("Process-type, file" , process_type, ' ', file)
+            # check if thumbnail already exists (dict has not been cleared because we only want to sort new)
+            thumbnail_reuse = False
+            if file in Globals.dict_thumbnails[imagetype]:
+                thumbnail_reuse = True
             this_lineno = self.dict_image_lineno[imagetype][file]
             # distance from border for text-boxes
             dist_text  = 10
             # distance from border for image-frame
             dist_frame = 20
             img_opened = False
-            if  process_type != "none": 
+            state = INCLUDE # can be overridenn after new sort
+            if  process_type != "none":
                 if process_type != 'VIDEO': # we have to convert image to photoimage
-                    if file in Globals.dict_thumbnails[imagetype]:
+                    if thumbnail_reuse:
                         pimg = Globals.dict_thumbnails[imagetype][file].getImage()
                         image_width, image_height = pimg.width(), pimg.height()
+                        state = Globals.dict_thumbnails[imagetype][file].getState()
                     else:
                         img  = Image.open(showfile)
                         image_width_orig, image_height_orig = img.size
@@ -2471,10 +2481,10 @@ class Dateimeister_support:
                         newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
                         r_img = img
                         r_img.thumbnail(newsize)
-                        image_width, image_height = r_img.size
                         #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
                         #   + " factor is " + str(faktor))
                         pimg = ImageTk.PhotoImage(r_img)
+                        image_width, image_height = pimg.width(), pimg.height()
                         img_opened = True
                 # an den Thumbnails führen wir einige Attribute, außerdem sorgt die Liste dafür, dass der Garbage-Kollektor das Bild nicht löscht.
                 # indem wir es in eine Liste einfügen, bleibt der Referenz-Count > 0
@@ -2498,7 +2508,7 @@ class Dateimeister_support:
                     player.setId(id)
                 mts = os.stat(file).st_mtime
                 # if request is from new ordering use existing thumbnail
-                if file in Globals.dict_thumbnails[imagetype]:
+                if thumbnail_reuse:
                     myimage = Globals.dict_thumbnails[imagetype][file]
                     print("Reuse existing thumbnail for file {:s}".format(file)) if self.debug else True
                 else:
@@ -2553,6 +2563,10 @@ class Dateimeister_support:
                     text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup =self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(self.dict_image_lineno[imagetype][file]))
+            # apply status if thumbnail reuse
+            if thumbnail_reuse:
+                Globals.dict_thumbnails[imagetype][file].updateIds(text_id, rect_id, frameids)
+                Globals.dict_thumbnails[imagetype][file].setState(state)
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")
         self.canvas_gallery.tag_raise("rect")
