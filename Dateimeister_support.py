@@ -3170,10 +3170,9 @@ class Dateimeister_support:
 
     def apply_process_id(self, process_id, processid_predecessor):
         # set thumbnail-states according actual processid
-        i = 0
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
-            thumbnail.setState(self.dict_status_image[process_id][i], None, False)
-            i += 1
+            image = thumbnail.getImage()
+            thumbnail.setState(self.dict_status_image[process_id][image], None, False)
         self.update_button_state()
         self.write_cmdfile(Globals.imagetype)
         
@@ -3182,9 +3181,10 @@ class Dateimeister_support:
         processid_akt = self.UR.get_processid_akt()
         # wir bilden jetzt zu der aktuellen processid eine Liste der states der thumbnails
         self.clear_dict_2nd(self.dict_status_image, processid_akt)
-        self.dict_status_image[processid_akt] = []
+        self.dict_status_image[processid_akt] = {}
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
-            self.dict_status_image[processid_akt].append(thumbnail.getState())
+            image = thumbnail.getImage()
+            self.dict_status_image[processid_akt][image] = thumbnail.getState()
         self.update_button_state() # refer to function comment
         
         # UNDO / REDO disabeln, wenn Aktion nicht möglich, weil es keine frühere / spätere Bearbeitung gibt
