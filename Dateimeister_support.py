@@ -112,8 +112,14 @@ class MyThumbnail:
         #print("*** retrieve Image ")
         return self.image    
 
+    def setStart(self, start):
+        self.start = start   
+
     def getStart(self):
         return self.start    
+
+    def setEnd(self, end):
+        self.end = end   
 
     def getEnd(self):
         return self.end    
@@ -1646,7 +1652,6 @@ class Dateimeister_support:
         self.dict_gen_files_delete = {}
         Globals.thumbnails = {}
         images = []
-        self.dict_image_lineno = {}
         self.title = self.root.title()
         self.oldcamera = ""
         self.dict_source_target_jpeg = {}
@@ -2389,7 +2394,7 @@ class Dateimeister_support:
         self.rbvalue.set(self.dict_sort_method[imagetype])
         
         self.l_label1.config(text = "Output from Dateimeister : " + filename)
-        self.dict_image_lineno[imagetype] = {} # in Python muss das sein, sonst gehts in der nächsten Ebene nicht
+        dict_image_lineno = {}
         lineno = 0
         #print(str(self.dict_source_target))
         for this_sourcefile in self.dict_source_target[imagetype]:
@@ -2407,7 +2412,7 @@ class Dateimeister_support:
             #thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = source_without_dir, target = target_without_dir)
             thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = this_sourcefile, target = this_targetfile)
             self.insert_text(self.t_text1, thisline)
-            self.dict_image_lineno[imagetype][this_sourcefile] = lineno
+            dict_image_lineno[this_sourcefile] = lineno
         
         # wir suchen in der cmd-Datei die Endung für jedes Imagefile. Damit suchen wir in dict_process_image nach einem Eintrag
         # wenn JPEG, dann verarbeiten wir die Zeile und verwenden das mutmaßliche JPEG_Bild in der Gallerie. Wenn use_jpeg gefunden wird
@@ -2434,6 +2439,12 @@ class Dateimeister_support:
             # wir brauchen die Methode aus der ini-Datei, mit der wir das Bild verarbeiten sollen
             process_type = self.dict_process_image[lastname].upper()
             #print("Process Type is: " + process_type)
+ 
+            # check if thumbnail already exists (dict has not been cleared because we only want to sort new)
+            thumbnail_reuse = False
+            if file in Globals.dict_thumbnails[imagetype]:
+                thumbnail_reuse = True
+
             player = None # only for video
             if (process_type == "JPEG"):
                 showfile = file # Image-file to show in Canvas
@@ -2446,9 +2457,12 @@ class Dateimeister_support:
                     print ("*** No JPEG found for " + file + " using " + showfile)
                     process_type = "none" # rectangle instead
             elif process_type == 'VIDEO':
-                print("try to create new videoplayer...")
-                # create new videoplayer
-                player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height, self.lastposition)
+                if thumbnail_reuse:
+                    player = Globals.dict_thumbnails[imagetype][file].getPlayer()
+                else:
+                    print("try to create new videoplayer...")
+                    # create new videoplayer
+                    player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height, self.lastposition)
                 image_width, image_height, pimg = player.get_pimg()
                 showfile = file
             else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
@@ -2457,11 +2471,7 @@ class Dateimeister_support:
                 duplicate = 'j'
             else:
                 duplicate = 'n'
-            # check if thumbnail already exists (dict has not been cleared because we only want to sort new)
-            thumbnail_reuse = False
-            if file in Globals.dict_thumbnails[imagetype]:
-                thumbnail_reuse = True
-            this_lineno = self.dict_image_lineno[imagetype][file]
+            this_lineno = dict_image_lineno[file]
             # distance from border for text-boxes
             dist_text  = 10
             # distance from border for image-frame
@@ -2511,6 +2521,8 @@ class Dateimeister_support:
                 if thumbnail_reuse:
                     myimage = Globals.dict_thumbnails[imagetype][file]
                     print("Reuse existing thumbnail for file {:s}".format(file)) if self.debug else True
+                    # reset lineno, start and end
+                    Globals.dict_thumbnails[imagetype][file].setLineno(this_lineno)
                 else:
                     myimage = MyThumbnail(pimg, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
                         text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
@@ -2521,13 +2533,15 @@ class Dateimeister_support:
                     self.canvas_gallery.itemconfig(text_id, text="EXC OVW")
                 Globals.thumbnails[imagetype].append(myimage)
                 self.dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
+                # save position before change
+                lastpos = self.lastposition
                 self.lastposition += image_width + Globals.gap 
                 if myimage.getDuplicate() == 'j':
                     if imagetype.upper() == "JPEG":
                         print ("Duplicate: " + file)
                     text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
-                #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(self.dict_image_lineno[imagetype][file]))
+                #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(dict_image_lineno[file]))
                 if process_type != 'VIDEO' and img_opened:
                     img.close()
             else: # wir haben kein Bild, ein Rechteck einfügen
@@ -2558,15 +2572,22 @@ class Dateimeister_support:
                 Globals.thumbnails[imagetype].append(myimage)
                 Globals.dict_thumbnails[imagetype][file] = myimage
                 self.dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
+                # save position before change
+                lastpos = self.lastposition
                 self.lastposition += image_width + Globals.gap 
                 if myimage.getDuplicate() == 'j':
                     text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup =self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
-                #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(self.dict_image_lineno[imagetype][file]))
-            # apply status if thumbnail reuse
+                #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(dict_image_lineno[file]))
+            # update if thumbnail reuse
             if thumbnail_reuse:
                 Globals.dict_thumbnails[imagetype][file].updateIds(text_id, rect_id, frameids)
                 Globals.dict_thumbnails[imagetype][file].setState(state)
+                # reset lineno, start and end
+                Globals.dict_thumbnails[imagetype][file].setLineno(this_lineno)
+                Globals.dict_thumbnails[imagetype][file].setStart(lastpos)
+                Globals.dict_thumbnails[imagetype][file].setEnd(lastpos + image_width)
+                Globals.dict_thumbnails[imagetype][file].setId(id)
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")
         self.canvas_gallery.tag_raise("rect")
