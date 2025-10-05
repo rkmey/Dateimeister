@@ -1914,13 +1914,13 @@ class Dateimeister_support:
         for thumbnail in xmlroot.findall('thumbnail'):
             #print (thumbnail.attrib['filename'])   
             image = thumbnail.find('image').text
-            mystate = thumbnail.find('state').text
+            mystate = int(thumbnail.find('state').text)
             #print(image)
             #print(mystate)
             # apply config
             if image in Globals.dict_thumbnails[Globals.imagetype]:
                 if Globals.dict_thumbnails[Globals.imagetype][image] in Globals.thumbnails[Globals.imagetype]:
-                    if mystate == "INCLUDE":
+                    if mystate == INCLUDE:
                         Globals.dict_thumbnails[Globals.imagetype][image].setState(INCLUDE, None, False)
                     else:
                         Globals.dict_thumbnails[Globals.imagetype][image].setState(EXCLUDE, None, False)
