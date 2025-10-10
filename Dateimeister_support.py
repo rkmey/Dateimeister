@@ -2477,13 +2477,15 @@ class Dateimeister_support:
             # distance from border for image-frame
             dist_frame = 20
             img_opened = False
-            state = INCLUDE # can be overridenn after new sort
+            if thumbnail_reuse:
+                state = Globals.dict_thumbnails[imagetype][file].getState()
+            else:
+                state = INCLUDE # can be overridenn after new sort
             if  process_type != "none":
                 if process_type != 'VIDEO': # we have to convert image to photoimage
                     if thumbnail_reuse:
                         pimg = Globals.dict_thumbnails[imagetype][file].getImage()
                         image_width, image_height = pimg.width(), pimg.height()
-                        state = Globals.dict_thumbnails[imagetype][file].getState()
                     else:
                         img  = Image.open(showfile)
                         image_width_orig, image_height_orig = img.size
