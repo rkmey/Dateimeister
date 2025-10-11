@@ -54,7 +54,16 @@ from enum import Enum
 
 INCLUDE = 1
 EXCLUDE = 2
-    
+
+# File Menu menuitem names
+MENUITEM_FILE_NEW               = 0
+MENUITEM_FILE_OPEN_CONFIG       = 1
+MENUITEM_FILE_OPEN_APPLY_CONFIG = 2
+MENUITEM_FILE_SAVE_CONFIG       = 3
+MENUITEM_FILE_SAVE_CONFIG_AS    = 4
+MENUITEM_FILE_APPLY_CONFIG      = 5
+MENUITEM_FILE_RECENT            = 6
+   
 # variables used by more than 1 class
 class Globals:
     imagetype = ""
@@ -1673,6 +1682,7 @@ class Dateimeister_support:
         self.filemenu = Menu(menubar, tearoff=0)
         self.filemenu.add_command(label="New", command=self.donothing)
         self.filemenu.add_command(label="Open config", command=self.open_config)
+        self.filemenu.add_command(label="Open Apply config", command=self.open_apply_config)
         self.filemenu.add_command(label="Save config", command=self.save_config)
         self.filemenu.add_command(label="Save config as...", command=self.saveas_config)
         self.filemenu.add_command(label="Apply config", command=self.apply_config)
@@ -1681,12 +1691,13 @@ class Dateimeister_support:
         self.filemenu.add_cascade(label="Open Recent", menu=self.recentmenu)
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.root.quit)
-        self.filemenu.entryconfig(0, state=DISABLED)
-        self.filemenu.entryconfig(1, state=DISABLED) # open after Browse / Edit, we need indir and type
-        self.filemenu.entryconfig(2, state=DISABLED)
-        self.filemenu.entryconfig(3, state=DISABLED)
-        self.filemenu.entryconfig(4, state=DISABLED)
-        self.filemenu.entryconfig(5, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_NEW, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_OPEN_CONFIG, state=DISABLED) # open after Browse / Edit, we need indir and type
+        self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_APPLY_CONFIG, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_RECENT, state=DISABLED)
         
         # camera menu
         cameramenu = Menu(menubar, tearoff=0)
@@ -1902,9 +1913,21 @@ class Dateimeister_support:
         
         endung = 'xml'
         self.config_file = fd.askopenfilename(initialdir = os.path.join(Globals.datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
-        self.filemenu.entryconfig(4, state=NORMAL)
-        self.root.title(self.title + ' ' + self.config_file)
-        self.filemenu.entryconfig(2, state=NORMAL)
+        if self.config_file:
+            self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=NORMAL)
+            self.root.title(self.title + ' ' + self.config_file)
+            self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=NORMAL)
+
+    def open_apply_config(self):
+        # get config_files for indir / type
+        
+        endung = 'xml'
+        self.config_file = fd.askopenfilename(initialdir = os.path.join(Globals.datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
+        if self.config_file:
+            self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=NORMAL)
+            self.root.title(self.title + ' ' + self.config_file)
+            self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=NORMAL)
+            self.apply_config()
 
     def apply_config(self):
         tree = ET.parse(self.config_file)
@@ -1957,9 +1980,9 @@ class Dateimeister_support:
             self.update_config_xml(self.config_file)
             
             self.root.title(self.title + ' ' + self.config_file)
-            self.filemenu.entryconfig(2, state=NORMAL) # Save
-            self.filemenu.entryconfig(3, state=NORMAL) # Save As
-            self.filemenu.entryconfig(4, state=NORMAL) # Apply config
+            self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=NORMAL) # Save
+            self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG, state=NORMAL) # Save As
+            self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=NORMAL) # Apply config
 
     def update_config_xml(self, config_file): # Config-xml unter neuem Namen sichern und update
         # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
@@ -2020,7 +2043,9 @@ class Dateimeister_support:
                 self.recentmenu.entryconfig(ii, state = DISABLED)
             ii += 1
         if ii == 0:
-            self.filemenu.entryconfig(5, state=DISABLED)
+            self.filemenu.entryconfig(MENUITEM_FILE_RECENT, state=DISABLED)
+        else:
+            self.filemenu.entryconfig(MENUITEM_FILE_RECENT, state=NORMAL)
 
 
     def write_config(self, filename): # Config-xml unter neuem Namen sichern
@@ -2068,9 +2093,10 @@ class Dateimeister_support:
     def recent_config(self, item):
         print("** Menuitem selected: " + item)
         self.config_file = item
-        self.filemenu.entryconfig(4, state=NORMAL)
+        self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=NORMAL)
         self.root.title(self.title + ' ' + self.config_file)
-        self.filemenu.entryconfig(2, state=NORMAL)
+        self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=NORMAL)
+        self.apply_config()
     
 
     def tooltip_imagefile(self, event):
@@ -2150,7 +2176,8 @@ class Dateimeister_support:
             self.button_redo.config(state = DISABLED)
             self.clear_text(self.t_text1)
             self.canvas_gallery.delete("all")
-            self.filemenu.entryconfig(1, state=DISABLED)
+            self.filemenu.entryconfig(MENUITEM_FILE_OPEN_CONFIG, state=DISABLED)
+            self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=DISABLED)
             self.button_exclude.config(state = DISABLED)
             self.button_include.config(state = DISABLED)
             self.button_exec.config(state = DISABLED)
@@ -2369,7 +2396,8 @@ class Dateimeister_support:
             self.lb_gen.select_set(0)
             if self.lb_gen.size() > 0:
                 self.button_be.config(state = NORMAL)
-        self.filemenu.entryconfig(1, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_OPEN_CONFIG, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=DISABLED)
         self.button_exclude.config(state = DISABLED)
         self.button_include.config(state = DISABLED)
         self.button_exec.config(state = DISABLED)
@@ -2620,14 +2648,15 @@ class Dateimeister_support:
         #print(Globals.dict_duplicates)
         self.historize_process()
         if len(Globals.thumbnails[imagetype]) > 0:
-            self.filemenu.entryconfig(1, state=NORMAL)
-            self.filemenu.entryconfig(3, state=NORMAL)
+            self.filemenu.entryconfig(MENUITEM_FILE_OPEN_CONFIG, state=NORMAL)
+            self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=NORMAL)
+            self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG, state=NORMAL)
         
         else: # if no images available we dont need config files
-            self.filemenu.entryconfig(1, state=DISABLED)
-            self.filemenu.entryconfig(2, state=DISABLED)
-            self.filemenu.entryconfig(3, state=DISABLED)
-            self.filemenu.entryconfig(4, state=DISABLED)
+            self.filemenu.entryconfig(MENUITEM_FILE_OPEN_CONFIG, state=DISABLED)
+            self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=DISABLED)
+            self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG, state=DISABLED)
+            self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=DISABLED)
         self.duplicates = False
         
         for mytarget in Globals.dict_duplicates[imagetype]:
@@ -2638,7 +2667,7 @@ class Dateimeister_support:
                 break
         
         if self.num_images > 0: # config makes no sense for zero images
-            self.filemenu.entryconfig(5, state=NORMAL)
+            self.filemenu.entryconfig(MENUITEM_FILE_APPLY_CONFIG, state=NORMAL)
             # get the config-files for indir / type:
             indir = self.label_indir.cget('text')
                 
@@ -2664,7 +2693,8 @@ class Dateimeister_support:
         self.button_redo.config(state = DISABLED)
         self.clear_text(self.t_text1)
         self.canvas_gallery.delete("all")
-        self.filemenu.entryconfig(1, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_OPEN_CONFIG, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=DISABLED)
         self.button_exclude.config(state = DISABLED)
         self.button_include.config(state = DISABLED)
         self.button_exec.config(state = DISABLED)
