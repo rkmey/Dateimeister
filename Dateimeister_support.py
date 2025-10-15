@@ -111,7 +111,23 @@ class MyThumbnail:
         self.duplicate = duplicate
         self.tooold = tooold
         self.setState(self.state)
+
+        statinfo = os.stat(file)
+        st_ctime = statinfo.st_ctime
+        st_mtime = statinfo.st_mtime
+        self.filectime = datetime.fromtimestamp(st_ctime).strftime('%Y-%m-%d %H:%M')
+        self.filemtime = datetime.fromtimestamp(st_mtime).strftime('%Y-%m-%d %H:%M')
+        self.filesize  = os.stat(file).st_size/(1024*1024.0) 
         
+    def get_filectime(self):
+        return self.filectime
+        
+    def get_filemtime(self):
+        return self.filemtime
+        
+    def get_filesize(self):
+        return self.filesize
+                
     def updateIds(self, text_id, rect_id, frameids): #necessary after sort when thumbnail is reused, but items in canvas are created new
         self.state_id_text = text_id
         self.state_id_rect = rect_id
@@ -436,7 +452,7 @@ class MyDuplicates:
             canvas_y = self.f.canvasy(event.y)
             thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
             if thumbnail is not None:
-                text = thumbnail.getFile()
+                text = "{:s}\n created {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
                 #print("Image clicked: " + text)
             if text != self.tooltiptext:
                 self.tt.update(text)
@@ -2116,7 +2132,7 @@ class Dateimeister_support:
             canvas_y = self.canvas_gallery.canvasy(event.y)
             thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
             if thumbnail is not None:
-                text = thumbnail.getFile()
+                text = "{:s}\n created {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
                 #print("Image clicked: " + text)
             if text != self.tooltiptext:
                 self.tt.update(text)
