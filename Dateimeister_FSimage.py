@@ -27,6 +27,7 @@ from tkinter import Frame
 from tkinter import Label
 from tkinter import Canvas
 from tkinter import Menu
+from tkinter.font import Font
 from time import gmtime, strftime
 
 from PIL import Image, ImageTk
@@ -134,6 +135,21 @@ class MyFSImage:
             self.w2.Scale_fps.set(int(1000 / fps))
             self.playerstatus = 'play'
             self.w2.Button_pp.config(text = 'pause')
+            
+        # frame for Label displaying file info start at  0,75 (width of canvas
+        self.text_font = Font(family="Helvetica", size=6)
+        self.Frame_labels = tk.Frame(self.root2)
+        self.Frame_labels.place(relx=.75, rely=0.00, relheight=0.1, relwidth=0.2)
+        self.Frame_labels.configure(relief='flat')
+        self.Frame_labels.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Label_fileinfo = tk.Label(self.Frame_labels)
+        self.Label_fileinfo.place(relx=0.0, rely=0.0, relheight=1, relwidth=1)
+        self.Label_fileinfo.configure(anchor=tk.NW)
+        self.Label_fileinfo.configure(font=self.text_font)
+        mytext = "{:s}\n created {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
+        self.Label_fileinfo.configure(text=mytext)
+    
+        
     def getPlayer(self):
         return self.player
     
