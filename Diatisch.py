@@ -76,6 +76,25 @@ class MyImage:
         self.canvas = canvas
         self.selected = 0
         self.was_selected = False
+        # file statistics for tooltip, FSImage display
+        statinfo = os.stat(filename)
+        st_ctime = statinfo.st_ctime
+        st_mtime = statinfo.st_mtime
+        self.filectime = datetime.fromtimestamp(st_ctime).strftime('%Y-%m-%d %H:%M')
+        self.filemtime = datetime.fromtimestamp(st_mtime).strftime('%Y-%m-%d %H:%M')
+        self.filesize  = os.stat(filename).st_size/(1024*1024.0) 
+        
+    def get_filectime(self):
+        return self.filectime
+        
+    def get_filemtime(self):
+        return self.filemtime
+        
+    def get_filesize(self):
+        return self.filesize
+                        
+    def getFile(self):
+        return self.filename    
         
     def get_filename(self):
         return self.filename
@@ -130,6 +149,28 @@ class Thumbnail:
         self.fs_close = fs_close # called on unregister = close
         self.fs_button = fs_button # called on button pressed
         #self.setState(self.state)
+        # file statistics for tooltip, FSImage display
+        statinfo = os.stat(file)
+        st_ctime = statinfo.st_ctime
+        st_mtime = statinfo.st_mtime
+        self.filectime = datetime.fromtimestamp(st_ctime).strftime('%Y-%m-%d %H:%M')
+        self.filemtime = datetime.fromtimestamp(st_mtime).strftime('%Y-%m-%d %H:%M')
+        self.filesize  = os.stat(file).st_size/(1024*1024.0) 
+        
+    def get_filectime(self):
+        return self.filectime
+        
+    def get_filemtime(self):
+        return self.filemtime
+        
+    def get_filesize(self):
+        return self.filesize
+                        
+    def getFile(self):
+        return self.file    
+  
+    def get_image(self):
+        return self.image
         
     def setState(self, state, caller = None, do_save = True):
         print("Thumbnail.setState, state = {:d}".format(state)) if self.debug else True
@@ -1116,7 +1157,7 @@ class Diatisch:
             image_id = closest[0]
             if image_id in self.dict_source_images:
                 img      = self.dict_source_images[image_id]
-                text     = img.get_filename()
+                text = "{:s}\n created {:s} size {:.3f}".format(img.getFile(), img.get_filectime(), img.get_filesize())
                 if text != self.tooltiptext_st:
                     self.st.update(text)
                     self.tooltiptext_st = text
@@ -1136,7 +1177,7 @@ class Diatisch:
             image_id = closest[0]
             if image_id in self.dict_target_images:
                 img      = self.dict_target_images[image_id]
-                text     = img.get_filename()
+                text = "{:s}\n created {:s} size {:.3f}".format(img.getFile(), img.get_filectime(), img.get_filesize())
                 if text != self.tooltiptext_tt:
                     self.tt.update(text)
                     self.tooltiptext_tt = text
