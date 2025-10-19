@@ -1496,7 +1496,6 @@ class Dateimeister_support:
         self.dict_templates = {}
         self.dict_file_image = {}
 
-
         # configure some controls
         self.o_camera  = self.w.Entry_camera
         self.lb_camera = self.w.Listbox_camera
@@ -1642,7 +1641,6 @@ class Dateimeister_support:
         self.canvas_gallery.bind("<Button-3>", self.show_context_menu)    
         self.canvas_gallery.bind('<Motion>', self.tooltip_imagefile)    
         self.canvas_gallery.bind('<Button-1>', self.canvas_button_1)    
-        self.root.bind("<Configure>", self.on_window_resize)
         self.root.bind("<Destroy>",   self.on_window_destroy)
         # strg-z, y
         self.canvas_gallery.bind('<Control-z>', lambda event: self.process_undo(event))
@@ -1690,7 +1688,7 @@ class Dateimeister_support:
         self.root.geometry(v_dim)
         #my_w.maxsize(300,220)  # (maximum ) width , ( maximum) height
         #my_w.minsize(250,220)  # (minimum ) width , ( minimum) height
-        self.root.resizable(False, False)
+        self.root.resizable(True, True)
         self.tt = Dateimeister.ToolTip(self.canvas_gallery, "no images available", delay=0, follow = True)
         
         # Menubar
@@ -1837,6 +1835,8 @@ class Dateimeister_support:
             rb.place(relx = (int(i) - 1) / 4, rely=0.0, relheight=1.0, relwidth = 0.25)
             rb.configure(font=self.text_font)
         self.rbvalue.set("1")
+        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
+
 
     def rb_sort(self, event = None):
         sort_method = self.rbvalue.get()
@@ -1883,7 +1883,7 @@ class Dateimeister_support:
         if x == ".": # . is toplevel window
             if (self.width != event.width):
                 self.width = event.width
-                #print(f"The width of Toplevel is {self.width}") if self.debug else True
+                print(f"The width of Toplevel is {self.width}") if self.debug else True
             if (self.height != event.height):
                 self.height = event.height
                 self.Frame_sortbuttons.update()
@@ -2159,12 +2159,6 @@ class Dateimeister_support:
         a = 0
         #self.stop_all_players()
         
-
-    def on_window_resize(self, event): # das funktioniert nicht rihtig. Die übergebenen Zahlen sind falsch und der Handler wird unglaublich oft aufgerufen
-        width = event.width
-        height = event.height
-        #print("Window resized to width: " + str(width) + " height: " + str(height))
-
     def Press_indir(self, *args):
         indir = fd.askdirectory() 
         print ("indir %s" % indir)
