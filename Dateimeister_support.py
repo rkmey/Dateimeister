@@ -2915,7 +2915,7 @@ class Dateimeister_support:
                 #print ("new Scroll posiion in canvas  is: " + str(new_canvas_x) + " S1, S2 = " + str(s1) + "," + str(s2) + " slider-widt: " + str(slider_width))
             self.scroll_canvas_x.set(s1, s2)
             self.canvas_gallery.xview('moveto', s2)
-        elif len(args) == 3 and args[2] == "page":
+        elif len(args) == 3 and (args[2] == "page" or args[2] == "pages"):
             #print("Args: ", str(args))
             # wenn wir eine Seite nach rechts scrollen sollen, soll das Bild, das jetzt ganz oder teilweise am rechten Bildrand zu sehen ist, am linken Bildrand erscheinen
             # wenn wir 1 Seite nach links scrollen sollen, soll der Vorgänger des Bildes vollständig am rechten Bildrand sichtbar sein. Wenn das dazu führt,
