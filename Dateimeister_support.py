@@ -81,6 +81,7 @@ class Globals:
     dict_duplicates = {}
     outdir = ""
     list_result_diatisch = []
+    resized = False # only temporary set to True on resize window
 
 class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
@@ -136,6 +137,10 @@ class MyThumbnail:
     def getImage(self):
         #print("*** retrieve Image ")
         return self.image    
+
+    def setImage(self, image):
+        #print("*** retrieve Image ")
+        self.image = image    
 
     def setStart(self, start):
         self.start = start   
@@ -1836,11 +1841,13 @@ class Dateimeister_support:
             rb.configure(font=self.text_font)
         self.rbvalue.set("1")
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
-
+        # create a timer which prevents from redrawing images while mouse is still moving for resize window
+        self.timer = RestartableTimer(root, 333, self.resize)  # ms
+        
 
     def rb_sort(self, event = None):
         sort_method = self.rbvalue.get()
-        print("Radiobutton pressed, value = {:s}".format(sort_method))
+        print("Radiobutton pressed, value = {:s}".format(sort_method)) if self.debug else True
         if Globals.imagetype != "": # new sort of existing images
             if sort_method != self.dict_sort_method[Globals.imagetype]: # do something only if sort method is new
                 self.dict_sort_method[Globals.imagetype] = sort_method
@@ -1890,7 +1897,15 @@ class Dateimeister_support:
                 l_height = self.Frame_sortbuttons.winfo_height()
                 fontsize_use = int(.8 * min(12.0, l_height * .75))
                 print(f"The height of Toplevel is {self.height}, label height is {l_height} set fontsize to {fontsize_use}") if self.debug else True
-                self.text_font.configure(size=fontsize_use)                
+                self.text_font.configure(size=fontsize_use) 
+            self.timer.start()
+
+    def resize(self):
+        print("TIMER elapsed start resize") if self.debug else True
+        if Globals.imagetype != "": # new sort of existing images
+            Globals.resized = True
+            self.display_images(Globals.imagetype)
+            Globals.resized = False
 
     def timer_end(self):
         print("Timer has elapsed")
@@ -2235,7 +2250,6 @@ class Dateimeister_support:
         print ("INDIR is  " + indir)
         
         self.clear_text(self.t_text1)
-        self.canvas_gallery.delete("all")
        
         owndir = os.getcwd()
 
@@ -2462,6 +2476,7 @@ class Dateimeister_support:
         self.lastposition = 0
         self.dict_thumbnails_lineno[imagetype] = {}
         self.num_images = 0
+        self.canvas_gallery.delete("all")
         for file in self.dict_source_target[imagetype]:
             self.num_images += 1
             this_targetfile = self.dict_source_target[imagetype][file]
@@ -2480,7 +2495,7 @@ class Dateimeister_support:
  
             # check if thumbnail already exists (dict has not been cleared because we only want to sort new)
             thumbnail_reuse = False
-            if file in Globals.dict_thumbnails[imagetype]:
+            if file in Globals.dict_thumbnails[imagetype] and not Globals.resized: # the only reason why we reuse
                 thumbnail_reuse = True
 
             player = None # only for video
@@ -2495,7 +2510,7 @@ class Dateimeister_support:
                     print ("*** No JPEG found for " + file + " using " + showfile)
                     process_type = "none" # rectangle instead
             elif process_type == 'VIDEO':
-                if thumbnail_reuse:
+                if thumbnail_reuse and not Globals.resized: # we need a new player because of new size:
                     player = Globals.dict_thumbnails[imagetype][file].getPlayer()
                 else:
                     print("try to create new videoplayer...")
@@ -2514,28 +2529,18 @@ class Dateimeister_support:
             dist_text  = 10
             # distance from border for image-frame
             dist_frame = 20
-            img_opened = False
-            if thumbnail_reuse:
+            if thumbnail_reuse or Globals.resized:
                 state = Globals.dict_thumbnails[imagetype][file].getState()
             else:
                 state = INCLUDE # can be overridenn after new sort
             if  process_type != "none":
                 if process_type != 'VIDEO': # we have to convert image to photoimage
-                    if thumbnail_reuse:
+                    if not thumbnail_reuse or Globals.resized: # we need a new image
+                        pimg, image_width, image_height = self.new_image(showfile, canvas_height)
+                    else: # we can use the existing
                         pimg = Globals.dict_thumbnails[imagetype][file].getImage()
                         image_width, image_height = pimg.width(), pimg.height()
-                    else:
-                        img  = Image.open(showfile)
-                        image_width_orig, image_height_orig = img.size
-                        faktor = canvas_height / image_height_orig
-                        newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
-                        r_img = img
-                        r_img.thumbnail(newsize)
-                        #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
-                        #   + " factor is " + str(faktor))
-                        pimg = ImageTk.PhotoImage(r_img)
-                        image_width, image_height = pimg.width(), pimg.height()
-                        img_opened = True
+                # if resized we have to replace the thumbnail image with a new one with appropriate size
                 # an den Thumbnails führen wir einige Attribute, außerdem sorgt die Liste dafür, dass der Garbage-Kollektor das Bild nicht löscht.
                 # indem wir es in eine Liste einfügen, bleibt der Referenz-Count > 0
                 id = self.canvas_gallery.create_image(self.lastposition, 0, anchor='nw',image = pimg, tags = 'images')
@@ -2567,6 +2572,9 @@ class Dateimeister_support:
                     myimage = MyThumbnail(pimg, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
                         text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
                     Globals.dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
+                if thumbnail_reuse and Globals.resized: # replace existing image
+                    myimage.setImage(myimage)
+
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE, None, False)
                     myimage.set_tooold(True)
@@ -2582,8 +2590,6 @@ class Dateimeister_support:
                     text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(dict_image_lineno[file]))
-                if process_type != 'VIDEO' and img_opened:
-                    img.close()
             else: # wir haben kein Bild, ein Rechteck einfügen
                 image_height = canvas_height
                 image_width  = int(canvas_height * 4 / 3)
@@ -2620,7 +2626,7 @@ class Dateimeister_support:
                     rect_id_dup =self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(dict_image_lineno[file]))
             # update if thumbnail reuse
-            if thumbnail_reuse:
+            if thumbnail_reuse or Globals.resized:
                 Globals.dict_thumbnails[imagetype][file].updateIds(text_id, rect_id, frameids)
                 Globals.dict_thumbnails[imagetype][file].setState(state)
                 # reset lineno, start and end
@@ -2696,6 +2702,21 @@ class Dateimeister_support:
             self.win_messages.close_handler()
             self.win_messages = None
         self.canvas_gallery.xview('moveto', 0)
+
+    def new_image(self, file, canvas_height):    
+        img  = Image.open(file)
+        image_width_orig, image_height_orig = img.size
+        faktor = canvas_height / image_height_orig
+        newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
+        r_img = img
+        r_img.thumbnail(newsize)
+        #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
+        #   + " factor is " + str(faktor))
+        pimg = ImageTk.PhotoImage(r_img)
+        image_width, image_height = pimg.width(), pimg.height()
+        img.close()
+        return pimg, image_width, image_height
+
 
     def state_gen_required(self):
         self.button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
@@ -3514,6 +3535,26 @@ class Dateimeister_support:
            thiscmdfile.write(ii + '\n') 
         thiscmdfile.close()
 
+class RestartableTimer:
+    def __init__(self, root, interval_ms, callback):
+        self.root = root
+        self.interval_ms = interval_ms
+        self.callback = callback
+        self._timer_id = None
+
+    def start(self):
+        self.cancel()  # Falls bereits laufend, abbrechen
+        self._timer_id = self.root.after(self.interval_ms, self._execute)
+
+    def cancel(self):
+        if self._timer_id is not None:
+            self.root.after_cancel(self._timer_id)
+            self._timer_id = None
+
+    def _execute(self):
+        self._timer_id = None
+        self.callback()
+        
 # #############################################################
 if __name__ == '__main__':
     '''Main entry point for the application.'''
