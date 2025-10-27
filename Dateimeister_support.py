@@ -2249,8 +2249,6 @@ class Dateimeister_support:
             addrelpath  = "n"
         print ("INDIR is  " + indir)
         
-        self.clear_text(self.t_text1)
-       
         owndir = os.getcwd()
 
         # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
@@ -2447,6 +2445,8 @@ class Dateimeister_support:
         
         self.l_label1.config(text = "Output from Dateimeister : " + filename)
         dict_image_lineno = {}
+        self.canvas_gallery.delete("all")
+        self.clear_text(self.t_text1)
         lineno = 0
         #print(str(self.dict_source_target))
         for this_sourcefile in self.dict_source_target[imagetype]:
@@ -2476,7 +2476,6 @@ class Dateimeister_support:
         self.lastposition = 0
         self.dict_thumbnails_lineno[imagetype] = {}
         self.num_images = 0
-        self.canvas_gallery.delete("all")
         for file in self.dict_source_target[imagetype]:
             self.num_images += 1
             this_targetfile = self.dict_source_target[imagetype][file]
