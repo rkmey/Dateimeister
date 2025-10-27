@@ -2251,6 +2251,9 @@ class Dateimeister_support:
         
         owndir = os.getcwd()
 
+        self.clear_text(self.t_text1)
+        self.canvas_gallery.delete("all")
+
         # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
         # Just correct it and run generate again
         self.get_templates() # read them into dict_templates (instance variable)
@@ -2350,7 +2353,6 @@ class Dateimeister_support:
             #print ("OUTFILE is " + os.environ["OUTFILE"])
             # wenn die Endung wegen mehrerer Möglichkeiten (jpeg, jpg) mehr al 1 Eintrag hat, nehmen wir den letzten
             #print("'(.*?)\.({:s})' 'PIC_{:s}_$1.$2'".format(dateityp, thiscamera))
-            self.clear_text(self.t_text1)
             # wir tragen die Dubletten ein       
             lineno = 0
             for this_sourcefile in self.dict_source_target[dateityp]:
