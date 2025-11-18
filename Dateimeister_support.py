@@ -48,7 +48,7 @@ import Undo_Redo as UR
 import Dateimeister_FSimage as FS
 import Dateimeister_messages as DM
 
-#from Dateimeister import ToolTip
+import Tooltip as TT
 
 from enum import Enum
 
@@ -346,7 +346,7 @@ class MyDuplicates:
         self.dict_child_parent = {}
         self.timestamp = datetime.now()
         self.tooltiptext = ""
-        self.tt = Dateimeister.ToolTip(self.f, "no images available", delay=0, follow = True)
+        self.tt = TT.ToolTip(self.f, "no images available", delay=0, follow = True)
         
         self.dict_file_image = {}
         Globals.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
@@ -1618,11 +1618,66 @@ class Dateimeister_support:
         VC.config(command = self.lb_camera.yview)
         self.lb_camera.config(yscrollcommand = VC.set)
         
-        self.canvas_gallery = self.w.Canvas1
+        # Frame for the canvas and the horizontal scrollbar
+        self.root.update()
+        # y starts with this value
+        c_rely = (self.button_exec.winfo_y() + self.button_exec.winfo_height()) / self.root.winfo_height() + 0.01
+        x1 = 0
+        x2 = self.root.winfo_width()
+        y1 = int(c_rely * self.root.winfo_height())
+        y2 = self.root.winfo_y()
+        # the frame
+        print("frame_canvas x1, y1, x2, y2 is {:f}, {:f} {:f}, {:f}".format(x1, x2, y1, y2)) if self.debug else True      
+        self.frame_canvas = tk.Frame(self.root)
+        self.frame_canvas.place(relx = x1, rely = c_rely, relheight = 1 - c_rely, relwidth = 1.0)
+        self.frame_canvas.configure(relief='flat')
+        self.frame_canvas.configure(background="#d9d9d9") if not self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_canvas.update()
+
+        # we need a frame for sort method radio buttons. we want to place them above the right upper corner of the canvas
+        # x2, y2 shall be the coordinates of the upper right corner of canvas, which are the coordintes of low right corner of frame
+
+        self.width  = 0
+        self.height = 0
+        self.text_font = Font(family="Helvetica", size=6)
+
+        self.frame_canvas.update()
+        parent_height = self.root.winfo_height()
+        parent_width  = self.root.winfo_width()
+        x2 = self.frame_canvas.winfo_x() + self.frame_canvas.winfo_width()
+        y2 = self.frame_canvas.winfo_y()
+        # to calc x1 we substract min of 80, x2 - dictance from right edge of exec-button
+        x1 = x2 - min(int(parent_width / 4), x2 - (self.button_exec.winfo_x() + self.button_exec.winfo_width()))
+        # to calc y1 we sutract the height of the exec button
+        y1 = y2 - self.button_exec.winfo_height()
+        print("x, y of upper left corner of frame above canvas is {:d}, {:d}, lower right corner is {:d}, {:d}".format(x1, y1, x2, y2)) if self.debug else True      
+        # the frame
+        relx1 = x1 / parent_width
+        rely1 = y1 / parent_height
+        relh = (y2 - y1) / parent_height
+        relw  = (x2 - x1) / parent_width
+        print("Frame relx, rely, relw, relh is {:f}, {:f} {:f}, {:f}".format(relx1, rely1, relw, relh)) if self.debug else True      
+        self.Frame_sortbuttons = tk.Frame(self.root)
+        self.Frame_sortbuttons.place(relx = relx1, rely = rely1, relheight = relh, relwidth = relw)
+        self.Frame_sortbuttons.configure(relief='flat')
+        self.Frame_sortbuttons.configure(background="#d9d9d9") if not self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_sortbuttons.update()
+        
+        self.rbvalue = tk.StringVar()
+        self.dict_sort_method = {} # here we keep type(JPEG...) -> sort method(1...4)
+        dict_rbtext = {"1": "sort name asc", "2": "sort name desc", "3": "sort mod. asc.", "4": "sort mod. desc"}
+        for i in dict_rbtext:
+            rb = tk.Radiobutton(self.Frame_sortbuttons, text = dict_rbtext[i], value = i, variable = self.rbvalue, command = self.rb_sort, indicatoron = 0)
+            rb.place(relx = (int(i) - 1) / 4, rely=0.0, relheight=1.0, relwidth = 0.25)
+            rb.configure(font=self.text_font)
+        self.rbvalue.set("1")
+
+        self.canvas_gallery = tk.Canvas(self.frame_canvas)
+        self.canvas_gallery.place(relx=0.0, rely=0.0, relheight=0.9, relwidth=1.0)
         # Scrollbars
-        self.scroll_canvas_x = tk.Scrollbar(self.root, orient="horizontal", command=self.xview)
+        self.scroll_canvas_x = tk.Scrollbar(self.frame_canvas, orient="horizontal", command=self.xview)
         #self.scroll_canvas_x.pack(side=BOTTOM, fill=BOTH)
-        self.scroll_canvas_x.place(relx = .015, rely = .96, relheight = 0.015, relwidth = .97, anchor = tk.NW)
+        self.scroll_canvas_x.place(relx = 0.0, rely = .9, relheight = 0.1, relwidth = 1.0, anchor = tk.SW)
         self.canvas_gallery.config(xscrollcommand = self.scroll_canvas_x.set, scrollregion=self.canvas_gallery.bbox("all"))
 
         # Create the context menu
@@ -1694,8 +1749,8 @@ class Dateimeister_support:
         #my_w.maxsize(300,220)  # (maximum ) width , ( maximum) height
         #my_w.minsize(250,220)  # (minimum ) width , ( minimum) height
         self.root.resizable(True, True)
-        self.tt = Dateimeister.ToolTip(self.canvas_gallery, "no images available", delay=0, follow = True)
-        
+        self.tt = TT.ToolTip(self.canvas_gallery, "no images available", delay=0, follow = True)
+
         # Menubar
         menubar = Menu(self.root)
         self.filemenu = Menu(menubar, tearoff=0)
@@ -1803,43 +1858,7 @@ class Dateimeister_support:
         for ii in indexes:
             self.combobox_outdir.itemconfig(ii, fg="gray")
         
-        # we need a frame for sort method radio buttons. we want to place them above the right upper corner of the canvas
-        # x2, y2 shall be the coordinates of the upper right corner of canvas, which are the coordintes of low right corner of frame
 
-        self.width  = 0
-        self.height = 0
-        self.text_font = Font(family="Helvetica", size=6)
-
-        self.root.update()
-        parent_height = self.root.winfo_height()
-        parent_width  = self.root.winfo_width()
-        x2 = self.canvas_gallery.winfo_x() + self.canvas_gallery.winfo_width()
-        y2 = self.canvas_gallery.winfo_y()
-        # to calc x1 we substract min of 80, x2 - dictance from right edge of exec-button
-        x1 = x2 - min(int(parent_width / 4), x2 - (self.button_exec.winfo_x() + self.button_exec.winfo_width()))
-        # to calc y1 we sutract the height of the exec button
-        y1 = y2 - self.button_exec.winfo_height()
-        print("x, y of upper left corner of frame above canvas is {:d}, {:d}, lower right corner is {:d}, {:d}".format(x1, y1, x2, y2)) if self.debug else True      
-        # the frame
-        relx1 = x1 / parent_width
-        rely1 = y1 / parent_height
-        relh = (y2 - y1) / parent_height
-        relw  = (x2 - x1) / parent_width
-        print("Frame relx, rely, relw, relh is {:f}, {:f} {:f}, {:f}".format(relx1, rely1, relw, relh)) if self.debug else True      
-        self.Frame_sortbuttons = tk.Frame(self.root)
-        self.Frame_sortbuttons.place(relx = relx1, rely = rely1, relheight = relh, relwidth = relw)
-        self.Frame_sortbuttons.configure(relief='flat')
-        self.Frame_sortbuttons.configure(background="#d9d9d9") if not self.debug else True # uncomment for same colour as window (default) or depend on debug
-        self.Frame_sortbuttons.update()
-        
-        self.rbvalue = tk.StringVar()
-        self.dict_sort_method = {} # here we keep type(JPEG...) -> sort method(1...4)
-        dict_rbtext = {"1": "sort name asc", "2": "sort name desc", "3": "sort mod. asc.", "4": "sort mod. desc"}
-        for i in dict_rbtext:
-            rb = tk.Radiobutton(self.Frame_sortbuttons, text = dict_rbtext[i], value = i, variable = self.rbvalue, command = self.rb_sort, indicatoron = 0)
-            rb.place(relx = (int(i) - 1) / 4, rely=0.0, relheight=1.0, relwidth = 0.25)
-            rb.configure(font=self.text_font)
-        self.rbvalue.set("1")
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
         self.timer = RestartableTimer(root, 333, self.resize)  # ms

@@ -10,6 +10,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter.constants import *
 import os.path
+import Tooltip as TT
 
 _location = os.path.dirname(__file__)
 
@@ -73,7 +74,7 @@ class Toplevel1:
         self.Button1.configure(pady="0")
         self.Button1.configure(text='''from file system''')
         self.Button1_tooltip = \
-        ToolTip(self.Button1, '''opens file dialog''')
+        TT.ToolTip(self.Button1, '''opens file dialog''')
 
         self.Button2 = tk.Button(self.top)
         self.Button2.place(relx=0.035, rely=0.347, height=34, width=87)
@@ -90,7 +91,7 @@ class Toplevel1:
         self.Button2.configure(pady="0")
         self.Button2.configure(text='''Select Camera''')
         self.Button2_tooltip = \
-        ToolTip(self.Button2, '''Select Camera''')
+        TT.ToolTip(self.Button2, '''Select Camera''')
 
         self.menubar = tk.Menu(top,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
         top.configure(menu = self.menubar)
@@ -110,7 +111,7 @@ class Toplevel1:
         self.Button_outdir.configure(pady="0")
         self.Button_outdir.configure(text='''from file system''')
         self.Button_outdir_tooltip = \
-        ToolTip(self.Button_outdir, '''opens file dialog''')
+        TT.ToolTip(self.Button_outdir, '''opens file dialog''')
 
         self.Entry_camera = tk.Entry(self.top)
         self.Entry_camera.place(relx=0.035, rely=0.402, height=40
@@ -140,7 +141,7 @@ class Toplevel1:
         self.Button_call.configure(pady="0")
         self.Button_call.configure(text='''Generate''')
         self.Button_call_tooltip = \
-        ToolTip(self.Button_call, '''Call Dateimeister''')
+        TT.ToolTip(self.Button_call, '''Call Dateimeister''')
 
         self.Label1 = tk.Label(self.top)
         self.Label1.place(relx=0.616, rely=0.673, height=37, width=506)
@@ -169,7 +170,7 @@ class Toplevel1:
         self.Listbox_gen.configure(selectforeground="black")
         self.Listbox_gen.configure(selectmode='single')
         self.Listbox_gen_tooltip = \
-        ToolTip(self.Listbox_gen, '''generated files''')
+        TT.ToolTip(self.Listbox_gen, '''generated files''')
 
         self.Checkbutton1 = tk.Checkbutton(self.top)
         self.Checkbutton1.place(relx=0.041, rely=0.043, relheight=0.027
@@ -189,7 +190,7 @@ class Toplevel1:
         self.Checkbutton1.configure(text='''recursive''')
         self.Checkbutton1.configure(variable=self.cb1_val)
         self.Checkbutton1_tooltip = \
-        ToolTip(self.Checkbutton1, '''process  subdirectories''')
+        TT.ToolTip(self.Checkbutton1, '''process  subdirectories''')
 
         self.Button_exclude = tk.Button(self.top)
         self.Button_exclude.place(relx=0.159, rely=0.684, height=24, width=67)
@@ -206,7 +207,7 @@ class Toplevel1:
         self.Button_exclude.configure(pady="0")
         self.Button_exclude.configure(text='''Exclude all''')
         self.Button_exclude_tooltip = \
-        ToolTip(self.Button_exclude, '''Exclude all''')
+        TT.ToolTip(self.Button_exclude, '''Exclude all''')
 
         self.Button_include = tk.Button(self.top)
         self.Button_include.place(relx=0.222, rely=0.684, height=24, width=67)
@@ -223,7 +224,7 @@ class Toplevel1:
         self.Button_include.configure(pady="0")
         self.Button_include.configure(text='''Include all''')
         self.Button_include_tooltip = \
-        ToolTip(self.Button_include, '''Include all''')
+        TT.ToolTip(self.Button_include, '''Include all''')
 
         self.Button_be = tk.Button(self.top)
         self.Button_be.place(relx=0.152, rely=0.467, height=34, width=137)
@@ -287,7 +288,7 @@ class Toplevel1:
         self.Checkbutton_use_camera_name.configure(text='''use camera prefix''')
         self.Checkbutton_use_camera_name.configure(variable=self.cb_prefix_var)
         self.Checkbutton_use_camera_name_tooltip = \
-        ToolTip(self.Checkbutton_use_camera_name, '''use camera as prefix''')
+        TT.ToolTip(self.Checkbutton_use_camera_name, '''use camera as prefix''')
 
         self.Checkbutton_addrelpath = tk.Checkbutton(self.top)
         self.Checkbutton_addrelpath.place(relx=0.041, rely=0.098, relheight=0.027
@@ -307,7 +308,7 @@ class Toplevel1:
         self.Checkbutton_addrelpath.configure(text='''Addrelpath''')
         self.Checkbutton_addrelpath.configure(variable=self.cb_addrelpath_var)
         self.Checkbutton_addrelpath_tooltip = \
-        ToolTip(self.Checkbutton_addrelpath, '''add relative path to target''')
+        TT.ToolTip(self.Checkbutton_addrelpath, '''add relative path to target''')
 
         self.Button_duplicates = tk.Button(self.top)
         self.Button_duplicates.place(relx=0.152, rely=0.532, height=34
@@ -343,7 +344,7 @@ class Toplevel1:
         self.Checkbutton_newer.configure(text='''copy file only when newer or not existent''')
         self.Checkbutton_newer.configure(variable=self.cb_newer_var)
         self.Checkbutton_newer_tooltip = \
-        ToolTip(self.Checkbutton_newer, '''if checked existing files will ohnly be overridden when they are older than the source file''')
+        TT.ToolTip(self.Checkbutton_newer, '''if checked existing files will ohnly be overridden when they are older than the source file''')
 
         self.Label_num = tk.Label(self.top)
         self.Label_num.place(relx=0.097, rely=0.684, height=21, width=75)
@@ -359,7 +360,7 @@ class Toplevel1:
         self.Label_num.configure(highlightcolor="black")
         self.Label_num.configure(text='''Label''')
         self.Label_num_tooltip = \
-        ToolTip(self.Label_num, '''Number of images ''')
+        TT.ToolTip(self.Label_num, '''Number of images ''')
 
         self.Button_exec = tk.Button(self.top)
         self.Button_exec.place(relx=0.29, rely=0.684, height=24, width=57)
@@ -375,7 +376,7 @@ class Toplevel1:
         self.Button_exec.configure(pady="0")
         self.Button_exec.configure(text='''Exec''')
         self.Button_exec_tooltip = \
-        ToolTip(self.Button_exec, '''Execute commands''')
+        TT.ToolTip(self.Button_exec, '''Execute commands''')
 
         self.Checkbutton_num = tk.Checkbutton(self.top)
         self.Checkbutton_num.place(relx=0.159, rely=0.651, relheight=0.026
@@ -395,7 +396,7 @@ class Toplevel1:
         self.Checkbutton_num.configure(text='''show image numbers''')
         self.Checkbutton_num.configure(variable=self.cbnum_var)
         self.Checkbutton_num_tooltip = \
-        ToolTip(self.Checkbutton_num, '''image numbers in canvas''')
+        TT.ToolTip(self.Checkbutton_num, '''image numbers in canvas''')
 
         self.TCombobox_indir = tk.Listbox(self.top)
         self.TCombobox_indir.place(relx=0.29, rely=0.065, relheight=0.131
@@ -411,7 +412,7 @@ class Toplevel1:
         self.TCombobox_indir.configure(selectmode='single')
         self.TCombobox_indir.configure(listvariable=self.combobox_indir)
         self.TCombobox_indir_tooltip = \
-        ToolTip(self.TCombobox_indir, '''recent indirs''')
+        TT.ToolTip(self.TCombobox_indir, '''recent indirs''')
 
         self.TCombobox_outdir = tk.Listbox(self.top)
         self.TCombobox_outdir.place(relx=0.636, rely=0.065, relheight=0.131
@@ -426,7 +427,7 @@ class Toplevel1:
         self.TCombobox_outdir.configure(selectforeground="black")
         self.TCombobox_outdir.configure(listvariable=self.combobox_outdir)
         self.TCombobox_outdir_tooltip = \
-        ToolTip(self.TCombobox_outdir, '''recent outdirs''')
+        TT.ToolTip(self.TCombobox_outdir, '''recent outdirs''')
 
         self.Label_indir = tk.Label(self.top)
         self.Label_indir.place(relx=0.29, rely=0.217, height=21, width=476)
@@ -471,7 +472,7 @@ class Toplevel1:
         self.Button_indir_from_list.configure(pady="0")
         self.Button_indir_from_list.configure(text='''from list''')
         self.Button_indir_from_list_tooltip = \
-        ToolTip(self.Button_indir_from_list, '''select dir from list''')
+        TT.ToolTip(self.Button_indir_from_list, '''select dir from list''')
 
         self.Button_outdir_from_list = tk.Button(self.top)
         self.Button_outdir_from_list.place(relx=0.899, rely=0.022, height=34
@@ -488,7 +489,7 @@ class Toplevel1:
         self.Button_outdir_from_list.configure(pady="0")
         self.Button_outdir_from_list.configure(text='''from list''')
         self.Button_outdir_from_list_tooltip = \
-        ToolTip(self.Button_outdir_from_list, '''select dir from list''')
+        TT.ToolTip(self.Button_outdir_from_list, '''select dir from list''')
 
         self.Label_select_indir = tk.Label(self.top)
         self.Label_select_indir.place(relx=0.394, rely=0.033, height=22
@@ -565,19 +566,7 @@ class Toplevel1:
         self.Listbox_camera.configure(selectforeground="black")
         self.Listbox_camera.configure(selectmode='single')
         self.Listbox_camera_tooltip = \
-        ToolTip(self.Listbox_camera, '''choose camera''')
-
-        self.Canvas1 = tk.Canvas(self.top)
-        self.Canvas1.place(relx=0.014, rely=0.717, relheight=0.243
-                , relwidth=0.973)
-        self.Canvas1.configure(background="#d9d9d9")
-        self.Canvas1.configure(borderwidth="2")
-        self.Canvas1.configure(highlightbackground="#d9d9d9")
-        self.Canvas1.configure(highlightcolor="black")
-        self.Canvas1.configure(insertbackground="black")
-        self.Canvas1.configure(relief="ridge")
-        self.Canvas1.configure(selectbackground="#c4c4c4")
-        self.Canvas1.configure(selectforeground="black")
+        TT.ToolTip(self.Listbox_camera, '''choose camera''')
 
 class Toplevel2:
     def __init__(self, top=None):
@@ -621,7 +610,7 @@ class Toplevel2:
         self.Button_fit.configure(pady="0")
         self.Button_fit.configure(text='''Fit canvas''')
         self.Button_fit_tooltip = \
-        ToolTip(self.Button_fit, '''Zoom in / out''')
+        TT.ToolTip(self.Button_fit, '''Zoom in / out''')
 
         self.Button_fscale = tk.Button(self.top)
         self.Button_fscale.place(relx=0.883, rely=0.133, height=34, width=87)
@@ -637,7 +626,7 @@ class Toplevel2:
         self.Button_fscale.configure(pady="0")
         self.Button_fscale.configure(text='''Full scale''')
         self.Button_fscale_tooltip = \
-        ToolTip(self.Button_fscale, '''full resolution''')
+        TT.ToolTip(self.Button_fscale, '''full resolution''')
 
         self.Button_exclude = tk.Button(self.top)
         self.Button_exclude.place(relx=0.783, rely=0.233, height=34, width=87)
@@ -653,7 +642,7 @@ class Toplevel2:
         self.Button_exclude.configure(pady="0")
         self.Button_exclude.configure(text='''Exclude''')
         self.Button_exclude_tooltip = \
-        ToolTip(self.Button_exclude, '''include / exclude''')
+        TT.ToolTip(self.Button_exclude, '''include / exclude''')
 
         self.Label_status = tk.Label(self.top)
         self.Label_status.place(relx=0.875, rely=0.217, height=41, width=104)
@@ -697,7 +686,7 @@ class Toplevel2:
         self.Button_restart.configure(pady="0")
         self.Button_restart.configure(text='''Restart''')
         self.Button_restart_tooltip = \
-        ToolTip(self.Button_restart, '''restart video from begin''')
+        TT.ToolTip(self.Button_restart, '''restart video from begin''')
 
         self.Scale_fps =  tk.Scale(self.top, from_=1.0, to=200.0, resolution=1.0)
         self.Scale_fps.place(relx=0.767, rely=0.417, relheight=0.327
@@ -712,7 +701,7 @@ class Toplevel2:
         self.Scale_fps.configure(length="196")
         self.Scale_fps.configure(troughcolor="#d9d9d9")
         self.Scale_fps_tooltip = \
-        ToolTip(self.Scale_fps, '''fps''')
+        TT.ToolTip(self.Scale_fps, '''fps''')
 
         self.Label_fps = tk.Label(self.top)
         self.Label_fps.place(relx=0.775, rely=0.75, height=21, width=114)
@@ -819,7 +808,7 @@ class Toplevel_camera:
         self.Listbox_camera_name.configure(selectforeground="black")
         self.Listbox_camera_name.configure(selectmode='single')
         self.Listbox_camera_name_tooltip = \
-        ToolTip(self.Listbox_camera_name, '''Camera Name''')
+        TT.ToolTip(self.Listbox_camera_name, '''Camera Name''')
 
         self.Frame_camera_type = tk.Frame(self.top)
         self.Frame_camera_type.place(relx=0.35, rely=0.101, relheight=0.501
@@ -842,7 +831,7 @@ class Toplevel_camera:
         self.Listbox_camera_type.configure(selectforeground="black")
         self.Listbox_camera_type.configure(selectmode='single')
         self.Listbox_camera_type_tooltip = \
-        ToolTip(self.Listbox_camera_type, '''Camera Image Type''')
+        TT.ToolTip(self.Listbox_camera_type, '''Camera Image Type''')
 
         self.Frame_camera_suffix = tk.Frame(self.top)
         self.Frame_camera_suffix.place(relx=0.675, rely=0.101, relheight=0.499
@@ -865,7 +854,7 @@ class Toplevel_camera:
         self.Listbox_camera_suffix.configure(selectforeground="black")
         self.Listbox_camera_suffix.configure(selectmode='single')
         self.Listbox_camera_suffix_tooltip = \
-        ToolTip(self.Listbox_camera_suffix, '''Camera File Suffix''')
+        TT.ToolTip(self.Listbox_camera_suffix, '''Camera File Suffix''')
 
         self.Entry_camera_name = tk.Entry(self.top)
         self.Entry_camera_name.place(relx=0.025, rely=0.024, height=40
@@ -880,7 +869,7 @@ class Toplevel_camera:
         self.Entry_camera_name.configure(selectbackground="#c4c4c4")
         self.Entry_camera_name.configure(selectforeground="black")
         self.Entry_camera_name_tooltip = \
-        ToolTip(self.Entry_camera_name, '''Enter new Camera Name''')
+        TT.ToolTip(self.Entry_camera_name, '''Enter new Camera Name''')
 
         self.Entry_camera_type = tk.Entry(self.top)
         self.Entry_camera_type.place(relx=0.35, rely=0.024, height=40
@@ -895,7 +884,7 @@ class Toplevel_camera:
         self.Entry_camera_type.configure(selectbackground="#c4c4c4")
         self.Entry_camera_type.configure(selectforeground="black")
         self.Entry_camera_type_tooltip = \
-        ToolTip(self.Entry_camera_type, '''Enter new image type''')
+        TT.ToolTip(self.Entry_camera_type, '''Enter new image type''')
 
         self.Entrycamera_suffix = tk.Entry(self.top)
         self.Entrycamera_suffix.place(relx=0.675, rely=0.024, height=40
@@ -910,7 +899,7 @@ class Toplevel_camera:
         self.Entrycamera_suffix.configure(selectbackground="#c4c4c4")
         self.Entrycamera_suffix.configure(selectforeground="black")
         self.Entrycamera_suffix_tooltip = \
-        ToolTip(self.Entrycamera_suffix, '''Enter new Image Type Suffix''')
+        TT.ToolTip(self.Entrycamera_suffix, '''Enter new Image Type Suffix''')
 
 class Toplevel_messages:
     def __init__(self, top=None):
@@ -990,7 +979,7 @@ class Toplevel_messages:
         self.Button_execute.configure(pady="0")
         self.Button_execute.configure(text='''copy''')
         self.Button_execute_tooltip = \
-        ToolTip(self.Button_execute, '''execute command''')
+        TT.ToolTip(self.Button_execute, '''execute command''')
 
         self.Checkbutton_delrelpath = tk.Checkbutton(self.top)
         self.Checkbutton_delrelpath.place(relx=0.246, rely=0.919, relheight=0.046
@@ -1010,7 +999,7 @@ class Toplevel_messages:
         self.Checkbutton_delrelpath.configure(text='''delrelpath''')
         self.Checkbutton_delrelpath.configure(variable=self.cb_delrelpath_var)
         self.Checkbutton_delrelpath_tooltip = \
-        ToolTip(self.Checkbutton_delrelpath, '''delete copied subdirs''')
+        TT.ToolTip(self.Checkbutton_delrelpath, '''delete copied subdirs''')
 
         self.Frame_script = tk.Frame(self.top)
         self.Frame_script.place(relx=0.007, rely=0.014, relheight=0.8
@@ -1215,7 +1204,7 @@ class Toplevel_treeview_camera:
         self.Entry_camera.configure(selectbackground="#c4c4c4")
         self.Entry_camera.configure(selectforeground="black")
         self.Entry_camera_tooltip = \
-        ToolTip(self.Entry_camera, '''Enter new Cameraname''')
+        TT.ToolTip(self.Entry_camera, '''Enter new Cameraname''')
 
         self.Label_camera = tk.Label(self.Frame_treeview)
         self.Label_camera.place(relx=0.103, rely=0.956, height=20, width=173)
@@ -1260,7 +1249,7 @@ class Toplevel_treeview_camera:
         self.Button_camera_new.configure(pady="0")
         self.Button_camera_new.configure(text='''New camera...''')
         self.Button_camera_new_tooltip = \
-        ToolTip(self.Button_camera_new, '''create a new camera''')
+        TT.ToolTip(self.Button_camera_new, '''create a new camera''')
 
         self.Entry_type = tk.Entry(self.Frame_treeview)
         self.Entry_type.place(relx=0.249, rely=0.906, height=30, relwidth=0.127)
@@ -1274,7 +1263,7 @@ class Toplevel_treeview_camera:
         self.Entry_type.configure(selectbackground="#c4c4c4")
         self.Entry_type.configure(selectforeground="black")
         self.Entry_type_tooltip = \
-        ToolTip(self.Entry_type, '''Enter new type''')
+        TT.ToolTip(self.Entry_type, '''Enter new type''')
 
         self.Entry_suffix = tk.Entry(self.Frame_treeview)
         self.Entry_suffix.place(relx=0.388, rely=0.906, height=30
@@ -1289,7 +1278,7 @@ class Toplevel_treeview_camera:
         self.Entry_suffix.configure(selectbackground="#c4c4c4")
         self.Entry_suffix.configure(selectforeground="black")
         self.Entry_suffix_tooltip = \
-        ToolTip(self.Entry_suffix, '''Enter new image file suffix''')
+        TT.ToolTip(self.Entry_suffix, '''Enter new image file suffix''')
 
         self.Label_type = tk.Label(self.Frame_treeview)
         self.Label_type.place(relx=0.249, rely=0.956, height=20, width=181)
@@ -1346,7 +1335,7 @@ class Toplevel_treeview_camera:
         self.Entry_subdir.configure(selectbackground="#c4c4c4")
         self.Entry_subdir.configure(selectforeground="black")
         self.Entry_subdir_tooltip = \
-        ToolTip(self.Entry_subdir, '''Enter subdir for type''')
+        TT.ToolTip(self.Entry_subdir, '''Enter subdir for type''')
 
         self.Button_cancel = tk.Button(self.Frame_treeview)
         self.Button_cancel.place(relx=0.872, rely=0.906, height=34, width=87)
@@ -1362,7 +1351,7 @@ class Toplevel_treeview_camera:
         self.Button_cancel.configure(pady="0")
         self.Button_cancel.configure(text='''Cancel''')
         self.Button_cancel_tooltip = \
-        ToolTip(self.Button_cancel, '''cancel transaction''')
+        TT.ToolTip(self.Button_cancel, '''cancel transaction''')
 
         self.Button_undo = tk.Button(self.Frame_treeview)
         self.Button_undo.place(relx=0.945, rely=0.906, height=34, width=67)
@@ -1378,7 +1367,7 @@ class Toplevel_treeview_camera:
         self.Button_undo.configure(pady="0")
         self.Button_undo.configure(text='''undo''')
         self.Button_undo_tooltip = \
-        ToolTip(self.Button_undo, '''undo apply''')
+        TT.ToolTip(self.Button_undo, '''undo apply''')
 
         self.Button_redo = tk.Button(self.Frame_treeview)
         self.Button_redo.place(relx=0.945, rely=0.956, height=34, width=67)
@@ -1394,107 +1383,9 @@ class Toplevel_treeview_camera:
         self.Button_redo.configure(pady="0")
         self.Button_redo.configure(text='''redo''')
         self.Button_redo_tooltip = \
-        ToolTip(self.Button_redo, '''redo apply''')
+        TT.ToolTip(self.Button_redo, '''redo apply''')
 
 from time import time, localtime, strftime
-class ToolTip(tk.Toplevel):
-    """ Provides a ToolTip widget for Tkinter. """
-    def __init__(self, wdgt, msg=None, msgFunc=None, delay=0.5,
-                 follow=True):
-        self.wdgt = wdgt
-        self.parent = self.wdgt.master
-        tk.Toplevel.__init__(self, self.parent, bg='black', padx=1, pady=1)
-        self.withdraw()
-        self.overrideredirect(True)
-        self.msgVar = tk.StringVar()
-        if msg is None:
-            self.msgVar.set('No message provided')
-        else:
-            self.msgVar.set(msg)
-        self.msgFunc = msgFunc
-        self.delay = delay
-        self.follow = follow
-        self.visible = 0
-        self.lastMotion = 0
-        self.msg = tk.Message(self, textvariable=self.msgVar, bg=_bgcolor,
-                   fg=_fgcolor, font="TkDefaultFont",
-                   aspect=1000)
-        self.msg.grid()
-        self.wdgt.bind('<Enter>', self.spawn, '+')
-        self.wdgt.bind('<Leave>', self.hide, '+')
-        self.wdgt.bind('<Motion>', self.move, '+')
-    def spawn(self, event=None):
-        self.visible = 1
-        self.after(int(self.delay * 1000), self.show)
-    def show(self):
-        if self.visible == 1 and time() - self.lastMotion > self.delay:
-            self.visible = 2
-        if self.visible == 2:
-            self.deiconify()
-    def move(self, event):
-        self.lastMotion = time()
-        if self.follow is False:
-            self.withdraw()
-            self.visible = 1
-        self.geometry('+%i+%i' % (event.x_root + 20, event.y_root - 10))
-        try:
-            self.msgVar.set(self.msgFunc())
-        except:
-            pass
-        self.after(int(self.delay * 1000), self.show)
-    def hide(self, event=None):
-        self.visible = 0
-        self.withdraw()
-    def update(self, msg):
-        self.msgVar.set(msg)
-    def configure(self, **kwargs):
-        backgroundset = False
-        foregroundset = False
-        # Get the current tooltip text just in case the user doesn't provide any.
-        current_text = self.msgVar.get()
-        # to clear the tooltip text, use the .update method
-        if 'debug' in kwargs.keys():
-            debug = kwargs.pop('debug', False)
-            if debug:
-                for key, value in kwargs.items():
-                    print(f'key: {key} - value: {value}')
-        if 'background' in kwargs.keys():
-            background = kwargs.pop('background')
-            backgroundset = True
-        if 'bg' in kwargs.keys():
-            background = kwargs.pop('bg')
-            backgroundset = True
-        if 'foreground' in kwargs.keys():
-            foreground = kwargs.pop('foreground')
-            foregroundset = True
-        if 'fg' in kwargs.keys():
-            foreground = kwargs.pop('fg')
-            foregroundset = True
-
-        fontd = kwargs.pop('font', None)
-        if 'text' in kwargs.keys():
-            text = kwargs.pop('text')
-            if (text == '') or (text == "\n"):
-                text = current_text
-            else:
-                self.msgVar.set(text)
-        reliefd = kwargs.pop('relief', 'flat')
-        justifyd = kwargs.pop('justify', 'left')
-        padxd = kwargs.pop('padx', 1)
-        padyd = kwargs.pop('pady', 1)
-        borderwidthd = kwargs.pop('borderwidth', 2)
-        wid = self.msg      # The message widget which is the actual tooltip
-        if backgroundset:
-            wid.config(bg=background)
-        if foregroundset:
-            wid.config(fg=foreground)
-        wid.config(font=fontd)
-        wid.config(borderwidth=borderwidthd)
-        wid.config(relief=reliefd)
-        wid.config(justify=justifyd)
-        wid.config(padx=padxd)
-        wid.config(pady=padyd)
-#                   End of Class ToolTip
 
 # The following code is added to facilitate the Scrolled widgets you specified.
 class AutoScroll(object):
