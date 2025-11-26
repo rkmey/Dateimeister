@@ -10,14 +10,3 @@ if (-not (Test-Path $TargetDir)) {
 
 # PowerShell mit Arbeitsverzeichnis öffnen
 & $TargetDir\new_pshell.ps1 "$TargetDir"
-
-
-# Explorer im Zielverzeichnis öffnen
-Start-Process explorer.exe $TargetDir
-
-# Git Bash im Arbeitsverzeichnis öffnen
-Start-Process "C:\Program Files\Git\git-bash.exe" --cd="$TargetDir"
-
-# Notepad++ öffnen
-Start-Process "C:\Program Files\Notepad++\notepad++.exe"
-
