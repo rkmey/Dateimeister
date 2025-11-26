@@ -119,6 +119,7 @@ class MyThumbnail:
         self.filectime = datetime.fromtimestamp(st_ctime).strftime('%Y-%m-%d %H:%M')
         self.filemtime = datetime.fromtimestamp(st_mtime).strftime('%Y-%m-%d %H:%M')
         self.filesize  = os.stat(file).st_size/(1024*1024.0) 
+        self.frame_selected = False # we need this for Resize of Window in order to hide / show dotted rect
         
     def get_filectime(self):
         return self.filectime
@@ -243,6 +244,7 @@ class MyThumbnail:
             else:
                 self.text.tag_add("normal_exclude", lstart, lend)
             self.canvas.itemconfigure("imageframe", state = 'hidden')
+            self.frame_selected = False
         # now set tag for this thumbnail
         lstart = "%d.0" % (self.lineno)
         lend   = "%d.0 lineend" % (self.lineno)
@@ -261,9 +263,16 @@ class MyThumbnail:
         self.text.yview_scroll(lineinfo[1], 'pixels' )
         #self.canvas.itemconfigure("imageframe", state = 'normal')
         #print("Frameids: " + str(self.frameids))
-        for frameid in self.frameids:
-            self.canvas.itemconfigure(frameid, state = 'normal')
+        self.frame_selected = True
+        self.show_hide_frame()
 
+    def show_hide_frame(self):
+        if self.frame_selected:
+            for frameid in self.frameids:
+                self.canvas.itemconfigure(frameid, state = 'normal')
+        else:
+            self.canvas.itemconfigure("imageframe", state = 'hidden')
+ 
     def register_FSimage(self, fsimage):
         self.fsimage = fsimage
 
@@ -1677,7 +1686,7 @@ class Dateimeister_support:
         # Scrollbars
         self.scroll_canvas_x = tk.Scrollbar(self.frame_canvas, orient="horizontal", command=self.xview)
         #self.scroll_canvas_x.pack(side=BOTTOM, fill=BOTH)
-        self.scroll_canvas_x.place(relx = 0.0, rely = .9, relheight = 0.1, relwidth = 1.0, anchor = tk.SW)
+        self.scroll_canvas_x.place(relx = 0.0, rely = 1.0, relheight = 0.1, relwidth = 1.0, anchor = tk.SW)
         self.canvas_gallery.config(xscrollcommand = self.scroll_canvas_x.set, scrollregion=self.canvas_gallery.bbox("all"))
 
         # Create the context menu
@@ -2559,7 +2568,7 @@ class Dateimeister_support:
                         pimg, image_width, image_height = self.new_image(showfile, canvas_height)
                     else: # we can use the existing
                         pimg = Globals.dict_thumbnails[imagetype][file].getImage()
-                        image_width, image_height = pimg.width(), pimg.height()
+                    image_width, image_height = pimg.width(), pimg.height()
                 # if resized we have to replace the thumbnail image with a new one with appropriate size
                 # an den Thumbnails führen wir einige Attribute, außerdem sorgt die Liste dafür, dass der Garbage-Kollektor das Bild nicht löscht.
                 # indem wir es in eine Liste einfügen, bleibt der Referenz-Count > 0
@@ -2649,11 +2658,12 @@ class Dateimeister_support:
             if thumbnail_reuse or Globals.resized:
                 Globals.dict_thumbnails[imagetype][file].updateIds(text_id, rect_id, frameids)
                 Globals.dict_thumbnails[imagetype][file].setState(state)
-                # reset lineno, start and end
+                # reset lineno, start and end, renew ids and show / hide frame
                 Globals.dict_thumbnails[imagetype][file].setLineno(this_lineno)
                 Globals.dict_thumbnails[imagetype][file].setStart(lastpos)
                 Globals.dict_thumbnails[imagetype][file].setEnd(lastpos + image_width)
                 Globals.dict_thumbnails[imagetype][file].setId(id)
+                Globals.dict_thumbnails[imagetype][file].show_hide_frame()
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")
         self.canvas_gallery.tag_raise("rect")
