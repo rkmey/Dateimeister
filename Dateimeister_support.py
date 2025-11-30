@@ -1867,7 +1867,7 @@ class Dateimeister_support:
         for ii in indexes:
             self.combobox_outdir.itemconfig(ii, fg="gray")
         
-
+        self.leftmost_thumbnail = None
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
         self.timer = RestartableTimer(root, 333, self.resize)  # ms
@@ -2731,7 +2731,12 @@ class Dateimeister_support:
         if self.win_messages is not None: # stop MyMessagesWindow-Objekt
             self.win_messages.close_handler()
             self.win_messages = None
-        self.canvas_gallery.xview('moveto', 0)
+            
+        #if resized keep scroll-position else scroll to first position (0)
+        if Globals.resized:
+            self.scrollToImage(self.leftmost_thumbnail)
+        else:
+            self.canvas_gallery.xview('moveto', 0)
 
     def new_image(self, file, canvas_height):    
         img  = Image.open(file)
@@ -3059,6 +3064,13 @@ class Dateimeister_support:
             #if (1 == 0):
                 #return
             self.canvas_gallery.xview(*args)
+            
+        # for scroll after window resize we need the leftmost visible thumbnail
+        canvas_x = int(self.canvas_gallery.canvasx(0))
+        canvas_y = int(self.canvas_gallery.canvasy(0))
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x + 11, canvas_y)
+        # store reference in instance variable
+        self.leftmost_thumbnail = thumbnail
 
     def text1_single(self, event): # synchronize text / gallery
         (row, col) = self.t_text1.index(tk.CURRENT).split(".")
