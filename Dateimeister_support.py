@@ -1449,6 +1449,10 @@ class Dateimeister_support:
         elif debug == 'P' or debug == 'p':
             self.debug   = False # no debug all
             self.debug_p = True  # debug process history
+        elif debug == 'R' or debug == 'r':
+            self.debug   = False # no debug all
+            self.debug_r = True  # debug resize process
+            self.debug_p = False
         else:
             print("Debug parameter {:s} not allowed, only j, n or p".format(debug))
             exit(-1)
@@ -1726,7 +1730,7 @@ class Dateimeister_support:
         self.t_text1.bind('<Key>', self.text1_key)
         # handler for arrow up / down must be called AFTER the Text-class handler or the bind-handler is 1 step ahead
         self.t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
-        print("Bindtags: %s " % str(self.t_text1.bindtags()))
+        print("Bindtags: %s " % str(self.t_text1.bindtags())) if self.debug else True
 
         self.cb_num.config(command = self.on_cb_num_toggle)
         self.combobox_indir.bind('<Double-1>', self.combobox_indir_double)
@@ -1852,7 +1856,7 @@ class Dateimeister_support:
         for tfile in sorted_d:
             self.combobox_outdir.insert(END, tfile)
             if not os.path.isdir(tfile):
-                print("OUTDIR: " + tfile + " INDEX: " + str(ii))
+                print("OUTDIR: " + tfile + " INDEX: " + str(ii)) if self.debug else True
                 indexes.append(ii) # list of indizes to disable because dir does not exist
             else:
                 if use_as_dir: 
@@ -1928,15 +1932,29 @@ class Dateimeister_support:
                 self.text_font.configure(size=fontsize_use) 
             self.timer.start()
 
+    def debug_info_resize(self):
+        if self.leftmost_thumbnail:
+            fn = self.leftmost_thumbnail.getFile()
+            ln = self.leftmost_thumbnail.getLineno()
+            s  = self.leftmost_thumbnail.getStart()
+            e  = self.leftmost_thumbnail.getEnd()
+        else:
+            fn = "none"
+            ln = -999
+            s  = -1
+            e  = -1
+        print("TIMER elapsed start resize, leftmost humbnail filename {:s}, lnr {:d}, start {:d}, end {:d}".format(fn, ln, s, e))
+
     def resize(self):
-        print("TIMER elapsed start resize") if self.debug else True
+        # display debug info for resize, this is very difficult to debug
+        self.debug_info_resize() if self.debug_r else True
         if Globals.imagetype != "": # new sort of existing images
             Globals.resized = True
             self.display_images(Globals.imagetype)
             Globals.resized = False
 
     def timer_end(self):
-        print("Timer has elapsed")
+        print("Timer has elapsed") if self.debug else True
 
     def lb_camera_double(self, event):
         self.B_camera_press(event)
@@ -1954,7 +1972,7 @@ class Dateimeister_support:
     def combobox_indir_check_exist(self, event):
         index = self.combobox_indir.curselection()[0]
         indir = self.combobox_indir.get(index) # because listbox has single selection
-        print("current selection is: " + indir + " INDEX: " + str(index))
+        print("current selection is: " + indir + " INDEX: " + str(index)) if self.debug else True
         if not os.path.isdir(indir):
             self.combobox_indir.selection_clear(index) # dont select, MessageBox
             messagebox.showerror("showerror", "Indir: " + indir + " does not exist, choose another one")
@@ -1962,7 +1980,7 @@ class Dateimeister_support:
     def combobox_outdir_check_exist(self, event):
         index = self.combobox_outdir.curselection()[0]
         outdir = self.combobox_outdir.get(index) # because listbox has single selection
-        print("current selection is: " + outdir + " INDEX: " + str(index))
+        print("current selection is: " + outdir + " INDEX: " + str(index)) if self.debug else True
         if not os.path.isdir(outdir):
             self.combobox_outdir.selection_clear(index) # dont select, MessageBox
             messagebox.showerror("showerror", "outdir: " + outdir + " does not exist, choose another one")
@@ -1992,7 +2010,7 @@ class Dateimeister_support:
         tree = ET.parse(self.config_file)
         xmlroot = tree.getroot()
         time = xmlroot.attrib['time']
-        print(time)    
+        print(time) if self.debug else True    
         for thumbnail in xmlroot.findall('thumbnail'):
             #print (thumbnail.attrib['filename'])   
             image = thumbnail.find('image').text
@@ -2007,16 +2025,16 @@ class Dateimeister_support:
                     else:
                         Globals.dict_thumbnails[Globals.imagetype][image].setState(EXCLUDE, None, False)
                 else:
-                    print("thumbnail for " + Globals.imagetype + " file " + image + " not found")
-                    print(Globals.thumbnails)
+                    print("thumbnail for " + Globals.imagetype + " file " + image + " not found") if self.debug else True
+                    print(Globals.thumbnails) if self.debug else True
             else:
-                print("Imagefile: " + image + " not found in _dict thumdnails of type " + Globals.imagetype)
+                print("Imagefile: " + image + " not found in _dict thumdnails of type " + Globals.imagetype) if self.debug else True
         self.historize_process()
         self.write_cmdfile(Globals.imagetype)
 
 
     def save_config(self): # Config-xml speichern
-        print("Config File is: " + self.config_file)
+        print("Config File is: " + self.config_file) if self.debug else True
         if self.config_file != "":
             self.write_config(self.config_file)
             # update config-file-entry in xml. will automatically create new entry if type or infile does not exist
@@ -2097,7 +2115,7 @@ class Dateimeister_support:
             mynum_images = result[item]['num_images']
             labeltext = item + ' (usedate: ' + usedate + ' ,images: ' + mynum_images + ')'
             self.recentmenu.add_command(label=labeltext, command = lambda item=item: self.recent_config(item))
-            print("  config_file: " + labeltext)
+            print("  config_file: " + labeltext) if self.debug else True
             if not os.path.isfile(item):
                 self.recentmenu.entryconfig(ii, state = DISABLED)
             ii += 1
@@ -2136,11 +2154,11 @@ class Dateimeister_support:
         result = DX.get_cfgfiles(Globals.config_files_xml, indir, imagetype)
         dict_filename_usedate = {}
         for cfg_file in result:
-            print("config_file: " + cfg_file)
+            print("config_file: " + cfg_file) if self.debug else True
             attribute = result[cfg_file]
             searchattr = 'usedate'
             for attribut in attribute:
-                print("  " + attribut + " = " + attribute[attribut])
+                print("  " + attribut + " = " + attribute[attribut]) if self.debug else True
                 if attribut == searchattr:
                     dict_filename_usedate[cfg_file] = attribute[searchattr]
             
@@ -2150,7 +2168,7 @@ class Dateimeister_support:
 
 
     def recent_config(self, item):
-        print("** Menuitem selected: " + item)
+        print("** Menuitem selected: " + item) if self.debug else True
         self.config_file = item
         self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=NORMAL)
         self.root.title(self.title + ' ' + self.config_file)
@@ -2204,14 +2222,14 @@ class Dateimeister_support:
         
     def Press_indir(self, *args):
         indir = fd.askdirectory() 
-        print ("indir %s" % indir)
+        print ("indir %s" % indir) if self.debug else True
         #self.clear_textbox(self.combobox_indir)
         self.label_indir.config(text = indir)
 
     def Press_outdir(self, *args):
         #outdir = fd.askopenindir() 
         outdir = fd.askdirectory() 
-        print ("outdir %s" % outdir)
+        print ("outdir %s" % outdir) if self.debug else True
         #self.clear_textbox(self.combobox_outdir)
         self.label_outdir.config(text = outdir)
 
@@ -2219,7 +2237,7 @@ class Dateimeister_support:
         # get selected indices
         selected_indices = self.lb_camera.curselection()
         thiscamera = ",".join([self.lb_camera.get(i) for i in selected_indices]) # because we have a single choice listbox
-        print ("Kamera ist " + thiscamera)
+        print ("Kamera ist " + thiscamera) if self.debug else True
         self.clear_textbox(self.o_camera)
         self.insert_text(self.o_camera, thiscamera)
         self.button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
@@ -2275,7 +2293,7 @@ class Dateimeister_support:
             addrelpath  = "j"
         else:
             addrelpath  = "n"
-        print ("INDIR is  " + indir)
+        print ("INDIR is  " + indir) if self.debug else True
         
         owndir = os.getcwd()
 
@@ -2339,21 +2357,21 @@ class Dateimeister_support:
             # get sort method. if value exists in dict_sort_method use it. it has been set when images are displayed. Otherwise use value of the radio button
             if self.dict_sort_method.get(dateityp):
                 sort_method = self.dict_sort_method.get(dateityp)
-                print("generate sort method for {:s} is {:s}".format(dateityp, sort_method))
+                print("generate sort method for {:s} is {:s}".format(dateityp, sort_method)) if self.debug else True
             else:
                 sort_method = self.rbvalue.get()
-                print("generate sort method is {:s}".format(sort_method))
+                print("generate sort method is {:s}".format(sort_method)) if self.debug else True
                 self.dict_sort_method[dateityp] = sort_method
             self.dict_source_target[dateityp], self.dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp], self.dict_relpath[dateityp] = \
               DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, int(sort_method), self.debug)
             self.dict_relpath[dateityp] = dict(reversed(list(self.dict_relpath[dateityp].items())))
             for ii in self.dict_relpath[dateityp]:
-                print(" > ", ii, " files: ", self.dict_relpath[dateityp][ii])
+                print(" > ", ii, " files: ", self.dict_relpath[dateityp][ii]) if self.debug else True
             num_files = 0
             for thisfile in self.dict_source_target[dateityp]:
                 #print("IN: " + thisfile + " OUT: " + self.dict_source_target[dateityp][thisfile])
                 num_files += 1
-            print(dateityp + " F NUM: " + str(num_files))
+            print(dateityp + " F NUM: " + str(num_files)) if self.debug else True
             # save name for cmdfile
             cmd_file_name = "_copy_" + dateityp + '.cmd'
             cmd_file_full = os.path.join(Globals.datadir, Globals.cmd_files_subdir, cmd_file_name)
@@ -2377,7 +2395,7 @@ class Dateimeister_support:
             #print("self.dict_gen_files_delrelpath[dateityp]: ", str(self.dict_gen_files_delrelpath[dateityp]))
 
             Globals.dict_duplicates[dateityp] = {}
-            print ("OUTDIR is " + thisoutdir + " ENDUNG is " + endung)
+            print ("OUTDIR is " + thisoutdir + " ENDUNG is " + endung) if self.debug else True
             #print ("OUTFILE is " + os.environ["OUTFILE"])
             # wenn die Endung wegen mehrerer Möglichkeiten (jpeg, jpg) mehr al 1 Eintrag hat, nehmen wir den letzten
             #print("'(.*?)\.({:s})' 'PIC_{:s}_$1.$2'".format(dateityp, thiscamera))
@@ -2431,7 +2449,7 @@ class Dateimeister_support:
                 # Show error if no process_type available
                 if lastname.upper() not in self.dict_process_image:
                     messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for: " + lastname)
-                    print("dict_process_image is: " + str(self.dict_process_image))
+                    print("dict_process_image is: " + str(self.dict_process_image)) if self.debug else True
                     exit()
                 process_type = self.dict_process_image[lastname].upper()
                 if (process_type == "JPEG"):
@@ -2536,13 +2554,13 @@ class Dateimeister_support:
                     #print ("*** JPEG found for " + file + " using " + showfile)
                 else:
                     showfile = "none"
-                    print ("*** No JPEG found for " + file + " using " + showfile)
+                    print ("*** No JPEG found for " + file + " using " + showfile) if self.debug else True
                     process_type = "none" # rectangle instead
             elif process_type == 'VIDEO':
                 if thumbnail_reuse and not Globals.resized: # we need a new player because of new size:
                     player = Globals.dict_thumbnails[imagetype][file].getPlayer()
                 else:
-                    print("try to create new videoplayer...")
+                    print("try to create new videoplayer...") if self.debug else True
                     # create new videoplayer
                     player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height, self.lastposition)
                 image_width, image_height, pimg = player.get_pimg()
@@ -2615,7 +2633,7 @@ class Dateimeister_support:
                 self.lastposition += image_width + Globals.gap 
                 if myimage.getDuplicate() == 'j':
                     if imagetype.upper() == "JPEG":
-                        print ("Duplicate: " + file)
+                        print ("Duplicate: " + file) if self.debug else True
                     text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(dict_image_lineno[file]))
@@ -2782,7 +2800,7 @@ class Dateimeister_support:
             if dir_chosen in d:
                 do_del = False # existing dir, no cleanup
         # delete dir-entrie(s) from Globals.config_files_xml only if a new one has been selected
-        print("do_del: " + str(do_del) + " dir_chosen: " + dir_chosen)
+        print("do_del: " + str(do_del) + " dir_chosen: " + dir_chosen) if self.debug else True
         if do_del: # 2 pass: in the first we delete entries with not existing dir, in the second existing dirs (if necessary)
             for loop in range(1,3): # 3 is excluded
                 if dirtype == 'indir':
@@ -2886,11 +2904,11 @@ class Dateimeister_support:
         if thumbnail is not None:
             item_id = thumbnail.getId()
             self.display_image(thumbnail)
-            print("Text sroll to lineno: ", str(thumbnail.getLineno()))
+            print("Text sroll to lineno: ", str(thumbnail.getLineno())) if self.debug else True
             thumbnail.scrollTextToLineno()
 
     def canvas_image_show(self):
-        print("Context menu show")
+        print("Context menu show") if self.debug else True
         self.canvas_gallery_show(self.event)
 
     def delay_decr(self, event): # speed +
@@ -3074,7 +3092,7 @@ class Dateimeister_support:
 
     def text1_single(self, event): # synchronize text / gallery
         (row, col) = self.t_text1.index(tk.CURRENT).split(".")
-        print(row, col)
+        print(row, col) if self.debug else True
         if Globals.imagetype != "" and row in self.dict_thumbnails_lineno[Globals.imagetype]:
             thumbnail = self.dict_thumbnails_lineno[Globals.imagetype][row]
             self.scrollToImage(thumbnail)
@@ -3091,7 +3109,7 @@ class Dateimeister_support:
         
     def text1_double(self, event): # synchronize text / gallery and display FSImage 
         (row, col) = self.t_text1.index(tk.CURRENT).split(".")
-        print(row, col)
+        print(row, col) if self.debug else True
         if Globals.imagetype != "" and row in self.dict_thumbnails_lineno[Globals.imagetype]:
             thumbnail = self.dict_thumbnails_lineno[Globals.imagetype][row]
             if thumbnail is not None:
@@ -3104,9 +3122,9 @@ class Dateimeister_support:
         (row, col) = self.t_text1.index(tk.INSERT).split(".")
         #print("Event x: ", event.x, " Event y: ",event.y)
         #print("Event is " + str(event))
-        print("Key pressed: ")
-        print(event.char, event.keysym, event.keycode)
-        print(row, col)
+        print("Key pressed: ") if self.debug else True
+        print(event.char, event.keysym, event.keycode) if self.debug else True
+        print(row, col) if self.debug else True
         if event.keysym == 'Up' or event.keysym == 'Down':
             if Globals.imagetype != "" and row in self.dict_thumbnails_lineno[Globals.imagetype]:
                 thumbnail = self.dict_thumbnails_lineno[Globals.imagetype][row]
@@ -3140,16 +3158,16 @@ class Dateimeister_support:
         file = thumbnail.getShowfile()
         # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
         if file in self.dict_file_image:
-            print ("FSImage exists for file: " + file)
+            print ("FSImage exists for file: " + file) if self.debug else True
             fs_image = self.dict_file_image[file]
             player = fs_image.getPlayer()
             if player is not None: # this is a video
-                print ("FSImage restart file: " + file)
+                print ("FSImage restart file: " + file) if self.debug else True
                 player.restart()
                 fs_image.setPlaystatus('play') # Status, Buttontext
         else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
-                print ("FSImage does not exist for file: " + file)
+                print ("FSImage does not exist for file: " + file) if self.debug else True
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, "", "Include", "Exclude", "Included", "Excluded", self.debug)
                 self.dict_file_image[file] = fs_image
 
@@ -3162,7 +3180,7 @@ class Dateimeister_support:
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             if thumbnail.getImage() == 0:
-                print(" No Image availabl for " + thumbnail.getFile())
+                print(" No Image availabl for " + thumbnail.getFile()) if self.debug else True
                 self.context_menu.entryconfig(1, state="disabled")
             else:
                 self.context_menu.entryconfig(1, state="normal")
@@ -3180,7 +3198,7 @@ class Dateimeister_support:
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
             item_id = thumbnail.getId()
-            print("Text sroll to lineno: ", str(thumbnail.getLineno()))
+            print("Text sroll to lineno: ", str(thumbnail.getLineno())) if self.debug else True
             thumbnail.scrollTextToLineno()
 
     def canvas_gallery_exclude(self, event):
@@ -3214,11 +3232,11 @@ class Dateimeister_support:
         self.write_cmdfile(Globals.imagetype)
      
     def canvas_image_exclude(self): # used for exclude and include
-        print("Context menu exlude")
+        print("Context menu exlude") if self.debug else True
         self.canvas_gallery_exclude(self.event)
 
     def canvas_video_restart(self):
-        print("Context menu restart")
+        print("Context menu restart") if self.debug else True
         self.canvas_gallery.focus_set()
 
         canvas_x = self.canvas_gallery.canvasx(self.event.x)
@@ -3232,7 +3250,7 @@ class Dateimeister_support:
 
     # Undo /Redo Funktionen
     def process_undo(self, event):
-        print("ctrl_z pressed.")
+        print("ctrl_z pressed.") if self.debug else True
         rc, p_now, p_before = self.UR.process_undo()
         if not rc: # undo was not possible
             messagebox.showinfo("UNDO", "no further processes which can be undone", parent = self.root)
@@ -3241,7 +3259,7 @@ class Dateimeister_support:
             self.endis_buttons()
 
     def process_redo(self, event):
-        print("ctrl_y pressed.")
+        print("ctrl_y pressed.") if self.debug else True
         rc, p_now, p_before = self.UR.process_redo()
         if not rc:
             messagebox.showinfo("REDO", "no further processes which can be redone", parent = self.root)
@@ -3250,11 +3268,11 @@ class Dateimeister_support:
             self.endis_buttons()
 
     def button_undo_h(self, event = None):
-        print("Button Undo pressed")
+        print("Button Undo pressed") if self.debug else True
         self.process_undo(event)
         
     def button_redo_h(self, event = None):
-        print("Button Redo pressed")
+        print("Button Redo pressed") if self.debug else True
         self.process_redo(event)
 
     def button_undo_pressed(self):
@@ -3324,9 +3342,9 @@ class Dateimeister_support:
             #print("Duplcate Key: " + mytarget) 
             mylist = Globals.dict_duplicates[Globals.imagetype][mytarget]
             if len(mylist) > 1: # es gibt 1...n Duplicates
-                print("Duplcate Key: " + mytarget)
+                print("Duplcate Key: " + mytarget) if self.debug else True
                 for mysource in mylist:
-                    print("   " + mysource)
+                    print("   " + mysource) if self.debug else True
         self.win_duplicates = MyDuplicates(self) 
        
     def menu_cameras_edit(self):
@@ -3436,7 +3454,7 @@ class Dateimeister_support:
                 type_num += 1
                 suffixes = ", ".join(dict_cameras[camera][type])
                 dict_t[camera][type] = suffixes
-                print("Camera: " + camera + " Type: " + type + " Suffixes: " + suffixes)
+                print("Camera: " + camera + " Type: " + type + " Suffixes: " + suffixes) if self.debug else True
                 if len(suffixes) == 0:
                     messagebox.showerror("INIT", "Camera " + camera + " type " + type + " no suffix defined")
                     exit()
@@ -3447,12 +3465,12 @@ class Dateimeister_support:
         dict_s = {}
         dict_s = DX.get_subdirs(Globals.config_files_xml)
         for imagetype in dict_s:
-            print("Subdir {:s}, {:s}".format(imagetype, dict_s[imagetype]))
+            print("Subdir {:s}, {:s}".format(imagetype, dict_s[imagetype])) if self.debug else True
         
         dict_pi = {}
         dict_pi = DX.get_process_image(Globals.config_files_xml)
         for t in dict_pi:
-            print("Process Image  {:s}, {:s}".format(t, dict_pi[t]))
+            print("Process Image  {:s}, {:s}".format(t, dict_pi[t])) if self.debug else True
         
         self.lb_camera.delete(0, END)
         index = 0
