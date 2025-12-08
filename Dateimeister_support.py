@@ -143,6 +143,9 @@ class MyThumbnail:
         #print("*** retrieve Image ")
         self.image = image    
 
+    def setPlayer(self, p):
+        self.player = p
+        
     def setStart(self, start):
         self.start = start   
 
@@ -1440,19 +1443,17 @@ class Dateimeister_support:
         self.context_menu = None
         self.timestamp = datetime.now()
         self.use_camera_prefix = True
+        self.debug = False
+        self.debug_p = False
+        self.debug_r = False
         if debug == 'Y' or debug == 'y':
             self.debug   = True # debug all
-            self.debug_p = True # debug process history
         elif debug == 'N' or debug == 'n':
             self.debug   = False # no debug all
-            self.debug_p = False # no debug process history
         elif debug == 'P' or debug == 'p':
-            self.debug   = False # no debug all
             self.debug_p = True  # debug process history
         elif debug == 'R' or debug == 'r':
-            self.debug   = False # no debug all
-            self.debug_r = True  # debug resize process
-            self.debug_p = False
+            self.debug_r = True  # debug resize info
         else:
             print("Debug parameter {:s} not allowed, only j, n or p".format(debug))
             exit(-1)
@@ -1932,7 +1933,7 @@ class Dateimeister_support:
                 self.text_font.configure(size=fontsize_use) 
             self.timer.start()
 
-    def debug_info_resize(self):
+    def debug_info_resize(self, text):
         if self.leftmost_thumbnail:
             fn = self.leftmost_thumbnail.getFile()
             ln = self.leftmost_thumbnail.getLineno()
@@ -1943,11 +1944,11 @@ class Dateimeister_support:
             ln = -999
             s  = -1
             e  = -1
-        print("TIMER elapsed start resize, leftmost humbnail filename {:s}, lnr {:d}, start {:d}, end {:d}".format(fn, ln, s, e))
+        print("{:s} elapsed start resize, leftmost humbnail filename {:s}, lnr {:d}, start {:d}, end {:d}".format(text, fn, ln, s, e))
 
     def resize(self):
         # display debug info for resize, this is very difficult to debug
-        self.debug_info_resize() if self.debug_r else True
+        self.debug_info_resize("TIMER") if self.debug_r else True
         if Globals.imagetype != "": # new sort of existing images
             Globals.resized = True
             self.display_images(Globals.imagetype)
@@ -2194,6 +2195,8 @@ class Dateimeister_support:
             thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
             if thumbnail is not None:
                 text = "{:s}\n created {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
+                if self.debug_r:
+                    text += "\n start {:d} end {:d}".format(thumbnail.getStart(), thumbnail.getEnd())
                 #print("Image clicked: " + text)
             if text != self.tooltiptext:
                 self.tt.update(text)
@@ -2541,9 +2544,15 @@ class Dateimeister_support:
             #print("Process Type is: " + process_type)
  
             # check if thumbnail already exists (dict has not been cleared because we only want to sort new)
-            thumbnail_reuse = False
-            if file in Globals.dict_thumbnails[imagetype] and not Globals.resized: # the only reason why we reuse
-                thumbnail_reuse = True
+            if file in Globals.dict_thumbnails[imagetype]: # the only reason why we reuse
+                new_thumbnail_required = False
+                if  Globals.resized:
+                    new_image_required = True
+                else:
+                    new_image_required = False
+            else:
+                new_thumbnail_required = True
+                new_image_required = True
 
             player = None # only for video
             if (process_type == "JPEG"):
@@ -2557,12 +2566,12 @@ class Dateimeister_support:
                     print ("*** No JPEG found for " + file + " using " + showfile) if self.debug else True
                     process_type = "none" # rectangle instead
             elif process_type == 'VIDEO':
-                if thumbnail_reuse and not Globals.resized: # we need a new player because of new size:
-                    player = Globals.dict_thumbnails[imagetype][file].getPlayer()
-                else:
+                if new_image_required or new_thumbnail_required: # we need a new player because of new size::
                     print("try to create new videoplayer...") if self.debug else True
                     # create new videoplayer
                     player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height, self.lastposition)
+                else:
+                    player = Globals.dict_thumbnails[imagetype][file].getPlayer()
                 image_width, image_height, pimg = player.get_pimg()
                 showfile = file
             else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
@@ -2576,13 +2585,13 @@ class Dateimeister_support:
             dist_text  = 10
             # distance from border for image-frame
             dist_frame = 20
-            if thumbnail_reuse or Globals.resized:
-                state = Globals.dict_thumbnails[imagetype][file].getState()
-            else:
+            if new_thumbnail_required:
                 state = INCLUDE # can be overridenn after new sort
+            else: # use existing thumbnail
+                state = Globals.dict_thumbnails[imagetype][file].getState()
             if  process_type != "none":
                 if process_type != 'VIDEO': # we have to convert image to photoimage
-                    if not thumbnail_reuse or Globals.resized: # we need a new image
+                    if new_image_required or new_thumbnail_required: # we need a new image
                         pimg, image_width, image_height = self.new_image(showfile, canvas_height)
                     else: # we can use the existing
                         pimg = Globals.dict_thumbnails[imagetype][file].getImage()
@@ -2609,18 +2618,17 @@ class Dateimeister_support:
                 if player is not None:
                     player.setId(id)
                 mts = os.stat(file).st_mtime
-                # if request is from new ordering use existing thumbnail
-                if thumbnail_reuse:
-                    myimage = Globals.dict_thumbnails[imagetype][file]
-                    print("Reuse existing thumbnail for file {:s}".format(file)) if self.debug else True
-                    # reset lineno, start and end
-                    Globals.dict_thumbnails[imagetype][file].setLineno(this_lineno)
-                else:
+                # if new thumbnail or new image required
+                if new_thumbnail_required:
                     myimage = MyThumbnail(pimg, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
                         text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
                     Globals.dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
-                if thumbnail_reuse and Globals.resized: # replace existing image
-                    myimage.setImage(myimage)
+                else: # use existing
+                    myimage = Globals.dict_thumbnails[imagetype][file]
+                    print("Reuse existing thumbnail for file {:s}".format(file)) if self.debug else True
+                    if new_image_required: # replace existing image
+                        myimage.setImage(pimg)
+                        myimage.setPlayer(player)
 
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE, None, False)
@@ -2673,7 +2681,7 @@ class Dateimeister_support:
                     rect_id_dup =self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(dict_image_lineno[file]))
             # update if thumbnail reuse
-            if thumbnail_reuse or Globals.resized:
+            if not new_thumbnail_required:
                 Globals.dict_thumbnails[imagetype][file].updateIds(text_id, rect_id, frameids)
                 Globals.dict_thumbnails[imagetype][file].setState(state)
                 # reset lineno, start and end, renew ids and show / hide frame
@@ -2751,7 +2759,7 @@ class Dateimeister_support:
             self.win_messages = None
             
         #if resized keep scroll-position else scroll to first position (0)
-        if Globals.resized:
+        if Globals.resized and self.leftmost_thumbnail:
             self.scrollToImage(self.leftmost_thumbnail)
         else:
             self.canvas_gallery.xview('moveto', 0)
@@ -3089,6 +3097,8 @@ class Dateimeister_support:
         thumbnail, index = self.get_thumbnail_by_position(canvas_x + 11, canvas_y)
         # store reference in instance variable
         self.leftmost_thumbnail = thumbnail
+        # display debug info for resize, this is very difficult to debug
+        self.debug_info_resize("SCROLL") if self.debug_r else True
 
     def text1_single(self, event): # synchronize text / gallery
         (row, col) = self.t_text1.index(tk.CURRENT).split(".")
