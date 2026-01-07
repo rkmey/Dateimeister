@@ -1761,7 +1761,7 @@ class Dateimeister_support:
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
         #my_w.maxsize(300,220)  # (maximum ) width , ( maximum) height
-        #my_w.minsize(250,220)  # (minimum ) width , ( minimum) height
+        self.root.minsize(int(width / 2), int(height / 2))  # (minimum ) width , ( minimum) height
         self.root.resizable(True, True)
         self.tt = TT.ToolTip(self.canvas_gallery, "no images available", delay=0, follow = True)
 

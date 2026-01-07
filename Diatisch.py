@@ -227,6 +227,7 @@ class Diatisch:
         print("Bildschirm ist " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(physical_width) + " x " + str(physical_height))
         v_dim=str(self.screen_width)+'x'+str(self.screen_height)
         self.root.geometry(v_dim)
+        self.root.minsize(int(physical_width / 2), int(physical_height / 2))  # (minimum ) width , ( minimum) height
 
         self.m, self.n = 10, 5
         self.image_width = 1500  # Adjust as needed
