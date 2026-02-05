@@ -1656,14 +1656,17 @@ class Dateimeister_support:
         self.text_font = Font(family="Helvetica", size=6)
 
         self.frame_canvas.update()
+        # now we create a frame above the canvas which we will use for the undo/redo/include/exclude/exec ans sort buttons
+        # same x1 as canvas, x2 is end of Frame1(text1), y1 is end of height is canvas.y1 - text.y2
         parent_height = self.root.winfo_height()
         parent_width  = self.root.winfo_width()
-        x2 = self.frame_canvas.winfo_x() + self.frame_canvas.winfo_width()
+        x2 = self.w.Frame1.winfo_x() + self.w.Frame1.winfo_width()
         y2 = self.frame_canvas.winfo_y()
         # to calc x1 we substract min of 80, x2 - dictance from right edge of exec-button
         x1 = x2 - min(int(parent_width / 4), x2 - (self.button_exec.winfo_x() + self.button_exec.winfo_width()))
-        # to calc y1 we sutract the height of the exec button
-        y1 = y2 - self.button_exec.winfo_height()
+        # to calc y1 we subtract the vertical endpoint of text1
+        self.t_text1.update()
+        y1 = self.w.Frame1.winfo_y() + self.w.Frame1.winfo_height()
         print("x, y of upper left corner of frame above canvas is {:d}, {:d}, lower right corner is {:d}, {:d}".format(x1, y1, x2, y2)) if self.debug else True      
         # the frame
         relx1 = x1 / parent_width
@@ -1920,18 +1923,24 @@ class Dateimeister_support:
     
     def on_configure(self, event):
         x = str(event.widget)
+        l_width  = 0
+        l_height = 0
         if x == ".": # . is toplevel window
-            if (self.width != event.width):
-                self.width = event.width
-                print(f"The width of Toplevel is {self.width}") if self.debug else True
-            if (self.height != event.height):
+            if (self.width != event.width or self.height != event.height):
+                self.width  = event.width
                 self.height = event.height
+                # we use the new dimension of the frame for calculating fontsize needed
                 self.Frame_sortbuttons.update()
+                l_width  = self.Frame_sortbuttons.winfo_width()
                 l_height = self.Frame_sortbuttons.winfo_height()
-                fontsize_use = int(.8 * min(12.0, l_height * .75))
-                print(f"The height of Toplevel is {self.height}, label height is {l_height} set fontsize to {fontsize_use}") if self.debug else True
+                # we have to change fontsize according to Minimum of new Height / width
+                fontsize_width  = int(l_width * .025) 
+                #fontsize_height = int(.7 * min(12.0, l_height * .75))
+                fontsize_height = int(l_height * .25)
+                fontsize_use = min(fontsize_width, fontsize_height)
+                print(f"Frame sortbuttons: new width {l_width} new height {l_height}set fontsize to {fontsize_use}") if self.debug else True
                 self.text_font.configure(size=fontsize_use) 
-            self.timer.start()
+                self.timer.start()
 
     def debug_info_resize(self, text):
         if self.leftmost_thumbnail:
