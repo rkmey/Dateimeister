@@ -192,40 +192,6 @@ class Toplevel1:
         self.Checkbutton1_tooltip = \
         TT.ToolTip(self.Checkbutton1, '''process  subdirectories''')
 
-        self.Button_exclude = tk.Button(self.top)
-        self.Button_exclude.place(relx=0.159, rely=0.684, height=24, width=67)
-        self.Button_exclude.configure(activebackground="beige")
-        self.Button_exclude.configure(activeforeground="black")
-        self.Button_exclude.configure(background="#d9d9d9")
-        #self.Button_exclude.configure(command=Dateimeister_support.Button_exclude_all)
-        self.Button_exclude.configure(compound='left')
-        self.Button_exclude.configure(disabledforeground="#a3a3a3")
-        self.Button_exclude.configure(font="-family {Segoe UI} -size 9")
-        self.Button_exclude.configure(foreground="black")
-        self.Button_exclude.configure(highlightbackground="#d9d9d9")
-        self.Button_exclude.configure(highlightcolor="black")
-        self.Button_exclude.configure(pady="0")
-        self.Button_exclude.configure(text='''Exclude all''')
-        self.Button_exclude_tooltip = \
-        TT.ToolTip(self.Button_exclude, '''Exclude all''')
-
-        self.Button_include = tk.Button(self.top)
-        self.Button_include.place(relx=0.222, rely=0.684, height=24, width=67)
-        self.Button_include.configure(activebackground="beige")
-        self.Button_include.configure(activeforeground="black")
-        self.Button_include.configure(background="#d9d9d9")
-        #self.Button_include.configure(command=Dateimeister_support.Button_include_all)
-        self.Button_include.configure(compound='left')
-        self.Button_include.configure(disabledforeground="#a3a3a3")
-        self.Button_include.configure(font="-family {Segoe UI} -size 9")
-        self.Button_include.configure(foreground="black")
-        self.Button_include.configure(highlightbackground="#d9d9d9")
-        self.Button_include.configure(highlightcolor="black")
-        self.Button_include.configure(pady="0")
-        self.Button_include.configure(text='''Include all''')
-        self.Button_include_tooltip = \
-        TT.ToolTip(self.Button_include, '''Include all''')
-
         self.Button_be = tk.Button(self.top)
         self.Button_be.place(relx=0.152, rely=0.467, height=34, width=137)
         self.Button_be.configure(activebackground="beige")
@@ -331,22 +297,6 @@ class Toplevel1:
         self.Label_num.configure(text='''Label''')
         self.Label_num_tooltip = \
         TT.ToolTip(self.Label_num, '''Number of images ''')
-
-        self.Button_exec = tk.Button(self.top)
-        self.Button_exec.place(relx=0.29, rely=0.684, height=24, width=57)
-        self.Button_exec.configure(activebackground="beige")
-        self.Button_exec.configure(activeforeground="black")
-        self.Button_exec.configure(background="#d9d9d9")
-        self.Button_exec.configure(compound='left')
-        self.Button_exec.configure(disabledforeground="#a3a3a3")
-        self.Button_exec.configure(font="-family {Segoe UI} -size 9")
-        self.Button_exec.configure(foreground="black")
-        self.Button_exec.configure(highlightbackground="#d9d9d9")
-        self.Button_exec.configure(highlightcolor="black")
-        self.Button_exec.configure(pady="0")
-        self.Button_exec.configure(text='''Exec''')
-        self.Button_exec_tooltip = \
-        TT.ToolTip(self.Button_exec, '''Execute commands''')
 
         self.Checkbutton_num = tk.Checkbutton(self.top)
         self.Checkbutton_num.place(relx=0.159, rely=0.651, relheight=0.026

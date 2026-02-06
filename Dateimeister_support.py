@@ -1528,12 +1528,6 @@ class Dateimeister_support:
         self.b_button_outdir.config(command=self.Press_outdir)
         self.button_call = self.w.Button_call
         self.button_call.config(command = self.Button_generate_pressed)
-        self.button_exec = self.w.Button_exec
-        self.button_exec.config(command = self.button_exec_pressed)
-        self.Button_exclude = self.w.Button_exclude
-        self.Button_exclude.config(command=self.Button_exclude_all)
-        self.Button_include = self.w.Button_include
-        self.Button_include.config(command=self.Button_include_all)
 
         # get all camera information and fill camera-listbox
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
@@ -1551,16 +1545,11 @@ class Dateimeister_support:
         self.l_label1 = self.w.Label1
         self.label_num = self.w.Label_num
         self.lb_gen   = self.w.Listbox_gen
-        self.button_include = self.w.Button_include
-        self.button_exclude = self.w.Button_exclude
-        self.button_include.config(state = DISABLED)
-        self.button_exclude.config(state = DISABLED)
         Globals.button_duplicates = self.w.Button_duplicates
         Globals.button_duplicates.config(state = DISABLED)
         self.button_be = self.w.Button_be
         self.button_be.config(state = DISABLED)
         self.button_be.config(command = self.Button_be_pressed)
-        self.button_exec.config(state = DISABLED)
         self.button_call.config(state = DISABLED) # generate-Button
         Globals.button_duplicates.configure(command=self.button_duplicates)
         
@@ -1629,7 +1618,8 @@ class Dateimeister_support:
         # Frame for the canvas and the horizontal scrollbar
         self.root.update()
         # y starts with this value
-        c_rely = (self.button_exec.winfo_y() + self.button_exec.winfo_height()) / self.root.winfo_height() + 0.01
+        c_rely = 0.71
+        #c_rely = (self.button_exec.winfo_y() + self.button_exec.winfo_height()) / self.root.winfo_height() + 0.01
         x1 = 0
         x2 = self.root.winfo_width()
         y1 = int(c_rely * self.root.winfo_height())
@@ -1676,30 +1666,23 @@ class Dateimeister_support:
         
         # we create undo/redo/include/exclude/exec buttons
         dict_buttons = {}
-        dict_buttons["1"] = {"VAR":"button_undo","TEXT":"undo", "CALLBACK":self.button_undo_h, "STATE":tk.DISABLED, "TT":"Undo apply"}
-        dict_buttons["2"] = {"VAR":"button_redo","TEXT":"redo", "CALLBACK":self.button_redo_h, "STATE":tk.DISABLED, "TT":"Redo apply"}
-        # start for these buttons is 0, end is .6, width of a button is (1-group)/4
-        group = .0
-        relw  = .6 / 5
-        start = group
-        for i in dict_buttons:
-            b = tk.Button(self.Frame_sortbuttons, text=dict_buttons[i]["TEXT"], command=dict_buttons[i]["CALLBACK"], state=dict_buttons[i]["STATE"])
-            b.place(relx = group + (int(i) - 1) * relw, rely=0.0, relheight=1.0, relwidth = relw)
-            b.configure(font=self.text_font)
-            setattr(self, dict_buttons[i]["VAR"], b)
-            setattr(self, dict_buttons[i]["VAR"] + "tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
+        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"button_undo","TEXT":"undo","CALLBACK":self.button_undo_h,"STATE":tk.DISABLED,"TT":"Undo apply"}
+        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_redo","TEXT":"redo","CALLBACK":self.button_redo_h,"STATE":tk.DISABLED,"TT":"Redo apply"}
+        dict_buttons["3"] = {"OFFSET":0.02,"VAR":"button_include","TEXT":"include all","CALLBACK":self.button_include_all,"STATE":tk.DISABLED,"TT":"Include all Images"}
+        dict_buttons["4"] = {"OFFSET":0.00,"VAR":"button_exclude","TEXT":"exclude all","CALLBACK":self.button_exclude_all,"STATE":tk.DISABLED,"TT":"Exclude all Images"}
+        dict_buttons["5"] = {"OFFSET":0.02,"VAR":"button_exec","TEXT":"Exec","CALLBACK":self.button_exec_pressed,"STATE":tk.DISABLED,"TT":"Execute generated commands"}
+        self.create_buttons_from_dict(dict_buttons, self.Frame_sortbuttons, 0.0, 0.5, 0.9, self.text_font, "HORIZONTAL")
 
+        # the sort radio buttons
         self.rbvalue = tk.StringVar()
         self.dict_sort_method = {} # here we keep type(JPEG...) -> sort method(1...4)
-        dict_rbtext = {"1": "sort name asc", "2": "sort name desc", "3": "sort mod. asc.", "4": "sort mod. desc"}
-        # start for sortbuttons is at 60% of the Frame, width of a button is (1-group)/4
-        group = .6
-        relw  = (1 - group) / 4
-        start = self.Frame_sortbuttons.winfo_x() + int(0.6 * self.Frame_sortbuttons.winfo_width())
-        for i in dict_rbtext:
-            rb = tk.Radiobutton(self.Frame_sortbuttons, text = dict_rbtext[i], value = i, variable = self.rbvalue, command = self.rb_sort, indicatoron = 0)
-            rb.place(relx = group + (int(i) - 1) * relw, rely=0.0, relheight=1.0, relwidth = relw)
-            rb.configure(font=self.text_font)
+        # we create undo/redo/include/exclude/exec buttons
+        dict_buttons = {}
+        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas1","VALUE":"1","TEXT":"sort name asc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort name ascending"}
+        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas2","VALUE":"2","TEXT":"sort name desc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort name descending"}
+        dict_buttons["3"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas3","VALUE":"3","TEXT":"sort mod. asc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort modification date ascending"}
+        dict_buttons["4"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas4","VALUE":"4","TEXT":"sort mod. desc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort modification date descending"}
+        self.create_radiobuttons_from_dict(dict_buttons, self.Frame_sortbuttons, 0.6, 0.4, 0.9, self.rbvalue, self.rb_sort, self.text_font, "HORIZONTAL")
         self.rbvalue.set("1")
 
         self.canvas_gallery = tk.Canvas(self.frame_canvas)
@@ -1892,7 +1875,59 @@ class Dateimeister_support:
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
         self.timer = RestartableTimer(root, 333, self.resize)  # ms
-        
+ 
+
+    def create_buttons_from_dict(self, dict_buttons, frame, startpos, rgwidth, relsize, fon, orientation): # create Buttons in horizontal Frame
+        # calculate rel width considering the offsets
+        num_buttons = 0
+        relw = 0.0
+        sum_offsets = 0
+        # part of frame to use for group of buttons
+        rel_group_width = rgwidth
+        for i in dict_buttons:
+            sum_offsets = sum_offsets + dict_buttons[i]["OFFSET"] 
+            num_buttons += 1
+        relw  = (rel_group_width - sum_offsets) / num_buttons
+        nextpos = startpos #<== set rel. start position
+        for i in dict_buttons:
+            offset = dict_buttons[i]["OFFSET"]
+            b = tk.Button(frame, text=dict_buttons[i]["TEXT"], command=dict_buttons[i]["CALLBACK"], state=dict_buttons[i]["STATE"])
+            if orientation.upper() == "HORIZONTAL":
+                b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
+            elif orientation.upper() == "VERTICAL":
+                b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
+            else:
+                raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
+            b.configure(font=fon)
+            setattr(self, dict_buttons[i]["VAR"], b)
+            setattr(self, dict_buttons[i]["VAR"] + "tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
+            nextpos += relw + offset
+
+    def create_radiobuttons_from_dict(self, dict_buttons, frame, startpos, rgwidth, relsize, var, cmd, fon, orientation): # create Radiobuttons in horizontal Frame
+        # calculate rel width considering the offsets
+        num_buttons = 0
+        relw = 0.0
+        sum_offsets = 0
+        # part of frame to use for group of buttons
+        rel_group_width = rgwidth
+        for i in dict_buttons:
+            sum_offsets = sum_offsets + dict_buttons[i]["OFFSET"] 
+            num_buttons += 1
+        relw  = (rel_group_width - sum_offsets) / num_buttons
+        nextpos = startpos #<== set rel. start position
+        for i in dict_buttons:
+            offset = dict_buttons[i]["OFFSET"]
+            b = tk.Radiobutton(frame, text = dict_buttons[i]["TEXT"], value = dict_buttons[i]["VALUE"], variable = var, command = self.rb_sort, indicatoron = 0)
+            if orientation.upper() == "HORIZONTAL":
+                b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
+            elif orientation.upper() == "VERTICAL":
+                b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
+            else:
+                raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
+            b.configure(font=fon)
+            setattr(self, dict_buttons[i]["VAR"], b)
+            setattr(self, dict_buttons[i]["VAR"] + "tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
+            nextpos += relw + offset
 
     def rb_sort(self, event = None):
         sort_method = self.rbvalue.get()
@@ -3249,14 +3284,14 @@ class Dateimeister_support:
                 thumbnail.setState(INCLUDE)
         self.historize_process()
         
-    def Button_exclude_all(self, *args):
+    def button_exclude_all(self, *args):
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
             if thumbnail.getState() == INCLUDE:
                 thumbnail.setState(EXCLUDE, None, False)
         self.historize_process()
         self.write_cmdfile(Globals.imagetype)
                 
-    def Button_include_all(self, *args):
+    def button_include_all(self, *args):
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
             if thumbnail.getState() == EXCLUDE:
                 thumbnail.setState(INCLUDE, None, False)
