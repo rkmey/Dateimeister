@@ -1555,12 +1555,6 @@ class Dateimeister_support:
         self.button_exclude = self.w.Button_exclude
         self.button_include.config(state = DISABLED)
         self.button_exclude.config(state = DISABLED)
-        self.button_undo = self.w.Button_undo
-        self.button_redo = self.w.Button_redo
-        self.button_undo.config(state = DISABLED)
-        self.button_redo.config(state = DISABLED)
-        self.button_undo.configure(command=self.button_undo_h)
-        self.button_redo.configure(command=self.button_redo_h)
         Globals.button_duplicates = self.w.Button_duplicates
         Globals.button_duplicates.config(state = DISABLED)
         self.button_be = self.w.Button_be
@@ -1656,14 +1650,14 @@ class Dateimeister_support:
         self.text_font = Font(family="Helvetica", size=6)
 
         self.frame_canvas.update()
-        # now we create a frame above the canvas which we will use for the undo/redo/include/exclude/exec ans sort buttons
+        # now we create a frame above the canvas which we will use for the undo/redo/include/exclude/exec and sort buttons
         # same x1 as canvas, x2 is end of Frame1(text1), y1 is end of height is canvas.y1 - text.y2
         parent_height = self.root.winfo_height()
         parent_width  = self.root.winfo_width()
         x2 = self.w.Frame1.winfo_x() + self.w.Frame1.winfo_width()
         y2 = self.frame_canvas.winfo_y()
-        # to calc x1 we substract min of 80, x2 - dictance from right edge of exec-button
-        x1 = x2 - min(int(parent_width / 4), x2 - (self.button_exec.winfo_x() + self.button_exec.winfo_width()))
+        # Frame will be symmetrical, so start is width of root - end of Frame1(for text)
+        x1 = parent_width - x2
         # to calc y1 we subtract the vertical endpoint of text1
         self.t_text1.update()
         y1 = self.w.Frame1.winfo_y() + self.w.Frame1.winfo_height()
@@ -1680,12 +1674,31 @@ class Dateimeister_support:
         self.Frame_sortbuttons.configure(background="#d9d9d9") if not self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_sortbuttons.update()
         
+        # we create undo/redo/include/exclude/exec buttons
+        dict_buttons = {}
+        dict_buttons["1"] = {"VAR":"button_undo","TEXT":"undo", "CALLBACK":self.button_undo_h, "STATE":tk.DISABLED, "TT":"Undo apply"}
+        dict_buttons["2"] = {"VAR":"button_redo","TEXT":"redo", "CALLBACK":self.button_redo_h, "STATE":tk.DISABLED, "TT":"Redo apply"}
+        # start for these buttons is 0, end is .6, width of a button is (1-group)/4
+        group = .0
+        relw  = .6 / 5
+        start = group
+        for i in dict_buttons:
+            b = tk.Button(self.Frame_sortbuttons, text=dict_buttons[i]["TEXT"], command=dict_buttons[i]["CALLBACK"], state=dict_buttons[i]["STATE"])
+            b.place(relx = group + (int(i) - 1) * relw, rely=0.0, relheight=1.0, relwidth = relw)
+            b.configure(font=self.text_font)
+            setattr(self, dict_buttons[i]["VAR"], b)
+            setattr(self, dict_buttons[i]["VAR"] + "tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
+
         self.rbvalue = tk.StringVar()
         self.dict_sort_method = {} # here we keep type(JPEG...) -> sort method(1...4)
         dict_rbtext = {"1": "sort name asc", "2": "sort name desc", "3": "sort mod. asc.", "4": "sort mod. desc"}
+        # start for sortbuttons is at 60% of the Frame, width of a button is (1-group)/4
+        group = .6
+        relw  = (1 - group) / 4
+        start = self.Frame_sortbuttons.winfo_x() + int(0.6 * self.Frame_sortbuttons.winfo_width())
         for i in dict_rbtext:
             rb = tk.Radiobutton(self.Frame_sortbuttons, text = dict_rbtext[i], value = i, variable = self.rbvalue, command = self.rb_sort, indicatoron = 0)
-            rb.place(relx = (int(i) - 1) / 4, rely=0.0, relheight=1.0, relwidth = 0.25)
+            rb.place(relx = group + (int(i) - 1) * relw, rely=0.0, relheight=1.0, relwidth = relw)
             rb.configure(font=self.text_font)
         self.rbvalue.set("1")
 
