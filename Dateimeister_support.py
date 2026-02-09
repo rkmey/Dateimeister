@@ -1516,6 +1516,38 @@ class Dateimeister_support:
         self.dict_file_image = {}
 
         # configure some controls
+        self.frame1 = tk.Frame(self.root)
+        self.frame1.place(relx=0.29, rely=0.25, relheight=0.42, relwidth=0.69)
+        self.frame1.configure(relief='flat')
+        self.frame1.configure(background="#d9d9d9") if not self.debug else True # uncomment for same colour as window (default) or depend on debug
+
+        self.l_label1 = tk.Label(self.frame1)
+        self.l_label1.place(relx=0.0, rely=0.0, relheight=0.05, relwidth=1)
+        self.l_label1.configure(activebackground="#f9f9f9")
+        self.l_label1.configure(activeforeground="black")
+        self.l_label1.configure(anchor='w')
+        self.l_label1.configure(background="#d9d9d9")
+        self.l_label1.configure(compound='left')
+        self.l_label1.configure(disabledforeground="#a3a3a3")
+        self.l_label1.configure(font="-family {Arial} -size 8")
+        self.l_label1.configure(foreground="black")
+        self.l_label1.configure(highlightbackground="#d9d9d9")
+        self.l_label1.configure(highlightcolor="black")
+        self.l_label1.configure(text='''Label''')
+
+        self.t_text1 = tk.Text(self.frame1)
+        self.t_text1.place(relx=0.0, rely=0.05, relheight=0.974, relwidth=0.989)
+        self.t_text1.configure(background="white")
+        self.t_text1.configure(exportselection="0")
+        self.t_text1.configure(font="-family {Lucida Console} -size 11")
+        self.t_text1.configure(foreground="black")
+        self.t_text1.configure(highlightbackground="#d9d9d9")
+        self.t_text1.configure(highlightcolor="black")
+        self.t_text1.configure(insertbackground="black")
+        self.t_text1.configure(selectbackground="#c4c4c4")
+        self.t_text1.configure(selectforeground="black")
+        self.t_text1.configure(wrap="word")
+
         self.o_camera  = self.w.Entry_camera
         self.lb_camera = self.w.Listbox_camera
         self.lb_camera.configure(exportselection=False)
@@ -1533,7 +1565,6 @@ class Dateimeister_support:
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
         #print("self.dict_process_image is: " + str(self.dict_process_image))
 
-        self.t_text1 = self.w.Text1
         # set font
         font_tuple = ("Lucida Console", 10, "normal")
         self.t_text1.config(font = font_tuple)
@@ -1542,7 +1573,6 @@ class Dateimeister_support:
         self.t_text1.tag_configure("normal_exclude", foreground="lightgrey", background = "darkgrey")
         self.t_text1.tag_configure("select_exclude", foreground="red", background = "darkgrey")
         
-        self.l_label1 = self.w.Label1
         self.label_num = self.w.Label_num
         self.lb_gen   = self.w.Listbox_gen
         Globals.button_duplicates = self.w.Button_duplicates
@@ -1559,11 +1589,11 @@ class Dateimeister_support:
         self.button_outdir_from_list = self.w.Button_outdir_from_list
         
         # Scrollbars
-        V = Scrollbar(self.w.Frame1)
+        V = Scrollbar(self.frame1)
         V.place(relx = 1, rely = 0, relheight = .976, relwidth = .01, anchor = tk.NE)
         V.config(command=self.t_text1.yview)
         self.t_text1.config(yscrollcommand=V.set)  
-        H = Scrollbar(self.w.Frame1, orient = HORIZONTAL)
+        H = Scrollbar(self.frame1, orient = HORIZONTAL)
         H.place(relx = 0, rely = 1, relheight = 0.024, relwidth = .99, anchor = tk.SW)
         H.config(command=self.t_text1.xview)
         self.t_text1.config(xscrollcommand=H.set)  
@@ -1644,13 +1674,13 @@ class Dateimeister_support:
         # same x1 as canvas, x2 is end of Frame1(text1), y1 is end of height is canvas.y1 - text.y2
         parent_height = self.root.winfo_height()
         parent_width  = self.root.winfo_width()
-        x2 = self.w.Frame1.winfo_x() + self.w.Frame1.winfo_width()
+        x2 = self.frame1.winfo_x() + self.frame1.winfo_width()
         y2 = self.frame_canvas.winfo_y()
         # Frame will be symmetrical, so start is width of root - end of Frame1(for text)
         x1 = parent_width - x2
         # to calc y1 we subtract the vertical endpoint of text1
         self.t_text1.update()
-        y1 = self.w.Frame1.winfo_y() + self.w.Frame1.winfo_height()
+        y1 = self.frame1.winfo_y() + self.frame1.winfo_height()
         print("x, y of upper left corner of frame above canvas is {:d}, {:d}, lower right corner is {:d}, {:d}".format(x1, y1, x2, y2)) if self.debug else True      
         # the frame
         relx1 = x1 / parent_width
