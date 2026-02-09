@@ -1519,7 +1519,7 @@ class Dateimeister_support:
         self.frame1 = tk.Frame(self.root)
         self.frame1.place(relx=0.29, rely=0.25, relheight=0.42, relwidth=0.69)
         self.frame1.configure(relief='flat')
-        self.frame1.configure(background="#d9d9d9") if not self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame1.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.l_label1 = tk.Label(self.frame1)
         self.l_label1.place(relx=0.0, rely=0.0, relheight=0.05, relwidth=1)
@@ -1659,7 +1659,7 @@ class Dateimeister_support:
         self.frame_canvas = tk.Frame(self.root)
         self.frame_canvas.place(relx = x1, rely = c_rely, relheight = 1 - c_rely, relwidth = 1.0)
         self.frame_canvas.configure(relief='flat')
-        self.frame_canvas.configure(background="#d9d9d9") if not self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_canvas.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_canvas.update()
 
         # we need a frame for sort method radio buttons. we want to place them above the right upper corner of the canvas
@@ -1691,7 +1691,7 @@ class Dateimeister_support:
         self.Frame_sortbuttons = tk.Frame(self.root)
         self.Frame_sortbuttons.place(relx = relx1, rely = rely1, relheight = relh, relwidth = relw)
         self.Frame_sortbuttons.configure(relief='flat')
-        self.Frame_sortbuttons.configure(background="#d9d9d9") if not self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_sortbuttons.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_sortbuttons.update()
         
         # we create undo/redo/include/exclude/exec buttons
