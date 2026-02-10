@@ -1538,36 +1538,21 @@ class Dateimeister_support:
         rel_width_sb_y = rel_width_sb_x * self.frame1.winfo_width() / self.frame1.winfo_height() # width relative to y 
         print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame1.winfo_width(), rel_width_sb_y, self.frame1.winfo_height())) if self.debug else True
 
+        self.text_font = Font(family="Helvetica", size=6)
+
         self.frame1_label_height = .05
         self.l_label1 = tk.Label(self.frame1)
         self.l_label1.place(relx=0.0, rely=0.0, relheight=self.frame1_label_height, relwidth=1)
-        self.l_label1.configure(activebackground="#f9f9f9")
-        self.l_label1.configure(activeforeground="black")
-        self.l_label1.configure(anchor='w')
-        self.l_label1.configure(background="#d9d9d9")
-        self.l_label1.configure(compound='left')
-        self.l_label1.configure(disabledforeground="#a3a3a3")
-        self.l_label1.configure(font="-family {Arial} -size 8")
-        self.l_label1.configure(foreground="black")
-        self.l_label1.configure(highlightbackground="#d9d9d9")
-        self.l_label1.configure(highlightcolor="black")
-        self.l_label1.configure(text='''Label''')
+        self.l_label1.configure(font=self.text_font)
 
         self.t_text1 = tk.Text(self.frame1)
         self.t_text1.place(relx=0.0, rely=self.frame1_label_height, relheight=1-self.frame1_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
         self.t_text1.configure(background="white")
         self.t_text1.configure(exportselection="0")
-        self.t_text1.configure(font="-family {Lucida Console} -size 11")
-        self.t_text1.configure(foreground="black")
-        self.t_text1.configure(highlightbackground="#d9d9d9")
-        self.t_text1.configure(highlightcolor="black")
-        self.t_text1.configure(insertbackground="black")
-        self.t_text1.configure(selectbackground="#c4c4c4")
-        self.t_text1.configure(selectforeground="black")
+        self.t_text1.configure(font = self.text_font)
         self.t_text1.configure(wrap="none")
         # set font
         #font_tuple = ("Lucida Console", 10, "normal")
-        self.text_font = Font(family="Helvetica", size=6)
         self.t_text1.config(font = self.text_font)
         self.t_text1.tag_configure("normal_include", foreground="black", background = "white")
         self.t_text1.tag_configure("select_include", foreground="red", background = "white")
