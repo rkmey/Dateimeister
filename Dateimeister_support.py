@@ -1515,14 +1515,32 @@ class Dateimeister_support:
         self.dict_templates = {}
         self.dict_file_image = {}
 
-        # configure some controls
+        # Frame 1 with elements (text1, ...)
+        # Fenstergröße
+        Globals.screen_width  = int(self.root.winfo_screenwidth() * 0.9)
+        Globals.screen_height = int(self.root.winfo_screenheight() * 0.8)
+        print("Bildschirm ist " + str(Globals.screen_width) + " x " + str(Globals.screen_height))
+        width,height=Globals.screen_width,Globals.screen_height
+        v_dim=str(width)+'x'+str(height)
+        self.root.geometry(v_dim)
+        #my_w.maxsize(300,220)  # (maximum ) width , ( maximum) height
+        self.root.minsize(int(width / 2), int(height / 2))  # (minimum ) width , ( minimum) height
+        self.root.resizable(True, True)
+        self.root.update()
+        
         self.frame1 = tk.Frame(self.root)
         self.frame1.place(relx=0.29, rely=0.25, relheight=0.42, relwidth=0.69)
         self.frame1.configure(relief='flat')
         self.frame1.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame1.update()
+        # scrollbar width as fraction of frame-width
+        rel_width_sb_x = self.frame1.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
+        rel_width_sb_y = rel_width_sb_x * self.frame1.winfo_width() / self.frame1.winfo_height() # width relative to y 
+        print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame1.winfo_width(), rel_width_sb_y, self.frame1.winfo_height())) if self.debug else True
 
+        self.frame1_label_height = .05
         self.l_label1 = tk.Label(self.frame1)
-        self.l_label1.place(relx=0.0, rely=0.0, relheight=0.05, relwidth=1)
+        self.l_label1.place(relx=0.0, rely=0.0, relheight=self.frame1_label_height, relwidth=1)
         self.l_label1.configure(activebackground="#f9f9f9")
         self.l_label1.configure(activeforeground="black")
         self.l_label1.configure(anchor='w')
@@ -1536,7 +1554,7 @@ class Dateimeister_support:
         self.l_label1.configure(text='''Label''')
 
         self.t_text1 = tk.Text(self.frame1)
-        self.t_text1.place(relx=0.0, rely=0.05, relheight=0.974, relwidth=0.989)
+        self.t_text1.place(relx=0.0, rely=self.frame1_label_height, relheight=1-self.frame1_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
         self.t_text1.configure(background="white")
         self.t_text1.configure(exportselection="0")
         self.t_text1.configure(font="-family {Lucida Console} -size 11")
@@ -1546,8 +1564,29 @@ class Dateimeister_support:
         self.t_text1.configure(insertbackground="black")
         self.t_text1.configure(selectbackground="#c4c4c4")
         self.t_text1.configure(selectforeground="black")
-        self.t_text1.configure(wrap="word")
+        self.t_text1.configure(wrap="none")
+        # set font
+        #font_tuple = ("Lucida Console", 10, "normal")
+        self.text_font = Font(family="Helvetica", size=6)
+        self.t_text1.config(font = self.text_font)
+        self.t_text1.tag_configure("normal_include", foreground="black", background = "white")
+        self.t_text1.tag_configure("select_include", foreground="red", background = "white")
+        self.t_text1.tag_configure("normal_exclude", foreground="lightgrey", background = "darkgrey")
+        self.t_text1.tag_configure("select_exclude", foreground="red", background = "darkgrey")
 
+        # Scrollbars for text1
+        self.V = Scrollbar(self.frame1)
+        self.V.place(relx = 1, rely = self.frame1_label_height, relheight = 1-self.frame1_label_height-rel_width_sb_y, relwidth = rel_width_sb_x, anchor = tk.NE)
+        self.V.config(command=self.t_text1.yview)
+        self.t_text1.config(yscrollcommand=self.V.set)
+        self.V.update()
+               
+        self.H = Scrollbar(self.frame1, orient = HORIZONTAL)
+        self.H.place(relx = 0, rely = 1, relheight = rel_width_sb_y, relwidth = 1-rel_width_sb_x, anchor = tk.SW)
+        self.H.config(command=self.t_text1.xview)
+        self.t_text1.config(xscrollcommand=self.H.set)  
+        self.H.update()
+        
         self.o_camera  = self.w.Entry_camera
         self.lb_camera = self.w.Listbox_camera
         self.lb_camera.configure(exportselection=False)
@@ -1565,13 +1604,6 @@ class Dateimeister_support:
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
         #print("self.dict_process_image is: " + str(self.dict_process_image))
 
-        # set font
-        font_tuple = ("Lucida Console", 10, "normal")
-        self.t_text1.config(font = font_tuple)
-        self.t_text1.tag_configure("normal_include", foreground="black", background = "white")
-        self.t_text1.tag_configure("select_include", foreground="red", background = "white")
-        self.t_text1.tag_configure("normal_exclude", foreground="lightgrey", background = "darkgrey")
-        self.t_text1.tag_configure("select_exclude", foreground="red", background = "darkgrey")
         
         self.label_num = self.w.Label_num
         self.lb_gen   = self.w.Listbox_gen
@@ -1587,17 +1619,6 @@ class Dateimeister_support:
         self.label_outdir = self.w.Label_outdir
         self.button_indir_from_list = self.w.Button_indir_from_list
         self.button_outdir_from_list = self.w.Button_outdir_from_list
-        
-        # Scrollbars
-        V = Scrollbar(self.frame1)
-        V.place(relx = 1, rely = 0, relheight = .976, relwidth = .01, anchor = tk.NE)
-        V.config(command=self.t_text1.yview)
-        self.t_text1.config(yscrollcommand=V.set)  
-        H = Scrollbar(self.frame1, orient = HORIZONTAL)
-        H.place(relx = 0, rely = 1, relheight = 0.024, relwidth = .99, anchor = tk.SW)
-        H.config(command=self.t_text1.xview)
-        self.t_text1.config(xscrollcommand=H.set)  
-        self.t_text1.configure(wrap="none")
         
         self.cb_recursive = self.w.Checkbutton1
         self.cb_recursive.config(command = self.state_gen_required)
@@ -1646,7 +1667,6 @@ class Dateimeister_support:
         self.lb_camera.config(yscrollcommand = VC.set)
         
         # Frame for the canvas and the horizontal scrollbar
-        self.root.update()
         # y starts with this value
         c_rely = 0.71
         #c_rely = (self.button_exec.winfo_y() + self.button_exec.winfo_height()) / self.root.winfo_height() + 0.01
@@ -1667,7 +1687,6 @@ class Dateimeister_support:
 
         self.width  = 0
         self.height = 0
-        self.text_font = Font(family="Helvetica", size=6)
 
         self.frame_canvas.update()
         # now we create a frame above the canvas which we will use for the undo/redo/include/exclude/exec and sort buttons
@@ -1689,7 +1708,7 @@ class Dateimeister_support:
         relw  = (x2 - x1) / parent_width
         print("Frame relx, rely, relw, relh is {:f}, {:f} {:f}, {:f}".format(relx1, rely1, relw, relh)) if self.debug else True      
         self.Frame_sortbuttons = tk.Frame(self.root)
-        self.Frame_sortbuttons.place(relx = relx1, rely = rely1, relheight = relh, relwidth = relw)
+        self.Frame_sortbuttons.place(relx = relx1, rely = rely1 + .005, relheight = relh, relwidth = relw)
         self.Frame_sortbuttons.configure(relief='flat')
         self.Frame_sortbuttons.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_sortbuttons.update()
@@ -1759,7 +1778,10 @@ class Dateimeister_support:
         self.t_text1.bind('<Button-1>', self.text1_single)  # synchronize zext / gallery
         self.t_text1.bind('<Key>', self.text1_key)
         # handler for arrow up / down must be called AFTER the Text-class handler or the bind-handler is 1 step ahead
-        self.t_text1.bindtags(('Text', '.!frame.!text', '.', 'all'))
+        tags = list(self.t_text1.bindtags()) # Standard: [widget, 'Text', '.', 'all'] # Text-Klasse soll zuerst: 
+        tags.remove('Text') 
+        tags.insert(0, 'Text') 
+        self.t_text1.bindtags(tuple(tags))        
         print("Bindtags: %s " % str(self.t_text1.bindtags())) if self.debug else True
 
         self.cb_num.config(command = self.on_cb_num_toggle)
@@ -1782,16 +1804,6 @@ class Dateimeister_support:
         self.oldcamera = ""
         self.dict_source_target_jpeg = {}
         
-        # Fenstergröße
-        Globals.screen_width  = int(self.root.winfo_screenwidth() * 0.9)
-        Globals.screen_height = int(self.root.winfo_screenheight() * 0.8)
-        print("Bildschirm ist " + str(Globals.screen_width) + " x " + str(Globals.screen_height))
-        width,height=Globals.screen_width,Globals.screen_height
-        v_dim=str(width)+'x'+str(height)
-        self.root.geometry(v_dim)
-        #my_w.maxsize(300,220)  # (maximum ) width , ( maximum) height
-        self.root.minsize(int(width / 2), int(height / 2))  # (minimum ) width , ( minimum) height
-        self.root.resizable(True, True)
         self.tt = TT.ToolTip(self.canvas_gallery, "no images available", delay=0, follow = True)
 
         # Menubar
@@ -2018,6 +2030,16 @@ class Dateimeister_support:
                 fontsize_use = min(fontsize_width, fontsize_height)
                 print(f"Frame sortbuttons: new width {l_width} new height {l_height}set fontsize to {fontsize_use}") if self.debug else True
                 self.text_font.configure(size=fontsize_use) 
+                # scrollbar width as fraction of frame-width
+                rel_width_sb_x = self.frame1.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
+                rel_width_sb_y = rel_width_sb_x * self.frame1.winfo_width() / self.frame1.winfo_height() # width relative to y 
+                print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame1.winfo_width(), rel_width_sb_y, self.frame1.winfo_height())) if self.debug else True
+                self.V.place(relx = 1, rely = self.frame1_label_height, relheight = 1-self.frame1_label_height-rel_width_sb_y, relwidth = rel_width_sb_x, anchor = tk.NE)
+                self.H.place(relx = 0, rely = 1, relheight = rel_width_sb_y, relwidth = 1-rel_width_sb_x, anchor = tk.SW)
+                self.V.update()
+                self.H.update()
+                self.t_text1.place(relx=0.0, rely=self.frame1_label_height, relheight=1-self.frame1_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
+                self.t_text1.update()
                 self.timer.start()
 
     def debug_info_resize(self, text):
