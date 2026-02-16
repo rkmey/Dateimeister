@@ -1515,7 +1515,6 @@ class Dateimeister_support:
         self.dict_templates = {}
         self.dict_file_image = {}
 
-        # Frame 1 with elements (text1, ...)
         # Fenstergröße
         Globals.screen_width  = int(self.root.winfo_screenwidth() * 0.9)
         Globals.screen_height = int(self.root.winfo_screenheight() * 0.8)
@@ -1528,25 +1527,47 @@ class Dateimeister_support:
         self.root.resizable(True, True)
         self.root.update()
         
-        self.frame1 = tk.Frame(self.root)
-        self.frame1.place(relx=0.29, rely=0.25, relheight=0.42, relwidth=0.69)
-        self.frame1.configure(relief='flat')
-        self.frame1.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
-        self.frame1.update()
+        # Frame_checkboxes
+        self.frame_checkboxes = tk.Frame(self.root)
+        self.frame_checkboxes.place(relx=0.005, rely=0.005, relheight=0.11, relwidth=0.28)
+        self.frame_checkboxes.configure(relief='flat')
+        self.frame_checkboxes.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_checkboxes.update()
+        
+        # Frame_camera with elements (listboxes, ...)
+        self.frame_camera = tk.Frame(self.root)
+        self.frame_camera.place(relx=0.005, rely=0.12, relheight=0.55, relwidth=0.28)
+        self.frame_camera.configure(relief='flat')
+        self.frame_camera.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_camera.update()
+
+        # Subframe Frame_camera_buttons
+        self.frame_camera_buttons = tk.Frame(self.frame_camera)
+        self.frame_camera_buttons.place(relx=0.75, rely=0.005, relheight=0.99, relwidth=0.245)
+        self.frame_camera_buttons.configure(relief='flat', highlightbackground="black", highlightthickness=1)
+        self.frame_camera_buttons.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_camera_buttons.update()
+
+        # Frame_text with elements (text1, ...)
+        self.frame_text = tk.Frame(self.root)
+        self.frame_text.place(relx=0.29, rely=0.25, relheight=0.42, relwidth=0.69)
+        self.frame_text.configure(relief='flat')
+        self.frame_text.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_text.update()
         # scrollbar width as fraction of frame-width
-        rel_width_sb_x = self.frame1.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
-        rel_width_sb_y = rel_width_sb_x * self.frame1.winfo_width() / self.frame1.winfo_height() # width relative to y 
-        print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame1.winfo_width(), rel_width_sb_y, self.frame1.winfo_height())) if self.debug else True
+        rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
+        rel_width_sb_y = rel_width_sb_x * self.frame_text.winfo_width() / self.frame_text.winfo_height() # width relative to y 
+        print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame_text.winfo_width(), rel_width_sb_y, self.frame_text.winfo_height())) if self.debug else True
 
         self.text_font = Font(family="Helvetica", size=6)
 
-        self.frame1_label_height = .05
-        self.l_label1 = tk.Label(self.frame1)
-        self.l_label1.place(relx=0.0, rely=0.0, relheight=self.frame1_label_height, relwidth=1)
+        self.frame_text_label_height = .05
+        self.l_label1 = tk.Label(self.frame_text)
+        self.l_label1.place(relx=0.0, rely=0.0, relheight=self.frame_text_label_height, relwidth=1)
         self.l_label1.configure(font=self.text_font)
 
-        self.t_text1 = tk.Text(self.frame1)
-        self.t_text1.place(relx=0.0, rely=self.frame1_label_height, relheight=1-self.frame1_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
+        self.t_text1 = tk.Text(self.frame_text)
+        self.t_text1.place(relx=0.0, rely=self.frame_text_label_height, relheight=1-self.frame_text_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
         self.t_text1.configure(background="white")
         self.t_text1.configure(exportselection="0")
         self.t_text1.configure(font = self.text_font)
@@ -1560,13 +1581,13 @@ class Dateimeister_support:
         self.t_text1.tag_configure("select_exclude", foreground="red", background = "darkgrey")
 
         # Scrollbars for text1
-        self.V = Scrollbar(self.frame1)
-        self.V.place(relx = 1, rely = self.frame1_label_height, relheight = 1-self.frame1_label_height-rel_width_sb_y, relwidth = rel_width_sb_x, anchor = tk.NE)
+        self.V = Scrollbar(self.frame_text)
+        self.V.place(relx = 1, rely = self.frame_text_label_height, relheight = 1-self.frame_text_label_height-rel_width_sb_y, relwidth = rel_width_sb_x, anchor = tk.NE)
         self.V.config(command=self.t_text1.yview)
         self.t_text1.config(yscrollcommand=self.V.set)
         self.V.update()
                
-        self.H = Scrollbar(self.frame1, orient = HORIZONTAL)
+        self.H = Scrollbar(self.frame_text, orient = HORIZONTAL)
         self.H.place(relx = 0, rely = 1, relheight = rel_width_sb_y, relwidth = 1-rel_width_sb_x, anchor = tk.SW)
         self.H.config(command=self.t_text1.xview)
         self.t_text1.config(xscrollcommand=self.H.set)  
@@ -1605,9 +1626,15 @@ class Dateimeister_support:
         self.button_indir_from_list = self.w.Button_indir_from_list
         self.button_outdir_from_list = self.w.Button_outdir_from_list
         
-        self.cb_recursive = self.w.Checkbutton1
+        thisrelheight = .1
+        self.cb_recursive = tk.Checkbutton(self.frame_checkboxes)
+#        self.cb_recursive.place(relx=0.005, rely=0.1, relheight=thisrelheight, relwidth=thisrelheight * self.frame_checkboxes.winfo_height() / self.frame_checkboxes.winfo_width())
+        self.cb_recursive.place(relx=0.005, rely=0.1, relheight=thisrelheight, relwidth=.2)
+        self.cb_recursive.configure(text="recursive")
+        self.cb_recursive_var = tk.IntVar()
+        self.cb_recursive.configure(variable=self.cb_recursive_var, justify='left', font = self.text_font)
+        self.cb_recursive_tooltip = TT.ToolTip(self.cb_recursive, "process  subdirectories")
         self.cb_recursive.config(command = self.state_gen_required)
-        self.cb_recursive_var = self.w.cb1_val
         self.cb_recursive_var.set(1)
         
         self.cb_prefix = self.w.Checkbutton_use_camera_name
@@ -1678,13 +1705,13 @@ class Dateimeister_support:
         # same x1 as canvas, x2 is end of Frame1(text1), y1 is end of height is canvas.y1 - text.y2
         parent_height = self.root.winfo_height()
         parent_width  = self.root.winfo_width()
-        x2 = self.frame1.winfo_x() + self.frame1.winfo_width()
+        x2 = self.frame_text.winfo_x() + self.frame_text.winfo_width()
         y2 = self.frame_canvas.winfo_y()
         # Frame will be symmetrical, so start is width of root - end of Frame1(for text)
         x1 = parent_width - x2
         # to calc y1 we subtract the vertical endpoint of text1
         self.t_text1.update()
-        y1 = self.frame1.winfo_y() + self.frame1.winfo_height()
+        y1 = self.frame_text.winfo_y() + self.frame_text.winfo_height()
         print("x, y of upper left corner of frame above canvas is {:d}, {:d}, lower right corner is {:d}, {:d}".format(x1, y1, x2, y2)) if self.debug else True      
         # the frame
         relx1 = x1 / parent_width
@@ -2016,14 +2043,14 @@ class Dateimeister_support:
                 print(f"Frame sortbuttons: new width {l_width} new height {l_height}set fontsize to {fontsize_use}") if self.debug else True
                 self.text_font.configure(size=fontsize_use) 
                 # scrollbar width as fraction of frame-width
-                rel_width_sb_x = self.frame1.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
-                rel_width_sb_y = rel_width_sb_x * self.frame1.winfo_width() / self.frame1.winfo_height() # width relative to y 
-                print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame1.winfo_width(), rel_width_sb_y, self.frame1.winfo_height())) if self.debug else True
-                self.V.place(relx = 1, rely = self.frame1_label_height, relheight = 1-self.frame1_label_height-rel_width_sb_y, relwidth = rel_width_sb_x, anchor = tk.NE)
+                rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
+                rel_width_sb_y = rel_width_sb_x * self.frame_text.winfo_width() / self.frame_text.winfo_height() # width relative to y 
+                print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame_text.winfo_width(), rel_width_sb_y, self.frame_text.winfo_height())) if self.debug else True
+                self.V.place(relx = 1, rely = self.frame_text_label_height, relheight = 1-self.frame_text_label_height-rel_width_sb_y, relwidth = rel_width_sb_x, anchor = tk.NE)
                 self.H.place(relx = 0, rely = 1, relheight = rel_width_sb_y, relwidth = 1-rel_width_sb_x, anchor = tk.SW)
                 self.V.update()
                 self.H.update()
-                self.t_text1.place(relx=0.0, rely=self.frame1_label_height, relheight=1-self.frame1_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
+                self.t_text1.place(relx=0.0, rely=self.frame_text_label_height, relheight=1-self.frame_text_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
                 self.t_text1.update()
                 self.timer.start()
 

@@ -158,26 +158,6 @@ class Toplevel1:
         self.Listbox_gen_tooltip = \
         TT.ToolTip(self.Listbox_gen, '''generated files''')
 
-        self.Checkbutton1 = tk.Checkbutton(self.top)
-        self.Checkbutton1.place(relx=0.041, rely=0.043, relheight=0.027
-                , relwidth=0.076)
-        self.Checkbutton1.configure(activebackground="beige")
-        self.Checkbutton1.configure(activeforeground="black")
-        self.Checkbutton1.configure(anchor='w')
-        self.Checkbutton1.configure(background="#d9d9d9")
-        self.Checkbutton1.configure(compound='left')
-        self.Checkbutton1.configure(disabledforeground="#a3a3a3")
-        self.Checkbutton1.configure(font="-family {Segoe UI} -size 9")
-        self.Checkbutton1.configure(foreground="black")
-        self.Checkbutton1.configure(highlightbackground="#d9d9d9")
-        self.Checkbutton1.configure(highlightcolor="black")
-        self.Checkbutton1.configure(justify='left')
-        self.Checkbutton1.configure(selectcolor="#d9d9d9")
-        self.Checkbutton1.configure(text='''recursive''')
-        self.Checkbutton1.configure(variable=self.cb1_val)
-        self.Checkbutton1_tooltip = \
-        TT.ToolTip(self.Checkbutton1, '''process  subdirectories''')
-
         self.Button_be = tk.Button(self.top)
         self.Button_be.place(relx=0.152, rely=0.467, height=34, width=137)
         self.Button_be.configure(activebackground="beige")
