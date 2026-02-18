@@ -51,11 +51,6 @@ class Toplevel1:
         top.configure(highlightcolor="black")
 
         self.top = top
-        self.cb1_val = tk.IntVar()
-        self.cb_prefix_var = tk.IntVar()
-        self.cb_addrelpath_var = tk.IntVar()
-        self.cb_newer_var = tk.IntVar()
-        self.cbnum_var = tk.IntVar()
         self.combobox_indir = tk.StringVar()
         self.combobox_outdir = tk.StringVar()
 
@@ -172,46 +167,6 @@ class Toplevel1:
         self.Button_be.configure(pady="0")
         self.Button_be.configure(text='''Browse / edit output''')
 
-        self.Checkbutton_use_camera_name = tk.Checkbutton(self.top)
-        self.Checkbutton_use_camera_name.place(relx=0.104, rely=0.043
-                , relheight=0.026, relwidth=0.091)
-        self.Checkbutton_use_camera_name.configure(activebackground="beige")
-        self.Checkbutton_use_camera_name.configure(activeforeground="black")
-        self.Checkbutton_use_camera_name.configure(anchor='w')
-        self.Checkbutton_use_camera_name.configure(background="#d9d9d9")
-        self.Checkbutton_use_camera_name.configure(compound='left')
-        self.Checkbutton_use_camera_name.configure(disabledforeground="#a3a3a3")
-        self.Checkbutton_use_camera_name.configure(font="-family {Segoe UI} -size 9")
-        self.Checkbutton_use_camera_name.configure(foreground="black")
-        self.Checkbutton_use_camera_name.configure(highlightbackground="#d9d9d9")
-        self.Checkbutton_use_camera_name.configure(highlightcolor="black")
-        self.Checkbutton_use_camera_name.configure(justify='left')
-        self.Checkbutton_use_camera_name.configure(selectcolor="#d9d9d9")
-        self.Checkbutton_use_camera_name.configure(text='''use camera prefix''')
-        self.Checkbutton_use_camera_name.configure(variable=self.cb_prefix_var)
-        self.Checkbutton_use_camera_name_tooltip = \
-        TT.ToolTip(self.Checkbutton_use_camera_name, '''use camera as prefix''')
-
-        self.Checkbutton_addrelpath = tk.Checkbutton(self.top)
-        self.Checkbutton_addrelpath.place(relx=0.041, rely=0.098, relheight=0.027
-                , relwidth=0.084)
-        self.Checkbutton_addrelpath.configure(activebackground="beige")
-        self.Checkbutton_addrelpath.configure(activeforeground="black")
-        self.Checkbutton_addrelpath.configure(anchor='w')
-        self.Checkbutton_addrelpath.configure(background="#d9d9d9")
-        self.Checkbutton_addrelpath.configure(compound='left')
-        self.Checkbutton_addrelpath.configure(disabledforeground="#a3a3a3")
-        self.Checkbutton_addrelpath.configure(font="-family {Segoe UI} -size 9")
-        self.Checkbutton_addrelpath.configure(foreground="black")
-        self.Checkbutton_addrelpath.configure(highlightbackground="#d9d9d9")
-        self.Checkbutton_addrelpath.configure(highlightcolor="black")
-        self.Checkbutton_addrelpath.configure(justify='left')
-        self.Checkbutton_addrelpath.configure(selectcolor="#d9d9d9")
-        self.Checkbutton_addrelpath.configure(text='''Addrelpath''')
-        self.Checkbutton_addrelpath.configure(variable=self.cb_addrelpath_var)
-        self.Checkbutton_addrelpath_tooltip = \
-        TT.ToolTip(self.Checkbutton_addrelpath, '''add relative path to target''')
-
         self.Button_duplicates = tk.Button(self.top)
         self.Button_duplicates.place(relx=0.152, rely=0.532, height=34
                 , width=137)
@@ -228,26 +183,6 @@ class Toplevel1:
         self.Button_duplicates.configure(pady="0")
         self.Button_duplicates.configure(text='''Show duplicates''')
 
-        self.Checkbutton_newer = tk.Checkbutton(self.top)
-        self.Checkbutton_newer.place(relx=0.104, rely=0.098, relheight=0.027
-                , relwidth=0.175)
-        self.Checkbutton_newer.configure(activebackground="beige")
-        self.Checkbutton_newer.configure(activeforeground="black")
-        self.Checkbutton_newer.configure(anchor='w')
-        self.Checkbutton_newer.configure(background="#d9d9d9")
-        self.Checkbutton_newer.configure(compound='left')
-        self.Checkbutton_newer.configure(disabledforeground="#a3a3a3")
-        self.Checkbutton_newer.configure(font="-family {Segoe UI} -size 9")
-        self.Checkbutton_newer.configure(foreground="black")
-        self.Checkbutton_newer.configure(highlightbackground="#d9d9d9")
-        self.Checkbutton_newer.configure(highlightcolor="black")
-        self.Checkbutton_newer.configure(justify='left')
-        self.Checkbutton_newer.configure(selectcolor="#d9d9d9")
-        self.Checkbutton_newer.configure(text='''copy file only when newer or not existent''')
-        self.Checkbutton_newer.configure(variable=self.cb_newer_var)
-        self.Checkbutton_newer_tooltip = \
-        TT.ToolTip(self.Checkbutton_newer, '''if checked existing files will ohnly be overridden when they are older than the source file''')
-
         self.Label_num = tk.Label(self.top)
         self.Label_num.place(relx=0.097, rely=0.684, height=21, width=75)
         self.Label_num.configure(activebackground="#f9f9f9")
@@ -263,26 +198,6 @@ class Toplevel1:
         self.Label_num.configure(text='''Label''')
         self.Label_num_tooltip = \
         TT.ToolTip(self.Label_num, '''Number of images ''')
-
-        self.Checkbutton_num = tk.Checkbutton(self.top)
-        self.Checkbutton_num.place(relx=0.159, rely=0.651, relheight=0.026
-                , relwidth=0.105)
-        self.Checkbutton_num.configure(activebackground="beige")
-        self.Checkbutton_num.configure(activeforeground="black")
-        self.Checkbutton_num.configure(anchor='w')
-        self.Checkbutton_num.configure(background="#d9d9d9")
-        self.Checkbutton_num.configure(compound='left')
-        self.Checkbutton_num.configure(disabledforeground="#a3a3a3")
-        self.Checkbutton_num.configure(font="-family {Segoe UI} -size 9")
-        self.Checkbutton_num.configure(foreground="black")
-        self.Checkbutton_num.configure(highlightbackground="#d9d9d9")
-        self.Checkbutton_num.configure(highlightcolor="black")
-        self.Checkbutton_num.configure(justify='left')
-        self.Checkbutton_num.configure(selectcolor="#d9d9d9")
-        self.Checkbutton_num.configure(text='''show image numbers''')
-        self.Checkbutton_num.configure(variable=self.cbnum_var)
-        self.Checkbutton_num_tooltip = \
-        TT.ToolTip(self.Checkbutton_num, '''image numbers in canvas''')
 
         self.TCombobox_indir = tk.Listbox(self.top)
         self.TCombobox_indir.place(relx=0.29, rely=0.065, relheight=0.131

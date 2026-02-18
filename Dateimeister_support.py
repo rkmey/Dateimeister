@@ -1626,35 +1626,14 @@ class Dateimeister_support:
         self.button_indir_from_list = self.w.Button_indir_from_list
         self.button_outdir_from_list = self.w.Button_outdir_from_list
         
-        thisrelheight = .1
-        self.cb_recursive = tk.Checkbutton(self.frame_checkboxes)
-#        self.cb_recursive.place(relx=0.005, rely=0.1, relheight=thisrelheight, relwidth=thisrelheight * self.frame_checkboxes.winfo_height() / self.frame_checkboxes.winfo_width())
-        self.cb_recursive.place(relx=0.005, rely=0.1, relheight=thisrelheight, relwidth=.2)
-        self.cb_recursive.configure(text="recursive")
-        self.cb_recursive_var = tk.IntVar()
-        self.cb_recursive.configure(variable=self.cb_recursive_var, justify='left', font = self.text_font)
-        self.cb_recursive_tooltip = TT.ToolTip(self.cb_recursive, "process  subdirectories")
-        self.cb_recursive.config(command = self.state_gen_required)
-        self.cb_recursive_var.set(1)
-        
-        self.cb_prefix = self.w.Checkbutton_use_camera_name
-        self.cb_prefix.config(command = self.state_gen_required)
-        self.cb_prefix_var = self.w.cb_prefix_var
-        self.cb_prefix_var.set(1)
-
-        self.cb_addrelpath = self.w.Checkbutton_addrelpath
-        self.cb_addrelpath.config(command = self.state_gen_required)
-        self.cb_addrelpath_var = self.w.cb_addrelpath_var
-        self.cb_addrelpath_var.set(0)
-
-        self.cb_newer = self.w.Checkbutton_newer
-        self.cb_newer.config(command = self.state_gen_required)
-        self.cb_newer_var = self.w.cb_newer_var
-        self.cb_newer_var.set(0)
-
-        self.cb_num = self.w.Checkbutton_num
-        self.cb_num_var = self.w.cbnum_var
-        self.cb_num_var.set(1)
+        # we create all checkboxes
+        dict_controls = {}
+        dict_controls["1"] = {"OFFSET":0.00,"VAR":"cb_recursive","TEXT":"recursive","CALLBACK":self.state_gen_required,"STATE":1,"TT":"include subdirs"}
+        dict_controls["2"] = {"OFFSET":0.00,"VAR":"cb_prefix","TEXT":"use cameraname as prefix","CALLBACK":self.state_gen_required,"STATE":1,"TT":"use cameraname as prefix"}
+        dict_controls["3"] = {"OFFSET":0.00,"VAR":"cb_newer","TEXT":"copy file only when newer or not existent","CALLBACK":self.state_gen_required,"STATE":0,"TT":"if checked existing files will ohnly be overridden when they are older than the source file"}
+        dict_controls["4"] = {"OFFSET":0.00,"VAR":"cb_addrelpath","TEXT":"add relative path","CALLBACK":self.state_gen_required,"STATE":0,"TT":"add relative path to filename to avoid duplicates"}
+        dict_controls["5"] = {"OFFSET":0.00,"VAR":"cb_num","TEXT":"numerate images in canvas","CALLBACK":self.state_gen_required,"STATE":0,"TT":"numerate images in canvas"}
+        self.create_checkboxes_from_dict(dict_controls, self.frame_checkboxes, 0.0, .95, .8, self.text_font, "VERTICAL")
 
         self.combobox_indir = self.w.TCombobox_indir
         self.combobox_indir_var = self.w.combobox_indir
@@ -1954,7 +1933,7 @@ class Dateimeister_support:
                 raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
             b.configure(font=fon)
             setattr(self, dict_buttons[i]["VAR"], b)
-            setattr(self, dict_buttons[i]["VAR"] + "tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
+            setattr(self, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
             nextpos += relw + offset
 
     def create_radiobuttons_from_dict(self, dict_buttons, frame, startpos, rgwidth, relsize, var, cmd, fon, orientation): # create Radiobuttons in horizontal Frame
@@ -1980,7 +1959,37 @@ class Dateimeister_support:
                 raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
             b.configure(font=fon)
             setattr(self, dict_buttons[i]["VAR"], b)
-            setattr(self, dict_buttons[i]["VAR"] + "tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
+            setattr(self, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
+            nextpos += relw + offset
+
+    def create_checkboxes_from_dict(self, dict_controls, frame, startpos, rgwidth, relsize, fon, orientation): # create Buttons in horizontal Frame
+        # calculate rel width considering the offsets
+        num_controls = 0
+        relw = 0.0
+        sum_offsets = 0
+        # part of frame to use for group of buttons
+        rel_group_width = rgwidth
+        for i in dict_controls:
+            sum_offsets = sum_offsets + dict_controls[i]["OFFSET"] 
+            num_controls += 1
+        relw  = (rel_group_width - sum_offsets) / num_controls
+        nextpos = startpos #<== set rel. start position
+        for i in dict_controls:
+            offset = dict_controls[i]["OFFSET"]
+            b = tk.Checkbutton(frame, text=dict_controls[i]["TEXT"], command=dict_controls[i]["CALLBACK"], anchor='w')
+            if orientation.upper() == "HORIZONTAL":
+                b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
+            elif orientation.upper() == "VERTICAL":
+                b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
+            else:
+                raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
+            b.configure(font=fon)
+            v = tk.IntVar()
+            v.set(dict_controls[i]["STATE"])
+            setattr(self, dict_controls[i]["VAR"], b) # the variable for the control
+            setattr(self, dict_controls[i]["VAR"] + "_var", v) # the variable
+            setattr(self, dict_controls[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_controls[i]["TT"])) # the tooltip
+            b.configure(variable=v)
             nextpos += relw + offset
 
     def rb_sort(self, event = None):
