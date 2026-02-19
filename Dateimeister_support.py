@@ -1594,8 +1594,6 @@ class Dateimeister_support:
         self.H.update()
         
         self.o_camera  = self.w.Entry_camera
-        self.lb_camera = self.w.Listbox_camera
-        self.lb_camera.configure(exportselection=False)
         self.b_button1 = self.w.Button1
         self.b_button2 = self.w.Button2
         self.b_button2.config(command=self.B_camera_press)
@@ -1606,11 +1604,6 @@ class Dateimeister_support:
         self.button_call = self.w.Button_call
         self.button_call.config(command = self.Button_generate_pressed)
 
-        # get all camera information and fill camera-listbox
-        self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
-        #print("self.dict_process_image is: " + str(self.dict_process_image))
-
-        
         self.label_num = self.w.Label_num
         self.lb_gen   = self.w.Listbox_gen
         Globals.button_duplicates = self.w.Button_duplicates
@@ -1632,8 +1625,27 @@ class Dateimeister_support:
         dict_controls["2"] = {"OFFSET":0.00,"VAR":"cb_prefix","TEXT":"use cameraname as prefix","CALLBACK":self.state_gen_required,"STATE":1,"TT":"use cameraname as prefix"}
         dict_controls["3"] = {"OFFSET":0.00,"VAR":"cb_newer","TEXT":"copy file only when newer or not existent","CALLBACK":self.state_gen_required,"STATE":0,"TT":"if checked existing files will ohnly be overridden when they are older than the source file"}
         dict_controls["4"] = {"OFFSET":0.00,"VAR":"cb_addrelpath","TEXT":"add relative path","CALLBACK":self.state_gen_required,"STATE":0,"TT":"add relative path to filename to avoid duplicates"}
-        dict_controls["5"] = {"OFFSET":0.00,"VAR":"cb_num","TEXT":"numerate images in canvas","CALLBACK":self.state_gen_required,"STATE":0,"TT":"numerate images in canvas"}
+        dict_controls["5"] = {"OFFSET":0.00,"VAR":"cb_num","TEXT":"numerate images in canvas","CALLBACK":self.on_cb_num_toggle,"STATE":0,"TT":"numerate images in canvas"}
         self.create_checkboxes_from_dict(dict_controls, self.frame_checkboxes, 0.0, .95, .8, self.text_font, "VERTICAL")
+
+        self.lb_camera = tk.Listbox(self.frame_camera)
+        self.lb_camera.place(relx=0.005, rely=0.005, relheight=0.5, relwidth=0.5)
+        self.lb_camera.configure(background="white")
+        self.lb_camera.configure(disabledforeground="#a3a3a3")
+        self.lb_camera.configure(exportselection="0")
+        self.lb_camera.configure(font="TkFixedFont")
+        self.lb_camera.configure(foreground="black")
+        self.lb_camera.configure(highlightbackground="#d9d9d9")
+        self.lb_camera.configure(highlightcolor="black")
+        self.lb_camera.configure(selectbackground="#d9d9d9")
+        self.lb_camera.configure(selectforeground="black")
+        self.lb_camera.configure(selectmode='single')
+        self.lb_camera.configure(exportselection=False)
+        self.lb_camera_tooltip = TT.ToolTip(self.lb_camera, 'choose camera')
+
+        # get all camera information and fill camera-listbox
+        self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
+        #print("self.dict_process_image is: " + str(self.dict_process_image))
 
         self.combobox_indir = self.w.TCombobox_indir
         self.combobox_indir_var = self.w.combobox_indir
@@ -1652,8 +1664,11 @@ class Dateimeister_support:
         VO.config(command = self.combobox_outdir.yview)
         self.combobox_outdir.config(yscrollcommand = VO.set)
         #listbox camera
-        VC = Scrollbar(self.w.Frame_camera, orient= VERTICAL)
-        VC.place(relx = 1, rely = 0.01, relheight = .96, relwidth = .03, anchor = tk.NE)
+        self.frame_camera.update()
+        self.lb_camera.update()
+        VC = Scrollbar(self.frame_camera, orient= VERTICAL)
+        VC.place(relx = (self.lb_camera.winfo_x() + self.lb_camera.winfo_width()) / self.frame_camera.winfo_width(), \
+          rely = self.lb_camera.winfo_y() / self.frame_camera.winfo_height(), relheight = self.lb_camera.winfo_height() / self.frame_camera.winfo_height(), relwidth = .03, anchor = tk.NW)
         VC.config(command = self.lb_camera.yview)
         self.lb_camera.config(yscrollcommand = VC.set)
         

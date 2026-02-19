@@ -331,21 +331,6 @@ class Toplevel1:
         self.Frame_camera.configure(highlightbackground="#d9d9d9")
         self.Frame_camera.configure(highlightcolor="black")
 
-        self.Listbox_camera = tk.Listbox(self.Frame_camera)
-        self.Listbox_camera.place(relx=0.0, rely=0.0, relheight=0.973
-                , relwidth=0.97)
-        self.Listbox_camera.configure(background="white")
-        self.Listbox_camera.configure(disabledforeground="#a3a3a3")
-        self.Listbox_camera.configure(exportselection="0")
-        self.Listbox_camera.configure(font="TkFixedFont")
-        self.Listbox_camera.configure(foreground="black")
-        self.Listbox_camera.configure(highlightbackground="#d9d9d9")
-        self.Listbox_camera.configure(highlightcolor="black")
-        self.Listbox_camera.configure(selectbackground="#d9d9d9")
-        self.Listbox_camera.configure(selectforeground="black")
-        self.Listbox_camera.configure(selectmode='single')
-        self.Listbox_camera_tooltip = \
-        TT.ToolTip(self.Listbox_camera, '''choose camera''')
 
 class Toplevel2:
     def __init__(self, top=None):
