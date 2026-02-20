@@ -72,7 +72,6 @@ class Globals:
     screen_height = 0
     uncomment = ""
     gap = 10
-    button_duplicates   = None
     config_files_xml    = None
     config_files_subdir = None
     cmd_files_subdir    = None
@@ -361,7 +360,7 @@ class MyDuplicates:
         self.tt = TT.ToolTip(self.f, "no images available", delay=0, follow = True)
         
         self.dict_file_image = {}
-        Globals.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
+        self.main.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
 
     def exclude_call(self, parent, state): # react to request from outside, outside is root - thumbnail
         print("MyDuplicate.Exclude called, State = " + str(state))
@@ -555,12 +554,12 @@ class MyDuplicates:
         for t in self.dict_file_image: # destroy all FSImages
             u = self.dict_file_image[t]
             u.close_handler_external()
-        Globals.button_duplicates.config(state = NORMAL)
+        self.main.button_duplicates.config(state = NORMAL)
         self.main.win_duplicates = None
         
     def stop_all_players(self):
         # stop all video players
-        Globals.button_duplicates.config(state = DISABLED)
+        self.main.button_duplicates.config(state = DISABLED)
         if Globals.imagetype in self.thumbnails_duplicates:
             for t in self.thumbnails_duplicates[Globals.imagetype]: # stop all running players
                 thisplayer = t.getPlayer()
@@ -784,7 +783,6 @@ class MyCameraTreeview:
         self.tv.tag_bind("suffix", "<<TreeviewSelect>>", self.item_selected_suffix)
         
         self.entry_camera = self.w.Entry_camera
-        self.label_camera = self.w.Label_camera
         self.entry_type = self.w.Entry_type
         self.label_type = self.w.Label_type
         self.entry_suffix = self.w.Entry_suffix
@@ -798,8 +796,6 @@ class MyCameraTreeview:
         self.button_camera_new = self.w.Button_camera_new
         self.button_camera_new.config(command = self.camera_new)
         self.root.bind('<Return>', self.apply_new)
-
-        self.label_camera.config(text = "new item")
 
         # Undo /Redo Funktionen
         self.button_undo = self.w.Button_undo
@@ -1593,26 +1589,55 @@ class Dateimeister_support:
         self.t_text1.config(xscrollcommand=self.H.set)  
         self.H.update()
         
-        self.o_camera  = self.w.Entry_camera
-        self.b_button1 = self.w.Button1
-        self.b_button2 = self.w.Button2
-        self.b_button2.config(command=self.B_camera_press)
+        self.lb_camera = tk.Listbox(self.frame_camera)
+        self.lb_camera.place(relx=0.005, rely=0.005, relheight=0.5, relwidth=0.5)
+        self.lb_camera.configure(background="white")
+        self.lb_camera.configure(disabledforeground="#a3a3a3")
+        self.lb_camera.configure(exportselection="0")
+        self.lb_camera.configure(font=self.text_font)
+        self.lb_camera.configure(foreground="black")
+        self.lb_camera.configure(highlightbackground="#d9d9d9")
+        self.lb_camera.configure(highlightcolor="black")
+        self.lb_camera.configure(selectbackground="#d9d9d9")
+        self.lb_camera.configure(selectforeground="black")
+        self.lb_camera.configure(selectmode='single')
+        self.lb_camera.configure(exportselection=False)
+        self.lb_camera_tooltip = TT.ToolTip(self.lb_camera, 'available cameras')
+
+        self.o_camera = tk.Entry(self.frame_camera)
+        self.o_camera.place(relx=0.005, rely=0.505, relheight=0.05, relwidth=0.745)
+        self.o_camera.configure(background="grey70")
+        self.o_camera.configure(disabledforeground="#a3a3a3")
+        self.o_camera.configure(font=self.text_font)
+        self.o_camera.configure(foreground="grey5")
+
+        self.lb_gen = tk.Listbox(self.frame_camera)
+        self.lb_gen.place(relx=0.005, rely=0.55, relheight=0.4, relwidth=0.5)
+        self.lb_gen.configure(background="white")
+        self.lb_gen.configure(disabledforeground="#a3a3a3")
+        self.lb_gen.configure(font=self.text_font)
+        self.lb_gen.configure(foreground="black")
+        self.lb_gen.configure(highlightbackground="#d9d9d9")
+        self.lb_gen.configure(highlightcolor="black")
+        self.lb_gen.configure(selectbackground="#c4c4c4")
+        self.lb_gen.configure(selectforeground="black")
+        self.lb_gen.configure(selectmode='single')
+        self.lb_gen_tooltip = TT.ToolTip(self.lb_gen, 'generated imagetypes')
+
+        # we create buttons for camera selection etc in a column (vertical)
+        dict_buttons = {}
+        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"button_select_camera","TEXT":"Select Camera","CALLBACK":self.B_camera_press,"STATE":tk.ACTIVE,"TT":"Select Camera from Listbox"}
+        dict_buttons["2"] = {"OFFSET":0.50,"VAR":"button_generate","TEXT":"Generate","CALLBACK":self.Button_generate_pressed,"STATE":tk.DISABLED,"TT":"Call Dateimeister for generating commands"}
+        dict_buttons["3"] = {"OFFSET":0.00,"VAR":"button_be","TEXT":"Browse / Edit Output","CALLBACK":self.Button_be_pressed,"STATE":tk.DISABLED,"TT":"Browse / Edit Output from Dateimeister"}
+        dict_buttons["4"] = {"OFFSET":0.00,"VAR":"button_duplicates","TEXT":"Show duplicates","CALLBACK":self.button_duplicates,"STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths"}
+        self.create_buttons_from_dict(dict_buttons, self.frame_camera_buttons, 0.005, 0.72, 0.99, self.text_font, "VERTICAL")
+
         self.b_button_indir = self.w.Button1
         self.b_button_indir.config(command=self.Press_indir)
         self.b_button_outdir = self.w.Button_outdir
         self.b_button_outdir.config(command=self.Press_outdir)
-        self.button_call = self.w.Button_call
-        self.button_call.config(command = self.Button_generate_pressed)
 
         self.label_num = self.w.Label_num
-        self.lb_gen   = self.w.Listbox_gen
-        Globals.button_duplicates = self.w.Button_duplicates
-        Globals.button_duplicates.config(state = DISABLED)
-        self.button_be = self.w.Button_be
-        self.button_be.config(state = DISABLED)
-        self.button_be.config(command = self.Button_be_pressed)
-        self.button_call.config(state = DISABLED) # generate-Button
-        Globals.button_duplicates.configure(command=self.button_duplicates)
         
         self.label_indir  = self.w.Label_indir
         self.label_outdir = self.w.Label_outdir
@@ -1627,21 +1652,6 @@ class Dateimeister_support:
         dict_controls["4"] = {"OFFSET":0.00,"VAR":"cb_addrelpath","TEXT":"add relative path","CALLBACK":self.state_gen_required,"STATE":0,"TT":"add relative path to filename to avoid duplicates"}
         dict_controls["5"] = {"OFFSET":0.00,"VAR":"cb_num","TEXT":"numerate images in canvas","CALLBACK":self.on_cb_num_toggle,"STATE":0,"TT":"numerate images in canvas"}
         self.create_checkboxes_from_dict(dict_controls, self.frame_checkboxes, 0.0, .95, .8, self.text_font, "VERTICAL")
-
-        self.lb_camera = tk.Listbox(self.frame_camera)
-        self.lb_camera.place(relx=0.005, rely=0.005, relheight=0.5, relwidth=0.5)
-        self.lb_camera.configure(background="white")
-        self.lb_camera.configure(disabledforeground="#a3a3a3")
-        self.lb_camera.configure(exportselection="0")
-        self.lb_camera.configure(font="TkFixedFont")
-        self.lb_camera.configure(foreground="black")
-        self.lb_camera.configure(highlightbackground="#d9d9d9")
-        self.lb_camera.configure(highlightcolor="black")
-        self.lb_camera.configure(selectbackground="#d9d9d9")
-        self.lb_camera.configure(selectforeground="black")
-        self.lb_camera.configure(selectmode='single')
-        self.lb_camera.configure(exportselection=False)
-        self.lb_camera_tooltip = TT.ToolTip(self.lb_camera, 'choose camera')
 
         # get all camera information and fill camera-listbox
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
@@ -1663,7 +1673,8 @@ class Dateimeister_support:
         VO.place(relx = 1, rely = 0, relheight = 1, relwidth = .015, anchor = tk.NE)
         VO.config(command = self.combobox_outdir.yview)
         self.combobox_outdir.config(yscrollcommand = VO.set)
-        #listbox camera
+
+        #for listbox camera
         self.frame_camera.update()
         self.lb_camera.update()
         VC = Scrollbar(self.frame_camera, orient= VERTICAL)
@@ -1672,6 +1683,14 @@ class Dateimeister_support:
         VC.config(command = self.lb_camera.yview)
         self.lb_camera.config(yscrollcommand = VC.set)
         
+        #for listbox gen
+        self.lb_gen.update()
+        VG = Scrollbar(self.frame_camera, orient= VERTICAL)
+        VG.place(relx = (self.lb_gen.winfo_x() + self.lb_gen.winfo_width()) / self.frame_camera.winfo_width(), \
+          rely = self.lb_gen.winfo_y() / self.frame_camera.winfo_height(), relheight = self.lb_gen.winfo_height() / self.frame_camera.winfo_height(), relwidth = .03, anchor = tk.NW)
+        VG.config(command = self.lb_gen.yview)
+        self.lb_gen.config(yscrollcommand = VG.set)
+
         # Frame for the canvas and the horizontal scrollbar
         # y starts with this value
         c_rely = 0.71
@@ -2108,12 +2127,20 @@ class Dateimeister_support:
     def combobox_indir_double(self, event = None):
         selected_indices = self.combobox_indir.curselection()
         indir = ",".join([self.combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
+        olddir = self.label_indir.cget('text')
         self.label_indir.config(text = indir)
+        # gen required if new dir != old dir
+        if not olddir or indir != olddir:
+            self.state_gen_required()
 
     def combobox_outdir_double(self, event = None):
         selected_indices = self.combobox_outdir.curselection()
         outdir = ",".join([self.combobox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
+        olddir = self.label_outdir.cget('text')
         self.label_outdir.config(text = outdir)
+        # gen required if new dir != old dir
+        if not olddir or outdir != olddir:
+            self.state_gen_required()
 
     def combobox_indir_check_exist(self, event):
         index = self.combobox_indir.curselection()[0]
@@ -2389,7 +2416,7 @@ class Dateimeister_support:
         self.clear_textbox(self.o_camera)
         self.insert_text(self.o_camera, thiscamera)
         self.button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
-        self.button_call.config(state = NORMAL)
+        self.button_generate.config(state = NORMAL)
         if thiscamera != self.oldcamera:
             self.button_undo.config(state = DISABLED)    
             self.button_redo.config(state = DISABLED)
@@ -2400,7 +2427,7 @@ class Dateimeister_support:
             self.button_exclude.config(state = DISABLED)
             self.button_include.config(state = DISABLED)
             self.button_exec.config(state = DISABLED)
-            Globals.button_duplicates.config(state = DISABLED)
+            self.button_duplicates.config(state = DISABLED)
             self.label_num.config(text = "0")
             self.clear_textbox(self.lb_gen)
             self.oldcamera = thiscamera
@@ -2427,7 +2454,7 @@ class Dateimeister_support:
             return None
         if not thiscamera:
             messagebox.showerror("showerror", "keine Kamera ausgewählt")
-            self.b_button2.focus_set()
+            self.button_select_camera.focus_set()
             return None
         if self.cb_recursive_var.get():
             recursive = "j"
@@ -2619,7 +2646,7 @@ class Dateimeister_support:
         self.button_exclude.config(state = DISABLED)
         self.button_include.config(state = DISABLED)
         self.button_exec.config(state = DISABLED)
-        Globals.button_duplicates.config(state = DISABLED)
+        self.button_duplicates.config(state = DISABLED)
         self.label_num.config(text = "0")
         Globals.generated = True
         os.chdir(owndir)
@@ -2892,9 +2919,9 @@ class Dateimeister_support:
             self.update_recent_menu(indir, imagetype)
         
         if self.duplicates:
-            Globals.button_duplicates.config(state = NORMAL)
+            self.button_duplicates.config(state = NORMAL)
         else:
-            Globals.button_duplicates.config(state = DISABLED)
+            self.button_duplicates.config(state = DISABLED)
         
         self.label_num.config(text = str(self.num_images))
         self.button_exec.config(state = NORMAL)
@@ -2935,8 +2962,8 @@ class Dateimeister_support:
         self.button_exclude.config(state = DISABLED)
         self.button_include.config(state = DISABLED)
         self.button_exec.config(state = DISABLED)
-        Globals.button_duplicates.config(state = DISABLED)
-        #button_call.config(state = DISABLED)
+        self.button_duplicates.config(state = DISABLED)
+        #button_generate.config(state = DISABLED)
         self.label_num.config(text = "0")
         self.clear_textbox(self.lb_gen)
         self.clear_dict_2nd(Globals.thumbnails, Globals.imagetype)
