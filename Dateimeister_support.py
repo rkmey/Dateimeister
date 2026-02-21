@@ -1523,6 +1523,8 @@ class Dateimeister_support:
         self.root.resizable(True, True)
         self.root.update()
         
+        self.text_font = Font(family="Helvetica", size=6)
+
         # Frame_checkboxes
         self.frame_checkboxes = tk.Frame(self.root)
         self.frame_checkboxes.place(relx=0.005, rely=0.005, relheight=0.11, relwidth=0.28)
@@ -1544,9 +1546,58 @@ class Dateimeister_support:
         self.frame_camera_buttons.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_camera_buttons.update()
 
+        # Frame_indir with elements (listboxe, ...)
+        self.frame_indir = tk.Frame(self.root)
+        self.frame_indir.place(relx=0.29, rely=0.005, relheight=0.24, relwidth=0.35)
+        self.frame_indir.configure(relief='flat')
+        self.frame_indir.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_indir.update()
+
+        self.frame_indir_label_height = .05
+        self.label_indir_select = tk.Label(self.frame_indir, text = "Select Indir", anchor='w')
+        self.label_indir_select.place(relx=0.0, rely=0.0, relheight=self.frame_indir_label_height, relwidth=.3)
+        self.label_indir_select.configure(font=self.text_font)
+
+        self.label_indir = tk.Label(self.frame_indir, text = "Select Indir", anchor='w')
+        self.label_indir.place(relx=0.0, rely=1-self.frame_indir_label_height, relheight=self.frame_indir_label_height, relwidth=.9)
+        self.label_indir.configure(font=self.text_font)
+
+        # we create buttons for choosing dir from list or file system (horizontal) in own frame
+        self.frame_indir_buttons = tk.Frame(self.frame_indir, relief='flat')
+        self.frame_indir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
+        self.frame_indir_buttons.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        dict_buttons = {}
+        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"b_button_indir","TEXT":"from file system","CALLBACK":self.Press_indir,"STATE":tk.ACTIVE,"TT":"Select Input Directory from filesystem"}
+        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_indir_from_list","TEXT":"from list","CALLBACK":self.combobox_indir_double,"STATE":tk.ACTIVE,"TT":"Select Input Directory from list"}
+        self.create_buttons_from_dict(dict_buttons, self.frame_indir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
+
+        # Frame_outdir with elements (listboxe, ...)
+        self.frame_outdir = tk.Frame(self.root)
+        self.frame_outdir.place(relx=0.645, rely=0.005, relheight=0.24, relwidth=0.35)
+        self.frame_outdir.configure(relief='flat')
+        self.frame_outdir.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_outdir.update()
+
+        self.frame_outdir_label_height = .05
+        self.label_outdir_select = tk.Label(self.frame_outdir, text = "Select Outdir", anchor='w')
+        self.label_outdir_select.place(relx=0.0, rely=0.0, relheight=self.frame_outdir_label_height, relwidth=.3)
+        self.label_outdir_select.configure(font=self.text_font)
+
+        self.label_outdir = tk.Label(self.frame_outdir, text = "Select Indir", anchor='w')
+        self.label_outdir.place(relx=0.0, rely=1-self.frame_outdir_label_height, relheight=self.frame_outdir_label_height, relwidth=.9)
+        self.label_outdir.configure(font=self.text_font)
+
+        # we create buttons for choosing dir from list or file system (horizontal) in own frame
+        self.frame_outdir_buttons = tk.Frame(self.frame_outdir, relief='flat')
+        self.frame_outdir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
+        self.frame_outdir_buttons.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"b_button_outdir","TEXT":"from file system","CALLBACK":self.Press_outdir,"STATE":tk.ACTIVE,"TT":"Select output Directory from filesystem"}
+        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_outdir_from_list","TEXT":"from list","CALLBACK":self.combobox_outdir_double,"STATE":tk.ACTIVE,"TT":"Select Output Directory from list"}
+        self.create_buttons_from_dict(dict_buttons, self.frame_outdir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
+
         # Frame_text with elements (text1, ...)
         self.frame_text = tk.Frame(self.root)
-        self.frame_text.place(relx=0.29, rely=0.25, relheight=0.42, relwidth=0.69)
+        self.frame_text.place(relx=0.29, rely=0.25, relheight=0.42, relwidth=0.705)
         self.frame_text.configure(relief='flat')
         self.frame_text.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_text.update()
@@ -1554,8 +1605,6 @@ class Dateimeister_support:
         rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
         rel_width_sb_y = rel_width_sb_x * self.frame_text.winfo_width() / self.frame_text.winfo_height() # width relative to y 
         print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame_text.winfo_width(), rel_width_sb_y, self.frame_text.winfo_height())) if self.debug else True
-
-        self.text_font = Font(family="Helvetica", size=6)
 
         self.frame_text_label_height = .05
         self.l_label1 = tk.Label(self.frame_text)
@@ -1632,17 +1681,7 @@ class Dateimeister_support:
         dict_buttons["4"] = {"OFFSET":0.00,"VAR":"button_duplicates","TEXT":"Show duplicates","CALLBACK":self.button_duplicates,"STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths"}
         self.create_buttons_from_dict(dict_buttons, self.frame_camera_buttons, 0.005, 0.72, 0.99, self.text_font, "VERTICAL")
 
-        self.b_button_indir = self.w.Button1
-        self.b_button_indir.config(command=self.Press_indir)
-        self.b_button_outdir = self.w.Button_outdir
-        self.b_button_outdir.config(command=self.Press_outdir)
-
         self.label_num = self.w.Label_num
-        
-        self.label_indir  = self.w.Label_indir
-        self.label_outdir = self.w.Label_outdir
-        self.button_indir_from_list = self.w.Button_indir_from_list
-        self.button_outdir_from_list = self.w.Button_outdir_from_list
         
         # we create all checkboxes
         dict_controls = {}
@@ -1814,8 +1853,6 @@ class Dateimeister_support:
         self.combobox_outdir.bind('<Double-1>', self.combobox_outdir_double)
         self.combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
         self.combobox_outdir.bind("<<ListboxSelect>>", lambda event: self.combobox_outdir_check_exist(event))
-        self.button_indir_from_list.config(command = self.combobox_indir_double)  
-        self.button_outdir_from_list.config(command = self.combobox_outdir_double)  
         
         self.label_indir.config(text = default_indir)   # may be overridden later with first listbox entry
         self.label_outdir.config(text = default_outdir) # may be overridden later with first listbox entry
