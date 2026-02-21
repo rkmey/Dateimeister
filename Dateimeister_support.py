@@ -1614,7 +1614,7 @@ class Dateimeister_support:
         self.t_text1 = tk.Text(self.frame_text)
         self.t_text1.place(relx=0.0, rely=self.frame_text_label_height, relheight=1-self.frame_text_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
         self.t_text1.configure(background="white")
-        self.t_text1.configure(exportselection="0")
+        self.t_text1.configure(exportselection=False)
         self.t_text1.configure(font = self.text_font)
         self.t_text1.configure(wrap="none")
         # set font
@@ -1642,7 +1642,6 @@ class Dateimeister_support:
         self.lb_camera.place(relx=0.005, rely=0.005, relheight=0.5, relwidth=0.5)
         self.lb_camera.configure(background="white")
         self.lb_camera.configure(disabledforeground="#a3a3a3")
-        self.lb_camera.configure(exportselection="0")
         self.lb_camera.configure(font=self.text_font)
         self.lb_camera.configure(foreground="black")
         self.lb_camera.configure(highlightbackground="#d9d9d9")
@@ -1681,8 +1680,6 @@ class Dateimeister_support:
         dict_buttons["4"] = {"OFFSET":0.00,"VAR":"button_duplicates","TEXT":"Show duplicates","CALLBACK":self.button_duplicates,"STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths"}
         self.create_buttons_from_dict(dict_buttons, self.frame_camera_buttons, 0.005, 0.72, 0.99, self.text_font, "VERTICAL")
 
-        self.label_num = self.w.Label_num
-        
         # we create all checkboxes
         dict_controls = {}
         dict_controls["1"] = {"OFFSET":0.00,"VAR":"cb_recursive","TEXT":"recursive","CALLBACK":self.state_gen_required,"STATE":1,"TT":"include subdirs"}
@@ -1697,10 +1694,8 @@ class Dateimeister_support:
         #print("self.dict_process_image is: " + str(self.dict_process_image))
 
         self.combobox_indir = self.w.TCombobox_indir
-        self.combobox_indir_var = self.w.combobox_indir
         self.combobox_indir.configure(exportselection=False)
         self.combobox_outdir = self.w.TCombobox_outdir
-        self.combobox_outdir_var = self.w.combobox_outdir
         self.combobox_outdir.configure(exportselection=False)
         
         # Scrollbars
@@ -1797,6 +1792,12 @@ class Dateimeister_support:
         dict_buttons["4"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas4","VALUE":"4","TEXT":"sort mod. desc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort modification date descending"}
         self.create_radiobuttons_from_dict(dict_buttons, self.Frame_sortbuttons, 0.6, 0.4, 0.9, self.rbvalue, self.rb_sort, self.text_font, "HORIZONTAL")
         self.rbvalue.set("1")
+
+        # Label for number of images in canvas 
+        self.label_num = tk.Label(self.Frame_sortbuttons)
+        self.label_num.place(relx=0.5, rely=0.005, relheight=1, relwidth=.08)
+        self.label_num.configure(font=self.text_font)
+        TT.ToolTip(self.label_num, 'Number of images ')
 
         self.canvas_gallery = tk.Canvas(self.frame_canvas)
         self.canvas_gallery.place(relx=0.0, rely=0.0, relheight=0.9, relwidth=1.0)

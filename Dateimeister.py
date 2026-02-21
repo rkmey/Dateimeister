@@ -57,22 +57,6 @@ class Toplevel1:
         self.menubar = tk.Menu(top,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
         top.configure(menu = self.menubar)
 
-        self.Label_num = tk.Label(self.top)
-        self.Label_num.place(relx=0.097, rely=0.684, height=21, width=75)
-        self.Label_num.configure(activebackground="#f9f9f9")
-        self.Label_num.configure(activeforeground="black")
-        self.Label_num.configure(anchor='w')
-        self.Label_num.configure(background="#d9d9d9")
-        self.Label_num.configure(compound='left')
-        self.Label_num.configure(disabledforeground="#a3a3a3")
-        self.Label_num.configure(font="-family {Segoe UI} -size 9")
-        self.Label_num.configure(foreground="black")
-        self.Label_num.configure(highlightbackground="#d9d9d9")
-        self.Label_num.configure(highlightcolor="black")
-        self.Label_num.configure(text='''Label''')
-        self.Label_num_tooltip = \
-        TT.ToolTip(self.Label_num, '''Number of images ''')
-
         self.TCombobox_indir = tk.Listbox(self.top)
         self.TCombobox_indir.place(relx=0.29, rely=0.065, relheight=0.131
                 , relwidth=0.328)
@@ -103,43 +87,6 @@ class Toplevel1:
         self.TCombobox_outdir.configure(listvariable=self.combobox_outdir)
         self.TCombobox_outdir_tooltip = \
         TT.ToolTip(self.TCombobox_outdir, '''recent outdirs''')
-
-        self.Label_indir = tk.Label(self.top)
-        self.Label_indir.place(relx=0.29, rely=0.217, height=21, width=476)
-        self.Label_indir.configure(activebackground="#ffffff")
-        self.Label_indir.configure(activeforeground="black")
-        self.Label_indir.configure(anchor='w')
-        self.Label_indir.configure(background="#d9d9d9")
-        self.Label_indir.configure(compound='left')
-        self.Label_indir.configure(disabledforeground="#a3a3a3")
-        self.Label_indir.configure(font="-family {Segoe UI} -size 9")
-        self.Label_indir.configure(foreground="black")
-        self.Label_indir.configure(highlightbackground="#d9d9d9")
-        self.Label_indir.configure(highlightcolor="black")
-        self.Label_indir.configure(text='''Label''')
-
-        self.Label_outdir = tk.Label(self.top)
-        self.Label_outdir.place(relx=0.636, rely=0.217, height=21, width=484)
-        self.Label_outdir.configure(activebackground="#ffffff")
-        self.Label_outdir.configure(activeforeground="black")
-        self.Label_outdir.configure(anchor='w')
-        self.Label_outdir.configure(background="#d9d9d9")
-        self.Label_outdir.configure(compound='left')
-        self.Label_outdir.configure(disabledforeground="#a3a3a3")
-        self.Label_outdir.configure(font="-family {Segoe UI} -size 9")
-        self.Label_outdir.configure(foreground="black")
-        self.Label_outdir.configure(highlightbackground="#d9d9d9")
-        self.Label_outdir.configure(highlightcolor="black")
-        self.Label_outdir.configure(text='''Label''')
-
-        self.Frame_camera = tk.Frame(self.top)
-        self.Frame_camera.place(relx=0.028, rely=0.13, relheight=0.201
-                , relwidth=0.228)
-        self.Frame_camera.configure(relief='flat')
-        self.Frame_camera.configure(borderwidth="2")
-        self.Frame_camera.configure(background="#d9d9d9")
-        self.Frame_camera.configure(highlightbackground="#d9d9d9")
-        self.Frame_camera.configure(highlightcolor="black")
 
 
 class Toplevel2:
