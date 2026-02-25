@@ -36,59 +36,6 @@ def _style_code():
     style.configure('.', font = "TkDefaultFont")
     _style_code_ran = 1
 
-class Toplevel1:
-    def __init__(self, top=None):
-        '''This class configures and populates the toplevel window.
-           top is the toplevel containing window.'''
-
-        top.geometry("1446x921+31+20")
-        top.minsize(120, 100)
-        top.maxsize(4000, 4000)
-        top.resizable(1,  1)
-        top.title("Dateimeister")
-        top.configure(background="#d9d9d9")
-        top.configure(highlightbackground="#d9d9d9")
-        top.configure(highlightcolor="black")
-
-        self.top = top
-        self.combobox_indir = tk.StringVar()
-        self.combobox_outdir = tk.StringVar()
-
-        self.menubar = tk.Menu(top,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
-        top.configure(menu = self.menubar)
-
-        self.TCombobox_indir = tk.Listbox(self.top)
-        self.TCombobox_indir.place(relx=0.29, rely=0.065, relheight=0.131
-                , relwidth=0.328)
-        self.TCombobox_indir.configure(background="white")
-        self.TCombobox_indir.configure(disabledforeground="#a3a3a3")
-        self.TCombobox_indir.configure(font="TkFixedFont")
-        self.TCombobox_indir.configure(foreground="black")
-        self.TCombobox_indir.configure(highlightbackground="#d9d9d9")
-        self.TCombobox_indir.configure(highlightcolor="black")
-        self.TCombobox_indir.configure(selectbackground="#c4c4c4")
-        self.TCombobox_indir.configure(selectforeground="black")
-        self.TCombobox_indir.configure(selectmode='single')
-        self.TCombobox_indir.configure(listvariable=self.combobox_indir)
-        self.TCombobox_indir_tooltip = \
-        TT.ToolTip(self.TCombobox_indir, '''recent indirs''')
-
-        self.TCombobox_outdir = tk.Listbox(self.top)
-        self.TCombobox_outdir.place(relx=0.636, rely=0.065, relheight=0.131
-                , relwidth=0.335)
-        self.TCombobox_outdir.configure(background="white")
-        self.TCombobox_outdir.configure(disabledforeground="#a3a3a3")
-        self.TCombobox_outdir.configure(font="TkFixedFont")
-        self.TCombobox_outdir.configure(foreground="black")
-        self.TCombobox_outdir.configure(highlightbackground="#d9d9d9")
-        self.TCombobox_outdir.configure(highlightcolor="black")
-        self.TCombobox_outdir.configure(selectbackground="#c4c4c4")
-        self.TCombobox_outdir.configure(selectforeground="black")
-        self.TCombobox_outdir.configure(listvariable=self.combobox_outdir)
-        self.TCombobox_outdir_tooltip = \
-        TT.ToolTip(self.TCombobox_outdir, '''recent outdirs''')
-
-
 class Toplevel2:
     def __init__(self, top=None):
         '''This class configures and populates the toplevel window.

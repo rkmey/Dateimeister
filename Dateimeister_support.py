@@ -52,6 +52,17 @@ import Tooltip as TT
 
 from enum import Enum
 
+_bgcolor = '#d9d9d9'
+_fgcolor = 'black'
+_tabfg1 = 'black' 
+_tabfg2 = 'white' 
+_bgmode = 'light' 
+_tabbg1 = '#d9d9d9' 
+_tabbg2 = 'gray40' 
+
+_style_code_ran = 0
+
+
 INCLUDE = 1
 EXCLUDE = 2
 
@@ -1426,10 +1437,25 @@ class MyCameraTreeview:
 
 class Dateimeister_support:
     def __init__(self, root, debug):
-        self.root = root
+        if root is None:
+            self.root = tk.Toplevel()
+        else:
+            self.root = root
         self.root.protocol( 'WM_DELETE_WINDOW' , self.root.destroy)
+
         # Creates a toplevel widget.
-        self.w = Dateimeister.Toplevel1(self.root)
+        root.geometry("1446x921+31+20")
+        root.minsize(120, 100)
+        root.maxsize(4000, 4000)
+        root.resizable(1,  1)
+        root.title("Dateimeister")
+        root.configure(background="#d9d9d9")
+        root.configure(highlightbackground="#d9d9d9")
+        root.configure(highlightcolor="black")
+
+        self.menubar = tk.Menu(root,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
+        root.configure(menu = self.menubar)
+
         self.dict_process_image = {}
         self.win_duplicates = None
         self.dict_status_image = {}
@@ -1546,6 +1572,7 @@ class Dateimeister_support:
         self.frame_camera_buttons.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_camera_buttons.update()
 
+
         # Frame_indir with elements (listboxe, ...)
         self.frame_indir = tk.Frame(self.root)
         self.frame_indir.place(relx=0.29, rely=0.005, relheight=0.24, relwidth=0.35)
@@ -1561,15 +1588,41 @@ class Dateimeister_support:
         self.label_indir = tk.Label(self.frame_indir, text = "Select Indir", anchor='w')
         self.label_indir.place(relx=0.0, rely=1-self.frame_indir_label_height, relheight=self.frame_indir_label_height, relwidth=.9)
         self.label_indir.configure(font=self.text_font)
+        self.label_indir.update()
 
         # we create buttons for choosing dir from list or file system (horizontal) in own frame
         self.frame_indir_buttons = tk.Frame(self.frame_indir, relief='flat')
         self.frame_indir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
         self.frame_indir_buttons.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_indir_buttons.update()
         dict_buttons = {}
         dict_buttons["1"] = {"OFFSET":0.00,"VAR":"b_button_indir","TEXT":"from file system","CALLBACK":self.Press_indir,"STATE":tk.ACTIVE,"TT":"Select Input Directory from filesystem"}
-        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_indir_from_list","TEXT":"from list","CALLBACK":self.combobox_indir_double,"STATE":tk.ACTIVE,"TT":"Select Input Directory from list"}
+        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_indir_from_list","TEXT":"from list","CALLBACK":self.listbox_indir_double,"STATE":tk.ACTIVE,"TT":"Select Input Directory from list"}
         self.create_buttons_from_dict(dict_buttons, self.frame_indir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
+
+        # the listbox indir
+        self.listbox_indir = tk.Listbox(self.frame_indir)
+        self.listbox_indir.configure(background="white")
+        self.listbox_indir.configure(disabledforeground="#a3a3a3")
+        self.listbox_indir.configure(font=self.text_font)
+        self.listbox_indir.configure(foreground="black")
+        self.listbox_indir.configure(highlightbackground="#d9d9d9")
+        self.listbox_indir.configure(highlightcolor="black")
+        self.listbox_indir.configure(selectbackground="#d9d9d9")
+        self.listbox_indir.configure(selectforeground="black")
+        self.listbox_indir.configure(selectmode='single')
+        self.listbox_indir.configure(exportselection=False)
+        self.listbox_indir_tooltip = TT.ToolTip(self.listbox_indir, 'choose Input Directory')
+        # Scrollbars
+        HI = Scrollbar(self.frame_indir, orient= HORIZONTAL, command = self.listbox_indir.xview)
+        VI = Scrollbar(self.frame_indir, orient= VERTICAL,   command = self.listbox_indir.yview)
+        self.listbox_indir.config(xscrollcommand = HI.set)
+        self.listbox_indir.config(yscrollcommand = VI.set)
+        # place listbox and scrollbars
+        d_n = self.frame_indir_label_height + self.frame_indir_buttons.winfo_height() / self.frame_indir.winfo_height() # distance from north
+        d_s = self.label_indir.winfo_height() / self.frame_indir.winfo_height() # distance from south
+        self.place_box_with_scrollbars(self.frame_indir, self.listbox_indir, HI, VI, .01, d_n, .005, d_s + .005, .005)
+
 
         # Frame_outdir with elements (listboxe, ...)
         self.frame_outdir = tk.Frame(self.root)
@@ -1591,9 +1644,34 @@ class Dateimeister_support:
         self.frame_outdir_buttons = tk.Frame(self.frame_outdir, relief='flat')
         self.frame_outdir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
         self.frame_outdir_buttons.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_outdir_buttons.update()
         dict_buttons["1"] = {"OFFSET":0.00,"VAR":"b_button_outdir","TEXT":"from file system","CALLBACK":self.Press_outdir,"STATE":tk.ACTIVE,"TT":"Select output Directory from filesystem"}
-        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_outdir_from_list","TEXT":"from list","CALLBACK":self.combobox_outdir_double,"STATE":tk.ACTIVE,"TT":"Select Output Directory from list"}
+        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_outdir_from_list","TEXT":"from list","CALLBACK":self.listbox_outdir_double,"STATE":tk.ACTIVE,"TT":"Select Output Directory from list"}
         self.create_buttons_from_dict(dict_buttons, self.frame_outdir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
+
+        # the listbox outdir
+        self.listbox_outdir = tk.Listbox(self.frame_outdir)
+        self.listbox_outdir.configure(background="white")
+        self.listbox_outdir.configure(disabledforeground="#a3a3a3")
+        self.listbox_outdir.configure(font=self.text_font)
+        self.listbox_outdir.configure(foreground="black")
+        self.listbox_outdir.configure(highlightbackground="#d9d9d9")
+        self.listbox_outdir.configure(highlightcolor="black")
+        self.listbox_outdir.configure(selectbackground="#d9d9d9")
+        self.listbox_outdir.configure(selectforeground="black")
+        self.listbox_outdir.configure(selectmode='single')
+        self.listbox_outdir.configure(exportselection=False)
+        self.listbox_outdir_tooltip = TT.ToolTip(self.listbox_outdir, 'choose Output Directory')
+        # Scrollbars
+        HI = Scrollbar(self.frame_outdir, orient= HORIZONTAL, command = self.listbox_outdir.xview)
+        VI = Scrollbar(self.frame_outdir, orient= VERTICAL,   command = self.listbox_outdir.yview)
+        self.listbox_outdir.config(xscrollcommand = HI.set)
+        self.listbox_outdir.config(yscrollcommand = VI.set)
+        # place listbox and scrollbars
+        d_n = self.frame_outdir_label_height + self.frame_outdir_buttons.winfo_height() / self.frame_outdir.winfo_height() # distance from north
+        d_s = self.label_outdir.winfo_height() / self.frame_outdir.winfo_height() # distance from south
+        self.place_box_with_scrollbars(self.frame_outdir, self.listbox_outdir, HI, VI, .01, d_n, .005, d_s + .005, .005)
+
 
         # Frame_text with elements (text1, ...)
         self.frame_text = tk.Frame(self.root)
@@ -1692,21 +1770,6 @@ class Dateimeister_support:
         # get all camera information and fill camera-listbox
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
         #print("self.dict_process_image is: " + str(self.dict_process_image))
-
-        self.combobox_indir = self.w.TCombobox_indir
-        self.combobox_indir.configure(exportselection=False)
-        self.combobox_outdir = self.w.TCombobox_outdir
-        self.combobox_outdir.configure(exportselection=False)
-        
-        # Scrollbars
-        VI = Scrollbar(self.combobox_indir, orient= VERTICAL)
-        VI.place(relx = 1, rely = 0, relheight = 1, relwidth = .015, anchor = tk.NE)
-        VI.config(command = self.combobox_indir.yview)
-        self.combobox_indir.config(yscrollcommand = VI.set)
-        VO = Scrollbar(self.combobox_outdir, orient= VERTICAL)
-        VO.place(relx = 1, rely = 0, relheight = 1, relwidth = .015, anchor = tk.NE)
-        VO.config(command = self.combobox_outdir.yview)
-        self.combobox_outdir.config(yscrollcommand = VO.set)
 
         #for listbox camera
         self.frame_camera.update()
@@ -1850,10 +1913,10 @@ class Dateimeister_support:
         print("Bindtags: %s " % str(self.t_text1.bindtags())) if self.debug else True
 
         self.cb_num.config(command = self.on_cb_num_toggle)
-        self.combobox_indir.bind('<Double-1>', self.combobox_indir_double)
-        self.combobox_outdir.bind('<Double-1>', self.combobox_outdir_double)
-        self.combobox_indir.bind("<<ListboxSelect>>", lambda event: self.combobox_indir_check_exist(event))
-        self.combobox_outdir.bind("<<ListboxSelect>>", lambda event: self.combobox_outdir_check_exist(event))
+        self.listbox_indir.bind('<Double-1>', self.listbox_indir_double)
+        self.listbox_outdir.bind('<Double-1>', self.listbox_outdir_double)
+        self.listbox_indir.bind("<<ListboxSelect>>", lambda event: self.listbox_indir_check_exist(event))
+        self.listbox_outdir.bind("<<ListboxSelect>>", lambda event: self.listbox_outdir_check_exist(event))
         
         self.label_indir.config(text = default_indir)   # may be overridden later with first listbox entry
         self.label_outdir.config(text = default_outdir) # may be overridden later with first listbox entry
@@ -1923,7 +1986,7 @@ class Dateimeister_support:
         indexes = []
         use_as_dir = True
         for tfile in sorted_d:
-            self.combobox_indir.insert(END, tfile)
+            self.listbox_indir.insert(END, tfile)
             if not os.path.isdir(tfile):
                 #print("INDIR: " + tfile + " INDEX: " + str(ii))
                 indexes.append(ii) # list of indizes to grey out because dir does not exist
@@ -1933,12 +1996,12 @@ class Dateimeister_support:
                     use_as_dir = False
             ii += 1
         if ii > 0:
-            self.combobox_indir.select_set(0)
+            self.listbox_indir.select_set(0)
             self.button_indir_from_list.config(state = NORMAL)
         else: 
             self.button_indir_from_list.config(state = DISABLED)
         for ii in indexes:
-            self.combobox_indir.itemconfig(ii, fg="gray")
+            self.listbox_indir.itemconfig(ii, fg="gray")
 
         # fill out combobox
         result = DX.get_outdirs(Globals.config_files_xml)
@@ -1959,7 +2022,7 @@ class Dateimeister_support:
         indexes = []
         use_as_dir = True
         for tfile in sorted_d:
-            self.combobox_outdir.insert(END, tfile)
+            self.listbox_outdir.insert(END, tfile)
             if not os.path.isdir(tfile):
                 print("OUTDIR: " + tfile + " INDEX: " + str(ii)) if self.debug else True
                 indexes.append(ii) # list of indizes to disable because dir does not exist
@@ -1969,18 +2032,42 @@ class Dateimeister_support:
                     use_as_dir = False
             ii += 1
         if ii > 0:
-            self.combobox_outdir.select_set(0)
+            self.listbox_outdir.select_set(0)
             self.button_outdir_from_list.config(state = NORMAL)
         else: 
             self.button_outdir_from_list.config(state = DISABLED)
         for ii in indexes:
-            self.combobox_outdir.itemconfig(ii, fg="gray")
+            self.listbox_outdir.itemconfig(ii, fg="gray")
         
         self.leftmost_thumbnail = None
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
         self.timer = RestartableTimer(root, 333, self.resize)  # ms
  
+
+    def place_box_with_scrollbars(self, frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w):
+        # this function places a listbox or other scrollable element in a given Frame with horizontal and vertical scrollbars
+        # element ist the element to be placed, sb_h and sb_v the scrollbars (horizonzal, vertical)
+        # d_n, d_e, d_s, d_w are the rel. distances from the frame borders (North, east, south, west.
+        # the box with the scrollbars fills the area in the frame completely.
+        # the last parameter is the font
+        # the relative width is given with respect to the listbox to be constructed. 
+        # The height of the horizontal scrollbar is the same as the width of the vertical scrollbar
+        # on call the frame is given and the width of the vertical scrollbar. 
+        
+        # scrollbar width as fraction of frame-width
+        parent_width_in_pixel  = frame.winfo_width()
+        parent_height_in_pixel = frame.winfo_height()
+        area_width_in_pixel  = parent_width_in_pixel * (1 - d_w - d_e)
+        area_height_in_pixel = parent_height_in_pixel * (1 - d_n - d_s)
+        factor = area_width_in_pixel / area_height_in_pixel
+        rel_size_sb_x = rw
+        rel_size_sb_y = rel_size_sb_x * factor # width relative to y
+        element_width  = area_width_in_pixel / parent_width_in_pixel - rel_size_sb_x
+        element_height = area_height_in_pixel / parent_height_in_pixel - rel_size_sb_y
+        element.place(relx = d_w, rely = d_n, relheight = element_height, relwidth = element_width, anchor = tk.NW)     
+        sb_h.place(relx = d_w, rely = d_n + element_height, relheight = rel_size_sb_y, relwidth = element_width, anchor = tk.NW)
+        sb_v.place(relx = d_w + element_width, rely = d_n, relheight = element_height, relwidth = rel_size_sb_x, anchor = tk.NW)
 
     def create_buttons_from_dict(self, dict_buttons, frame, startpos, rgwidth, relsize, fon, orientation): # create Buttons in horizontal Frame
         # calculate rel width considering the offsets
@@ -2162,38 +2249,38 @@ class Dateimeister_support:
     def lb_camera_double(self, event):
         self.B_camera_press(event)
 
-    def combobox_indir_double(self, event = None):
-        selected_indices = self.combobox_indir.curselection()
-        indir = ",".join([self.combobox_indir.get(i) for i in selected_indices]) # because listbox has single selection
+    def listbox_indir_double(self, event = None):
+        selected_indices = self.listbox_indir.curselection()
+        indir = ",".join([self.listbox_indir.get(i) for i in selected_indices]) # because listbox has single selection
         olddir = self.label_indir.cget('text')
         self.label_indir.config(text = indir)
         # gen required if new dir != old dir
         if not olddir or indir != olddir:
             self.state_gen_required()
 
-    def combobox_outdir_double(self, event = None):
-        selected_indices = self.combobox_outdir.curselection()
-        outdir = ",".join([self.combobox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
+    def listbox_outdir_double(self, event = None):
+        selected_indices = self.listbox_outdir.curselection()
+        outdir = ",".join([self.listbox_outdir.get(i) for i in selected_indices]) # because listbox has single selection
         olddir = self.label_outdir.cget('text')
         self.label_outdir.config(text = outdir)
         # gen required if new dir != old dir
         if not olddir or outdir != olddir:
             self.state_gen_required()
 
-    def combobox_indir_check_exist(self, event):
-        index = self.combobox_indir.curselection()[0]
-        indir = self.combobox_indir.get(index) # because listbox has single selection
+    def listbox_indir_check_exist(self, event):
+        index = self.listbox_indir.curselection()[0]
+        indir = self.listbox_indir.get(index) # because listbox has single selection
         print("current selection is: " + indir + " INDEX: " + str(index)) if self.debug else True
         if not os.path.isdir(indir):
-            self.combobox_indir.selection_clear(index) # dont select, MessageBox
+            self.listbox_indir.selection_clear(index) # dont select, MessageBox
             messagebox.showerror("showerror", "Indir: " + indir + " does not exist, choose another one")
     
-    def combobox_outdir_check_exist(self, event):
-        index = self.combobox_outdir.curselection()[0]
-        outdir = self.combobox_outdir.get(index) # because listbox has single selection
+    def listbox_outdir_check_exist(self, event):
+        index = self.listbox_outdir.curselection()[0]
+        outdir = self.listbox_outdir.get(index) # because listbox has single selection
         print("current selection is: " + outdir + " INDEX: " + str(index)) if self.debug else True
         if not os.path.isdir(outdir):
-            self.combobox_outdir.selection_clear(index) # dont select, MessageBox
+            self.listbox_outdir.selection_clear(index) # dont select, MessageBox
             messagebox.showerror("showerror", "outdir: " + outdir + " does not exist, choose another one")
         
     def open_config(self):
@@ -2436,14 +2523,14 @@ class Dateimeister_support:
     def Press_indir(self, *args):
         indir = fd.askdirectory() 
         print ("indir %s" % indir) if self.debug else True
-        #self.clear_textbox(self.combobox_indir)
+        #self.clear_textbox(self.listbox_indir)
         self.label_indir.config(text = indir)
 
     def Press_outdir(self, *args):
         #outdir = fd.askopenindir() 
         outdir = fd.askdirectory() 
         print ("outdir %s" % outdir) if self.debug else True
-        #self.clear_textbox(self.combobox_outdir)
+        #self.clear_textbox(self.listbox_outdir)
         self.label_outdir.config(text = outdir)
 
     def B_camera_press(self, *args):
