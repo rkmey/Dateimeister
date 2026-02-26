@@ -52,7 +52,8 @@ import Tooltip as TT
 
 from enum import Enum
 
-_bgcolor = '#d9d9d9'
+_bgcolor = 'grey90'
+_bgcolor_dbg = 'green'
 _fgcolor = 'black'
 _tabfg1 = 'black' 
 _tabfg2 = 'white' 
@@ -1449,7 +1450,7 @@ class Dateimeister_support:
         root.maxsize(4000, 4000)
         root.resizable(1,  1)
         root.title("Dateimeister")
-        root.configure(background="#d9d9d9")
+        root.configure(background=_bgcolor)
         root.configure(highlightbackground="#d9d9d9")
         root.configure(highlightcolor="black")
 
@@ -1554,46 +1555,112 @@ class Dateimeister_support:
         # Frame_checkboxes
         self.frame_checkboxes = tk.Frame(self.root)
         self.frame_checkboxes.place(relx=0.005, rely=0.005, relheight=0.11, relwidth=0.28)
-        self.frame_checkboxes.configure(relief='flat')
-        self.frame_checkboxes.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_checkboxes.configure(relief='flat', background = _bgcolor)
+        self.frame_checkboxes.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_checkboxes.update()
         
         # Frame_camera with elements (listboxes, ...)
         self.frame_camera = tk.Frame(self.root)
         self.frame_camera.place(relx=0.005, rely=0.12, relheight=0.55, relwidth=0.28)
-        self.frame_camera.configure(relief='flat')
-        self.frame_camera.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_camera.configure(relief='flat', background = _bgcolor)
+        self.frame_camera.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_camera.update()
+
+        # Subframe Frame_camera_listboxes
+        self.Frame_camera_listboxes = tk.Frame(self.frame_camera)
+        self.Frame_camera_listboxes.place(relx=0.005, rely=0.005, relheight=0.99, relwidth=0.745)
+        self.Frame_camera_listboxes.configure(relief='flat', highlightbackground="black", highlightthickness=1, background = _bgcolor)
+        self.Frame_camera_listboxes.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_camera_listboxes.update()
 
         # Subframe Frame_camera_buttons
         self.frame_camera_buttons = tk.Frame(self.frame_camera)
         self.frame_camera_buttons.place(relx=0.75, rely=0.005, relheight=0.99, relwidth=0.245)
-        self.frame_camera_buttons.configure(relief='flat', highlightbackground="black", highlightthickness=1)
-        self.frame_camera_buttons.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_camera_buttons.configure(relief='flat', highlightbackground="black", highlightthickness=1, background = _bgcolor)
+        self.frame_camera_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_camera_buttons.update()
 
+        # Listbox camera
+        self.lb_camera = tk.Listbox(self.Frame_camera_listboxes)
+        self.lb_camera.configure(background="white")
+        self.lb_camera.configure(disabledforeground="#a3a3a3")
+        self.lb_camera.configure(font=self.text_font)
+        self.lb_camera.configure(foreground="black")
+        self.lb_camera.configure(highlightbackground="#d9d9d9")
+        self.lb_camera.configure(highlightcolor="black")
+        self.lb_camera.configure(selectbackground="#d9d9d9")
+        self.lb_camera.configure(selectforeground="black")
+        self.lb_camera.configure(selectmode='single')
+        self.lb_camera.configure(exportselection=False)
+        self.lb_camera_tooltip = TT.ToolTip(self.lb_camera, 'available cameras')
+        self.lb_camera.update()
+
+        #Scrollbars for listbox camera
+        # Scrollbars
+        HC = Scrollbar(self.Frame_camera_listboxes, orient= HORIZONTAL, command = self.lb_camera.xview)
+        VC = Scrollbar(self.Frame_camera_listboxes, orient= VERTICAL,   command = self.lb_camera.yview)
+        self.lb_camera.config(xscrollcommand = HC.set)
+        self.lb_camera.config(yscrollcommand = VC.set)
+        # place listbox and scrollbars
+        d_n = 0.005 # distance from north
+        d_s = .5
+        self.place_box_with_scrollbars(self.Frame_camera_listboxes, self.lb_camera, HC, VC, .04, d_n, .005, d_s, .005)
+ 
+        # Listbox gen
+        self.lb_gen = tk.Listbox(self.Frame_camera_listboxes)
+        self.lb_gen.configure(background="white")
+        self.lb_gen.configure(disabledforeground="#a3a3a3")
+        self.lb_gen.configure(font=self.text_font)
+        self.lb_gen.configure(foreground="black")
+        self.lb_gen.configure(highlightbackground="#d9d9d9")
+        self.lb_gen.configure(highlightcolor="black")
+        self.lb_gen.configure(selectbackground="#d9d9d9")
+        self.lb_gen.configure(selectforeground="black")
+        self.lb_gen.configure(selectmode='single')
+        self.lb_gen.configure(exportselection=False)
+        self.lb_gen_tooltip = TT.ToolTip(self.lb_gen, 'generated imagetypes')
+        self.lb_gen.update()
+
+        #Scrollbars for listbox gen
+        # Scrollbars
+        HG = Scrollbar(self.Frame_camera_listboxes, orient= HORIZONTAL, command = self.lb_gen.xview)
+        VG = Scrollbar(self.Frame_camera_listboxes, orient= VERTICAL,   command = self.lb_gen.yview)
+        self.lb_gen.config(xscrollcommand = HG.set)
+        self.lb_gen.config(yscrollcommand = VG.set)
+        # place listbox and scrollbars
+        d_n = 0.6 # distance from north
+        d_s = .005
+        self.place_box_with_scrollbars(self.Frame_camera_listboxes, self.lb_gen, HG, VG, .04, d_n, .005, d_s, .005)
+
+       # Entry for displaying camera name
+        self.o_camera = tk.Entry(self.Frame_camera_listboxes)
+        self.o_camera.place(relx=0.005, rely=0.505, relheight=0.05, relwidth=0.99)
+        self.o_camera.configure(background="grey70")
+        self.o_camera.configure(disabledforeground="#a3a3a3")
+        self.o_camera.configure(font=self.text_font)
+        self.o_camera.configure(foreground="grey5")
 
         # Frame_indir with elements (listboxe, ...)
         self.frame_indir = tk.Frame(self.root)
         self.frame_indir.place(relx=0.29, rely=0.005, relheight=0.24, relwidth=0.35)
-        self.frame_indir.configure(relief='flat')
-        self.frame_indir.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_indir.configure(relief='flat', background = _bgcolor)
+        self.frame_indir.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_indir.update()
 
         self.frame_indir_label_height = .05
         self.label_indir_select = tk.Label(self.frame_indir, text = "Select Indir", anchor='w')
         self.label_indir_select.place(relx=0.0, rely=0.0, relheight=self.frame_indir_label_height, relwidth=.3)
-        self.label_indir_select.configure(font=self.text_font)
+        self.label_indir_select.configure(font=self.text_font, background = _bgcolor)
 
         self.label_indir = tk.Label(self.frame_indir, text = "Select Indir", anchor='w')
         self.label_indir.place(relx=0.0, rely=1-self.frame_indir_label_height, relheight=self.frame_indir_label_height, relwidth=.9)
-        self.label_indir.configure(font=self.text_font)
+        self.label_indir.configure(font=self.text_font, background = _bgcolor)
         self.label_indir.update()
 
         # we create buttons for choosing dir from list or file system (horizontal) in own frame
-        self.frame_indir_buttons = tk.Frame(self.frame_indir, relief='flat')
+        self.frame_indir_buttons = tk.Frame(self.frame_indir, relief='flat', background = _bgcolor)
         self.frame_indir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
-        self.frame_indir_buttons.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_indir_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_indir_buttons.update()
         dict_buttons = {}
         dict_buttons["1"] = {"OFFSET":0.00,"VAR":"b_button_indir","TEXT":"from file system","CALLBACK":self.Press_indir,"STATE":tk.ACTIVE,"TT":"Select Input Directory from filesystem"}
@@ -1621,29 +1688,29 @@ class Dateimeister_support:
         # place listbox and scrollbars
         d_n = self.frame_indir_label_height + self.frame_indir_buttons.winfo_height() / self.frame_indir.winfo_height() # distance from north
         d_s = self.label_indir.winfo_height() / self.frame_indir.winfo_height() # distance from south
-        self.place_box_with_scrollbars(self.frame_indir, self.listbox_indir, HI, VI, .01, d_n, .005, d_s + .005, .005)
+        self.place_box_with_scrollbars(self.frame_indir, self.listbox_indir, HI, VI, .03, d_n, .005, d_s + .005, .005)
 
 
         # Frame_outdir with elements (listboxe, ...)
         self.frame_outdir = tk.Frame(self.root)
         self.frame_outdir.place(relx=0.645, rely=0.005, relheight=0.24, relwidth=0.35)
-        self.frame_outdir.configure(relief='flat')
-        self.frame_outdir.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_outdir.configure(relief='flat', background = _bgcolor)
+        self.frame_outdir.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_outdir.update()
 
         self.frame_outdir_label_height = .05
         self.label_outdir_select = tk.Label(self.frame_outdir, text = "Select Outdir", anchor='w')
         self.label_outdir_select.place(relx=0.0, rely=0.0, relheight=self.frame_outdir_label_height, relwidth=.3)
-        self.label_outdir_select.configure(font=self.text_font)
+        self.label_outdir_select.configure(font=self.text_font, background = _bgcolor)
 
         self.label_outdir = tk.Label(self.frame_outdir, text = "Select Indir", anchor='w')
         self.label_outdir.place(relx=0.0, rely=1-self.frame_outdir_label_height, relheight=self.frame_outdir_label_height, relwidth=.9)
-        self.label_outdir.configure(font=self.text_font)
+        self.label_outdir.configure(font=self.text_font, background = _bgcolor)
 
         # we create buttons for choosing dir from list or file system (horizontal) in own frame
-        self.frame_outdir_buttons = tk.Frame(self.frame_outdir, relief='flat')
+        self.frame_outdir_buttons = tk.Frame(self.frame_outdir, relief='flat', background = _bgcolor)
         self.frame_outdir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
-        self.frame_outdir_buttons.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_outdir_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_outdir_buttons.update()
         dict_buttons["1"] = {"OFFSET":0.00,"VAR":"b_button_outdir","TEXT":"from file system","CALLBACK":self.Press_outdir,"STATE":tk.ACTIVE,"TT":"Select output Directory from filesystem"}
         dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_outdir_from_list","TEXT":"from list","CALLBACK":self.listbox_outdir_double,"STATE":tk.ACTIVE,"TT":"Select Output Directory from list"}
@@ -1670,14 +1737,14 @@ class Dateimeister_support:
         # place listbox and scrollbars
         d_n = self.frame_outdir_label_height + self.frame_outdir_buttons.winfo_height() / self.frame_outdir.winfo_height() # distance from north
         d_s = self.label_outdir.winfo_height() / self.frame_outdir.winfo_height() # distance from south
-        self.place_box_with_scrollbars(self.frame_outdir, self.listbox_outdir, HI, VI, .01, d_n, .005, d_s + .005, .005)
+        self.place_box_with_scrollbars(self.frame_outdir, self.listbox_outdir, HI, VI, .03, d_n, .005, d_s + .005, .005)
 
 
         # Frame_text with elements (text1, ...)
         self.frame_text = tk.Frame(self.root)
         self.frame_text.place(relx=0.29, rely=0.25, relheight=0.42, relwidth=0.705)
-        self.frame_text.configure(relief='flat')
-        self.frame_text.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_text.configure(relief='flat', background = _bgcolor)
+        self.frame_text.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_text.update()
         # scrollbar width as fraction of frame-width
         rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
@@ -1687,7 +1754,7 @@ class Dateimeister_support:
         self.frame_text_label_height = .05
         self.l_label1 = tk.Label(self.frame_text)
         self.l_label1.place(relx=0.0, rely=0.0, relheight=self.frame_text_label_height, relwidth=1)
-        self.l_label1.configure(font=self.text_font)
+        self.l_label1.configure(font=self.text_font, background = _bgcolor)
 
         self.t_text1 = tk.Text(self.frame_text)
         self.t_text1.place(relx=0.0, rely=self.frame_text_label_height, relheight=1-self.frame_text_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
@@ -1716,40 +1783,6 @@ class Dateimeister_support:
         self.t_text1.config(xscrollcommand=self.H.set)  
         self.H.update()
         
-        self.lb_camera = tk.Listbox(self.frame_camera)
-        self.lb_camera.place(relx=0.005, rely=0.005, relheight=0.5, relwidth=0.5)
-        self.lb_camera.configure(background="white")
-        self.lb_camera.configure(disabledforeground="#a3a3a3")
-        self.lb_camera.configure(font=self.text_font)
-        self.lb_camera.configure(foreground="black")
-        self.lb_camera.configure(highlightbackground="#d9d9d9")
-        self.lb_camera.configure(highlightcolor="black")
-        self.lb_camera.configure(selectbackground="#d9d9d9")
-        self.lb_camera.configure(selectforeground="black")
-        self.lb_camera.configure(selectmode='single')
-        self.lb_camera.configure(exportselection=False)
-        self.lb_camera_tooltip = TT.ToolTip(self.lb_camera, 'available cameras')
-
-        self.o_camera = tk.Entry(self.frame_camera)
-        self.o_camera.place(relx=0.005, rely=0.505, relheight=0.05, relwidth=0.745)
-        self.o_camera.configure(background="grey70")
-        self.o_camera.configure(disabledforeground="#a3a3a3")
-        self.o_camera.configure(font=self.text_font)
-        self.o_camera.configure(foreground="grey5")
-
-        self.lb_gen = tk.Listbox(self.frame_camera)
-        self.lb_gen.place(relx=0.005, rely=0.55, relheight=0.4, relwidth=0.5)
-        self.lb_gen.configure(background="white")
-        self.lb_gen.configure(disabledforeground="#a3a3a3")
-        self.lb_gen.configure(font=self.text_font)
-        self.lb_gen.configure(foreground="black")
-        self.lb_gen.configure(highlightbackground="#d9d9d9")
-        self.lb_gen.configure(highlightcolor="black")
-        self.lb_gen.configure(selectbackground="#c4c4c4")
-        self.lb_gen.configure(selectforeground="black")
-        self.lb_gen.configure(selectmode='single')
-        self.lb_gen_tooltip = TT.ToolTip(self.lb_gen, 'generated imagetypes')
-
         # we create buttons for camera selection etc in a column (vertical)
         dict_buttons = {}
         dict_buttons["1"] = {"OFFSET":0.00,"VAR":"button_select_camera","TEXT":"Select Camera","CALLBACK":self.B_camera_press,"STATE":tk.ACTIVE,"TT":"Select Camera from Listbox"}
@@ -1765,28 +1798,11 @@ class Dateimeister_support:
         dict_controls["3"] = {"OFFSET":0.00,"VAR":"cb_newer","TEXT":"copy file only when newer or not existent","CALLBACK":self.state_gen_required,"STATE":0,"TT":"if checked existing files will ohnly be overridden when they are older than the source file"}
         dict_controls["4"] = {"OFFSET":0.00,"VAR":"cb_addrelpath","TEXT":"add relative path","CALLBACK":self.state_gen_required,"STATE":0,"TT":"add relative path to filename to avoid duplicates"}
         dict_controls["5"] = {"OFFSET":0.00,"VAR":"cb_num","TEXT":"numerate images in canvas","CALLBACK":self.on_cb_num_toggle,"STATE":0,"TT":"numerate images in canvas"}
-        self.create_checkboxes_from_dict(dict_controls, self.frame_checkboxes, 0.0, .95, .8, self.text_font, "VERTICAL")
+        self.create_checkboxes_from_dict(dict_controls, self.frame_checkboxes, 0.0, .95, .8, self.text_font, "VERTICAL", _bgcolor)
 
         # get all camera information and fill camera-listbox
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
         #print("self.dict_process_image is: " + str(self.dict_process_image))
-
-        #for listbox camera
-        self.frame_camera.update()
-        self.lb_camera.update()
-        VC = Scrollbar(self.frame_camera, orient= VERTICAL)
-        VC.place(relx = (self.lb_camera.winfo_x() + self.lb_camera.winfo_width()) / self.frame_camera.winfo_width(), \
-          rely = self.lb_camera.winfo_y() / self.frame_camera.winfo_height(), relheight = self.lb_camera.winfo_height() / self.frame_camera.winfo_height(), relwidth = .03, anchor = tk.NW)
-        VC.config(command = self.lb_camera.yview)
-        self.lb_camera.config(yscrollcommand = VC.set)
-        
-        #for listbox gen
-        self.lb_gen.update()
-        VG = Scrollbar(self.frame_camera, orient= VERTICAL)
-        VG.place(relx = (self.lb_gen.winfo_x() + self.lb_gen.winfo_width()) / self.frame_camera.winfo_width(), \
-          rely = self.lb_gen.winfo_y() / self.frame_camera.winfo_height(), relheight = self.lb_gen.winfo_height() / self.frame_camera.winfo_height(), relwidth = .03, anchor = tk.NW)
-        VG.config(command = self.lb_gen.yview)
-        self.lb_gen.config(yscrollcommand = VG.set)
 
         # Frame for the canvas and the horizontal scrollbar
         # y starts with this value
@@ -1800,8 +1816,8 @@ class Dateimeister_support:
         print("frame_canvas x1, y1, x2, y2 is {:f}, {:f} {:f}, {:f}".format(x1, x2, y1, y2)) if self.debug else True      
         self.frame_canvas = tk.Frame(self.root)
         self.frame_canvas.place(relx = x1, rely = c_rely, relheight = 1 - c_rely, relwidth = 1.0)
-        self.frame_canvas.configure(relief='flat')
-        self.frame_canvas.configure(background="#c4c4c4") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_canvas.configure(relief='flat', background = _bgcolor)
+        self.frame_canvas.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_canvas.update()
 
         # we need a frame for sort method radio buttons. we want to place them above the right upper corner of the canvas
@@ -1831,7 +1847,7 @@ class Dateimeister_support:
         print("Frame relx, rely, relw, relh is {:f}, {:f} {:f}, {:f}".format(relx1, rely1, relw, relh)) if self.debug else True      
         self.Frame_sortbuttons = tk.Frame(self.root)
         self.Frame_sortbuttons.place(relx = relx1, rely = rely1 + .005, relheight = relh, relwidth = relw)
-        self.Frame_sortbuttons.configure(relief='flat')
+        self.Frame_sortbuttons.configure(relief='flat', background = _bgcolor)
         self.Frame_sortbuttons.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_sortbuttons.update()
         
@@ -1853,13 +1869,13 @@ class Dateimeister_support:
         dict_buttons["2"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas2","VALUE":"2","TEXT":"sort name desc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort name descending"}
         dict_buttons["3"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas3","VALUE":"3","TEXT":"sort mod. asc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort modification date ascending"}
         dict_buttons["4"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas4","VALUE":"4","TEXT":"sort mod. desc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort modification date descending"}
-        self.create_radiobuttons_from_dict(dict_buttons, self.Frame_sortbuttons, 0.6, 0.4, 0.9, self.rbvalue, self.rb_sort, self.text_font, "HORIZONTAL")
+        self.create_radiobuttons_from_dict(dict_buttons, self.Frame_sortbuttons, 0.6, 0.4, 0.9, self.rbvalue, self.rb_sort, self.text_font, "HORIZONTAL", _bgcolor)
         self.rbvalue.set("1")
 
         # Label for number of images in canvas 
         self.label_num = tk.Label(self.Frame_sortbuttons)
         self.label_num.place(relx=0.5, rely=0.005, relheight=1, relwidth=.08)
-        self.label_num.configure(font=self.text_font)
+        self.label_num.configure(font=self.text_font, background = _bgcolor)
         TT.ToolTip(self.label_num, 'Number of images ')
 
         self.canvas_gallery = tk.Canvas(self.frame_canvas)
@@ -2051,7 +2067,7 @@ class Dateimeister_support:
         # d_n, d_e, d_s, d_w are the rel. distances from the frame borders (North, east, south, west.
         # the box with the scrollbars fills the area in the frame completely.
         # the last parameter is the font
-        # the relative width is given with respect to the listbox to be constructed. 
+        # the relative width is given with respect to the listbox to be constructed, so we have to correct it according to its rel. width
         # The height of the horizontal scrollbar is the same as the width of the vertical scrollbar
         # on call the frame is given and the width of the vertical scrollbar. 
         
@@ -2060,8 +2076,8 @@ class Dateimeister_support:
         parent_height_in_pixel = frame.winfo_height()
         area_width_in_pixel  = parent_width_in_pixel * (1 - d_w - d_e)
         area_height_in_pixel = parent_height_in_pixel * (1 - d_n - d_s)
-        factor = area_width_in_pixel / area_height_in_pixel
-        rel_size_sb_x = rw
+        factor = parent_width_in_pixel / parent_height_in_pixel
+        rel_size_sb_x = rw * area_width_in_pixel / parent_width_in_pixel
         rel_size_sb_y = rel_size_sb_x * factor # width relative to y
         element_width  = area_width_in_pixel / parent_width_in_pixel - rel_size_sb_x
         element_height = area_height_in_pixel / parent_height_in_pixel - rel_size_sb_y
@@ -2095,7 +2111,7 @@ class Dateimeister_support:
             setattr(self, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
             nextpos += relw + offset
 
-    def create_radiobuttons_from_dict(self, dict_buttons, frame, startpos, rgwidth, relsize, var, cmd, fon, orientation): # create Radiobuttons in horizontal Frame
+    def create_radiobuttons_from_dict(self, dict_buttons, frame, startpos, rgwidth, relsize, var, cmd, fon, orientation, bgcolor): # create Radiobuttons in horizontal Frame
         # calculate rel width considering the offsets
         num_buttons = 0
         relw = 0.0
@@ -2116,12 +2132,12 @@ class Dateimeister_support:
                 b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
             else:
                 raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
-            b.configure(font=fon)
+            b.configure(font=fon, background = bgcolor)
             setattr(self, dict_buttons[i]["VAR"], b)
             setattr(self, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
             nextpos += relw + offset
 
-    def create_checkboxes_from_dict(self, dict_controls, frame, startpos, rgwidth, relsize, fon, orientation): # create Buttons in horizontal Frame
+    def create_checkboxes_from_dict(self, dict_controls, frame, startpos, rgwidth, relsize, fon, orientation, bgcolor): # create Buttons in horizontal Frame
         # calculate rel width considering the offsets
         num_controls = 0
         relw = 0.0
@@ -2148,7 +2164,7 @@ class Dateimeister_support:
             setattr(self, dict_controls[i]["VAR"], b) # the variable for the control
             setattr(self, dict_controls[i]["VAR"] + "_var", v) # the variable
             setattr(self, dict_controls[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_controls[i]["TT"])) # the tooltip
-            b.configure(variable=v)
+            b.configure(variable=v, background = bgcolor)
             nextpos += relw + offset
 
     def rb_sort(self, event = None):
