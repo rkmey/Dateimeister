@@ -2058,7 +2058,7 @@ class Dateimeister_support:
         self.leftmost_thumbnail = None
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
-        self.timer = RestartableTimer(root, 333, self.resize)  # ms
+        self.timer = Dateimeister.RestartableTimer(root, 333, self.resize)  # ms
  
 
     def place_box_with_scrollbars(self, frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w):
@@ -3918,26 +3918,6 @@ class Dateimeister_support:
            thiscmdfile.write(ii + '\n') 
         thiscmdfile.close()
 
-class RestartableTimer:
-    def __init__(self, root, interval_ms, callback):
-        self.root = root
-        self.interval_ms = interval_ms
-        self.callback = callback
-        self._timer_id = None
-
-    def start(self):
-        self.cancel()  # Falls bereits laufend, abbrechen
-        self._timer_id = self.root.after(self.interval_ms, self._execute)
-
-    def cancel(self):
-        if self._timer_id is not None:
-            self.root.after_cancel(self._timer_id)
-            self._timer_id = None
-
-    def _execute(self):
-        self._timer_id = None
-        self.callback()
-        
 # #############################################################
 if __name__ == '__main__':
     '''Main entry point for the application.'''

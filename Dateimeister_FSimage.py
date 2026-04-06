@@ -148,8 +148,39 @@ class MyFSImage:
         self.Label_fileinfo.configure(font=self.text_font)
         mytext = "{:s}\n created {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
         self.Label_fileinfo.configure(text=mytext)
+        self.width  = 0
+        self.height = 0
+        self.timer = Dateimeister.RestartableTimer(self.root2, 333, self.resize)  # ms
+        self.root2.bind("<Configure>", self.on_configure) # we want to know if size changes
     
         
+    def on_configure(self, event):
+        x = str(event.widget)
+        l_width  = 0
+        l_height = 0
+        if (self.width != event.width or self.height != event.height):
+            self.width  = event.width
+            self.height = event.height
+            # we use the new dimension of the frame for calculating fontsize needed
+            self.root2.update()
+            l_width  = self.root2.winfo_width()
+            l_height = self.root2.winfo_height()
+            # we have to change fontsize according to Minimum of new Height / width
+            fontsize_width  = int(l_width * .025) 
+            #fontsize_height = int(.7 * min(12.0, l_height * .75))
+            fontsize_height = int(l_height * .025)
+            fontsize_use = min(fontsize_width, fontsize_height)
+            print(f"Frame sortbuttons: new width {l_width} new height {l_height}set fontsize to {fontsize_use}") if self.debug else True
+            self.text_font.configure(size=fontsize_use) 
+            self.timer.start()
+
+    def resize(self):
+        # display debug info for resize, this is very difficult to debug
+        self.debug_info_resize("TIMER") if self.debug else True
+
+    def debug_info_resize(self, text):
+        print("{:s} elapsed start resize".format(text))
+
     def getPlayer(self):
         return self.player
     

@@ -36,6 +36,26 @@ def _style_code():
     style.configure('.', font = "TkDefaultFont")
     _style_code_ran = 1
 
+class RestartableTimer:
+    def __init__(self, root, interval_ms, callback):
+        self.root = root
+        self.interval_ms = interval_ms
+        self.callback = callback
+        self._timer_id = None
+
+    def start(self):
+        self.cancel()  # Falls bereits laufend, abbrechen
+        self._timer_id = self.root.after(self.interval_ms, self._execute)
+
+    def cancel(self):
+        if self._timer_id is not None:
+            self.root.after_cancel(self._timer_id)
+            self._timer_id = None
+
+    def _execute(self):
+        self._timer_id = None
+        self.callback()
+        
 class Toplevel2:
     def __init__(self, top=None):
         '''This class configures and populates the toplevel window.
