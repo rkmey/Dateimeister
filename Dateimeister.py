@@ -72,18 +72,6 @@ class Toplevel2:
 
         self.top = top
 
-        self.Canvas_image = tk.Canvas(self.top)
-        self.Canvas_image.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=0.75)
-
-        self.Canvas_image.configure(background="#d9d9d9")
-        self.Canvas_image.configure(borderwidth="2")
-        self.Canvas_image.configure(highlightbackground="#d9d9d9")
-        self.Canvas_image.configure(highlightcolor="black")
-        self.Canvas_image.configure(insertbackground="black")
-        self.Canvas_image.configure(relief="ridge")
-        self.Canvas_image.configure(selectbackground="#c4c4c4")
-        self.Canvas_image.configure(selectforeground="black")
-
         self.Button_fit = tk.Button(self.top)
         self.Button_fit.place(relx=0.783, rely=0.133, height=34, width=87)
         self.Button_fit.configure(activebackground="beige")

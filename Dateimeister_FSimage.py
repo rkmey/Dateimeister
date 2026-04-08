@@ -61,7 +61,19 @@ class MyFSImage:
         # Create secondary (or popup) window.
         self.root2 = tk.Toplevel()
         self.w2 = Dateimeister.Toplevel2(self.root2)
-        self.f = self.w2.Canvas_image
+
+        # create the canvas
+        self.f = tk.Canvas(self.root2)
+        self.f.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=0.75)
+        self.f.configure(background="#d9d9d9")
+        self.f.configure(borderwidth="2")
+        self.f.configure(highlightbackground="#d9d9d9")
+        self.f.configure(highlightcolor="black")
+        self.f.configure(insertbackground="black")
+        self.f.configure(relief="ridge")
+        self.f.configure(selectbackground="#c4c4c4")
+        self.f.configure(selectforeground="black")
+
         if self.thumbnail.getState() == INCLUDE:
             self.w2.Button_exclude.config(text = self.str_exclude)
             self.w2.Label_status.config(text = self.str_included)
@@ -150,6 +162,7 @@ class MyFSImage:
         self.Label_fileinfo.configure(text=mytext)
         self.width  = 0
         self.height = 0
+        self.adjust_zoom = 0
         self.timer = Dateimeister.RestartableTimer(self.root2, 333, self.resize)  # ms
         self.root2.bind("<Configure>", self.on_configure) # we want to know if size changes
     
@@ -158,7 +171,10 @@ class MyFSImage:
         x = str(event.widget)
         l_width  = 0
         l_height = 0
+        self.adjust_zoom = 1.0
         if (self.width != event.width or self.height != event.height):
+            old_w = self.width
+            old_h = self.height
             self.width  = event.width
             self.height = event.height
             # we use the new dimension of the frame for calculating fontsize needed
@@ -170,13 +186,20 @@ class MyFSImage:
             #fontsize_height = int(.7 * min(12.0, l_height * .75))
             fontsize_height = int(l_height * .025)
             fontsize_use = min(fontsize_width, fontsize_height)
-            print(f"Frame sortbuttons: new width {l_width} new height {l_height}set fontsize to {fontsize_use}") if self.debug else True
+            # we calculate the correction factor for zoom
+            self.adjust_zoom = 1.0
+            if old_w != 0 and old_h != 0 and self.width != 0 and self.height != 0:
+                self.adjust_zoom = min(l_width / old_w, l_height / old_h)
+            print(f"root: new width {l_width} new height {l_height} set fontsize to {fontsize_use}, old w = {old_w}, old h = {old_h}, zoomadjust = {self.adjust_zoom}") if self.debug else True
             self.text_font.configure(size=fontsize_use) 
             self.timer.start()
 
     def resize(self):
         # display debug info for resize, this is very difficult to debug
         self.debug_info_resize("TIMER") if self.debug else True
+        # recalculate the zoom factor
+        self.zoomfaktor = self.zoomfaktor / self.adjust_zoom
+        self.image_zoom(self.zoomfaktor)
 
     def debug_info_resize(self, text):
         print("{:s} elapsed start resize".format(text))
