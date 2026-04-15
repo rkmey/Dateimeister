@@ -59,11 +59,11 @@ class MyFSImage:
         # register at thumbnail, so it can call us for reacting to state
         self.thumbnail.register_FSimage(self)
         # Create secondary (or popup) window.
-        self.root2 = tk.Toplevel()
-        self.w2 = Dateimeister.Toplevel2(self.root2)
+        self.root = tk.Toplevel(name = "fsimage")
+        self.w2 = Dateimeister.Toplevel2(self.root)
 
         # create the canvas
-        self.f = tk.Canvas(self.root2)
+        self.f = tk.Canvas(self.root)
         self.f.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=0.75)
         self.f.configure(background="#d9d9d9")
         self.f.configure(borderwidth="2")
@@ -90,16 +90,16 @@ class MyFSImage:
         self.w2.Button_restart.config(command = self.restart_handler)
         self.w2.Scale_fps.config(command = self.setFps)
         self.f.bind("<MouseWheel>", self.mousewheel_handler)
-        self.root2.protocol("WM_DELETE_WINDOW", self.close_handler)
+        self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
-        self.root2.title(str_title_prefix + file)
-        screen_width  = int(self.root2.winfo_screenwidth() * 0.9)
-        screen_height = int(self.root2.winfo_screenheight() * 0.8)
+        self.root.title(str_title_prefix + file)
+        screen_width  = int(self.root.winfo_screenwidth() * 0.9)
+        screen_height = int(self.root.winfo_screenheight() * 0.8)
         print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height))
         width,height=screen_width,screen_height
         v_dim=str(width)+'x'+str(height)
-        self.root2.geometry(v_dim)
-        self.root2.resizable(True, True)
+        self.root.geometry(v_dim)
+        self.root.resizable(True, True)
 
         # Scrollbars
         self.V_I = Scrollbar(self.f)
@@ -134,7 +134,7 @@ class MyFSImage:
             self.H_I.pack_forget()
             self.V_I.pack_forget()
             self.f.update()
-            self.player   = DV.VideoPlayer(self.root2, self.file, self.f, self.f.winfo_width(), self.f.winfo_height(), 0)
+            self.player   = DV.VideoPlayer(self.root, self.file, self.f, self.f.winfo_width(), self.f.winfo_height(), 0)
             self.image_width, self.image_height, self.pimg = self.player.get_pimg()  
             print(file, " height / width: ",  self.image_width, self.image_height)
             self.id = self.f.create_image(0, 0, anchor='nw',image = self.pimg, tags = 'images')
@@ -147,10 +147,11 @@ class MyFSImage:
             self.w2.Scale_fps.set(int(1000 / fps))
             self.playerstatus = 'play'
             self.w2.Button_pp.config(text = 'pause')
+            self.image = self.player.get_image()
             
         # frame for Label displaying file info start at  0,75 (width of canvas
         self.text_font = Font(family="Helvetica", size=6)
-        self.Frame_labels = tk.Frame(self.root2)
+        self.Frame_labels = tk.Frame(self.root)
         self.Frame_labels.place(relx=.75, rely=0.00, relheight=0.1, relwidth=0.2)
         self.Frame_labels.configure(relief='flat')
         self.Frame_labels.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
@@ -163,42 +164,44 @@ class MyFSImage:
         self.width  = 0
         self.height = 0
         self.adjust_zoom = 0
-        self.timer = Dateimeister.RestartableTimer(self.root2, 333, self.resize)  # ms
-        self.root2.bind("<Configure>", self.on_configure) # we want to know if size changes
+        self.timer = Dateimeister.RestartableTimer(self.root, 333, self.resize)  # ms
+        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
     
         
     def on_configure(self, event):
-        x = str(event.widget)
+        x = event.widget
         l_width  = 0
         l_height = 0
         self.adjust_zoom = 1.0
-        if (self.width != event.width or self.height != event.height):
-            old_w = self.width
-            old_h = self.height
-            self.width  = event.width
-            self.height = event.height
-            # we use the new dimension of the frame for calculating fontsize needed
-            self.root2.update()
-            l_width  = self.root2.winfo_width()
-            l_height = self.root2.winfo_height()
-            # we have to change fontsize according to Minimum of new Height / width
-            fontsize_width  = int(l_width * .025) 
-            #fontsize_height = int(.7 * min(12.0, l_height * .75))
-            fontsize_height = int(l_height * .025)
-            fontsize_use = min(fontsize_width, fontsize_height)
-            # we calculate the correction factor for zoom
-            self.adjust_zoom = 1.0
-            if old_w != 0 and old_h != 0 and self.width != 0 and self.height != 0:
-                self.adjust_zoom = min(l_width / old_w, l_height / old_h)
-            print(f"root: new width {l_width} new height {l_height} set fontsize to {fontsize_use}, old w = {old_w}, old h = {old_h}, zoomadjust = {self.adjust_zoom}") if self.debug else True
-            self.text_font.configure(size=fontsize_use) 
-            self.timer.start()
+        if x == self.root:
+            if (self.width != event.width or self.height != event.height):
+                self.timer.start()
 
     def resize(self):
         # display debug info for resize, this is very difficult to debug
         self.debug_info_resize("TIMER") if self.debug else True
-        # recalculate the zoom factor
-        self.zoomfaktor = self.zoomfaktor / self.adjust_zoom
+        old_width  = self.width
+        old_height = self.height
+        # we use the new dimension of the frame for calculating fontsize needed
+        self.root.update()
+        new_width  = self.root.winfo_width()
+        new_height = self.root.winfo_height()
+        if (old_width != new_width or old_height != new_height):
+            # store new values
+            self.width  = new_width
+            self.height = new_height
+            # we have to change fontsize according to Minimum of new Height / width
+            fontsize_width  = int(new_width * .025) 
+            #fontsize_height = int(.7 * min(12.0, new_height * .75))
+            fontsize_height = int(new_height * .025)
+            fontsize_use = min(fontsize_width, fontsize_height)
+            # we calculate the correction factor for zoom
+            self.adjust_zoom = 1.0
+            if old_width != 0 and old_height != 0 and new_width != 0 and new_height != 0:
+                self.adjust_zoom = min(new_width / old_width, new_height / old_height)
+            print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}, old width = {old_width}, old height = {old_height}, zoomadjust = {self.adjust_zoom}") if self.debug else True
+            self.text_font.configure(size=fontsize_use) 
+        self.zoomfaktor = self.zoomfaktor * self.adjust_zoom
         self.image_zoom(self.zoomfaktor)
 
     def debug_info_resize(self, text):
@@ -275,7 +278,7 @@ class MyFSImage:
         if self.player is not None:
             self.player.pstop()
             del self.player
-        self.root2.destroy()
+        self.root.destroy()
         del t
         
     def close_handler_external(self): # called from external. Do the same things as close_handler, except remove from dict_file_image
@@ -285,7 +288,7 @@ class MyFSImage:
         if self.player is not None:
             self.player.pstop()
             del self.player
-        self.root2.destroy()
+        self.root.destroy()
         del t
         
     def mousewheel_handler(self, event):
@@ -310,7 +313,11 @@ class MyFSImage:
 
     def image_zoom(self, zoomfaktor):
         # zoomfaktor 0 heißt: selbst errechnen, so dass Bild formatfüllend ist.
-        image_width_orig, image_height_orig = self.image.size
+        if self.thumbnail.getPlayer() is None: # still image
+            image_width_orig, image_height_orig = self.image.size
+        else:
+            image_width_orig  =self.image_width
+            image_height_orig =self.image_height
         self.f.update()
         canvas_width  = self.f.winfo_width()
         canvas_height = self.f.winfo_height()
@@ -336,6 +343,8 @@ class MyFSImage:
         self.f.tag_raise("rect")
         self.f.tag_raise("text")
         self.f.update()
+        if self.thumbnail.getPlayer(): # Video we need a new player because size has changed
+            self.player   = DV.VideoPlayer(self.root, self.file, self.f, self.f.winfo_width(), self.f.winfo_height(), 0)
         
         if newsize[0] <= canvas_width:
             self.H_I.pack_forget()

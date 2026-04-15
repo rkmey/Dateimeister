@@ -44,6 +44,14 @@ class VideoPlayer:
             self.line_total    = self.canvas.create_line(self.x1, self.y1, self.x2, self.y2, width = 5, fill = 'white', tags = "line")
             self.line_progress = self.canvas.create_line(self.x1, self.y1, self.x1, self.y2, width = 3, fill = 'black', tags = "line")
             return new_w, new_h, self.photo # returns photoimage
+    def get_image(self):
+        # Get image from the video source
+        ret, new_w, new_h, frame = self.vid.get_frame(self.canvas_width, self.canvas_height)
+        if ret:
+            self.image_width  = new_w
+            self.image_height = new_h
+            return PIL.Image.fromarray(frame)
+
     def update(self): # Play video
         # Get a frame from the video source
         ret, new_w, new_h, frame = self.vid.get_frame(self.canvas_width, self.canvas_height)
