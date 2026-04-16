@@ -175,6 +175,8 @@ class MyFSImage:
         self.adjust_zoom = 1.0
         if x == self.root:
             if (self.width != event.width or self.height != event.height):
+                if self.player: # Video we have to pause the player
+                    self.player.pstop()
                 self.timer.start()
 
     def resize(self):
@@ -336,21 +338,11 @@ class MyFSImage:
             
         newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
         #print("*** faktor is: " + str(faktor) + " canvas_height: " + str(canvas_height) + " origsize: " + str(self.image.size) + " newsize: " +str(newsize))
-        if self.thumbnail.getPlayer(): # Video we need a new player because size has changed
-            self.f.delete('all')
-            self.player   = DV.VideoPlayer(self.root, self.file, self.f, self.f.winfo_width(), self.f.winfo_height(), 0)
-            self.image_width, self.image_height, self.pimg = self.player.get_pimg()  
-            print(self.file, " height / width: ",  self.image_width, self.image_height) if self.debug else True
-            self.id = self.f.create_image(0, 0, anchor='nw',image = self.pimg, tags = 'images')
-            self.f.tag_raise("text")
-            self.f.tag_raise("line")
-            self.player.setId(self.id)
+        if self.thumbnail.getPlayer(): # Video we have to resize the player
+            # video size is calculated automatically as the display process uses the actual canvas size, but we have to redraw the progress bar
+            # start the player again which has been stopped in on configure
+            self.player.resize()
             self.player.pstart()
-            fps = self.player.getFPS()
-            self.player.setDelay(int(1000 / fps))
-            self.w2.Scale_fps.set(int(1000 / fps))
-            self.playerstatus = 'play'
-            self.w2.Button_pp.config(text = 'pause')
         else:
             r_img = self.image.resize(newsize, Image.Resampling.NEAREST)
             self.pimg = ImageTk.PhotoImage(r_img)

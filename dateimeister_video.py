@@ -11,8 +11,6 @@ class VideoPlayer:
         self.window = window
         self.video_source = video_source        # open video source (by default this will try to open the computer webcam)
         self.canvas = canvas
-        self.canvas_height = canvas_height
-        self.canvas_width  = canvas_width
         self.start = start
         self.vid = MyVideoCapture(self.video_source)
         # After it is called once, the update method will be automatically called every delay milliseconds
@@ -30,9 +28,15 @@ class VideoPlayer:
     def audio_callback(self, a, b):
         print("AUDIO CALLBACK called with parms {:s} - {:s}".format(str(a), str(b)))
     
+    def resize(self):
+        # delete the old lines and recalculate the values for the coordinates of the
+        # new resized lines. We use the get_pimg function which is not good, butt it will work
+        self.canvas.delete("line")
+        self.get_pimg()
+
     def get_pimg(self): # get 1 Photoimage
         # Get a frame from the video source
-        ret, new_w, new_h, frame = self.vid.get_frame(self.canvas_width, self.canvas_height)
+        ret, new_w, new_h, frame = self.vid.get_frame(self.canvas.winfo_width(), self.canvas.winfo_height())
         if ret:
             self.image_width  = new_w
             self.image_height = new_h
@@ -46,7 +50,7 @@ class VideoPlayer:
             return new_w, new_h, self.photo # returns photoimage
     def get_image(self):
         # Get image from the video source
-        ret, new_w, new_h, frame = self.vid.get_frame(self.canvas_width, self.canvas_height)
+        ret, new_w, new_h, frame = self.vid.get_frame(self.canvas.winfo_width(), self.canvas.winfo_height())
         if ret:
             self.image_width  = new_w
             self.image_height = new_h
@@ -54,7 +58,7 @@ class VideoPlayer:
 
     def update(self): # Play video
         # Get a frame from the video source
-        ret, new_w, new_h, frame = self.vid.get_frame(self.canvas_width, self.canvas_height)
+        ret, new_w, new_h, frame = self.vid.get_frame(self.canvas.winfo_width(), self.canvas.winfo_height())
         if ret:
             self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame))
             self.canvas.itemconfig(self.canvas_id, image = self.photo)
@@ -106,6 +110,7 @@ class VideoPlayer:
         self.delay = delay
     def setId(self, id):
         self.canvas_id = id
+        
     def __del__(self):
         print("*** Deleting VideoPlayer-Objekt. " + self.video_source)
         self.audio_player.close_player()
@@ -119,8 +124,6 @@ class MyVideoCapture:
         if not self.vid.isOpened():
             raise ValueError("Unable to open video source", video_source)
         # Get video source width and height
-        self.width = self.vid.get(cv2.CAP_PROP_FRAME_WIDTH)
-        self.height = self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
     def get_frame(self, canvas_width, canvas_height):
         if self.vid.isOpened():
             ret, frame = self.vid.read()
