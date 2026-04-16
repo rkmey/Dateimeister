@@ -147,7 +147,7 @@ class MyFSImage:
             self.w2.Scale_fps.set(int(1000 / fps))
             self.playerstatus = 'play'
             self.w2.Button_pp.config(text = 'pause')
-            self.image = self.player.get_image()
+            #self.image = self.player.get_image()
             
         # frame for Label displaying file info start at  0,75 (width of canvas
         self.text_font = Font(family="Helvetica", size=6)
@@ -164,7 +164,7 @@ class MyFSImage:
         self.width  = 0
         self.height = 0
         self.adjust_zoom = 0
-        self.timer = Dateimeister.RestartableTimer(self.root, 333, self.resize)  # ms
+        self.timer = Dateimeister.RestartableTimer(self.root, 666, self.resize)  # ms
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
     
         
@@ -196,9 +196,10 @@ class MyFSImage:
             fontsize_height = int(new_height * .025)
             fontsize_use = min(fontsize_width, fontsize_height)
             # we calculate the correction factor for zoom
-            self.adjust_zoom = 1.0
             if old_width != 0 and old_height != 0 and new_width != 0 and new_height != 0:
                 self.adjust_zoom = min(new_width / old_width, new_height / old_height)
+            else:    
+                self.adjust_zoom = 1.0
             print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}, old width = {old_width}, old height = {old_height}, zoomadjust = {self.adjust_zoom}") if self.debug else True
             self.text_font.configure(size=fontsize_use) 
         self.zoomfaktor = self.zoomfaktor * self.adjust_zoom
@@ -335,16 +336,30 @@ class MyFSImage:
             
         newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
         #print("*** faktor is: " + str(faktor) + " canvas_height: " + str(canvas_height) + " origsize: " + str(self.image.size) + " newsize: " +str(newsize))
-        r_img = self.image.resize(newsize, Image.Resampling.NEAREST)
-        self.pimg = ImageTk.PhotoImage(r_img)
-        self.f.delete('images')
-        #f.itemconfig(canvas_id, image = pimg)
-        self.id = self.f.create_image(0, 0, anchor='nw',image = self.pimg, tags = 'images')
-        self.f.tag_raise("rect")
-        self.f.tag_raise("text")
-        self.f.update()
         if self.thumbnail.getPlayer(): # Video we need a new player because size has changed
+            self.f.delete('all')
             self.player   = DV.VideoPlayer(self.root, self.file, self.f, self.f.winfo_width(), self.f.winfo_height(), 0)
+            self.image_width, self.image_height, self.pimg = self.player.get_pimg()  
+            print(self.file, " height / width: ",  self.image_width, self.image_height) if self.debug else True
+            self.id = self.f.create_image(0, 0, anchor='nw',image = self.pimg, tags = 'images')
+            self.f.tag_raise("text")
+            self.f.tag_raise("line")
+            self.player.setId(self.id)
+            self.player.pstart()
+            fps = self.player.getFPS()
+            self.player.setDelay(int(1000 / fps))
+            self.w2.Scale_fps.set(int(1000 / fps))
+            self.playerstatus = 'play'
+            self.w2.Button_pp.config(text = 'pause')
+        else:
+            r_img = self.image.resize(newsize, Image.Resampling.NEAREST)
+            self.pimg = ImageTk.PhotoImage(r_img)
+            self.f.delete('images')
+            #f.itemconfig(canvas_id, image = pimg)
+            self.id = self.f.create_image(0, 0, anchor='nw',image = self.pimg, tags = 'images')
+            self.f.tag_raise("rect")
+            self.f.tag_raise("text")
+            self.f.update()
         
         if newsize[0] <= canvas_width:
             self.H_I.pack_forget()
