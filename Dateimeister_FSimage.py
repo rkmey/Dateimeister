@@ -170,8 +170,6 @@ class MyFSImage:
         
     def on_configure(self, event):
         x = event.widget
-        l_width  = 0
-        l_height = 0
         self.adjust_zoom = 1.0
         if x == self.root:
             if (self.width != event.width or self.height != event.height):
