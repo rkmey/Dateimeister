@@ -2059,7 +2059,8 @@ class Dateimeister_support:
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
         self.timer = Dateimeister.RestartableTimer(root, 333, self.resize)  # ms
- 
+        self.list_running_players = [] # we keep a list of running players so we can restart after stop_all players
+        self.resize_start = False
 
     def place_box_with_scrollbars(self, frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w):
         # this function places a listbox or other scrollable element in a given Frame with horizontal and vertical scrollbars
@@ -2208,35 +2209,55 @@ class Dateimeister_support:
         print("Menuitem not yet implemented")
     
     def on_configure(self, event):
-        x = str(event.widget)
-        l_width  = 0
-        l_height = 0
-        if x == ".": # . is toplevel window
+        x = event.widget
+        if x == self.root:
             if (self.width != event.width or self.height != event.height):
-                self.width  = event.width
-                self.height = event.height
-                # we use the new dimension of the frame for calculating fontsize needed
-                self.Frame_sortbuttons.update()
-                l_width  = self.Frame_sortbuttons.winfo_width()
-                l_height = self.Frame_sortbuttons.winfo_height()
-                # we have to change fontsize according to Minimum of new Height / width
-                fontsize_width  = int(l_width * .025) 
-                #fontsize_height = int(.7 * min(12.0, l_height * .75))
-                fontsize_height = int(l_height * .25)
-                fontsize_use = min(fontsize_width, fontsize_height)
-                print(f"Frame sortbuttons: new width {l_width} new height {l_height}set fontsize to {fontsize_use}") if self.debug else True
-                self.text_font.configure(size=fontsize_use) 
-                # scrollbar width as fraction of frame-width
-                rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
-                rel_width_sb_y = rel_width_sb_x * self.frame_text.winfo_width() / self.frame_text.winfo_height() # width relative to y 
-                print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame_text.winfo_width(), rel_width_sb_y, self.frame_text.winfo_height())) if self.debug else True
-                self.V.place(relx = 1, rely = self.frame_text_label_height, relheight = 1-self.frame_text_label_height-rel_width_sb_y, relwidth = rel_width_sb_x, anchor = tk.NE)
-                self.H.place(relx = 0, rely = 1, relheight = rel_width_sb_y, relwidth = 1-rel_width_sb_x, anchor = tk.SW)
-                self.V.update()
-                self.H.update()
-                self.t_text1.place(relx=0.0, rely=self.frame_text_label_height, relheight=1-self.frame_text_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
-                self.t_text1.update()
+                if not self.resize_start:
+                    # we have to stop all video players to reduce CPU load, resizing would not work else
+                    self.list_running_players = self.stop_all_players()
+                self.resize_start = True
                 self.timer.start()
+
+    def resize(self):
+        # display debug info for resize, this is very difficult to debug
+        self.debug_info_resize("TIMER") if self.debug else True
+        old_width  = self.width
+        old_height = self.height
+        # we use the new dimension of the window for calculating fontsize needed
+        self.root.update()
+        new_width  = self.root.winfo_width()
+        new_height = self.root.winfo_height()
+        if (old_width != new_width or old_height != new_height):
+            # store new values
+            self.width  = new_width
+            self.height = new_height
+            # we have to change fontsize according to Minimum of new Height / width
+            fontsize_width  = int(new_width * .01) 
+            fontsize_height = int(new_height * .01)
+            fontsize_use = min(fontsize_width, fontsize_height)
+            self.text_font.configure(size=fontsize_use) 
+            print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}, old width = {old_width}, old height = {old_height}") if self.debug else True
+
+            # adjust some widgets     
+            rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
+            rel_width_sb_y = rel_width_sb_x * self.frame_text.winfo_width() / self.frame_text.winfo_height() # width relative to y 
+            print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame_text.winfo_width(), rel_width_sb_y, self.frame_text.winfo_height())) if self.debug else True
+            self.V.place(relx = 1, rely = self.frame_text_label_height, relheight = 1-self.frame_text_label_height-rel_width_sb_y, relwidth = rel_width_sb_x, anchor = tk.NE)
+            self.H.place(relx = 0, rely = 1, relheight = rel_width_sb_y, relwidth = 1-rel_width_sb_x, anchor = tk.SW)
+            self.V.update()
+            self.H.update()
+            self.t_text1.place(relx=0.0, rely=self.frame_text_label_height, relheight=1-self.frame_text_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
+            self.t_text1.update()
+            if Globals.imagetype != "": # new sort of existing images
+                Globals.resized = True
+                self.display_images(Globals.imagetype)
+                # restart the players 
+                for p in self.list_running_players:
+                    print("PLAYER Restart {:s}".format(p.video_source)) if self.debug else True
+                    p.pstart() # restart
+                Globals.resized = False
+            self.list_running_players = [] # list is only needed within resize logic, so we shoul clear it here
+            self.resize_start = False
 
     def debug_info_resize(self, text):
         if self.leftmost_thumbnail:
@@ -2250,14 +2271,6 @@ class Dateimeister_support:
             s  = -1
             e  = -1
         print("{:s} elapsed start resize, leftmost humbnail filename {:s}, lnr {:d}, start {:d}, end {:d}".format(text, fn, ln, s, e))
-
-    def resize(self):
-        # display debug info for resize, this is very difficult to debug
-        self.debug_info_resize("TIMER") if self.debug_r else True
-        if Globals.imagetype != "": # new sort of existing images
-            Globals.resized = True
-            self.display_images(Globals.imagetype)
-            Globals.resized = False
 
     def timer_end(self):
         print("Timer has elapsed") if self.debug else True
@@ -2429,7 +2442,7 @@ class Dateimeister_support:
             mynum_images = result[item]['num_images']
             labeltext = item + ' (usedate: ' + usedate + ' ,images: ' + mynum_images + ')'
             self.recentmenu.add_command(label=labeltext, command = lambda item=item: self.recent_config(item))
-            print("  config_file: " + labeltext) if self.debug else True
+            #print("  config_file: " + labeltext) if self.debug else True
             if not os.path.isfile(item):
                 self.recentmenu.entryconfig(ii, state = DISABLED)
             ii += 1
@@ -2468,7 +2481,7 @@ class Dateimeister_support:
         result = DX.get_cfgfiles(Globals.config_files_xml, indir, imagetype)
         dict_filename_usedate = {}
         for cfg_file in result:
-            print("config_file: " + cfg_file) if self.debug else True
+            #print("config_file: " + cfg_file) if self.debug else True
             attribute = result[cfg_file]
             searchattr = 'usedate'
             for attribut in attribute:
@@ -2879,12 +2892,13 @@ class Dateimeister_support:
                     print ("*** No JPEG found for " + file + " using " + showfile) if self.debug else True
                     process_type = "none" # rectangle instead
             elif process_type == 'VIDEO':
-                if new_image_required or new_thumbnail_required: # we need a new player because of new size::
+                if new_thumbnail_required: # we need a new player:
                     print("try to create new videoplayer...") if self.debug else True
                     # create new videoplayer
                     player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height, self.lastposition)
                 else:
                     player = Globals.dict_thumbnails[imagetype][file].getPlayer()
+                    player.resize()
                 image_width, image_height, pimg = player.get_pimg()
                 showfile = file
             else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
@@ -3806,7 +3820,8 @@ class Dateimeister_support:
         return dict_t, dict_s, dict_pi
 
     def stop_all_players(self):
-        # stop all video players
+        # stop all video players and returns list of running players
+        list_players = []
         if Globals.imagetype is not None and Globals.imagetype != "":
             for imagetype in self.dict_subdirs:
                 if imagetype in Globals.thumbnails:
@@ -3815,7 +3830,9 @@ class Dateimeister_support:
                         if thisplayer is not None:
                             if thisplayer.getRun(): # running
                                 thisplayer.pstop()
+                                list_players.append(thisplayer)
                                 #print ("Stop player for: " + t.getFile() + " playertype: " + imagetype)
+        return list_players
      
     def write_cmdfile(self, imagetype):
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
