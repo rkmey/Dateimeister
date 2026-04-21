@@ -17,6 +17,7 @@ git diff master:Dateimeister_support.py -- Dateimeister_support.py
 
 VIEL besser mit BeyondCompare durch Anpassungen in .gitconfig (Alias, Bekanntgabe von BC):
 git last Dateimeister_support.py
+ACHTUNG: Groß-/Kleinschreibung beachten! Sonst passiert gar nichts - ohne Fehlermeldung
 
 
 lokal geänderte Datei auf Stand des letzten Commits zurücksetzen:
