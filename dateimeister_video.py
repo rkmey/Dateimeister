@@ -17,7 +17,7 @@ class VideoPlayer:
         self.delay = 20
         self.delay = int(1000 / self.getFPS())
         self.liney = 0.95
-        self.do_update = True
+        self.do_update = False
         self.frames_total = self.vid.getFrameCount()
         self.frames_till_now = 0
         

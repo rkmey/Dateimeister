@@ -2808,6 +2808,8 @@ class Dateimeister_support:
     
     # display images of given type
     def display_images(self, imagetype):
+        t_start = time.time()
+        busy = Dateimeister.BusyDialog(self.root, text="Fotos werden geladen…")        
         filename = self.dict_gen_files[imagetype]
         subdir = self.dict_subdirs[imagetype]
         Globals.outdir = self.dict_outdirs[imagetype] # for setting title of duplicate-window
@@ -2826,6 +2828,7 @@ class Dateimeister_support:
         self.clear_text(self.t_text1)
         lineno = 0
         #print(str(self.dict_source_target))
+        files_total = 0
         for this_sourcefile in self.dict_source_target[imagetype]:
             this_targetfile = self.dict_source_target[imagetype][this_sourcefile]
             lineno += 1
@@ -2842,6 +2845,7 @@ class Dateimeister_support:
             thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = this_sourcefile, target = this_targetfile)
             self.insert_text(self.t_text1, thisline)
             dict_image_lineno[this_sourcefile] = lineno
+            files_total += 1
         
         # wir suchen in der cmd-Datei die Endung für jedes Imagefile. Damit suchen wir in dict_process_image nach einem Eintrag
         # wenn JPEG, dann verarbeiten wir die Zeile und verwenden das mutmaßliche JPEG_Bild in der Gallerie. Wenn use_jpeg gefunden wird
@@ -2854,7 +2858,10 @@ class Dateimeister_support:
         self.dict_thumbnails_lineno[imagetype] = {}
         self.num_images = 0
         for file in self.dict_source_target[imagetype]:
+            if busy.cancelled:
+                break
             self.num_images += 1
+            busy.update_progress(self.num_images, files_total)
             this_targetfile = self.dict_source_target[imagetype][file]
             # wir brauchen die Endung der Datei und den Vornamen
             regpattern = r'[\/\\]([^\/\\."]+)\.([^\/\\."]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
@@ -3078,7 +3085,6 @@ class Dateimeister_support:
         else:
             self.button_duplicates.config(state = DISABLED)
         
-        self.label_num.config(text = str(self.num_images))
         self.button_exec.config(state = NORMAL)
         self.write_cmdfile(imagetype)
         if self.win_messages is not None: # stop MyMessagesWindow-Objekt
@@ -3090,7 +3096,15 @@ class Dateimeister_support:
             self.scrollToImage(self.leftmost_thumbnail)
         else:
             self.canvas_gallery.xview('moveto', 0)
-
+        busy.close()
+        elapsed = time.time() - t_start
+        hours = int(elapsed // 3600)
+        minutes = int((elapsed % 3600) // 60)
+        seconds = int(elapsed % 60)
+        tenths = int((elapsed * 10) % 10)
+        diff_formatted = f"{self.num_images:d} in {hours:02d}:{minutes:02d}:{seconds:02d}.{tenths}"
+        self.label_num.config(text = diff_formatted)
+        
     def new_image(self, file, canvas_height):    
         img  = Image.open(file)
         image_width_orig, image_height_orig = img.size

@@ -36,6 +36,67 @@ def _style_code():
     style.configure('.', font = "TkDefaultFont")
     _style_code_ran = 1
 
+import tkinter as tk
+from tkinter import ttk
+
+class BusyDialog:
+    def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):
+        self.root = root
+        self.cancelled = False
+
+        self.dialog = tk.Toplevel(root)
+        self.dialog.title(title)
+        self.dialog.geometry("320x180")
+        self.dialog.resizable(False, False)
+
+        # Modal
+        self.dialog.transient(root)
+        self.dialog.grab_set()
+
+        # Cursor
+        self.dialog.config(cursor="watch")
+        root.config(cursor="watch")
+
+        # Text
+        self.label_text = tk.Label(self.dialog, text=text)
+        self.label_text.pack(pady=10)
+
+        # Fortschrittsbalken
+        self.progress = ttk.Progressbar(self.dialog, orient="horizontal",
+                                        length=250, mode="determinate")
+        self.progress.pack(pady=5)
+
+        # Prozentanzeige
+        self.label_progress = tk.Label(self.dialog, text="0 %")
+        self.label_progress.pack()
+
+        # Abbrechen-Knopf
+        self.button_cancel = tk.Button(self.dialog, text="Abbrechen",
+                                       command=self._cancel)
+        self.button_cancel.pack(pady=10)
+
+        self.dialog.update()
+
+    def _cancel(self):
+        self.cancelled = True
+
+    def update_progress(self, current, total):
+        percent = int(current / total * 100)
+
+        # Fortschrittsbalken aktualisieren
+        self.progress["value"] = percent
+
+        # Text aktualisieren
+        self.label_progress.config(text=f"{percent} %   ({current} / {total})")
+
+        # GUI aktualisieren
+        self.dialog.update()
+
+    def close(self):
+        self.dialog.destroy()
+        self.root.config(cursor="")
+        self.root.update()
+
 class RestartableTimer:
     def __init__(self, root, interval_ms, callback):
         self.root = root
