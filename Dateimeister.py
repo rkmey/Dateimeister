@@ -39,6 +39,18 @@ def _style_code():
 import tkinter as tk
 from tkinter import ttk
 
+
+# some universal functions
+def count_files_top(path):
+    with os.scandir(path) as it:
+        return sum(1 for entry in it if entry.is_file())
+
+def count_files_recursive(path):
+    total = 0
+    for root, dirs, files in os.walk(path):
+        total += len(files)
+    return total
+
 class BusyDialog:
     def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):
         self.root = root

@@ -2614,6 +2614,11 @@ class Dateimeister_support:
             recursive = "j"
         else:
             recursive = "n"
+
+        if recursive == "j":
+            files_total = Dateimeister.count_files_recursive(indir)
+        else:
+            files_total = Dateimeister.count_files_top(indir)
         if self.cb_prefix_var.get():
             self.use_camera_prefix = True
         else:
@@ -2691,8 +2696,10 @@ class Dateimeister_support:
                 sort_method = self.rbvalue.get()
                 print("generate sort method is {:s}".format(sort_method)) if self.debug else True
                 self.dict_sort_method[dateityp] = sort_method
+            # show the busy dialog
+            busy = Dateimeister.BusyDialog(self.root, text= dateityp + " files are analyzed…")        
             self.dict_source_target[dateityp], self.dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp], self.dict_relpath[dateityp] = \
-              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, int(sort_method), self.debug)
+              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, int(sort_method), busy, files_total, self.debug)
             self.dict_relpath[dateityp] = dict(reversed(list(self.dict_relpath[dateityp].items())))
             for ii in self.dict_relpath[dateityp]:
                 print(" > ", ii, " files: ", self.dict_relpath[dateityp][ii]) if self.debug else True
@@ -2755,9 +2762,10 @@ class Dateimeister_support:
                     for mysource in mylist:
                         self.dict_duplicates_sourcefiles[dateityp][mysource] = mytarget
             #print("dict_duplicates: " + str(Globals.dict_duplicates[dateityp])) 
+            busy.close()
 
             # alle Dateien aus der gerade verarbeiteten cmd-Datei tragen wir in dict_firstname_fullname ein, wenn type = JPEG
-        regpattern = r'[\/\\]([^\/\\.]+)\.([^\/\\.]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
+        regpattern = r'^.*?[\/\\]([^\/\\]+)\.([^\/\\\.]+)$' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
         regpattern_source = r'"([^"]+)"' # Sourcefile
         target_file = ""
         source_file = ""
@@ -2772,12 +2780,12 @@ class Dateimeister_support:
                 #print("GENERATE: firstname / lastname = " + firstname + " / " + lastname)
                 b_match = True
             else: 
-                #print("GENERATE unable to find firstname, lastname in: " + line)
+                print("GENERATE unable to find firstname, lastname in: " + this_sourcefile) if self.debug else True
                 a = 1
             if (b_match == True):
                 # Show error if no process_type available
                 if lastname.upper() not in self.dict_process_image:
-                    messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for: " + lastname)
+                    messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for: " + firstname + ' ' + lastname + ' ' + this_sourcefile)
                     print("dict_process_image is: " + str(self.dict_process_image)) if self.debug else True
                     exit()
                 process_type = self.dict_process_image[lastname].upper()
@@ -2864,7 +2872,7 @@ class Dateimeister_support:
             busy.update_progress(self.num_images, files_total)
             this_targetfile = self.dict_source_target[imagetype][file]
             # wir brauchen die Endung der Datei und den Vornamen
-            regpattern = r'[\/\\]([^\/\\."]+)\.([^\/\\."]+)' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
+            regpattern = r'^.*?[\/\\]([^\/\\]+)\.([^\/\\\.]+)$' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
             match = re.search(regpattern, file)
             if match:
                 firstname  = match.group(1)
@@ -2906,7 +2914,7 @@ class Dateimeister_support:
                 else:
                     player = Globals.dict_thumbnails[imagetype][file].getPlayer()
                     player.resize()
-                image_width, image_height, pimg = player.get_pimg()
+                image_width, image_height, pimg = player.get_photo()
                 showfile = file
             else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
                 showfile = "none"
@@ -2951,6 +2959,7 @@ class Dateimeister_support:
                 
                 if player is not None:
                     player.setId(id)
+                    player.resize()
                 mts = os.stat(file).st_mtime
                 # if new thumbnail or new image required
                 if new_thumbnail_required:
@@ -3519,6 +3528,7 @@ class Dateimeister_support:
         else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file) if self.debug else True
+                self.stop_all_players() # we dont want noise from players in Main Window
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, "", "Include", "Exclude", "Included", "Excluded", self.debug)
                 self.dict_file_image[file] = fs_image
 

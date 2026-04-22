@@ -1,107 +1,242 @@
 import tkinter
-import cv2
 import PIL.Image, PIL.ImageTk
 import time
-#import kivy
-#from kivy.weakmethod import WeakMethod
-#import numpy as np
 from ffpyplayer.player import MediaPlayer
+
 class VideoPlayer:
     def __init__(self, window, video_source, canvas, canvas_width, canvas_height, start):
         self.window = window
-        self.video_source = video_source        # open video source (by default this will try to open the computer webcam)
+        self.video_source = video_source
         self.canvas = canvas
         self.start = start
-        self.vid = MyVideoCapture(self.video_source)
-        # After it is called once, the update method will be automatically called every delay milliseconds
-        self.delay = 20
-        self.delay = int(1000 / self.getFPS())
-        self.liney = 0.95
+        self.photo = None
+        self.canvas_id = None
         self.do_update = False
-        self.frames_total = self.vid.getFrameCount()
-        self.frames_till_now = 0
+        self.liney = 0.95
         
-        ff_opts={'an':False, 'sync':'video','thread_lib':'SDL','infbuf':True, 'autoexit':True}
-        #self.callback_ref = WeakMethod(self.audio_callback)
-        self.callback_ref = self.audio_callback
-        self.audio_player = MediaPlayer(video_source, callback = self.callback_ref, ff_opts = ff_opts)
-    def audio_callback(self, a, b):
-        print("AUDIO CALLBACK called with parms {:s} - {:s}".format(str(a), str(b)))
-    
+        # ff_opts optimiert für NAS/SSD
+        ff_opts = {'sync': 'video', 'thread_lib': 'SDL', 
+                   'infbuf': True, 'autoexit': True, 'framedrop': True}
+        
+        self.audio_player = MediaPlayer(video_source, ff_opts=ff_opts)
+        self.audio_player.set_volume(0.0) # Startet stumm
+        
+        # Metadaten laden
+        meta = {}
+        for _ in range(50):
+            meta = self.audio_player.get_metadata()
+            if meta and meta.get('duration'):
+                break
+            time.sleep(0.02)
+            
+        self.duration = meta.get('duration') or 0.0
+        self.fps = meta.get('fps') or 25.0
+        self.frames_total = int(self.duration * self.fps)
+        
+        # Speicher für das letzte Roh-Frame (für Resize-Operationen)
+        self.last_frame_obj = None
+
+    def _render_frame_to_photo(self, image_obj):
+        """Hilfsfunktion: Wandelt ffpyplayer-Image in skaliertes PhotoImage um"""
+        v_w, v_h = image_obj.get_size()
+        c_w = self.canvas.winfo_width()
+        c_h = self.canvas.winfo_height()
+        if c_w <= 1: c_w, c_h = 800, 600 # Fallback
+
+        # Skalierungsfaktor (Aspect Ratio erhalten)
+        faktor = min(c_h / v_h, c_w / v_w)
+        self.image_width = int(v_w * faktor)
+        self.image_height = int(v_h * faktor)
+
+        # Byte-Daten extrahieren und zusammenfügen (TypeError Fix)
+        img_data = image_obj.to_bytearray()
+        if isinstance(img_data, list):
+            img_data = bytes().join(img_data)
+        
+        # PIL Konvertierung & Resize
+        pil_img = PIL.Image.frombytes("RGB", (v_w, v_h), img_data)
+        pil_img = pil_img.resize((self.image_width, self.image_height), PIL.Image.Resampling.LANCZOS)
+        self.photo = PIL.ImageTk.PhotoImage(image=pil_img)
+        return self.photo
+
+    def get_pimg(self):
+        """Wird bei Resize aufgerufen."""
+        # Falls wir schon ein Bild im Cache haben, nimm das (spart NAS/SSD Last)
+        if self.last_frame_obj is None:
+            frame, val = self.audio_player.get_frame()
+            retry = 0
+            while frame is None and retry < 50:
+                time.sleep(0.01)
+                frame, val = self.audio_player.get_frame()
+                retry += 1
+            if frame:
+                self.last_frame_obj, _ = frame
+                self.audio_player.set_pause(True)
+
+        if self.last_frame_obj:
+            self.photo = self._render_frame_to_photo(self.last_frame_obj)
+            
+            bbox = self.canvas.bbox(self.canvas_id)
+            if bbox:
+                vx1, vy1, vx2, vy2 = bbox
+                
+                # Neue Koordinaten berechnen
+                self.x1 = vx1
+                self.y1 = vy1 + (self.image_height * self.liney)
+                self.x2 = vx1 + self.image_width
+                self.y2 = self.y1
+                
+                # Fortschritt ermitteln
+                pts = self.audio_player.get_pts()
+                progress = pts / self.duration if self.duration > 0 else 0
+                current_x2 = self.x1 + int(self.image_width * progress)
+
+                # 4. Linien aktualisieren oder neu erstellen
+                # Wir nutzen einen eindeutigen Tag pro Video-Instanz
+                my_tag = f"prog_{id(self)}"
+                
+                if not self.canvas.find_withtag(my_tag):
+                    self.line_total = self.canvas.create_line(self.x1, self.y1, self.x2, self.y2, 
+                                                              width=5, fill='white', tags=(my_tag, "line"))
+                    self.line_progress = self.canvas.create_line(self.x1, self.y1, current_x2, self.y2, 
+                                                                 width=3, fill='black', tags=(my_tag, "line"))
+                else:
+                    self.canvas.coords(self.line_total, self.x1, self.y1, self.x2, self.y2)
+                    self.canvas.coords(self.line_progress, self.x1, self.y1, current_x2, self.y2)
+
+                # 5. Z-Index: Linien nach oben holen
+                self.canvas.tag_raise("line")
+                return self.image_width, self.image_height, self.photo
+        return None
+
+    def get_photo(self):
+        """Wird bei Initialisierung"""
+        # Falls wir schon ein Bild im Cache haben, nimm das (spart NAS/SSD Last)
+        if self.last_frame_obj is None:
+            frame, val = self.audio_player.get_frame()
+            retry = 0
+            while frame is None and retry < 50:
+                time.sleep(0.01)
+                frame, val = self.audio_player.get_frame()
+                retry += 1
+            if frame:
+                self.last_frame_obj, _ = frame
+                self.audio_player.set_pause(True)
+
+        if self.last_frame_obj:
+            self.photo = self._render_frame_to_photo(self.last_frame_obj)
+            return self.image_width, self.image_height, self.photo
+        return None
+
     def resize(self):
-        # delete the old lines and recalculate the values for the coordinates of the
-        # new resized lines. We use the get_pimg function which is not good, butt it will work
-        self.canvas.delete("line")
-        self.get_pimg()
-
-    def get_pimg(self): # get 1 Photoimage
-        # Get a frame from the video source
-        ret, new_w, new_h, frame = self.vid.get_frame(self.canvas.winfo_width(), self.canvas.winfo_height())
-        if ret:
-            self.image_width  = new_w
-            self.image_height = new_h
-            self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame))
-            self.x1 = self.start
-            self.y1 = self.image_height * self.liney
-            self.x2 = self.start + self.image_width
+        # 1. Das Bild basierend auf der NEUEN Canvas-Größe neu berechnen
+        if self.last_frame_obj:
+            # _render_frame_to_photo nutzt intern self.canvas.winfo_width/height()
+            self.photo = self._render_frame_to_photo(self.last_frame_obj)
+            
+            # 2. Das vorhandene Bild-Objekt auf dem Canvas aktualisieren
+            if self.canvas_id:
+                self.canvas.itemconfig(self.canvas_id, image=self.photo)
+                print("... resize the video")
+                
+        bbox = self.canvas.bbox(self.canvas_id)
+        if bbox:
+            vx1, vy1, vx2, vy2 = bbox
+            
+            # Neue Koordinaten berechnen
+            self.x1 = vx1
+            self.y1 = vy1 + (self.image_height * self.liney)
+            self.x2 = vx1 + self.image_width
             self.y2 = self.y1
-            self.line_total    = self.canvas.create_line(self.x1, self.y1, self.x2, self.y2, width = 5, fill = 'white', tags = "line")
-            self.line_progress = self.canvas.create_line(self.x1, self.y1, self.x1, self.y2, width = 3, fill = 'black', tags = "line")
-            return new_w, new_h, self.photo # returns photoimage
-    def get_image(self):
-        # Get image from the video source
-        ret, new_w, new_h, frame = self.vid.get_frame(self.canvas.winfo_width(), self.canvas.winfo_height())
-        if ret:
-            self.image_width  = new_w
-            self.image_height = new_h
-            return PIL.Image.fromarray(frame)
+            
+            # Fortschritt ermitteln
+            pts = self.audio_player.get_pts()
+            progress = pts / self.duration if self.duration > 0 else 0
+            current_x2 = self.x1 + int(self.image_width * progress)
 
-    def update(self): # Play video
-        # Get a frame from the video source
-        ret, new_w, new_h, frame = self.vid.get_frame(self.canvas.winfo_width(), self.canvas.winfo_height())
-        if ret:
-            self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame))
-            self.canvas.itemconfig(self.canvas_id, image = self.photo)
-            x2 = self.x1 + int(self.image_width * (self.frames_till_now / self.frames_total))
-            #print("x1=" + self.x1 + " x2=" + x2)
+            # 4. Linien aktualisieren oder neu erstellen
+            # Wir nutzen einen eindeutigen Tag pro Video-Instanz
+            my_tag = f"prog_{id(self)}"
+            
+            if not self.canvas.find_withtag(my_tag):
+                self.line_total = self.canvas.create_line(self.x1, self.y1, self.x2, self.y2, 
+                                                          width=5, fill='white', tags=(my_tag, "line"))
+                self.line_progress = self.canvas.create_line(self.x1, self.y1, current_x2, self.y2, 
+                                                             width=3, fill='black', tags=(my_tag, "line"))
+            else:
+                self.canvas.coords(self.line_total, self.x1, self.y1, self.x2, self.y2)
+                self.canvas.coords(self.line_progress, self.x1, self.y1, current_x2, self.y2)
+
+            # 5. Z-Index: Linien nach oben holen
+            self.canvas.tag_raise("line")
+
+    def update(self):
+        if not self.do_update:
+            return
+
+        frame, val = self.audio_player.get_frame()
+
+        # Check: Fast am Ende? (Verhindert Audio-Loop)
+        pts = self.audio_player.get_pts()
+        if val == 'eof' or (self.duration > 0 and pts > self.duration - 0.2):
+            self.stop_and_rewind()
+            return
+
+        if frame:
+            image_obj, pts = frame
+            self.last_frame_obj = image_obj # Cache aktualisieren
+            
+            # Bild anzeigen
+            self.photo = self._render_frame_to_photo(image_obj)
+            self.canvas.itemconfig(self.canvas_id, image=self.photo)
+            
+            # Progressbar (basierend auf pts)
+            progress = pts / self.duration if self.duration > 0 else 0
+            x2 = self.x1 + int(self.image_width * progress)
             self.canvas.coords(self.line_progress, self.x1, self.y1, x2, self.y2)
-            self.frames_till_now += 1
-            #self.canvas.tag_lower("images")
-            self.canvas.update()
-            #time.sleep(.08) #very bad lot of exceptions
-            if self.do_update:
-                #self.update()
-                self.window.after(self.delay, self.update)
+
+            # Sync-Delay
+            delay = max(int(val * 1000), 1)
+            self.window.after(delay, self.update)
         else:
-            print("Video " + self.video_source + " has finished")
-            self.audio_player.seek(0)
-            self.audio_player.set_pause(True)
-    def restart(self): # restart from begin
+            self.window.after(5, self.update)
+
+    def stop_and_rewind(self):
+        self.do_update = False
+        self.audio_player.set_pause(True)
+        self.audio_player.set_volume(0.0)
+        self.audio_player.seek(0, relative=False)
+        # Progressbar optisch zurück auf Start
+        self.canvas.coords(self.line_progress, self.x1, self.y1, self.x1, self.y2)
+
+    def restart(self):
         self.do_update = True
-        #self.vid = MyVideoCapture(self.video_source)
-        self.vid.setFrame(0)
-        self.frames_till_now = 0
-        self.audio_player.seek(0)
+        self.audio_player.set_volume(1.0)
+        self.audio_player.seek(0, relative=False)
         self.audio_player.set_pause(False)
         self.update()
+
     def pstart(self):
         self.do_update = True
+        self.audio_player.set_volume(1.0)
         self.audio_player.set_pause(False)
         self.update()
-        #audio
-        audio_frame, val = self.audio_player.get_frame()
-        if val != 'eof' and audio_frame is not None:
-            img, t = audio_frame
+
     def pstop(self):
         self.do_update = False
         self.audio_player.set_pause(True)
+        self.audio_player.set_volume(0.0)
+
+    # "alte" Funktionen
+    def setId(self, id):
+        self.canvas_id = id
+
     def getRun(self):
         return self.do_update
     def getFPS(self):
-        self.fps = self.vid.getFPS()
         return self.fps
     def getFrameCount(self):
-        self.fc = self.vid.getFrameCount()
+        self.fc = self.frames_total
         return self.fc
     def getDelay(self):
         delay = self.delay
@@ -110,50 +245,8 @@ class VideoPlayer:
         self.delay = delay
     def setId(self, id):
         self.canvas_id = id
-        
+
+
     def __del__(self):
-        print("*** Deleting VideoPlayer-Objekt. " + self.video_source)
-        self.audio_player.close_player()
-
-
-class MyVideoCapture:
-    def __init__(self, video_source):
-        # Open the video source
-        self.video_source = video_source
-        self.vid = cv2.VideoCapture(video_source)
-        if not self.vid.isOpened():
-            raise ValueError("Unable to open video source", video_source)
-        # Get video source width and height
-    def get_frame(self, canvas_width, canvas_height):
-        if self.vid.isOpened():
-            ret, frame = self.vid.read()
-            if ret:
-                # Return a boolean success flag and the current frame converted to BGR
-                height, width, layers = frame.shape
-                faktor = min(canvas_height / height, canvas_width / width)
-                colored = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                new_h = int(height * faktor)
-                new_w = int(width * faktor)
-                resized = cv2.resize(colored, (new_w, new_h))
-                return (ret, new_w, new_h, resized)
-            else:
-                return (ret, 0, 0, None)
-        else:
-            return (ret, 0, 0, None)
-    def getFPS(self):
-        return self.vid.get(cv2.CAP_PROP_FPS)
-    def getFrameCount(self):
-        return self.vid.get(cv2.CAP_PROP_FRAME_COUNT)
-    def setFrame(self, index):
-        self.vid.set(cv2.CAP_PROP_POS_FRAMES, index)
-    # Release the video source when the object is destroyed
-    def __del__(self):
-        if self.vid.isOpened():
-            self.vid.release()
-        print("*** Deleting MyVideoCapture-Objekt. " + self.video_source)
-# Create a window and pass it to the Application object
-#App(tkinter.Tk(), "Tkinter and OpenCV", "C:\Fotos\Dateimeister\Burda.mp4")
-#App(tkinter.Tk(), "Tkinter and OpenCV", "_MOV.mov")
-
-
-
+        if self.audio_player:
+            self.audio_player.close_player()

@@ -20,7 +20,8 @@ import dateimeister_config_xml as DX
 import dateimeister_generator as DG
 import Dateimeister_messages as DM
 import Dateimeister_FSimage as FS
-import Dateimeister_processlist as DP 
+import Dateimeister_processlist as DP
+import Dateimeister 
 
 import cv2
 import matplotlib.pyplot as plt
@@ -955,8 +956,14 @@ class Diatisch:
                 recursive = "j"
             else:
                 recursive = "n"
+
+            if recursive == "j":
+                files_total = Dateimeister.count_files_recursive(p_indir)
+            else:
+                files_total = Dateimeister.count_files_top(p_indir)
+            busy = Dateimeister.BusyDialog(self.root, text= " files are loaded…")        
             self.dict_source_target, dict_source_target_jpeg, self.dict_source_target_tooold, self.dict_relpath = \
-              DG.dateimeister(self.imagetype, self.imagetypes, directory, "", "n", recursive, False, "", None, self.sort_method, self.debug)
+              DG.dateimeister(self.imagetype, self.imagetypes, directory, "", "n", recursive, False, "", None, self.sort_method, busy, files_total, self.debug)
             # copy result to image_files
             tfiles = []
             for i in self.dict_source_target:          
@@ -1022,6 +1029,7 @@ class Diatisch:
                 self.button_exec.config(state = tk.NORMAL)        
 
         print("LOAD ", directory)
+        busy.close()
         display_dir = "n.a."
         if directory: 
             self.update_listbox_indir()

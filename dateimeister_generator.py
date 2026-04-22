@@ -6,6 +6,7 @@ import os.path
 import re
 from datetime import datetime, timezone
 import functools
+import Dateimeister as DM
 
 # sort functions
 def compare_name(a, b):
@@ -27,7 +28,7 @@ def compare_mts(a, b):
         return 1
 
 # we have 3 procesing types: 1) list of full filenames (path/file), 2) directory not recursive, 3) directory recursive
-def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, target_prefix, select_list, sort_method, debug):
+def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, target_prefix, select_list, sort_method, busy_dialog, files_total, debug):
     global dict_result, dict_result_all, dict_result_tooold, dict_relpath
     # List all files and directories in the specified path, returns list
     #print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
@@ -45,6 +46,7 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
 
     if select_list: # comes from Diatisch
         fctr = 0
+        files_total = len(select_list)
         for fullname in select_list:
             if os.path.isfile(fullname):
                 filename = os.path.basename(fullname)
@@ -52,11 +54,14 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
                 #print("generating entry for : " + str(filename))
                 filename = re.sub(r"\\", "/", filename) # replace single backslash by slash
                 fullname = os.path.join(root, filename)
-                sourcefile, targetfile, docopy, process = process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixes, addrelpath, newer, target_prefix)
-
+                if not busy_dialog.cancelled:
+                    sourcefile, targetfile, docopy, process = process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixes, addrelpath, newer, target_prefix)
+                else: 
+                    return False
                 targetroot = os.path.dirname(targetfile)
                 targetfilename = os.path.basename(targetfile)
                 fctr += 1
+                busy_dialog.update_progress(fctr, files_total)
                 targetfilename = '{:04d}_'.format(fctr) + targetfilename
                 targetfile = os.path.join(targetroot, targetfilename)
                 targetfile = re.sub(r"\\", "/", targetfile) # replace single backslash by slash
@@ -75,13 +80,19 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
             direntries = list(it)  # reads all of the directory entries
             direntries.sort(key=lambda x: x.name)
         root = indir
+        fctr = 0
         for entry in direntries:
             if entry.is_file():
                 filename = entry.name
                 #print("generating entry for : " + str(filename))
                 filename = re.sub(r"\\", "/", filename) # replace single backslash by slash
                 fullname = os.path.join(root, filename)
-                sourcefile, targetfile, docopy, process = process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixes, addrelpath, newer, target_prefix)
+                if not busy_dialog.cancelled:
+                    sourcefile, targetfile, docopy, process = process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixes, addrelpath, newer, target_prefix)
+                else:
+                    return False
+                fctr += 1
+                busy_dialog.update_progress(fctr, files_total)
                 if process == "j":
                     if dateityp.upper() == "JPEG":
                         dict_result_all[sourcefile] = targetfile # we need all jpeg-files regardless of copy-status
@@ -92,12 +103,18 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
     else: # no list, recursive
         # für rekursive Aufrufe scheint os.walk besser geeignet, schneller und nimmt einem die Arbeit ab, selbst zu navigieren
         print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
+        fctr = 0
         for root, dirs, files in os.walk(indir, topdown=True):
             print("Dateimeister_generator DIRS {:s}".format(str(dirs))) if debug else True
             for filename in files:
                 filename = re.sub(r"\\", "/", filename) # replace single backslash by slash
                 fullname = os.path.join(root, filename)
-                sourcefile, targetfile, docopy, process = process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixes, addrelpath, newer, target_prefix)
+                if not busy_dialog.cancelled:
+                    sourcefile, targetfile, docopy, process = process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixes, addrelpath, newer, target_prefix)
+                else:
+                    return False
+                fctr += 1
+                busy_dialog.update_progress(fctr, files_total)
                 if process == "j":
                     if dateityp.upper() == "JPEG":
                         dict_result_all[sourcefile] = targetfile # we need all jpeg-files regardless of copy-status
@@ -178,6 +195,9 @@ def process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixe
         else: # copy anyway
             docopy = "j"
         sourcefile = os.path.join(root,       filename)
+        #20260421 replace // at the beginning by \\ as windows interprets a slash in position 1 as "paramater follows"...
+        if sourcefile.startswith("//"):        
+            sourcefile = re.sub(r"/", r"\\", sourcefile) # replace single backslash by slash
         targetfile = os.path.join(target_dir, target_prefix + filename)
         targetfile = re.sub(r"\\", "/", targetfile) # replace single backslash by slash
         if dateityp.upper() == "JPEG":
