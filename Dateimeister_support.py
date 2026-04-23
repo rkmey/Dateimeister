@@ -606,7 +606,7 @@ class MyDuplicates:
                 if thumbnail.getPlayer() is not None: # Video
                     print("try to create new videoplayer...")
                     # create new videoplayer
-                    player   = DV.VideoPlayer(self.root3, showfile, self.f, canvas_width, canvas_height, self.lastposition)
+                    player   = DV.VideoPlayer(self.root3, showfile, self.f, canvas_width, canvas_height)
                     image_width, image_height, pimg = player.get_pimg()
                 else: # still image
                     img  = Image.open(showfile)
@@ -2910,7 +2910,7 @@ class Dateimeister_support:
                 if new_thumbnail_required: # we need a new player:
                     print("try to create new videoplayer...") if self.debug else True
                     # create new videoplayer
-                    player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height, self.lastposition)
+                    player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height)
                 else:
                     player = Globals.dict_thumbnails[imagetype][file].getPlayer()
                     player.resize()

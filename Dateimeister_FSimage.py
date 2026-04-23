@@ -134,7 +134,7 @@ class MyFSImage:
             self.H_I.pack_forget()
             self.V_I.pack_forget()
             self.f.update()
-            self.player   = DV.VideoPlayer(self.root, self.file, self.f, self.f.winfo_width(), self.f.winfo_height(), 0)
+            self.player   = DV.VideoPlayer(self.root, self.file, self.f, self.f.winfo_width(), self.f.winfo_height())
             self.image_width, self.image_height, self.pimg = self.player.get_photo()  
             print(file, " height / width: ",  self.image_width, self.image_height)
             self.id = self.f.create_image(0, 0, anchor='nw',image = self.pimg, tags = 'images')

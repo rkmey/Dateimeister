@@ -11,6 +11,9 @@ import tkinter.ttk as ttk
 from tkinter.constants import *
 import os.path
 import Tooltip as TT
+import inspect
+import os
+import tkinter.messagebox as mb
 
 _location = os.path.dirname(__file__)
 
@@ -50,6 +53,31 @@ def count_files_recursive(path):
     for root, dirs, files in os.walk(path):
         total += len(files)
     return total
+
+
+def info_box(nachricht, level="info"):
+    """
+    Zeigt eine Box mit Source-Infos an.
+    level: "info", "warnung" oder "fehler" (beendet Programm)
+    """
+    caller = inspect.currentframe().f_back
+    datei = os.path.basename(caller.f_code.co_filename)
+    zeile = caller.f_lineno
+    funktion = caller.f_code.co_name
+    
+    # Herkunft zusammenbauen
+    klasse = caller.f_locals.get('self').__class__.__name__ + "." if 'self' in caller.f_locals else ""
+    source_info = f"\n\n[Ort: {datei} -> {klasse}{funktion}() -> Zeile {zeile}]"
+    
+    voller_text = f"{nachricht}{source_info}"
+
+    if level.lower() == "fehler":
+        mb.showerror("Kritischer Fehler", voller_text)
+        sys.exit()  # Beendet das Programm sofort
+    elif level.lower() == "warnung":
+        mb.showwarning("Warnung", voller_text)
+    else:
+        mb.showinfo("Information", voller_text)
 
 class BusyDialog:
     def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):

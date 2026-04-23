@@ -2,13 +2,13 @@ import tkinter
 import PIL.Image, PIL.ImageTk
 import time
 from ffpyplayer.player import MediaPlayer
+import Dateimeister as tools
 
 class VideoPlayer:
-    def __init__(self, window, video_source, canvas, canvas_width, canvas_height, start):
+    def __init__(self, window, video_source, canvas, canvas_width, canvas_height):
         self.window = window
         self.video_source = video_source
         self.canvas = canvas
-        self.start = start
         self.photo = None
         self.canvas_id = None
         self.do_update = False
@@ -59,56 +59,6 @@ class VideoPlayer:
         self.photo = PIL.ImageTk.PhotoImage(image=pil_img)
         return self.photo
 
-    def get_pimg(self):
-        """Wird bei Resize aufgerufen."""
-        # Falls wir schon ein Bild im Cache haben, nimm das (spart NAS/SSD Last)
-        if self.last_frame_obj is None:
-            frame, val = self.audio_player.get_frame()
-            retry = 0
-            while frame is None and retry < 50:
-                time.sleep(0.01)
-                frame, val = self.audio_player.get_frame()
-                retry += 1
-            if frame:
-                self.last_frame_obj, _ = frame
-                self.audio_player.set_pause(True)
-
-        if self.last_frame_obj:
-            self.photo = self._render_frame_to_photo(self.last_frame_obj)
-            
-            bbox = self.canvas.bbox(self.canvas_id)
-            if bbox:
-                vx1, vy1, vx2, vy2 = bbox
-                
-                # Neue Koordinaten berechnen
-                self.x1 = vx1
-                self.y1 = vy1 + (self.image_height * self.liney)
-                self.x2 = vx1 + self.image_width
-                self.y2 = self.y1
-                
-                # Fortschritt ermitteln
-                pts = self.audio_player.get_pts()
-                progress = pts / self.duration if self.duration > 0 else 0
-                current_x2 = self.x1 + int(self.image_width * progress)
-
-                # 4. Linien aktualisieren oder neu erstellen
-                # Wir nutzen einen eindeutigen Tag pro Video-Instanz
-                my_tag = f"prog_{id(self)}"
-                
-                if not self.canvas.find_withtag(my_tag):
-                    self.line_total = self.canvas.create_line(self.x1, self.y1, self.x2, self.y2, 
-                                                              width=5, fill='white', tags=(my_tag, "line"))
-                    self.line_progress = self.canvas.create_line(self.x1, self.y1, current_x2, self.y2, 
-                                                                 width=3, fill='black', tags=(my_tag, "line"))
-                else:
-                    self.canvas.coords(self.line_total, self.x1, self.y1, self.x2, self.y2)
-                    self.canvas.coords(self.line_progress, self.x1, self.y1, current_x2, self.y2)
-
-                # 5. Z-Index: Linien nach oben holen
-                self.canvas.tag_raise("line")
-                return self.image_width, self.image_height, self.photo
-        return None
-
     def get_photo(self):
         """Wird bei Initialisierung"""
         # Falls wir schon ein Bild im Cache haben, nimm das (spart NAS/SSD Last)
@@ -126,9 +76,11 @@ class VideoPlayer:
         if self.last_frame_obj:
             self.photo = self._render_frame_to_photo(self.last_frame_obj)
             return self.image_width, self.image_height, self.photo
-        return None
+        else:
+            tools.info_box("frame object not found", "fehler")
 
     def resize(self):
+        tools.info_box("searching frame object...", "info")
         # 1. Das Bild basierend auf der NEUEN Canvas-Größe neu berechnen
         if self.last_frame_obj:
             # _render_frame_to_photo nutzt intern self.canvas.winfo_width/height()
@@ -138,6 +90,11 @@ class VideoPlayer:
             if self.canvas_id:
                 self.canvas.itemconfig(self.canvas_id, image=self.photo)
                 print("... resize the video")
+            else:
+                tools.info_box("canvas_id not found")
+                exit()
+        else:
+            tools.info_box("frame object not found", "fehler")
                 
         bbox = self.canvas.bbox(self.canvas_id)
         if bbox:
@@ -169,6 +126,8 @@ class VideoPlayer:
 
             # 5. Z-Index: Linien nach oben holen
             self.canvas.tag_raise("line")
+        else:
+            tools.info_box("unable to find bbox", "fehler")
 
     def update(self):
         if not self.do_update:
