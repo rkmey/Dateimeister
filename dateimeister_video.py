@@ -2,7 +2,7 @@ import tkinter
 import PIL.Image, PIL.ImageTk
 import time
 from ffpyplayer.player import MediaPlayer
-import Dateimeister as tools
+import tools
 
 class VideoPlayer:
     def __init__(self, window, video_source, canvas, canvas_width, canvas_height):

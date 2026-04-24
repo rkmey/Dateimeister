@@ -34,6 +34,7 @@ from PIL import Image, ImageTk
 from datetime import datetime, timezone
 
 import Dateimeister
+import tools
 import dateimeister_video as DV
 
 INCLUDE = 1
@@ -165,7 +166,7 @@ class MyFSImage:
         self.width  = 0
         self.height = 0
         self.adjust_zoom = 0
-        self.timer = Dateimeister.RestartableTimer(self.root, 666, self.resize)  # ms
+        self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
     
         

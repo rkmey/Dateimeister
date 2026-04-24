@@ -11,9 +11,7 @@ import tkinter.ttk as ttk
 from tkinter.constants import *
 import os.path
 import Tooltip as TT
-import inspect
 import os
-import tkinter.messagebox as mb
 
 _location = os.path.dirname(__file__)
 
@@ -43,120 +41,6 @@ import tkinter as tk
 from tkinter import ttk
 
 
-# some universal functions
-def count_files_top(path):
-    with os.scandir(path) as it:
-        return sum(1 for entry in it if entry.is_file())
-
-def count_files_recursive(path):
-    total = 0
-    for root, dirs, files in os.walk(path):
-        total += len(files)
-    return total
-
-
-def info_box(nachricht, level="info"):
-    """
-    Zeigt eine Box mit Source-Infos an.
-    level: "info", "warnung" oder "fehler" (beendet Programm)
-    """
-    caller = inspect.currentframe().f_back
-    datei = os.path.basename(caller.f_code.co_filename)
-    zeile = caller.f_lineno
-    funktion = caller.f_code.co_name
-    
-    # Herkunft zusammenbauen
-    klasse = caller.f_locals.get('self').__class__.__name__ + "." if 'self' in caller.f_locals else ""
-    source_info = f"\n\n[Ort: {datei} -> {klasse}{funktion}() -> Zeile {zeile}]"
-    
-    voller_text = f"{nachricht}{source_info}"
-
-    if level.lower() == "fehler":
-        mb.showerror("Kritischer Fehler", voller_text)
-        sys.exit()  # Beendet das Programm sofort
-    elif level.lower() == "warnung":
-        mb.showwarning("Warnung", voller_text)
-    else:
-        mb.showinfo("Information", voller_text)
-
-class BusyDialog:
-    def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):
-        self.root = root
-        self.cancelled = False
-
-        self.dialog = tk.Toplevel(root)
-        self.dialog.title(title)
-        self.dialog.geometry("320x180")
-        self.dialog.resizable(False, False)
-
-        # Modal
-        self.dialog.transient(root)
-        self.dialog.grab_set()
-
-        # Cursor
-        self.dialog.config(cursor="watch")
-        root.config(cursor="watch")
-
-        # Text
-        self.label_text = tk.Label(self.dialog, text=text)
-        self.label_text.pack(pady=10)
-
-        # Fortschrittsbalken
-        self.progress = ttk.Progressbar(self.dialog, orient="horizontal",
-                                        length=250, mode="determinate")
-        self.progress.pack(pady=5)
-
-        # Prozentanzeige
-        self.label_progress = tk.Label(self.dialog, text="0 %")
-        self.label_progress.pack()
-
-        # Abbrechen-Knopf
-        self.button_cancel = tk.Button(self.dialog, text="Abbrechen",
-                                       command=self._cancel)
-        self.button_cancel.pack(pady=10)
-
-        self.dialog.update()
-
-    def _cancel(self):
-        self.cancelled = True
-
-    def update_progress(self, current, total):
-        percent = int(current / total * 100)
-
-        # Fortschrittsbalken aktualisieren
-        self.progress["value"] = percent
-
-        # Text aktualisieren
-        self.label_progress.config(text=f"{percent} %   ({current} / {total})")
-
-        # GUI aktualisieren
-        self.dialog.update()
-
-    def close(self):
-        self.dialog.destroy()
-        self.root.config(cursor="")
-        self.root.update()
-
-class RestartableTimer:
-    def __init__(self, root, interval_ms, callback):
-        self.root = root
-        self.interval_ms = interval_ms
-        self.callback = callback
-        self._timer_id = None
-
-    def start(self):
-        self.cancel()  # Falls bereits laufend, abbrechen
-        self._timer_id = self.root.after(self.interval_ms, self._execute)
-
-    def cancel(self):
-        if self._timer_id is not None:
-            self.root.after_cancel(self._timer_id)
-            self._timer_id = None
-
-    def _execute(self):
-        self._timer_id = None
-        self.callback()
-        
 class Toplevel2:
     def __init__(self, top=None):
         '''This class configures and populates the toplevel window.
