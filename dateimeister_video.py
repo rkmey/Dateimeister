@@ -80,7 +80,7 @@ class VideoPlayer:
             tools.info_box("frame object not found", "fehler")
 
     def resize(self):
-        tools.info_box("searching frame object...", "info")
+        #tools.info_box("searching frame object...", "info")
         # 1. Das Bild basierend auf der NEUEN Canvas-Größe neu berechnen
         if self.last_frame_obj:
             # _render_frame_to_photo nutzt intern self.canvas.winfo_width/height()

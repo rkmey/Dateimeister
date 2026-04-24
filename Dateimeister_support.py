@@ -607,7 +607,7 @@ class MyDuplicates:
                     print("try to create new videoplayer...")
                     # create new videoplayer
                     player   = DV.VideoPlayer(self.root3, showfile, self.f, canvas_width, canvas_height)
-                    image_width, image_height, pimg = player.get_pimg()
+                    image_width, image_height, pimg = player.get_photo()
                 else: # still image
                     img  = Image.open(showfile)
                     image_width_orig, image_height_orig = img.size
@@ -639,6 +639,7 @@ class MyDuplicates:
                 #self.f.tag_raise("imageframe")
                 if player is not None:
                     player.setId(id)
+                    player.resize()
                 # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
                 mts = os.stat(showfile).st_mtime
                 myimage = MyThumbnail(pimg, self.main, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
