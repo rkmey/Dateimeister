@@ -76,19 +76,19 @@ class MyDuplicates:
         self.dict_thumbnails_duplicates = {}
         # register at thumbnail, so it can call us for reacting to state
         # Create secondary (or popup) window.
-        self.root3 = tk.Toplevel()
-        self.w3 = Dateimeister.Toplevel_dupl(self.root3)
+        self.root = tk.Toplevel()
+        self.w3 = Dateimeister.Toplevel_dupl(self.root)
         self.f = self.w3.Canvas_dupl
         self.f.delete('all')
         self.w3.Button_dupl.config(command = self.dupl_handler)
-        self.root3.protocol("WM_DELETE_WINDOW", self.close_handler)
+        self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
         width,height=Globals.screen_width,Globals.screen_height
         v_dim=str(width)+'x'+str(height)
-        self.root3.geometry(v_dim)
-        self.root3.resizable(False, False)
-        title = self.root3.title()
-        self.root3.title(title + " for " + Globals.outdir)
+        self.root.geometry(v_dim)
+        self.root.resizable(False, False)
+        title = self.root.title()
+        self.root.title(title + " for " + Globals.outdir)
 
         # horizontal scrollbar for cancas
         self.H_I = Scrollbar(self.f, orient = HORIZONTAL, command = self.xview)
@@ -320,7 +320,7 @@ class MyDuplicates:
         for child in self.dict_child_parent:
             parent = self.dict_child_parent[child]
             parent.register_Dupl(None)
-        self.root3.destroy()
+        self.root.destroy()
         for t in self.dict_file_image: # destroy all FSImages
             u = self.dict_file_image[t]
             u.close_handler_external()
@@ -364,7 +364,7 @@ class MyDuplicates:
                 if thumbnail.getPlayer() is not None: # Video
                     print("try to create new videoplayer...")
                     # create new videoplayer
-                    player   = DV.VideoPlayer(self.root3, showfile, self.f, canvas_width, canvas_height)
+                    player   = DV.VideoPlayer(self.root, showfile, self.f, canvas_width, canvas_height)
                     image_width, image_height, pimg = player.get_photo()
                 else: # still image
                     img  = Image.open(showfile)
