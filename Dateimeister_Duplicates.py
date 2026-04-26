@@ -69,17 +69,16 @@ EXCLUDE = 2
 class MyDuplicates:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, pmain):
+    def __init__(self, pmain, debug):
         self.player = None
         self.main = pmain
+        self.debug = debug
         self.thumbnails_duplicates = {}
         self.dict_thumbnails_duplicates = {}
         # register at thumbnail, so it can call us for reacting to state
         # Create secondary (or popup) window.
         self.root = tk.Toplevel()
         self.w3 = Dateimeister.Toplevel_dupl(self.root)
-        self.f = self.w3.Canvas_dupl
-        self.f.delete('all')
         self.w3.Button_dupl.config(command = self.dupl_handler)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
@@ -90,11 +89,25 @@ class MyDuplicates:
         title = self.root.title()
         self.root.title(title + " for " + Globals.outdir)
 
+        # Frame_canvas
+        self.frame_canvas = tk.Frame(self.root)
+        rely = .6
+        relheight = 1 - rely -0.01
+        self.frame_canvas.place(relx=0.005, rely=rely, relheight=relheight, relwidth=0.995)
+        self.frame_canvas.configure(relief='flat', background = _bgcolor)
+        self.frame_canvas.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_canvas.update()
+
+        self.f = tk.Canvas(self.frame_canvas, bg="yellow")
+        self.f.place(relx=0.01, rely=0.0, relheight=.95, relwidth=.98)
+        self.f.delete('all')
+        self.f.update()
+
         # horizontal scrollbar for cancas
-        self.H_I = Scrollbar(self.f, orient = HORIZONTAL, command = self.xview)
-        #self.H_I.config(command=self.f.xview)
+        self.H_I = Scrollbar(self.frame_canvas, orient = HORIZONTAL, command = self.xview)
         self.f.config(xscrollcommand=self.H_I.set)
-        self.H_I.pack(side=BOTTOM, fill=BOTH)
+        self.H_I.place(relx=0.01, rely=1, relheight= 1 - self.f.winfo_height() /  self.f.master.winfo_height(), relwidth=.98, anchor = tk.SW)
+
         # Bind keys to canvas for scrolling
         self.f.bind("<Left>",  lambda event: self.xview("scroll", -1, "units"))
         self.f.bind("<Right>", lambda event: self.xview("scroll",  1, "units"))
