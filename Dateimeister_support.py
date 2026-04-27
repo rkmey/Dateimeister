@@ -1904,6 +1904,9 @@ class Dateimeister_support:
             self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
             Globals.generated = False
             Globals.imagetype = ""
+            # now update usedate for camera
+            ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+            DX.update_camera_usedate(Globals.config_files_xml, thiscamera, ts)
         if Globals.list_result_diatisch:
             Globals.list_result_diatisch.clear()
             Globals.list_result_diatisch = None

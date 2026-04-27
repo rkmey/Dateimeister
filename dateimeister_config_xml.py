@@ -472,6 +472,27 @@ def update_camera_type(xmlfile, cameraname, ctype, newname, usedate):
         pass # camera does not exist
     return rc
 
+# update camera-node. 
+# if camera not exists: error
+# if camera exists:
+#    set camera.usedate = usedate
+def update_camera_usedate(xmlfile, cameraname, usedate):
+    rc = 0
+    mytree = ET.parse(xmlfile)
+    myroot = mytree.getroot()
+    fstr_camera = ("camera[@name=" + '"' + "%s" + "\"]")
+    fstr_camera = (fstr_camera % cameraname)
+    result = mytree.findall(fstr_camera)
+    if result: # if camera exists, check if type exists
+        for i in result:
+            i.set("usedate", usedate)
+        indent(myroot)
+        mytree.write(xmlfile)
+    else:
+        rc = 1
+        pass # camera does not exist
+    return rc
+
 # delete camera and all children if newname is empty else delete
 def update_camera(xmlfile, cameraname, newname):
     #print("*** searching in "  + xmlfile + ' for ' + filename + ' ' + ftype)

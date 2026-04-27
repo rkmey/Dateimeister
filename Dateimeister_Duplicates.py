@@ -89,17 +89,21 @@ class MyDuplicates:
         title = self.root.title()
         self.root.title(title + " for " + Globals.outdir)
 
-        # Frame_canvas
+        # Frame_canvas, canvas and horizontal scrollbar
         self.frame_canvas = tk.Frame(self.root)
-        rely = .6
-        relheight = 1 - rely -0.01
+        # adjust only the values in the three lines following
+        rely = .5                   # relative vertical start of frame within parent
+        rel_dist_bottom = .01       # relative distance between bottom of frame from bottom of parent 
+        relheight_sb = 0.03         # relative height of horizontal scrollbar
+        
+        relheight = 1 - rely - rel_dist_bottom 
         self.frame_canvas.place(relx=0.005, rely=rely, relheight=relheight, relwidth=0.995)
         self.frame_canvas.configure(relief='flat', background = _bgcolor)
         self.frame_canvas.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_canvas.update()
 
         self.f = tk.Canvas(self.frame_canvas, bg="yellow")
-        self.f.place(relx=0.01, rely=0.0, relheight=.95, relwidth=.98)
+        self.f.place(relx=0.01, rely=0.0, relheight=1 - relheight_sb, relwidth=.98)
         self.f.delete('all')
         self.f.update()
 
