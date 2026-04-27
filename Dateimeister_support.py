@@ -3112,15 +3112,17 @@ class Dateimeister_support:
     def get_camera_xml(self): # returns dict with all cameras, types and suffixes
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         cameraname = self.diatisch_camera_name
-        ctype      = "JPEG"
-        suffix     = "JPG"
-        rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
-        suffix     = "JPEG"
-        rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
-        #ctype      = "VIDEO"
-        #suffix     = "MOV"
-        #rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
-        # dateimeister_config_xml.py returns suffixes as list we need them as a comma separated string
+        dict_cameras_usedate = DX.get_cameras_usedate(Globals.config_files_xml)
+        if cameraname not in dict_cameras_usedate:
+            ctype      = "JPEG"
+            suffix     = "JPG"
+            rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
+            suffix     = "JPEG"
+            rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
+            #ctype      = "VIDEO"
+            #suffix     = "MOV"
+            #rc = DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts) 
+            # dateimeister_config_xml.py returns suffixes as list we need them as a comma separated string
         dict_cameras = {}
         dict_cameras = DX.get_cameras_types_suffixes(Globals.config_files_xml)
         #print("Cameras: " + str(dict_cameras))
@@ -3150,13 +3152,27 @@ class Dateimeister_support:
         for t in dict_pi:
             print("Process Image  {:s}, {:s}".format(t, dict_pi[t])) if self.debug else True
         
+        # 20260427 in listbox select last used camera and set label so we can generate for the last used camera
         self.lb_camera.delete(0, END)
         index = 0
-        for key in dict_t:
+        usedate_high = ""
+        index_high = 0
+        cameraname_high = ""
+        for key in dict_cameras_usedate:
             self.lb_camera.insert(END, key)
             self.dict_lb_camera_index[key] = index
+            # get usedate
+            usedate  = dict_cameras_usedate[key]
+            print("Kamera {:s} usedate:{:s}".format(key,usedate)) if self.debug else True
+            if usedate > usedate_high:
+                usedate_high = usedate
+                index_high   = index
+                cameraname_high = key
             index += 1
-        self.lb_camera.selection_set(END)
+        self.lb_camera.selection_set(index_high)
+
+        self.insert_text(self.o_camera, cameraname_high)
+        self.button_generate.config(state = NORMAL) # as we have a camera name we can generate
 
         return dict_t, dict_s, dict_pi
 
