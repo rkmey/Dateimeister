@@ -100,7 +100,7 @@ class MyDuplicates:
 
         self.Button_dupl = tk.Button(self.root)
         self.Button_dupl.place(relx=0.63, rely=0.195, relheight=.04, relwidth=.08)
-        self.Button_dupl.configure(text='''Select Duplicate''')
+        self.Button_dupl.configure(font = self.text_font, text='''Select Duplicate''')
         self.Button_dupl.config(command = self.dupl_handler)
 
         # Frame_canvas, canvas and horizontal scrollbar
@@ -193,6 +193,7 @@ class MyDuplicates:
         self.main.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
+        self.thisduplicate = None
 
     def exclude_call(self, parent, state): # react to request from outside, outside is root - thumbnail
         print("MyDuplicate.Exclude called, State = " + str(state))
@@ -422,14 +423,15 @@ class MyDuplicates:
             self.width  = new_width
             self.height = new_height
             # we have to change fontsize according to Minimum of new Height / width
-            fontsize_width  = int(new_width * .025) 
+            fontsize_width  = int(new_width * .01) 
             #fontsize_height = int(.7 * min(12.0, new_height * .75))
-            fontsize_height = int(new_height * .025)
+            fontsize_height = int(new_height * .01)
             fontsize_use = min(fontsize_width, fontsize_height)
             # we calculate the correction factor for zoom
             print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}, old width = {old_width}, old height = {old_height}") if self.debug else True
             self.text_font.configure(size=fontsize_use) 
-        self.display_duplicate(self.thisduplicate)
+        if self.thisduplicate:
+            self.display_duplicate(self.thisduplicate)
 
     def debug_info_resize(self, text):
         print("{:s} elapsed start resize".format(text))
