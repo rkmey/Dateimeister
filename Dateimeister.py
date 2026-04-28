@@ -178,59 +178,6 @@ class Toplevel2:
         self.Label_fps.configure(highlightcolor="black")
         self.Label_fps.configure(text='''Frames per second''')
 
-class Toplevel_dupl:
-    def __init__(self, top=None):
-        '''This class configures and populates the toplevel window.
-           top is the toplevel containing window.'''
-
-        top.geometry("1064x514+93+103")
-        top.minsize(120, 1)
-        top.maxsize(1444, 881)
-        top.resizable(1,  1)
-        top.title("Duplicates")
-        top.configure(background="#d9d9d9")
-        top.configure(highlightbackground="#d9d9d9")
-        top.configure(highlightcolor="black")
-
-        self.top = top
-
-        self.Canvas_dupl = tk.Canvas(self.top)
-        self.Canvas_dupl.place(relx=0.019, rely=0.506, relheight=0.395
-                , relwidth=0.963)
-        self.Canvas_dupl.configure(background="#d9d9d9")
-        self.Canvas_dupl.configure(borderwidth="2")
-        self.Canvas_dupl.configure(highlightbackground="#d9d9d9")
-        self.Canvas_dupl.configure(highlightcolor="black")
-        self.Canvas_dupl.configure(insertbackground="black")
-        self.Canvas_dupl.configure(relief="ridge")
-        self.Canvas_dupl.configure(selectbackground="#c4c4c4")
-        self.Canvas_dupl.configure(selectforeground="black")
-
-        self.Listbox_dupl = tk.Listbox(self.top)
-        self.Listbox_dupl.place(relx=0.028, rely=0.039, relheight=0.412
-                , relwidth=0.568)
-        self.Listbox_dupl.configure(background="white")
-        self.Listbox_dupl.configure(disabledforeground="#a3a3a3")
-        self.Listbox_dupl.configure(font="TkFixedFont")
-        self.Listbox_dupl.configure(foreground="black")
-        self.Listbox_dupl.configure(highlightbackground="#d9d9d9")
-        self.Listbox_dupl.configure(highlightcolor="black")
-        self.Listbox_dupl.configure(selectbackground="#c4c4c4")
-        self.Listbox_dupl.configure(selectforeground="black")
-
-        self.Button_dupl = tk.Button(self.top)
-        self.Button_dupl.place(relx=0.63, rely=0.195, height=44, width=137)
-        self.Button_dupl.configure(activebackground="beige")
-        self.Button_dupl.configure(activeforeground="black")
-        self.Button_dupl.configure(background="#d9d9d9")
-        self.Button_dupl.configure(compound='left')
-        self.Button_dupl.configure(disabledforeground="#a3a3a3")
-        self.Button_dupl.configure(font="-family {Segoe UI} -size 9")
-        self.Button_dupl.configure(foreground="black")
-        self.Button_dupl.configure(highlightbackground="#d9d9d9")
-        self.Button_dupl.configure(highlightcolor="black")
-        self.Button_dupl.configure(pady="0")
-        self.Button_dupl.configure(text='''Select Duplicate''')
 
 class Toplevel_camera:
     def __init__(self, top=None):

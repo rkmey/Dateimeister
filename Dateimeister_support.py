@@ -3023,6 +3023,7 @@ class Dateimeister_support:
                 print("Duplcate Key: " + mytarget) if self.debug else True
                 for mysource in mylist:
                     print("   " + mysource) if self.debug else True
+        self.stop_all_players()
         self.win_duplicates = DD.MyDuplicates(self, self.debug) 
        
     def menu_cameras_edit(self):

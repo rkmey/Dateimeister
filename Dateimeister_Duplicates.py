@@ -33,7 +33,6 @@ import xml.etree.ElementTree as ET
 from PIL import Image, ImageTk
 from datetime import datetime, timezone
 
-import Dateimeister
 import dateimeister_config_xml as DX
 import dateimeister_video as DV
 import Diatisch as DIAT
@@ -70,6 +69,20 @@ class MyDuplicates:
 
     # The class "constructor" - It's actually an initializer 
     def __init__(self, pmain, debug):
+        # Creates a toplevel widget.
+        self.root = tk.Toplevel()
+        width,height=Globals.screen_width,Globals.screen_height
+        v_dim=str(width)+'x'+str(height)
+        self.root.geometry(v_dim)
+        self.root.resizable(True, True)
+        self.root.title("Dateimeister")
+        title = self.root.title()
+        self.root.title(title + " for " + Globals.outdir)
+        self.root.minsize(120, 100)
+        self.root.maxsize(4000, 4000)
+        self.root.configure(background=_bgcolor)
+        self.root.configure(highlightbackground="#d9d9d9")
+        self.root.configure(highlightcolor="black")
         self.player = None
         self.main = pmain
         self.debug = debug
@@ -77,17 +90,18 @@ class MyDuplicates:
         self.dict_thumbnails_duplicates = {}
         # register at thumbnail, so it can call us for reacting to state
         # Create secondary (or popup) window.
-        self.root = tk.Toplevel()
-        self.w3 = Dateimeister.Toplevel_dupl(self.root)
-        self.w3.Button_dupl.config(command = self.dupl_handler)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
-
-        width,height=Globals.screen_width,Globals.screen_height
-        v_dim=str(width)+'x'+str(height)
-        self.root.geometry(v_dim)
-        self.root.resizable(False, False)
         title = self.root.title()
         self.root.title(title + " for " + Globals.outdir)
+
+        self.width  = 0 # for resize
+        self.height = 0 # for resize
+        self.text_font = Font(family="Helvetica", size=6)
+
+        self.Button_dupl = tk.Button(self.root)
+        self.Button_dupl.place(relx=0.63, rely=0.195, relheight=.04, relwidth=.08)
+        self.Button_dupl.configure(text='''Select Duplicate''')
+        self.Button_dupl.config(command = self.dupl_handler)
 
         # Frame_canvas, canvas and horizontal scrollbar
         self.frame_canvas = tk.Frame(self.root)
@@ -118,16 +132,44 @@ class MyDuplicates:
         self.f.bind("<Double-Button-1>", self.canvas_show)
         self.f.focus_set()
         
-        # Listbox
-        # vertical scrollbar for lisrbox
-        self.V_L = Scrollbar(self.w3.Listbox_dupl, orient = VERTICAL)
-        self.V_L.config(command = self.w3.Listbox_dupl.yview)                    
-        self.V_L.pack(side=RIGHT, fill=BOTH)
-        self.w3.Listbox_dupl.config(yscrollcommand = self.V_L.set) 
-        self.w3.Listbox_dupl.bind('<Double-1>', self.lb_double)
+        # Frame for listbox duplicates
+        self.frame_lb_duplicates = tk.Frame(self.root)
+        self.frame_lb_duplicates.place(relx=0.01, rely=0.01, relheight=0.4, relwidth=0.6)
+        self.frame_lb_duplicates.configure(relief='flat', highlightbackground="black", highlightthickness=1, background = _bgcolor)
+        self.frame_lb_duplicates.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_lb_duplicates.update()
+
+        # Listbox duplicates
+        self.lb_duplicates = tk.Listbox(self.frame_lb_duplicates)
+        self.lb_duplicates.configure(background="white")
+        self.lb_duplicates.configure(disabledforeground="#a3a3a3")
+        self.lb_duplicates.configure(font=self.text_font)
+        self.lb_duplicates.configure(foreground="black")
+        self.lb_duplicates.configure(highlightbackground="#d9d9d9")
+        self.lb_duplicates.configure(highlightcolor="black")
+        self.lb_duplicates.configure(selectbackground="#d9d9d9")
+        self.lb_duplicates.configure(selectforeground="black")
+        self.lb_duplicates.configure(selectmode='single')
+        self.lb_duplicates.configure(exportselection=False)
+        self.lb_duplicates_tooltip = TT.ToolTip(self.lb_duplicates, 'available cameras')
+        self.lb_duplicates.update()
+
+        #Scrollbars for listbox camera
+        # Scrollbars
+        HC = Scrollbar(self.frame_lb_duplicates, orient= HORIZONTAL, command = self.lb_duplicates.xview)
+        VC = Scrollbar(self.frame_lb_duplicates, orient= VERTICAL,   command = self.lb_duplicates.yview)
+        self.lb_duplicates.config(xscrollcommand = HC.set)
+        self.lb_duplicates.config(yscrollcommand = VC.set)
+        # place listbox and scrollbars
+        d_n = .005 # distance from north
+        d_s = .005
+        tools.place_box_with_scrollbars(self.frame_lb_duplicates, self.lb_duplicates, HC, VC, .005, d_n, .005, d_s, .005)
+        
+        self.lb_duplicates.bind('<Double-1>', self.lb_double)
+
         for key in Globals.dict_duplicates[Globals.imagetype]:
-            self.w3.Listbox_dupl.insert(END, key)
-        self.w3.Listbox_dupl.select_set(0)
+            self.lb_duplicates.insert(END, key)
+        self.lb_duplicates.select_set(0)
 
         # Create the context menu
         self.context_menu = tk.Menu(self.f, tearoff=0)
@@ -147,7 +189,10 @@ class MyDuplicates:
         self.tt = TT.ToolTip(self.f, "no images available", delay=0, follow = True)
         
         self.dict_file_image = {}
+        self.dict_thumbnail_player = {}
         self.main.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
+        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
+        self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
 
     def exclude_call(self, parent, state): # react to request from outside, outside is root - thumbnail
         print("MyDuplicate.Exclude called, State = " + str(state))
@@ -315,8 +360,8 @@ class MyDuplicates:
                 player.setDelay(int(1000 / player.getFPS()))
                 
     def lb_double(self, event):
-        cs = self.w3.Listbox_dupl.curselection()
-        self.thisduplicate = self.w3.Listbox_dupl.get(cs)
+        cs = self.lb_duplicates.curselection()
+        self.thisduplicate = self.lb_duplicates.get(cs)
         #print("Duplicate selected: " + self.thisduplicate)
         self.display_duplicate(self.thisduplicate)
     
@@ -326,8 +371,8 @@ class MyDuplicates:
         return "break"
      
     def dupl_handler(self):
-        cs = self.w3.Listbox_dupl.curselection()
-        self.thisduplicate = self.w3.Listbox_dupl.get(cs)
+        cs = self.lb_duplicates.curselection()
+        self.thisduplicate = self.lb_duplicates.get(cs)
         #print("Duplicate selected: " + self.thisduplicate)
         self.display_duplicate(self.thisduplicate)
 
@@ -355,6 +400,40 @@ class MyDuplicates:
                         thisplayer.pstop()
                         #print ("Stop player for: " + t.getFile())
     
+    def on_configure(self, event):
+        x = event.widget
+        if x == self.root:
+            if (self.width != event.width or self.height != event.height):
+                if self.player: # Video we have to pause the player
+                    self.main.stop_all_players() # should not continue running 
+                self.timer.start()
+
+    def resize(self):
+        # display debug info for resize, this is very difficult to debug
+        self.debug_info_resize("TIMER") if self.debug else True
+        old_width  = self.width
+        old_height = self.height
+        # we use the new dimension of the frame for calculating fontsize needed
+        self.root.update()
+        new_width  = self.root.winfo_width()
+        new_height = self.root.winfo_height()
+        if (old_width != new_width or old_height != new_height):
+            # store new values
+            self.width  = new_width
+            self.height = new_height
+            # we have to change fontsize according to Minimum of new Height / width
+            fontsize_width  = int(new_width * .025) 
+            #fontsize_height = int(.7 * min(12.0, new_height * .75))
+            fontsize_height = int(new_height * .025)
+            fontsize_use = min(fontsize_width, fontsize_height)
+            # we calculate the correction factor for zoom
+            print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}, old width = {old_width}, old height = {old_height}") if self.debug else True
+            self.text_font.configure(size=fontsize_use) 
+        self.display_duplicate(self.thisduplicate)
+
+    def debug_info_resize(self, text):
+        print("{:s} elapsed start resize".format(text))
+
     def display_duplicate(self, target_file):
         self.main.stop_all_players() # should not continue running 
         self.f.delete('all')
@@ -379,9 +458,13 @@ class MyDuplicates:
                 self.canvas_width_visible = self.f.winfo_width() # Fensterbreite
                 player = None
                 if thumbnail.getPlayer() is not None: # Video
-                    print("try to create new videoplayer...")
-                    # create new videoplayer
-                    player   = DV.VideoPlayer(self.root, showfile, self.f, canvas_width, canvas_height)
+                    if (thumbnail not in self.dict_thumbnail_player): #we need a new one
+                        print("try to create new videoplayer...")
+                        # create new videoplayer
+                        player   = DV.VideoPlayer(self.root, showfile, self.f, canvas_width, canvas_height)
+                        self.dict_thumbnail_player[thumbnail] = player # we never need a new player so we store this one
+                    else: # reuse the existing
+                        player = self.dict_thumbnail_player[thumbnail]
                     image_width, image_height, pimg = player.get_photo()
                 else: # still image
                     img  = Image.open(showfile)
