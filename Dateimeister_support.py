@@ -94,7 +94,7 @@ class MyCameraTreeview:
         else:
             self.root.title("Cameras")
         width,height=Globals.screen_width,Globals.screen_height
-        v_dim=str(width)+'x'+str(height)
+        v_dim=str(int(width * .75))+'x'+str(int(height * .75))
         self.root.geometry(v_dim)
         self.root.resizable(True, True)
 
@@ -207,35 +207,21 @@ class MyCameraTreeview:
         self.label_subdir.configure(background="#d9d9d9")
         self.label_subdir.configure(anchor='w')
 
-        self.button_apply = tk.Button(self.Frame_treeview)
-        self.button_apply.place(relx=0.84, rely=0.906, relheight=relh_entry, relwidth=relw_button)
-        self.button_apply.configure(font = self.text_font, text='''Apply''')
-        self.button_apply_tooltip = TT.ToolTip(self.button_apply, '''apply your changes''')
-        self.button_apply.config(command = self.apply_new)
-
-        self.button_cancel = tk.Button(self.Frame_treeview)
-        self.button_cancel.place(relx=0.872, rely=0.906, relheight=relh_entry, relwidth=relw_button)
-        self.button_cancel.configure(font = self.text_font, text='''Cancel''')
-        self.button_cancel_tooltip = TT.ToolTip(self.button_cancel, '''cancel your changes''')
-        self.button_cancel.config(command = self.cancel_new)
-
-        self.button_undo = tk.Button(self.Frame_treeview)
-        self.button_undo.place(relx=0.90, rely=0.906, relheight=relh_entry, relwidth=relw_button)
-        self.button_undo.configure(font = self.text_font, text='''undo''')
-        self.button_undo_tooltip = TT.ToolTip(self.button_undo, '''undo apply''')
-
-        self.button_redo = tk.Button(self.Frame_treeview)
-        self.button_redo.place(relx=0.95, rely=0.906, relheight=relh_entry, relwidth=relw_button)
-        self.button_redo.configure(font = self.text_font, text='''redo''')
-        self.button_redo_tooltip = TT.ToolTip(self.button_redo, '''redo apply''')
+        # we create buttons for choapply, cancel, undo, redo in a frame
+        self.frame_entry_buttons = tk.Frame(self.root, relief='flat', background = _bgcolor)
+        self.frame_entry_buttons.place(relx=0.005, rely=0.906, relheight=relh_label, relwidth=.995)
+        self.frame_entry_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_entry_buttons.update()
+        dict_buttons = {}
+        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"button_apply","TEXT":"Apply","CALLBACK":self.apply_new,"STATE":tk.ACTIVE,"TT":"apply your changes"}
+        dict_buttons["2"] = {"OFFSET":0.01,"VAR":"button_cancel","TEXT":"Cancel","CALLBACK":self.cancel_new,"STATE":tk.ACTIVE,"TT":"cancel your changes"}
+        dict_buttons["3"] = {"OFFSET":0.01,"VAR":"button_undo","TEXT":"undo","CALLBACK":self.button_undo_h,"STATE":tk.DISABLED,"TT":"undo apply"}
+        dict_buttons["4"] = {"OFFSET":0.00,"VAR":"button_redo","TEXT":"redo","CALLBACK":self.button_redo_h,"STATE":tk.DISABLED,"TT":"redo apply"}
+        tools.create_buttons_from_dict(self, dict_buttons, self.frame_entry_buttons, 0.7, .3, 1, self.text_font, "HORIZONTAL")
 
         self.root.bind('<Return>', self.apply_new)
 
         # Undo /Redo Funktionen
-        self.button_undo.config(command = self.button_undo_h)
-        self.button_redo.config(command = self.button_redo_h)
-        self.button_undo.config(state = DISABLED)
-        self.button_redo.config(state = DISABLED)
         self.root.bind('<Control-z>', lambda event: self.process_undo(event))
         self.root.bind('<Control-y>', lambda event: self.process_redo(event))
 

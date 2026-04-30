@@ -74,7 +74,7 @@ def create_buttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth, rel
         setattr(caller, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
         nextpos += relw + offset
 
-def create_radiobuttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth, relsize, var, cmd, fon, orientation, bgcolor): # create Radiobuttons in horizontal Frame
+def create_radiobuttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth, relsize, var, fn_callback, fon, orientation, bgcolor): # create Radiobuttons in horizontal Frame
     # calculate rel width considering the offsets
     num_buttons = 0
     relw = 0.0
@@ -88,7 +88,7 @@ def create_radiobuttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth
     nextpos = startpos #<== set rel. start position
     for i in dict_buttons:
         offset = dict_buttons[i]["OFFSET"]
-        b = tk.Radiobutton(frame, text = dict_buttons[i]["TEXT"], value = dict_buttons[i]["VALUE"], variable = var, command = caller.rb_sort, indicatoron = 0)
+        b = tk.Radiobutton(frame, text = dict_buttons[i]["TEXT"], value = dict_buttons[i]["VALUE"], variable = var, command = fn_callback, indicatoron = 0)
         if orientation.upper() == "HORIZONTAL":
             b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
         elif orientation.upper() == "VERTICAL":
