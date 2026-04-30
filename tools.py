@@ -27,6 +27,7 @@ from tkinter import Label
 from tkinter import Canvas
 from tkinter import Menu
 from tkinter.font import Font
+import Tooltip as TT
 
 from time import gmtime, strftime
 
@@ -46,7 +47,61 @@ def count_files_recursive(path):
         total += len(files)
     return total
 
-def place_box_with_scrollbars(frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w):
+
+def create_buttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth, relsize, fon, orientation): # create Buttons in horizontal Frame
+    # calculate rel width considering the offsets
+    num_buttons = 0
+    relw = 0.0
+    sum_offsets = 0
+    # part of frame to use for group of buttons
+    rel_group_width = rgwidth
+    for i in dict_buttons:
+        sum_offsets = sum_offsets + dict_buttons[i]["OFFSET"] 
+        num_buttons += 1
+    relw  = (rel_group_width - sum_offsets) / num_buttons
+    nextpos = startpos #<== set rel. start position
+    for i in dict_buttons:
+        offset = dict_buttons[i]["OFFSET"]
+        b = tk.Button(frame, text=dict_buttons[i]["TEXT"], command=dict_buttons[i]["CALLBACK"], state=dict_buttons[i]["STATE"])
+        if orientation.upper() == "HORIZONTAL":
+            b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
+        elif orientation.upper() == "VERTICAL":
+            b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
+        else:
+            raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
+        b.configure(font=fon)
+        setattr(caller, dict_buttons[i]["VAR"], b)
+        setattr(caller, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
+        nextpos += relw + offset
+
+def create_radiobuttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth, relsize, var, cmd, fon, orientation, bgcolor): # create Radiobuttons in horizontal Frame
+    # calculate rel width considering the offsets
+    num_buttons = 0
+    relw = 0.0
+    sum_offsets = 0
+    # part of frame to use for group of buttons
+    rel_group_width = rgwidth
+    for i in dict_buttons:
+        sum_offsets = sum_offsets + dict_buttons[i]["OFFSET"] 
+        num_buttons += 1
+    relw  = (rel_group_width - sum_offsets) / num_buttons
+    nextpos = startpos #<== set rel. start position
+    for i in dict_buttons:
+        offset = dict_buttons[i]["OFFSET"]
+        b = tk.Radiobutton(frame, text = dict_buttons[i]["TEXT"], value = dict_buttons[i]["VALUE"], variable = var, command = caller.rb_sort, indicatoron = 0)
+        if orientation.upper() == "HORIZONTAL":
+            b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
+        elif orientation.upper() == "VERTICAL":
+            b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
+        else:
+            raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
+        b.configure(font=fon, background = bgcolor)
+        setattr(caller, dict_buttons[i]["VAR"], b)
+        setattr(caller, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
+        nextpos += relw + offset
+
+
+def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w):
     # this function places a listbox or other scrollable element in a given Frame with horizontal and vertical scrollbars
     # element ist the element to be placed, sb_h and sb_v the scrollbars (horizonzal, vertical)
     # d_n, d_e, d_s, d_w are the rel. distances from the frame borders (North, east, south, west.
@@ -70,6 +125,35 @@ def place_box_with_scrollbars(frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w
     sb_h.place(relx = d_w, rely = d_n + element_height, relheight = rel_size_sb_y, relwidth = element_width, anchor = tk.NW)
     sb_v.place(relx = d_w + element_width, rely = d_n, relheight = element_height, relwidth = rel_size_sb_x, anchor = tk.NW)
 
+def create_checkboxes_from_dict(caller, dict_controls, frame, startpos, rgwidth, relsize, fon, orientation, bgcolor): # create Buttons in horizontal Frame
+    # calculate rel width considering the offsets
+    num_controls = 0
+    relw = 0.0
+    sum_offsets = 0
+    # part of frame to use for group of buttons
+    rel_group_width = rgwidth
+    for i in dict_controls:
+        sum_offsets = sum_offsets + dict_controls[i]["OFFSET"] 
+        num_controls += 1
+    relw  = (rel_group_width - sum_offsets) / num_controls
+    nextpos = startpos #<== set rel. start position
+    for i in dict_controls:
+        offset = dict_controls[i]["OFFSET"]
+        b = tk.Checkbutton(frame, text=dict_controls[i]["TEXT"], command=dict_controls[i]["CALLBACK"], anchor='w')
+        if orientation.upper() == "HORIZONTAL":
+            b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
+        elif orientation.upper() == "VERTICAL":
+            b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
+        else:
+            raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
+        b.configure(font=fon)
+        v = tk.IntVar()
+        v.set(dict_controls[i]["STATE"])
+        setattr(caller, dict_controls[i]["VAR"], b) # the variable for the control
+        setattr(caller, dict_controls[i]["VAR"] + "_var", v) # the variable
+        setattr(caller, dict_controls[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_controls[i]["TT"])) # the tooltip
+        b.configure(variable=v, background = bgcolor)
+        nextpos += relw + offset
 
 
 class Globals:
@@ -403,3 +487,108 @@ class MyThumbnail:
         width = self.end -self.start 
         #print("*** Deleting MyThumbnail-Objekt. " + self.file + " lineno in cmdfile " + str(self.lineno))
 
+# The following code is added to facilitate the Scrolled widgets
+class AutoScroll(object):
+    '''Configure the scrollbars for a widget.'''
+    def __init__(self, master):
+        try: #if which vertical scrolling is not supported...
+            vsb = ttk.Scrollbar(master, orient='vertical', command=self.yview)
+        except:
+            pass
+        hsb = ttk.Scrollbar(master, orient='horizontal', command=self.xview)
+        try:
+            self.configure(yscrollcommand=self._autoscroll(vsb))
+        except:
+            pass
+        self.configure(xscrollcommand=self._autoscroll(hsb))
+        self.grid(column=0, row=0, sticky='nsew')
+        try:
+            vsb.grid(column=1, row=0, sticky='ns')
+        except:
+            pass
+        hsb.grid(column=0, row=1, sticky='ew')
+        master.grid_columnconfigure(0, weight=1)
+        master.grid_rowconfigure(0, weight=1)
+        # Copy geometry methods of master  (taken from ScrolledText.py)
+        methods = tk.Pack.__dict__.keys() | tk.Grid.__dict__.keys() \
+                  | tk.Place.__dict__.keys()
+        for meth in methods:
+            if meth[0] != '_' and meth not in ('config', 'configure'):
+                setattr(self, meth, getattr(master, meth))
+
+    @staticmethod
+    def _autoscroll(sbar):
+        '''Hide and show scrollbar as needed.'''
+        def wrapped(first, last):
+            first, last = float(first), float(last)
+            if first <= 0 and last >= 1:
+                sbar.grid_remove()
+            else:
+                sbar.grid()
+            sbar.set(first, last)
+        return wrapped
+
+    def __str__(self):
+        return str(self.master)
+
+def _create_container(func):
+    '''Creates a ttk Frame with a given master, and use this new frame to
+    place the scrollbars and the widget.'''
+    def wrapped(cls, master, **kw):
+        container = ttk.Frame(master)
+        container.bind('<Enter>', lambda e: _bound_to_mousewheel(e, container))
+        container.bind('<Leave>', lambda e: _unbound_to_mousewheel(e, container))
+        return func(cls, container, **kw)
+    return wrapped
+
+class ScrolledTreeView(AutoScroll, ttk.Treeview):
+    '''A standard ttk Treeview widget with scrollbars that will
+    automatically show/hide as needed.'''
+    @_create_container
+    def __init__(self, master, **kw):
+        ttk.Treeview.__init__(self, master, **kw)
+        AutoScroll.__init__(self, master)
+
+import platform
+def _bound_to_mousewheel(event, widget):
+    child = widget.winfo_children()[0]
+    if platform.system() == 'Windows' or platform.system() == 'Darwin':
+        child.bind_all('<MouseWheel>', lambda e: _on_mousewheel(e, child))
+        child.bind_all('<Shift-MouseWheel>', lambda e: _on_shiftmouse(e, child))
+    else:
+        child.bind_all('<Button-4>', lambda e: _on_mousewheel(e, child))
+        child.bind_all('<Button-5>', lambda e: _on_mousewheel(e, child))
+        child.bind_all('<Shift-Button-4>', lambda e: _on_shiftmouse(e, child))
+        child.bind_all('<Shift-Button-5>', lambda e: _on_shiftmouse(e, child))
+
+def _unbound_to_mousewheel(event, widget):
+    if platform.system() == 'Windows' or platform.system() == 'Darwin':
+        widget.unbind_all('<MouseWheel>')
+        widget.unbind_all('<Shift-MouseWheel>')
+    else:
+        widget.unbind_all('<Button-4>')
+        widget.unbind_all('<Button-5>')
+        widget.unbind_all('<Shift-Button-4>')
+        widget.unbind_all('<Shift-Button-5>')
+
+def _on_mousewheel(event, widget):
+    if platform.system() == 'Windows':
+        widget.yview_scroll(-1*int(event.delta/120),'units')
+    elif platform.system() == 'Darwin':
+        widget.yview_scroll(-1*int(event.delta),'units')
+    else:
+        if event.num == 4:
+            widget.yview_scroll(-1, 'units')
+        elif event.num == 5:
+            widget.yview_scroll(1, 'units')
+
+def _on_shiftmouse(event, widget):
+    if platform.system() == 'Windows':
+        widget.xview_scroll(-1*int(event.delta/120), 'units')
+    elif platform.system() == 'Darwin':
+        widget.xview_scroll(-1*int(event.delta), 'units')
+    else:
+        if event.num == 4:
+            widget.xview_scroll(-1, 'units')
+        elif event.num == 5:
+            widget.xview_scroll(1, 'units')

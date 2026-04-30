@@ -163,7 +163,7 @@ class MyDuplicates:
         # place listbox and scrollbars
         d_n = .005 # distance from north
         d_s = .005
-        tools.place_box_with_scrollbars(self.frame_lb_duplicates, self.lb_duplicates, HC, VC, .005, d_n, .005, d_s, .005)
+        tools.place_box_with_scrollbars(self, self.frame_lb_duplicates, self.lb_duplicates, HC, VC, .005, d_n, .005, d_s, .005)
         
         self.lb_duplicates.bind('<Double-1>', self.lb_double)
 

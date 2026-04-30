@@ -39,7 +39,6 @@ import xml.etree.ElementTree as ET
 from PIL import Image, ImageTk
 from datetime import datetime, timezone
 
-import Dateimeister
 import dateimeister_config_xml as DX
 import dateimeister_video as DV
 import Diatisch as DIAT
@@ -83,12 +82,12 @@ MENUITEM_FILE_RECENT            = 6
 class MyCameraTreeview:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, pmain, cameraname = None):
+    def __init__(self, pmain, debug, cameraname = None):
         self.main = pmain
         self.cameraname = cameraname
         self.root = tk.Toplevel()
-        self.w = Dateimeister.Toplevel_treeview_camera(self.root)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
+        self.debug = debug
 
         if cameraname is not None:
             self.root.title(cameraname)
@@ -98,7 +97,43 @@ class MyCameraTreeview:
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
         self.root.resizable(True, True)
-        self.tv = self.w.Scrolledtreeview_camera
+
+        self.text_font = Font(family="Helvetica", size=6)
+
+        # Frame and treeview
+        self.Frame_treeview = tk.Frame(self.root)
+        self.Frame_treeview.place(relx=0.014, rely=0.012, relheight=0.956, relwidth=0.975)
+        self.Frame_treeview.configure(relief='flat')
+        self.Frame_treeview.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+
+        style = ttk.Style()
+        style.configure("Treeview", font = self.text_font)          # Inhalt
+        style.configure("Treeview.Heading", font = self.text_font)  # Überschriften
+
+        self.tv = tools.ScrolledTreeView(self.Frame_treeview)
+        self.tv.place(relx=0.015, rely=0.026, relheight=0.865, relwidth=0.975)
+        self.tv.configure(columns="Col1, Col2, Col3")
+        self.tv.heading("#0",text="Tree")
+        self.tv.heading("#0",anchor="center")
+        self.tv.column("#0",width="643")
+        self.tv.column("#0",minwidth="20")
+        self.tv.column("#0",stretch="1")
+        self.tv.column("#0",anchor="w")
+        self.tv.heading("Col1,",anchor="center")
+        self.tv.column("Col1,",width="222")
+        self.tv.column("Col1,",minwidth="20")
+        self.tv.column("Col1,",stretch="1")
+        self.tv.column("Col1,",anchor="w")
+        self.tv.heading("Col2,",anchor="center")
+        self.tv.column("Col2,",width="223")
+        self.tv.column("Col2,",minwidth="20")
+        self.tv.column("Col2,",stretch="1")
+        self.tv.column("Col2,",anchor="w")
+        self.tv.heading("Col3",anchor="center")
+        self.tv.column("Col3",width="223")
+        self.tv.column("Col3",minwidth="20")
+        self.tv.column("Col3",stretch="1")
+        self.tv.column("Col3",anchor="w")
         self.tv.heading("#0", text="Camera")
         self.tv.heading("#1", text="Last modification")
         self.tv.heading("#2", text="Type Subdir")
@@ -109,24 +144,94 @@ class MyCameraTreeview:
         self.tv.tag_bind("type",   "<<TreeviewSelect>>", self.item_selected_type)
         self.tv.tag_bind("suffix", "<<TreeviewSelect>>", self.item_selected_suffix)
         
-        self.entry_camera = self.w.Entry_camera
-        self.entry_type = self.w.Entry_type
-        self.label_type = self.w.Label_type
-        self.entry_suffix = self.w.Entry_suffix
-        self.label_suffix = self.w.Label_suffix
-        self.entry_subdir = self.w.Entry_subdir
-        self.label_subdir = self.w.Label_subdir
-        self.button_apply = self.w.Button_apply
-        self.button_apply.config(command = self.apply_new)
-        self.button_cancel = self.w.Button_cancel
-        self.button_cancel.config(command = self.cancel_new)
-        self.button_camera_new = self.w.Button_camera_new
+        relh_entry = 0.03
+        relh_label = 0.02
+        relw_entry = 0.13
+        relw_button = .04
+        relw_label = 0.08
+        self.entry_camera = tk.Entry(self.Frame_treeview)
+        self.entry_camera.place(relx=0.103, rely=0.906, relheight=relh_entry, relwidth=relw_entry)
+        self.entry_camera.configure(background="white")
+        self.entry_camera.configure(font = self.text_font)
+        self.entry_camera_tooltip = TT.ToolTip(self.entry_camera, '''Enter new Cameraname''')
+        self.entry_camera.config(state = DISABLED)                  
+
+        self.label_camera = tk.Label(self.Frame_treeview)
+        self.label_camera.place(relx=0.103, rely=0.956, relheight=relh_label, relwidth=relw_entry)
+        self.label_camera.configure(font = self.text_font, text='''Camera''')
+        self.label_camera.configure(background="#d9d9d9")
+        self.label_camera.configure(anchor='w')
+
+        self.button_camera_new = tk.Button(self.Frame_treeview)
+        self.button_camera_new.place(relx=0.015, rely=0.906, relheight=relh_entry, relwidth=relw_button)
+        self.button_camera_new.configure(font = self.text_font, text='''New camera...''')
+        self.button_camera_new_tooltip = TT.ToolTip(self.button_camera_new, '''create a new camera''')
         self.button_camera_new.config(command = self.camera_new)
+
+        self.entry_type = tk.Entry(self.Frame_treeview)
+        self.entry_type.place(relx=0.249, rely=0.906, relheight=relh_entry, relwidth=relw_entry)
+        self.entry_type.configure(background="white")
+        self.entry_type.configure(font = self.text_font)
+        self.entry_type_tooltip = TT.ToolTip(self.entry_type, '''Enter new type''')
+        self.entry_type.config(state = DISABLED)                  
+
+        self.label_type = tk.Label(self.Frame_treeview)
+        self.label_type.place(relx=0.249, rely=0.956, relheight=relh_label, relwidth=relw_label)
+        self.label_type.configure(font = self.text_font, text='''Type''')
+        self.label_type.configure(background="#d9d9d9")
+        self.label_type.configure(anchor='w')
+
+        self.entry_suffix = tk.Entry(self.Frame_treeview)
+        self.entry_suffix.place(relx=0.388, rely=0.906, relheight=relh_entry, relwidth=relw_entry)
+        self.entry_suffix.configure(background="white")
+        self.entry_suffix.configure(font = self.text_font)
+        self.entry_suffix_tooltip = TT.ToolTip(self.entry_suffix, '''Enter new image file suffix''')
+        self.entry_suffix.config(state = DISABLED)                  
+
+        self.label_suffix = tk.Label(self.Frame_treeview)
+        self.label_suffix.place(relx=0.388, rely=0.956, relheight=relh_label, relwidth=relw_label)
+        self.label_suffix.configure(font = self.text_font, text='''Suffix''')
+        self.label_suffix.configure(background="#d9d9d9")
+        self.label_suffix.configure(anchor='w')
+
+        self.entry_subdir = tk.Entry(self.Frame_treeview)
+        self.entry_subdir.place(relx=0.535, rely=0.906, relheight=relh_entry, relwidth=relw_entry * 2)
+        self.entry_subdir.configure(background="white")
+        self.entry_subdir.configure(font = self.text_font)
+        self.entry_subdir_tooltip = TT.ToolTip(self.entry_subdir, '''Enter subdir for type''')
+        self.entry_subdir.config(state = DISABLED)                  
+
+        self.label_subdir = tk.Label(self.Frame_treeview)
+        self.label_subdir.place(relx=0.535, rely=0.956, relheight=relh_label, relwidth=relw_label)
+        self.label_subdir.configure(font = self.text_font, text='''Subdir''')
+        self.label_subdir.configure(background="#d9d9d9")
+        self.label_subdir.configure(anchor='w')
+
+        self.button_apply = tk.Button(self.Frame_treeview)
+        self.button_apply.place(relx=0.84, rely=0.906, relheight=relh_entry, relwidth=relw_button)
+        self.button_apply.configure(font = self.text_font, text='''Apply''')
+        self.button_apply_tooltip = TT.ToolTip(self.button_apply, '''apply your changes''')
+        self.button_apply.config(command = self.apply_new)
+
+        self.button_cancel = tk.Button(self.Frame_treeview)
+        self.button_cancel.place(relx=0.872, rely=0.906, relheight=relh_entry, relwidth=relw_button)
+        self.button_cancel.configure(font = self.text_font, text='''Cancel''')
+        self.button_cancel_tooltip = TT.ToolTip(self.button_cancel, '''cancel your changes''')
+        self.button_cancel.config(command = self.cancel_new)
+
+        self.button_undo = tk.Button(self.Frame_treeview)
+        self.button_undo.place(relx=0.90, rely=0.906, relheight=relh_entry, relwidth=relw_button)
+        self.button_undo.configure(font = self.text_font, text='''undo''')
+        self.button_undo_tooltip = TT.ToolTip(self.button_undo, '''undo apply''')
+
+        self.button_redo = tk.Button(self.Frame_treeview)
+        self.button_redo.place(relx=0.95, rely=0.906, relheight=relh_entry, relwidth=relw_button)
+        self.button_redo.configure(font = self.text_font, text='''redo''')
+        self.button_redo_tooltip = TT.ToolTip(self.button_redo, '''redo apply''')
+
         self.root.bind('<Return>', self.apply_new)
 
         # Undo /Redo Funktionen
-        self.button_undo = self.w.Button_undo
-        self.button_redo = self.w.Button_redo
         self.button_undo.config(command = self.button_undo_h)
         self.button_redo.config(command = self.button_redo_h)
         self.button_undo.config(state = DISABLED)
@@ -159,9 +264,6 @@ class MyCameraTreeview:
         self.dict_subdirs = {}
         self.dict_process_image = {}
         self.locked = False
-        self.entry_camera.config(state = DISABLED)                  
-        self.entry_type.config(state = DISABLED)                  
-        self.entry_suffix.config(state = DISABLED)                  
         self.entry_subdir.config(state = DISABLED)                  
 
         # Undo /Redo control
@@ -919,7 +1021,7 @@ class Dateimeister_support:
         # place listbox and scrollbars
         d_n = 0.005 # distance from north
         d_s = .5
-        self.place_box_with_scrollbars(self.Frame_camera_listboxes, self.lb_camera, HC, VC, .04, d_n, .005, d_s, .005)
+        tools.place_box_with_scrollbars(self, self.Frame_camera_listboxes, self.lb_camera, HC, VC, .04, d_n, .005, d_s, .005)
  
         # Listbox gen
         self.lb_gen = tk.Listbox(self.Frame_camera_listboxes)
@@ -945,7 +1047,7 @@ class Dateimeister_support:
         # place listbox and scrollbars
         d_n = 0.6 # distance from north
         d_s = .005
-        self.place_box_with_scrollbars(self.Frame_camera_listboxes, self.lb_gen, HG, VG, .04, d_n, .005, d_s, .005)
+        tools.place_box_with_scrollbars(self, self.Frame_camera_listboxes, self.lb_gen, HG, VG, .04, d_n, .005, d_s, .005)
 
        # Entry for displaying camera name
         self.o_camera = tk.Entry(self.Frame_camera_listboxes)
@@ -980,7 +1082,7 @@ class Dateimeister_support:
         dict_buttons = {}
         dict_buttons["1"] = {"OFFSET":0.00,"VAR":"b_button_indir","TEXT":"from file system","CALLBACK":self.Press_indir,"STATE":tk.ACTIVE,"TT":"Select Input Directory from filesystem"}
         dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_indir_from_list","TEXT":"from list","CALLBACK":self.listbox_indir_double,"STATE":tk.ACTIVE,"TT":"Select Input Directory from list"}
-        self.create_buttons_from_dict(dict_buttons, self.frame_indir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
+        tools.create_buttons_from_dict(self, dict_buttons, self.frame_indir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
 
         # the listbox indir
         self.listbox_indir = tk.Listbox(self.frame_indir)
@@ -1003,7 +1105,7 @@ class Dateimeister_support:
         # place listbox and scrollbars
         d_n = self.frame_indir_label_height + self.frame_indir_buttons.winfo_height() / self.frame_indir.winfo_height() # distance from north
         d_s = self.label_indir.winfo_height() / self.frame_indir.winfo_height() # distance from south
-        self.place_box_with_scrollbars(self.frame_indir, self.listbox_indir, HI, VI, .03, d_n, .005, d_s + .005, .005)
+        tools.place_box_with_scrollbars(self, self.frame_indir, self.listbox_indir, HI, VI, .03, d_n, .005, d_s + .005, .005)
 
 
         # Frame_outdir with elements (listboxe, ...)
@@ -1029,7 +1131,7 @@ class Dateimeister_support:
         self.frame_outdir_buttons.update()
         dict_buttons["1"] = {"OFFSET":0.00,"VAR":"b_button_outdir","TEXT":"from file system","CALLBACK":self.Press_outdir,"STATE":tk.ACTIVE,"TT":"Select output Directory from filesystem"}
         dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_outdir_from_list","TEXT":"from list","CALLBACK":self.listbox_outdir_double,"STATE":tk.ACTIVE,"TT":"Select Output Directory from list"}
-        self.create_buttons_from_dict(dict_buttons, self.frame_outdir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
+        tools.create_buttons_from_dict(self, dict_buttons, self.frame_outdir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
 
         # the listbox outdir
         self.listbox_outdir = tk.Listbox(self.frame_outdir)
@@ -1052,7 +1154,7 @@ class Dateimeister_support:
         # place listbox and scrollbars
         d_n = self.frame_outdir_label_height + self.frame_outdir_buttons.winfo_height() / self.frame_outdir.winfo_height() # distance from north
         d_s = self.label_outdir.winfo_height() / self.frame_outdir.winfo_height() # distance from south
-        self.place_box_with_scrollbars(self.frame_outdir, self.listbox_outdir, HI, VI, .03, d_n, .005, d_s + .005, .005)
+        tools.place_box_with_scrollbars(self, self.frame_outdir, self.listbox_outdir, HI, VI, .03, d_n, .005, d_s + .005, .005)
 
 
         # Frame_text with elements (text1, ...)
@@ -1104,7 +1206,7 @@ class Dateimeister_support:
         dict_buttons["2"] = {"OFFSET":0.50,"VAR":"button_generate","TEXT":"Generate","CALLBACK":self.Button_generate_pressed,"STATE":tk.DISABLED,"TT":"Call Dateimeister for generating commands"}
         dict_buttons["3"] = {"OFFSET":0.00,"VAR":"button_be","TEXT":"Browse / Edit Output","CALLBACK":self.Button_be_pressed,"STATE":tk.DISABLED,"TT":"Browse / Edit Output from Dateimeister"}
         dict_buttons["4"] = {"OFFSET":0.00,"VAR":"button_duplicates","TEXT":"Show duplicates","CALLBACK":self.button_duplicates,"STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths"}
-        self.create_buttons_from_dict(dict_buttons, self.frame_camera_buttons, 0.005, 0.72, 0.99, self.text_font, "VERTICAL")
+        tools.create_buttons_from_dict(self, dict_buttons, self.frame_camera_buttons, 0.005, 0.72, 0.99, self.text_font, "VERTICAL")
 
         # we create all checkboxes
         dict_controls = {}
@@ -1113,7 +1215,7 @@ class Dateimeister_support:
         dict_controls["3"] = {"OFFSET":0.00,"VAR":"cb_newer","TEXT":"copy file only when newer or not existent","CALLBACK":self.state_gen_required,"STATE":0,"TT":"if checked existing files will ohnly be overridden when they are older than the source file"}
         dict_controls["4"] = {"OFFSET":0.00,"VAR":"cb_addrelpath","TEXT":"add relative path","CALLBACK":self.state_gen_required,"STATE":0,"TT":"add relative path to filename to avoid duplicates"}
         dict_controls["5"] = {"OFFSET":0.00,"VAR":"cb_num","TEXT":"numerate images in canvas","CALLBACK":self.on_cb_num_toggle,"STATE":0,"TT":"numerate images in canvas"}
-        self.create_checkboxes_from_dict(dict_controls, self.frame_checkboxes, 0.0, .95, .8, self.text_font, "VERTICAL", _bgcolor)
+        tools.create_checkboxes_from_dict(self, dict_controls, self.frame_checkboxes, 0.0, .95, .8, self.text_font, "VERTICAL", _bgcolor)
 
         # get all camera information and fill camera-listbox
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
@@ -1173,7 +1275,7 @@ class Dateimeister_support:
         dict_buttons["3"] = {"OFFSET":0.02,"VAR":"button_include","TEXT":"include all","CALLBACK":self.button_include_all,"STATE":tk.DISABLED,"TT":"Include all Images"}
         dict_buttons["4"] = {"OFFSET":0.00,"VAR":"button_exclude","TEXT":"exclude all","CALLBACK":self.button_exclude_all,"STATE":tk.DISABLED,"TT":"Exclude all Images"}
         dict_buttons["5"] = {"OFFSET":0.02,"VAR":"button_exec","TEXT":"Exec","CALLBACK":self.button_exec_pressed,"STATE":tk.DISABLED,"TT":"Execute generated commands"}
-        self.create_buttons_from_dict(dict_buttons, self.Frame_sortbuttons, 0.0, 0.5, 0.9, self.text_font, "HORIZONTAL")
+        tools.create_buttons_from_dict(self, dict_buttons, self.Frame_sortbuttons, 0.0, 0.5, 0.9, self.text_font, "HORIZONTAL")
 
         # the sort radio buttons
         self.rbvalue = tk.StringVar()
@@ -1184,7 +1286,7 @@ class Dateimeister_support:
         dict_buttons["2"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas2","VALUE":"2","TEXT":"sort name desc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort name descending"}
         dict_buttons["3"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas3","VALUE":"3","TEXT":"sort mod. asc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort modification date ascending"}
         dict_buttons["4"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas4","VALUE":"4","TEXT":"sort mod. desc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort modification date descending"}
-        self.create_radiobuttons_from_dict(dict_buttons, self.Frame_sortbuttons, 0.6, 0.4, 0.9, self.rbvalue, self.rb_sort, self.text_font, "HORIZONTAL", _bgcolor)
+        tools.create_radiobuttons_from_dict(self, dict_buttons, self.Frame_sortbuttons, 0.6, 0.4, 0.9, self.rbvalue, self.rb_sort, self.text_font, "HORIZONTAL", _bgcolor)
         self.rbvalue.set("1")
 
         # Label for number of images in canvas 
@@ -1376,112 +1478,6 @@ class Dateimeister_support:
         self.timer = tools.RestartableTimer(root, 333, self.resize)  # ms
         self.list_running_players = [] # we keep a list of running players so we can restart after stop_all players
         self.resize_start = False
-
-    def place_box_with_scrollbars(self, frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w):
-        # this function places a listbox or other scrollable element in a given Frame with horizontal and vertical scrollbars
-        # element ist the element to be placed, sb_h and sb_v the scrollbars (horizonzal, vertical)
-        # d_n, d_e, d_s, d_w are the rel. distances from the frame borders (North, east, south, west.
-        # the box with the scrollbars fills the area in the frame completely.
-        # the last parameter is the font
-        # the relative width is given with respect to the listbox to be constructed, so we have to correct it according to its rel. width
-        # The height of the horizontal scrollbar is the same as the width of the vertical scrollbar
-        # on call the frame is given and the width of the vertical scrollbar. 
-        
-        # scrollbar width as fraction of frame-width
-        parent_width_in_pixel  = frame.winfo_width()
-        parent_height_in_pixel = frame.winfo_height()
-        area_width_in_pixel  = parent_width_in_pixel * (1 - d_w - d_e)
-        area_height_in_pixel = parent_height_in_pixel * (1 - d_n - d_s)
-        factor = parent_width_in_pixel / parent_height_in_pixel
-        rel_size_sb_x = rw * area_width_in_pixel / parent_width_in_pixel
-        rel_size_sb_y = rel_size_sb_x * factor # width relative to y
-        element_width  = area_width_in_pixel / parent_width_in_pixel - rel_size_sb_x
-        element_height = area_height_in_pixel / parent_height_in_pixel - rel_size_sb_y
-        element.place(relx = d_w, rely = d_n, relheight = element_height, relwidth = element_width, anchor = tk.NW)     
-        sb_h.place(relx = d_w, rely = d_n + element_height, relheight = rel_size_sb_y, relwidth = element_width, anchor = tk.NW)
-        sb_v.place(relx = d_w + element_width, rely = d_n, relheight = element_height, relwidth = rel_size_sb_x, anchor = tk.NW)
-
-    def create_buttons_from_dict(self, dict_buttons, frame, startpos, rgwidth, relsize, fon, orientation): # create Buttons in horizontal Frame
-        # calculate rel width considering the offsets
-        num_buttons = 0
-        relw = 0.0
-        sum_offsets = 0
-        # part of frame to use for group of buttons
-        rel_group_width = rgwidth
-        for i in dict_buttons:
-            sum_offsets = sum_offsets + dict_buttons[i]["OFFSET"] 
-            num_buttons += 1
-        relw  = (rel_group_width - sum_offsets) / num_buttons
-        nextpos = startpos #<== set rel. start position
-        for i in dict_buttons:
-            offset = dict_buttons[i]["OFFSET"]
-            b = tk.Button(frame, text=dict_buttons[i]["TEXT"], command=dict_buttons[i]["CALLBACK"], state=dict_buttons[i]["STATE"])
-            if orientation.upper() == "HORIZONTAL":
-                b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
-            elif orientation.upper() == "VERTICAL":
-                b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
-            else:
-                raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
-            b.configure(font=fon)
-            setattr(self, dict_buttons[i]["VAR"], b)
-            setattr(self, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
-            nextpos += relw + offset
-
-    def create_radiobuttons_from_dict(self, dict_buttons, frame, startpos, rgwidth, relsize, var, cmd, fon, orientation, bgcolor): # create Radiobuttons in horizontal Frame
-        # calculate rel width considering the offsets
-        num_buttons = 0
-        relw = 0.0
-        sum_offsets = 0
-        # part of frame to use for group of buttons
-        rel_group_width = rgwidth
-        for i in dict_buttons:
-            sum_offsets = sum_offsets + dict_buttons[i]["OFFSET"] 
-            num_buttons += 1
-        relw  = (rel_group_width - sum_offsets) / num_buttons
-        nextpos = startpos #<== set rel. start position
-        for i in dict_buttons:
-            offset = dict_buttons[i]["OFFSET"]
-            b = tk.Radiobutton(frame, text = dict_buttons[i]["TEXT"], value = dict_buttons[i]["VALUE"], variable = var, command = self.rb_sort, indicatoron = 0)
-            if orientation.upper() == "HORIZONTAL":
-                b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
-            elif orientation.upper() == "VERTICAL":
-                b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
-            else:
-                raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
-            b.configure(font=fon, background = bgcolor)
-            setattr(self, dict_buttons[i]["VAR"], b)
-            setattr(self, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
-            nextpos += relw + offset
-
-    def create_checkboxes_from_dict(self, dict_controls, frame, startpos, rgwidth, relsize, fon, orientation, bgcolor): # create Buttons in horizontal Frame
-        # calculate rel width considering the offsets
-        num_controls = 0
-        relw = 0.0
-        sum_offsets = 0
-        # part of frame to use for group of buttons
-        rel_group_width = rgwidth
-        for i in dict_controls:
-            sum_offsets = sum_offsets + dict_controls[i]["OFFSET"] 
-            num_controls += 1
-        relw  = (rel_group_width - sum_offsets) / num_controls
-        nextpos = startpos #<== set rel. start position
-        for i in dict_controls:
-            offset = dict_controls[i]["OFFSET"]
-            b = tk.Checkbutton(frame, text=dict_controls[i]["TEXT"], command=dict_controls[i]["CALLBACK"], anchor='w')
-            if orientation.upper() == "HORIZONTAL":
-                b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
-            elif orientation.upper() == "VERTICAL":
-                b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
-            else:
-                raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
-            b.configure(font=fon)
-            v = tk.IntVar()
-            v.set(dict_controls[i]["STATE"])
-            setattr(self, dict_controls[i]["VAR"], b) # the variable for the control
-            setattr(self, dict_controls[i]["VAR"] + "_var", v) # the variable
-            setattr(self, dict_controls[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_controls[i]["TT"])) # the tooltip
-            b.configure(variable=v, background = bgcolor)
-            nextpos += relw + offset
 
     def rb_sort(self, event = None):
         sort_method = self.rbvalue.get()
@@ -3027,7 +3023,7 @@ class Dateimeister_support:
         self.win_duplicates = DD.MyDuplicates(self, self.debug) 
        
     def menu_cameras_edit(self):
-        self.win_camera = MyCameraTreeview(self) 
+        self.win_camera = MyCameraTreeview(self, self.debug) 
 
     def menu_diatisch(self):
         # if jpeg build list of not excluded imagefiles and call diatisch
