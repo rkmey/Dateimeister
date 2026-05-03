@@ -102,9 +102,9 @@ class MyCameraTreeview:
 
         # Frame and treeview
         self.Frame_treeview = tk.Frame(self.root)
-        self.Frame_treeview.place(relx=0.014, rely=0.012, relheight=0.956, relwidth=0.975)
+        self.Frame_treeview.place(relx=0.015, rely=0.012, relheight=0.8, relwidth=0.985)
         self.Frame_treeview.configure(relief='flat')
-        self.Frame_treeview.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_treeview.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         style = ttk.Style()
         style.configure("Treeview", font = self.text_font)          # Inhalt
@@ -144,80 +144,77 @@ class MyCameraTreeview:
         self.tv.tag_bind("type",   "<<TreeviewSelect>>", self.item_selected_type)
         self.tv.tag_bind("suffix", "<<TreeviewSelect>>", self.item_selected_suffix)
         
-        relh_entry = 0.03
-        relh_label = 0.02
-        relw_entry = 0.13
-        relw_button = .04
-        relw_label = 0.08
-        self.entry_camera = tk.Entry(self.Frame_treeview)
-        self.entry_camera.place(relx=0.103, rely=0.906, relheight=relh_entry, relwidth=relw_entry)
-        self.entry_camera.configure(background="white")
-        self.entry_camera.configure(font = self.text_font)
-        self.entry_camera_tooltip = TT.ToolTip(self.entry_camera, '''Enter new Cameraname''')
-        self.entry_camera.config(state = DISABLED)                  
+        # create frame for the Entries and buttons for new / change camera and all the other attributes
+        self.frame_camera_properties = tk.Frame(self.root)
+        self.frame_camera_properties.place(relx=0.01, rely=.82, relheight=0.07, relwidth=0.98)
+        self.frame_camera_properties.configure(relief='flat')
+        self.frame_camera_properties.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_camera_properties.update()
+        
+        # now create the buttons and entries 
+        # VAR:variable name (assigned to the caller object)
+        # OFFSET: space before Widget starts
+        # RELW: relative width
+        # RELH: relative height
+        # ANCHOR: START / END /CENTER
+        # TEXT:text
+        # CALLBACK:callback
+        # TT:tooltip
+        # STATE:state
+        # FONT:font
+        
+        #set some defaults
+        relw_button = 0.9
+        relh_button = 0.8
+        relw_entry = 0.8
+        relh_entry = 0.8
+        offset_entry = .01
+        
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Button,"VAR":"button_camera_new","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.camera_new,"TEXT":"New camera","STATE":None,"TT":"create a new camera","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Entry,"VAR":"entry_camera","OFFSET":offset_entry,"RELH":relh_entry,"RELW":relw_entry,"ANCHOR":"END",
+          "CALLBACK":None,"TEXT":None,"STATE":tk.DISABLED,"TT":"Enter new Cameraname","FONT":self.text_font, "TITLE":"'Camera', .3, END"}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Entry,"VAR":"entry_type","OFFSET":offset_entry,"RELH":relh_entry,"RELW":relw_entry,"ANCHOR":"END",
+          "CALLBACK":None,"TEXT":None,"STATE":tk.DISABLED,"TT":"Enter new type","FONT":self.text_font, "TITLE":"'Type', .3, END"}
+        dict_widgets["4"] = {
+          "WIDGET":tk.Entry,"VAR":"entry_suffix","OFFSET":offset_entry,"RELH":relh_entry,"RELW":relw_entry,"ANCHOR":"END",
+          "CALLBACK":None,"TEXT":None,"STATE":tk.DISABLED,"TT":"Enter new image file suffix","FONT":self.text_font, "TITLE":"'Suffix', .3, END"}
+        dict_widgets["5"] = {
+          "WIDGET":tk.Entry,"VAR":"entry_subdir","OFFSET":offset_entry,"RELH":relh_entry,"RELW":relw_entry,"ANCHOR":"END",
+          "CALLBACK":None,"TEXT":None,"STATE":tk.DISABLED,"TT":"Enter subdir for type","FONT":self.text_font, "TITLE":"'Subdir', .3, END"}
+        dict_widgets["6"] = {
+          "WIDGET":tk.Button,"VAR":"button_apply","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.apply_new,"TEXT":"Apply","STATE":tk.ACTIVE,"TT":"apply changes","FONT":self.text_font}
+        dict_widgets["7"] = {
+          "WIDGET":tk.Button,"VAR":"button_cancel","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.cancel_new,"TEXT":"Cancel","STATE":tk.ACTIVE,"TT":"cancel changes","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.frame_camera_properties, "HORIZONTAL", font = self.text_font)
 
-        self.label_camera = tk.Label(self.Frame_treeview)
-        self.label_camera.place(relx=0.103, rely=0.956, relheight=relh_label, relwidth=relw_entry)
-        self.label_camera.configure(font = self.text_font, text='''Camera''')
-        self.label_camera.configure(background="#d9d9d9")
-        self.label_camera.configure(anchor='w')
+        # we create the labels for the camera entries and buttons for undo, redo
+        # we get the rel x for the entry with relx = float(<widget>.place_info().get("relx", 0))
+        
+        # the relx for the frame is start of frame in pixels + start of camera-entry in pixels divided by width of root
+        self.root.update()
 
-        self.button_camera_new = tk.Button(self.Frame_treeview)
-        self.button_camera_new.place(relx=0.015, rely=0.906, relheight=relh_entry, relwidth=relw_button)
-        self.button_camera_new.configure(font = self.text_font, text='''New camera...''')
-        self.button_camera_new_tooltip = TT.ToolTip(self.button_camera_new, '''create a new camera''')
-        self.button_camera_new.config(command = self.camera_new)
+        # create frame for undo / redo Buttons beneath the frame for the camera params
+        self.frame_buttons = tk.Frame(self.root)
+        self.frame_buttons.place(relx=.01, rely=.9, relheight=0.07, relwidth=.2)
+        self.frame_buttons.configure(relief='flat')
+        self.frame_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_buttons.update()
 
-        self.entry_type = tk.Entry(self.Frame_treeview)
-        self.entry_type.place(relx=0.249, rely=0.906, relheight=relh_entry, relwidth=relw_entry)
-        self.entry_type.configure(background="white")
-        self.entry_type.configure(font = self.text_font)
-        self.entry_type_tooltip = TT.ToolTip(self.entry_type, '''Enter new type''')
-        self.entry_type.config(state = DISABLED)                  
-
-        self.label_type = tk.Label(self.Frame_treeview)
-        self.label_type.place(relx=0.249, rely=0.956, relheight=relh_label, relwidth=relw_label)
-        self.label_type.configure(font = self.text_font, text='''Type''')
-        self.label_type.configure(background="#d9d9d9")
-        self.label_type.configure(anchor='w')
-
-        self.entry_suffix = tk.Entry(self.Frame_treeview)
-        self.entry_suffix.place(relx=0.388, rely=0.906, relheight=relh_entry, relwidth=relw_entry)
-        self.entry_suffix.configure(background="white")
-        self.entry_suffix.configure(font = self.text_font)
-        self.entry_suffix_tooltip = TT.ToolTip(self.entry_suffix, '''Enter new image file suffix''')
-        self.entry_suffix.config(state = DISABLED)                  
-
-        self.label_suffix = tk.Label(self.Frame_treeview)
-        self.label_suffix.place(relx=0.388, rely=0.956, relheight=relh_label, relwidth=relw_label)
-        self.label_suffix.configure(font = self.text_font, text='''Suffix''')
-        self.label_suffix.configure(background="#d9d9d9")
-        self.label_suffix.configure(anchor='w')
-
-        self.entry_subdir = tk.Entry(self.Frame_treeview)
-        self.entry_subdir.place(relx=0.535, rely=0.906, relheight=relh_entry, relwidth=relw_entry * 2)
-        self.entry_subdir.configure(background="white")
-        self.entry_subdir.configure(font = self.text_font)
-        self.entry_subdir_tooltip = TT.ToolTip(self.entry_subdir, '''Enter subdir for type''')
-        self.entry_subdir.config(state = DISABLED)                  
-
-        self.label_subdir = tk.Label(self.Frame_treeview)
-        self.label_subdir.place(relx=0.535, rely=0.956, relheight=relh_label, relwidth=relw_label)
-        self.label_subdir.configure(font = self.text_font, text='''Subdir''')
-        self.label_subdir.configure(background="#d9d9d9")
-        self.label_subdir.configure(anchor='w')
-
-        # we create buttons for choapply, cancel, undo, redo in a frame
-        self.frame_entry_buttons = tk.Frame(self.root, relief='flat', background = _bgcolor)
-        self.frame_entry_buttons.place(relx=0.005, rely=0.906, relheight=relh_label, relwidth=.995)
-        self.frame_entry_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
-        self.frame_entry_buttons.update()
-        dict_buttons = {}
-        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"button_apply","TEXT":"Apply","CALLBACK":self.apply_new,"STATE":tk.ACTIVE,"TT":"apply your changes"}
-        dict_buttons["2"] = {"OFFSET":0.01,"VAR":"button_cancel","TEXT":"Cancel","CALLBACK":self.cancel_new,"STATE":tk.ACTIVE,"TT":"cancel your changes"}
-        dict_buttons["3"] = {"OFFSET":0.01,"VAR":"button_undo","TEXT":"undo","CALLBACK":self.button_undo_h,"STATE":tk.DISABLED,"TT":"undo apply"}
-        dict_buttons["4"] = {"OFFSET":0.00,"VAR":"button_redo","TEXT":"redo","CALLBACK":self.button_redo_h,"STATE":tk.DISABLED,"TT":"redo apply"}
-        tools.create_buttons_from_dict(self, dict_buttons, self.frame_entry_buttons, 0.7, .3, 1, self.text_font, "HORIZONTAL")
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Button,"VAR":"button_undo","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.button_undo_h,"TEXT":"Undo","STATE":None,"TT":"undo action","FONT":self.text_font, "TITLE":"'Button', .3, END"}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Button,"VAR":"button_redo","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.button_redo_h,"TEXT":"Redo","STATE":None,"TT":"redo action","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.frame_buttons, "HORIZONTAL", font = self.text_font) # default font used for labels if none specified
 
         self.root.bind('<Return>', self.apply_new)
 
@@ -1066,8 +1063,8 @@ class Dateimeister_support:
         self.frame_indir_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_indir_buttons.update()
         dict_buttons = {}
-        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"b_button_indir","TEXT":"from file system","CALLBACK":self.Press_indir,"STATE":tk.ACTIVE,"TT":"Select Input Directory from filesystem"}
-        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_indir_from_list","TEXT":"from list","CALLBACK":self.listbox_indir_double,"STATE":tk.ACTIVE,"TT":"Select Input Directory from list"}
+        dict_buttons["1"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"b_button_indir","TEXT":"from file system","CALLBACK":self.Press_indir,"STATE":tk.ACTIVE,"TT":"Select Input Directory from filesystem"}
+        dict_buttons["2"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_indir_from_list","TEXT":"from list","CALLBACK":self.listbox_indir_double,"STATE":tk.ACTIVE,"TT":"Select Input Directory from list"}
         tools.create_buttons_from_dict(self, dict_buttons, self.frame_indir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
 
         # the listbox indir
@@ -1115,8 +1112,8 @@ class Dateimeister_support:
         self.frame_outdir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
         self.frame_outdir_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_outdir_buttons.update()
-        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"b_button_outdir","TEXT":"from file system","CALLBACK":self.Press_outdir,"STATE":tk.ACTIVE,"TT":"Select output Directory from filesystem"}
-        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_outdir_from_list","TEXT":"from list","CALLBACK":self.listbox_outdir_double,"STATE":tk.ACTIVE,"TT":"Select Output Directory from list"}
+        dict_buttons["1"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"b_button_outdir","TEXT":"from file system","CALLBACK":self.Press_outdir,"STATE":tk.ACTIVE,"TT":"Select output Directory from filesystem"}
+        dict_buttons["2"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_outdir_from_list","TEXT":"from list","CALLBACK":self.listbox_outdir_double,"STATE":tk.ACTIVE,"TT":"Select Output Directory from list"}
         tools.create_buttons_from_dict(self, dict_buttons, self.frame_outdir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
 
         # the listbox outdir
@@ -1188,10 +1185,10 @@ class Dateimeister_support:
         
         # we create buttons for camera selection etc in a column (vertical)
         dict_buttons = {}
-        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"button_select_camera","TEXT":"Select Camera","CALLBACK":self.B_camera_press,"STATE":tk.ACTIVE,"TT":"Select Camera from Listbox"}
-        dict_buttons["2"] = {"OFFSET":0.50,"VAR":"button_generate","TEXT":"Generate","CALLBACK":self.Button_generate_pressed,"STATE":tk.DISABLED,"TT":"Call Dateimeister for generating commands"}
-        dict_buttons["3"] = {"OFFSET":0.00,"VAR":"button_be","TEXT":"Browse / Edit Output","CALLBACK":self.Button_be_pressed,"STATE":tk.DISABLED,"TT":"Browse / Edit Output from Dateimeister"}
-        dict_buttons["4"] = {"OFFSET":0.00,"VAR":"button_duplicates","TEXT":"Show duplicates","CALLBACK":self.button_duplicates,"STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths"}
+        dict_buttons["1"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_select_camera","TEXT":"Select Camera","CALLBACK":self.B_camera_press,"STATE":tk.ACTIVE,"TT":"Select Camera from Listbox"}
+        dict_buttons["2"] = {"WIDGET":tk.Button,"OFFSET":0.50,"VAR":"button_generate","TEXT":"Generate","CALLBACK":self.Button_generate_pressed,"STATE":tk.DISABLED,"TT":"Call Dateimeister for generating commands"}
+        dict_buttons["3"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_be","TEXT":"Browse / Edit Output","CALLBACK":self.Button_be_pressed,"STATE":tk.DISABLED,"TT":"Browse / Edit Output from Dateimeister"}
+        dict_buttons["4"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_duplicates","TEXT":"Show duplicates","CALLBACK":self.button_duplicates,"STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths"}
         tools.create_buttons_from_dict(self, dict_buttons, self.frame_camera_buttons, 0.005, 0.72, 0.99, self.text_font, "VERTICAL")
 
         # we create all checkboxes
@@ -1251,16 +1248,16 @@ class Dateimeister_support:
         self.Frame_sortbuttons = tk.Frame(self.root)
         self.Frame_sortbuttons.place(relx = relx1, rely = rely1 + .005, relheight = relh, relwidth = relw)
         self.Frame_sortbuttons.configure(relief='flat', background = _bgcolor)
-        self.Frame_sortbuttons.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_sortbuttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_sortbuttons.update()
         
         # we create undo/redo/include/exclude/exec buttons
         dict_buttons = {}
-        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"button_undo","TEXT":"undo","CALLBACK":self.button_undo_h,"STATE":tk.DISABLED,"TT":"Undo apply"}
-        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"button_redo","TEXT":"redo","CALLBACK":self.button_redo_h,"STATE":tk.DISABLED,"TT":"Redo apply"}
-        dict_buttons["3"] = {"OFFSET":0.02,"VAR":"button_include","TEXT":"include all","CALLBACK":self.button_include_all,"STATE":tk.DISABLED,"TT":"Include all Images"}
-        dict_buttons["4"] = {"OFFSET":0.00,"VAR":"button_exclude","TEXT":"exclude all","CALLBACK":self.button_exclude_all,"STATE":tk.DISABLED,"TT":"Exclude all Images"}
-        dict_buttons["5"] = {"OFFSET":0.02,"VAR":"button_exec","TEXT":"Exec","CALLBACK":self.button_exec_pressed,"STATE":tk.DISABLED,"TT":"Execute generated commands"}
+        dict_buttons["1"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_undo","TEXT":"undo","CALLBACK":self.button_undo_h,"STATE":tk.DISABLED,"TT":"Undo apply"}
+        dict_buttons["2"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_redo","TEXT":"redo","CALLBACK":self.button_redo_h,"STATE":tk.DISABLED,"TT":"Redo apply"}
+        dict_buttons["3"] = {"WIDGET":tk.Button,"OFFSET":0.02,"VAR":"button_include","TEXT":"include all","CALLBACK":self.button_include_all,"STATE":tk.DISABLED,"TT":"Include all Images"}
+        dict_buttons["4"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_exclude","TEXT":"exclude all","CALLBACK":self.button_exclude_all,"STATE":tk.DISABLED,"TT":"Exclude all Images"}
+        dict_buttons["5"] = {"WIDGET":tk.Button,"OFFSET":0.02,"VAR":"button_exec","TEXT":"Exec","CALLBACK":self.button_exec_pressed,"STATE":tk.DISABLED,"TT":"Execute generated commands"}
         tools.create_buttons_from_dict(self, dict_buttons, self.Frame_sortbuttons, 0.0, 0.5, 0.9, self.text_font, "HORIZONTAL")
 
         # the sort radio buttons

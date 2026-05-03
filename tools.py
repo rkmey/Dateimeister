@@ -48,6 +48,188 @@ def count_files_recursive(path):
     return total
 
 
+def create_widgets_from_dict(dict_widgets, parent, p_orientation, font): 
+    """
+    Create multiple widgets in a horizontal or vertical line inside a parent widget (usually a frame).
+
+    Supported widget types include Button, Entry and Label. Other widget types may work but must be tested first.
+
+    Because mixed widget types are now supported, the function always fills the entire parent area.
+
+    Offsets and sizes are normalized so that their total always equals 1.
+
+    RELH / RELW representsand the widget height when orientare the relative height / width of the widget
+
+    If orientation is HORIZONTAL:
+        - If widget height >= parent height, the widget height is clamped to the parent height.
+        - If widget height < parent height, the widget is placed at the top (ANCHOR=START),
+          bottom (ANCHOR=END), or vertically centered (ANCHOR=CENTER).
+
+    If orientation is VERTICAL:
+        - If widget width >= parent width, the widget width is clamped to the parent height.
+        - If widget width < parent width, the widget is placed at the left (ANCHOR=START),
+          right (ANCHOR=END), or horizontally centered (ANCHOR=CENTER).
+
+    Title: we can define a title, e.g. for an Entry. The Syntax is:
+        '<string>', <relsize>, <position>
+        with: <string > = Text to be displayed, <relsize> = relative size within the space available for the widget, 
+            <position> = one os START, END where START / END means Top / Bottom  if orientation = HORIZONTAL, left / right if orientation = VERTICAL
+
+    For each widget, the following attributes are applied if provided:
+        - VAR:variable name (assigned to the caller object)
+        - OFFSET: space before Widget starts
+        - RELW: relative width
+        - RELH: relative height
+        - ANCHOR: START / END /CENTER
+        - TEXT:text
+        - CALLBACK:callback
+        - TT:tooltip
+        - STATE:state
+        - FONT:font
+        - TITLE: string defining title (s.o.)
+    we calculate throughout with relative values
+    """
+     
+    # get stackframe of caller
+    frame = inspect.currentframe().f_back
+    # extract caller object (self)
+    caller = frame.f_locals.get("self", None)
+    debug = caller.debug
+
+    num_widgets = 0
+    sum_offsets = 0
+    sum_widgets = 0
+    if p_orientation.upper() == "HORIZONTAL":
+        orientation = p_orientation.upper()
+    elif p_orientation.upper() == "VERTICAL":
+        orientation = p_orientation.upper()
+    else:
+        raise ValueError("{:s}.{:s}: {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, "wrong orientation", p_orientation,
+          "represents a hidden bug, do not catch this"))
+
+    for i in dict_widgets:
+        sum_offsets = sum_offsets + dict_widgets[i]["OFFSET"]
+        if orientation == "HORIZONTAL":
+            sum_widgets = sum_widgets + dict_widgets[i]["RELW"]
+        else:
+            sum_widgets = sum_widgets + dict_widgets[i]["RELH"]
+        num_widgets += 1
+        factor = 1 / (sum_offsets + sum_widgets)
+    nextpos = 0 # we always fill the whole parent area
+    for i in dict_widgets:
+        # construct the widget in parent
+        b = dict_widgets[i]["WIDGET"](parent)
+        t_text    = ""
+        t_relsize = 0
+        t_pos     = ""
+        t_font = font # this is the default font if non i specified for the widget
+        if "TITLE" in dict_widgets[i] and dict_widgets[i]["TITLE"] is not None:
+            result = parse_title(dict_widgets[i]["TITLE"])
+            if result is None:
+                raise ValueError("{:s}.{:s}: line {:s} {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, 
+                  i, "wrong expression", dict_widgets[i]["TITLE"],
+                  "represents a hidden bug, do not catch this"))
+            else:
+                t_text, t_relsize, t_pos = result
+                print("TITLE text:{:s}, relsize:{:f}, position:{:s}".format(t_text, t_relsize, t_pos)) if debug else True
+            title_yn = 'y'
+        else:
+            title_yn = 'n'
+        if "FONT" in dict_widgets[i] and dict_widgets[i]["FONT"] is not None: # if we have a font, we use it also for text-label 
+            b.config(font=dict_widgets[i]["FONT"])
+            t_font = dict_widgets[i]["FONT"]
+            
+        if orientation == "HORIZONTAL":
+            offset = dict_widgets[i]["OFFSET"] * factor
+            relh   = dict_widgets[i]["RELH"]
+            relw   = dict_widgets[i]["RELW"] * factor
+            size_available = relh # the size available
+            if relh >= 1: 
+                relh = 1
+            if dict_widgets[i]["ANCHOR"] == "START":
+                dist = 0
+            elif dict_widgets[i]["ANCHOR"] == "END":
+                dist = 1 - relh
+            elif dict_widgets[i]["ANCHOR"] == "CENTER":
+                dist = (1 - relh) / 2
+            else:
+                raise ValueError("{:s}.{:s}: line {:s} {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, 
+                  i, "wrong ANCHOR", dict_widgets[i]["ANCHOR"],
+                  "represents a hidden bug, do not catch this"))
+            if title_yn == 'y': # create Label and correct some values
+                # Example: relh = 0.8, t_relsize = 0.3, after correction relh = 0.56, t_relsize = 0.3 * 0.8 = 0.24. Sum is .56 + .24 = 0.8
+                relh = relh * (1 - t_relsize) # relh (heihgt of widget) has to be shared with label
+                t_relsize = t_relsize * size_available
+                if t_pos.upper() == "START":
+                    # create the label
+                    l = tk.Label(parent, text = t_text, font = font, bg = parent["bg"])
+                    l.place(relx = nextpos + offset, rely=dist, relheight=t_relsize, relwidth = relw)
+                    # now adjust dist for placement of widget
+                    dist += t_relsize
+                elif t_pos.upper() == "END":
+                    # create the label
+                    l = tk.Label(parent, text = t_text, font = t_font, bg = parent["bg"])
+                    l.place(relx = nextpos + offset, rely=dist + relh, relheight=t_relsize, relwidth = relw)
+            b.place(relx = nextpos + offset, rely=dist, relheight=relh, relwidth = relw)
+            nextpos += relw + offset
+        else: # must be vertical, we have checked this already
+            offset = dict_widgets[i]["OFFSET"] * factor
+            relh   = dict_widgets[i]["RELH"] * factor 
+            relw   = dict_widgets[i]["RELW"]
+            size_available = relw # the size available
+            if relw >= 1: 
+                relw = 1
+            if dict_widgets[i]["ANCHOR"] == "START":
+                dist = 0
+            elif dict_widgets[i]["ANCHOR"] == "END":
+                dist = 1 - relw
+            elif dict_widgets[i]["ANCHOR"] == "CENTER":
+                dist = (1 - relw) / 2
+            else:
+                raise ValueError("{:s}.{:s}: line {:s} {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, 
+                  i, "wrong ANCHOR", dict_widgets[i]["ANCHOR"],
+                  "represents a hidden bug, do not catch this"))
+            if title_yn == 'y': # create Label and correct some values
+                # Example: relw = 0.8, t_relsize = 0.3, after correction relw = 0.56, t_relsize = 0.3 * 0.8 = 0.24. Sum is .56 + .24 = 0.8
+                relw = relw* (1 - t_relsize) # relw (width of widget) has to be shared with label
+                t_relsize = t_relsize * size_available
+                if t_pos.upper() == "START":
+                    # create the label
+                    l = tk.Label(parent, text = t_text, font = font, bg = parent["bg"])
+                    l.place(relx = dist, rely=nextpos + offset, relheight=relh, relwidth = t_relsize)
+                    # now adjust dist for placement of widget
+                    dist += t_relsize
+                elif t_pos.upper() == "END": # we have to leave place for the title above the widget
+                    # create the label
+                    l = tk.Label(parent, text = t_text, font = t_font, bg = parent["bg"])
+                    l.place(relx = dist + relw, rely=nextpos + offset, relheight=relh, relwidth = t_relsize)
+            b.place(relx = dist, rely=nextpos + offset, relheight=relh, relwidth = relw)
+            nextpos += relh + offset
+        if "TEXT" in dict_widgets[i] and dict_widgets[i]["TEXT"] is not None: 
+            b.config(text=dict_widgets[i]["TEXT"])
+        if "CALLBACK" in dict_widgets[i] and dict_widgets[i]["CALLBACK"] is not None: 
+            b.config(command=dict_widgets[i]["CALLBACK"])
+        if "STATE" in dict_widgets[i] and dict_widgets[i]["STATE"] is not None: 
+            b.config(state=dict_widgets[i]["STATE"])
+        if "VAR" in dict_widgets[i] and dict_widgets[i]["VAR"] is not None: 
+            setattr(caller, dict_widgets[i]["VAR"], b)
+        else: #VAR must be given
+            raise ValueError("{:s}.{:s}: line {:s} {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, 
+              i, "parameter not specified", "VAR",
+              "represents a hidden bug, do not catch this"))
+        if "TT" in dict_widgets[i] and dict_widgets[i]["TT"] is not None: # we need a variable for the tooltip
+            setattr(caller, dict_widgets[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_widgets[i]["TT"]))
+ 
+
+def parse_title(s):
+    # helper function for create_widgets_from_dict
+    pattern = re.compile(r"^\s*(['\"])(.*?)\1\s*,\s*([0-9]*\.?[0-9]+)\s*,\s*(START|END)\s*$")
+    m = pattern.match(s)
+    if not m:
+        return None
+    text, relsize, pos = m.group(2), float(m.group(3)), m.group(4)
+    return text, relsize, pos
+
 def create_buttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth, relsize, fon, orientation): # create Buttons in horizontal Frame
     # calculate rel width considering the offsets
     num_buttons = 0
@@ -62,7 +244,7 @@ def create_buttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth, rel
     nextpos = startpos #<== set rel. start position
     for i in dict_buttons:
         offset = dict_buttons[i]["OFFSET"]
-        b = tk.Button(frame, text=dict_buttons[i]["TEXT"], command=dict_buttons[i]["CALLBACK"], state=dict_buttons[i]["STATE"])
+        b = dict_buttons[i]["WIDGET"](frame, text=dict_buttons[i]["TEXT"], command=dict_buttons[i]["CALLBACK"], state=dict_buttons[i]["STATE"])
         if orientation.upper() == "HORIZONTAL":
             b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
         elif orientation.upper() == "VERTICAL":
