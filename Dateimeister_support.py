@@ -151,17 +151,7 @@ class MyCameraTreeview:
         self.frame_camera_properties.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_camera_properties.update()
         
-        # now create the buttons and entries 
-        # VAR:variable name (assigned to the caller object)
-        # OFFSET: space before Widget starts
-        # RELW: relative width
-        # RELH: relative height
-        # ANCHOR: START / END /CENTER
-        # TEXT:text
-        # CALLBACK:callback
-        # TT:tooltip
-        # STATE:state
-        # FONT:font
+        # now create the buttons and entries, see documentation in utils for the function
         
         #set some defaults
         relw_button = 0.9
@@ -210,7 +200,7 @@ class MyCameraTreeview:
         dict_widgets = {}
         dict_widgets["1"] = {
           "WIDGET":tk.Button,"VAR":"button_undo","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
-          "CALLBACK":self.button_undo_h,"TEXT":"Undo","STATE":None,"TT":"undo action","FONT":self.text_font, "TITLE":"'Button', .3, END"}
+          "CALLBACK":self.button_undo_h,"TEXT":"Undo","STATE":None,"TT":"undo action","FONT":self.text_font}
         dict_widgets["2"] = {
           "WIDGET":tk.Button,"VAR":"button_redo","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
           "CALLBACK":self.button_redo_h,"TEXT":"Redo","STATE":None,"TT":"redo action","FONT":self.text_font}
@@ -1244,39 +1234,71 @@ class Dateimeister_support:
         rely1 = y1 / parent_height
         relh = (y2 - y1) / parent_height
         relw  = (x2 - x1) / parent_width
-        print("Frame relx, rely, relw, relh is {:f}, {:f} {:f}, {:f}".format(relx1, rely1, relw, relh)) if self.debug else True      
+        print("Frame relx, rely, relw, relh is {:f}, {:f} {:f}, {:f}".format(relx1, rely1, relw, relh)) if self.debug else True 
+        # 20260504 as we want to unify the creation of widgets and the new method always fills the complete frame, we need to divide the frame 60:40
+        self.Frame_mixed = tk.Frame(self.root)
+        self.Frame_mixed.place(relx = relx1, rely = rely1 + .005, relheight = relh, relwidth = relw * 0.6)
+        self.Frame_mixed.configure(relief='flat', background = _bgcolor)
+        self.Frame_mixed.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_mixed.update()
+        # 20260504 new Frame_sortbuttons 
+        relx1 = self.Frame_mixed.winfo_width() / parent_width + .1 # we want a gap between th 2 frames
         self.Frame_sortbuttons = tk.Frame(self.root)
-        self.Frame_sortbuttons.place(relx = relx1, rely = rely1 + .005, relheight = relh, relwidth = relw)
+        self.Frame_sortbuttons.place(relx = relx1, rely = rely1 + .005, relheight = relh, relwidth = relw * 0.3)
         self.Frame_sortbuttons.configure(relief='flat', background = _bgcolor)
         self.Frame_sortbuttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_sortbuttons.update()
         
         # we create undo/redo/include/exclude/exec buttons
-        dict_buttons = {}
-        dict_buttons["1"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_undo","TEXT":"undo","CALLBACK":self.button_undo_h,"STATE":tk.DISABLED,"TT":"Undo apply"}
-        dict_buttons["2"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_redo","TEXT":"redo","CALLBACK":self.button_redo_h,"STATE":tk.DISABLED,"TT":"Redo apply"}
-        dict_buttons["3"] = {"WIDGET":tk.Button,"OFFSET":0.02,"VAR":"button_include","TEXT":"include all","CALLBACK":self.button_include_all,"STATE":tk.DISABLED,"TT":"Include all Images"}
-        dict_buttons["4"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_exclude","TEXT":"exclude all","CALLBACK":self.button_exclude_all,"STATE":tk.DISABLED,"TT":"Exclude all Images"}
-        dict_buttons["5"] = {"WIDGET":tk.Button,"OFFSET":0.02,"VAR":"button_exec","TEXT":"Exec","CALLBACK":self.button_exec_pressed,"STATE":tk.DISABLED,"TT":"Execute generated commands"}
-        tools.create_buttons_from_dict(self, dict_buttons, self.Frame_sortbuttons, 0.0, 0.5, 0.9, self.text_font, "HORIZONTAL")
+        #set some defaults
+        relw_button = 0.9
+        relh_button = 0.8
+        relw_entry = 0.8
+        relh_entry = 0.8
+        relw_label = 0.8
+        relh_label = 0.8
+        offset_entry = .01
+
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Button,"VAR":"button_undo","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.button_undo_h,"TEXT":"Undo","STATE":tk.DISABLED,"TT":"undo action","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Button,"VAR":"button_redo","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.button_redo_h,"TEXT":"Redo","STATE":tk.DISABLED,"TT":"redo action","FONT":self.text_font}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Button,"VAR":"button_include","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.button_include_all,"TEXT":"include all","STATE":tk.DISABLED,"TT":"Include all Images","FONT":self.text_font}
+        dict_widgets["4"] = {
+          "WIDGET":tk.Button,"VAR":"button_exclude","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.button_exclude_all,"TEXT":"exclude all","STATE":tk.DISABLED,"TT":"Exclude all Images","FONT":self.text_font}
+        dict_widgets["5"] = {
+          "WIDGET":tk.Button,"VAR":"button_exec","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.button_exec_pressed,"TEXT":"Exec","STATE":tk.DISABLED,"TT":"Execute generated commands","FONT":self.text_font}
+        dict_widgets["6"] = {
+          "WIDGET":tk.Label,"VAR":"label_num","OFFSET":0.01,"RELH":relh_label,"RELW":relw_label,"ANCHOR":"CENTER","FONT":self.text_font,
+          "TITLE":"'num Images', .3, START"}
+        tools.create_widgets_from_dict(dict_widgets, self.Frame_mixed, "HORIZONTAL", font = self.text_font) # default font used for labels if none specified
 
         # the sort radio buttons
         self.rbvalue = tk.StringVar()
         self.dict_sort_method = {} # here we keep type(JPEG...) -> sort method(1...4)
-        # we create undo/redo/include/exclude/exec buttons
-        dict_buttons = {}
-        dict_buttons["1"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas1","VALUE":"1","TEXT":"sort name asc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort name ascending"}
-        dict_buttons["2"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas2","VALUE":"2","TEXT":"sort name desc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort name descending"}
-        dict_buttons["3"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas3","VALUE":"3","TEXT":"sort mod. asc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort modification date ascending"}
-        dict_buttons["4"] = {"OFFSET":0.00,"VAR":"rb_sort_canvas4","VALUE":"4","TEXT":"sort mod. desc","CALLBACK":None,"STATE":tk.DISABLED,"TT":"sort modification date descending"}
-        tools.create_radiobuttons_from_dict(self, dict_buttons, self.Frame_sortbuttons, 0.6, 0.4, 0.9, self.rbvalue, self.rb_sort, self.text_font, "HORIZONTAL", _bgcolor)
-        self.rbvalue.set("1")
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas1","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
+          "RB_VAR":self.rbvalue,"RB_VALUE":"1","TEXT":"sort name asc","STATE":tk.NORMAL,"TT":"sort images by name(ascending)","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas2","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
+          "RB_VAR":self.rbvalue,"RB_VALUE":"2","TEXT":"sort name desc","STATE":tk.NORMAL,"TT":"sort images by name(descending)","FONT":self.text_font}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas3","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
+          "RB_VAR":self.rbvalue,"RB_VALUE":"3","TEXT":"sort mod. asc","STATE":tk.NORMAL,"TT":"sort images by modification date(ascending)","FONT":self.text_font}
+        dict_widgets["4"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas4","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
+          "RB_VAR":self.rbvalue,"RB_VALUE":"4","TEXT":"sort mod. desc","STATE":tk.NORMAL,"TT":"sort images by modification date(descending)","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.Frame_sortbuttons, "HORIZONTAL", font = self.text_font) # default font used for labels if none specified
 
-        # Label for number of images in canvas 
-        self.label_num = tk.Label(self.Frame_sortbuttons)
-        self.label_num.place(relx=0.5, rely=0.005, relheight=1, relwidth=.08)
-        self.label_num.configure(font=self.text_font, background = _bgcolor)
-        TT.ToolTip(self.label_num, 'Number of images ')
+        self.rbvalue.set("1")
 
         self.canvas_gallery = tk.Canvas(self.frame_canvas)
         self.canvas_gallery.place(relx=0.0, rely=0.0, relheight=0.9, relwidth=1.0)

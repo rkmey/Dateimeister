@@ -119,6 +119,18 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font):
     for i in dict_widgets:
         # construct the widget in parent
         b = dict_widgets[i]["WIDGET"](parent)
+        # we have to find out if this widget is a radiobutton. if yes we need two special parameters: the variable associated with the group and the resp. value
+        if dict_widgets[i]["WIDGET"] is tk.Radiobutton:
+            if "RB_VAR" not in dict_widgets[i] or dict_widgets[i]["RB_VAR"] == "":
+                raise ValueError("{:s}.{:s}: line {:s} {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, 
+                  i, "parameter not specified for radio button", "RB_VAR",
+                  "represents a hidden bug, do not catch this"))
+            if "RB_VALUE" not in dict_widgets[i] or dict_widgets[i]["RB_VALUE"] == "":
+                raise ValueError("{:s}.{:s}: line {:s} {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, 
+                  i, "parameter not specified for radio button", "RB_VALUE",
+                  "represents a hidden bug, do not catch this"))
+            b.config(variable=dict_widgets[i]["RB_VAR"])
+            b.config(value=dict_widgets[i]["RB_VALUE"], indicatoron = 0)
         t_text    = ""
         t_relsize = 0
         t_pos     = ""
@@ -255,33 +267,6 @@ def create_buttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth, rel
         setattr(caller, dict_buttons[i]["VAR"], b)
         setattr(caller, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
         nextpos += relw + offset
-
-def create_radiobuttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth, relsize, var, fn_callback, fon, orientation, bgcolor): # create Radiobuttons in horizontal Frame
-    # calculate rel width considering the offsets
-    num_buttons = 0
-    relw = 0.0
-    sum_offsets = 0
-    # part of frame to use for group of buttons
-    rel_group_width = rgwidth
-    for i in dict_buttons:
-        sum_offsets = sum_offsets + dict_buttons[i]["OFFSET"] 
-        num_buttons += 1
-    relw  = (rel_group_width - sum_offsets) / num_buttons
-    nextpos = startpos #<== set rel. start position
-    for i in dict_buttons:
-        offset = dict_buttons[i]["OFFSET"]
-        b = tk.Radiobutton(frame, text = dict_buttons[i]["TEXT"], value = dict_buttons[i]["VALUE"], variable = var, command = fn_callback, indicatoron = 0)
-        if orientation.upper() == "HORIZONTAL":
-            b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
-        elif orientation.upper() == "VERTICAL":
-            b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
-        else:
-            raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
-        b.configure(font=fon, background = bgcolor)
-        setattr(caller, dict_buttons[i]["VAR"], b)
-        setattr(caller, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
-        nextpos += relw + offset
-
 
 def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w):
     # this function places a listbox or other scrollable element in a given Frame with horizontal and vertical scrollbars
