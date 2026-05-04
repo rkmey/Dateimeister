@@ -51,13 +51,10 @@ def count_files_recursive(path):
 def create_widgets_from_dict(dict_widgets, parent, p_orientation, font): 
     """
     Create multiple widgets in a horizontal or vertical line inside a parent widget (usually a frame).
-
-    Supported widget types include Button, Entry and Label. Other widget types may work but must be tested first.
-
+    Supported widget types include Button, Radiobutton, Entry and Label. Other widget types may work but must be tested first.
     Because mixed widget types are now supported, the function always fills the entire parent area.
-
     Offsets and sizes are normalized so that their total always equals 1.
-
+    we calculate throughout with relative values
     RELH / RELW representsand the widget height when orientare the relative height / width of the widget
 
     If orientation is HORIZONTAL:
@@ -87,7 +84,6 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font):
         - STATE:state
         - FONT:font
         - TITLE: string defining title (s.o.)
-    we calculate throughout with relative values
     """
      
     # get stackframe of caller
