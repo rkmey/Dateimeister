@@ -84,6 +84,8 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font):
         - STATE:state
         - FONT:font
         - TITLE: string defining title (s.o.)
+    
+    for radiobuttons we check if associated variable RB_VAR and value RB_VALUE are given
     """
      
     # get stackframe of caller
