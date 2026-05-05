@@ -86,6 +86,7 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font):
         - TITLE: string defining title (s.o.)
     
     for radiobuttons we check if associated variable RB_VAR and value RB_VALUE are given
+    for checkbuttons we check if associated variable RB_VAR and value RB_VALUE and type RB_TYPE are given
     """
      
     # get stackframe of caller
@@ -129,6 +130,26 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font):
                   "represents a hidden bug, do not catch this"))
             b.config(variable=dict_widgets[i]["RB_VAR"])
             b.config(value=dict_widgets[i]["RB_VALUE"], indicatoron = 0)
+        # we have to find out if this widget is a checkbutton. if yes we need three special parameters: the variable associated with the widget, the type (e.g IntVar and the value)
+        if dict_widgets[i]["WIDGET"] is tk.Checkbutton:
+            if "RB_VAR" not in dict_widgets[i] or dict_widgets[i]["RB_VAR"] == "":
+                raise ValueError("{:s}.{:s}: line {:s} {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, 
+                  i, "parameter not specified for check button", "RB_VAR",
+                  "represents a hidden bug, do not catch this"))
+            if "RB_TYPE" not in dict_widgets[i] or dict_widgets[i]["RB_TYPE"] == "":
+                raise ValueError("{:s}.{:s}: line {:s} {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, 
+                  i, "parameter not specified for check button", "RB_TYPE",
+                  "represents a hidden bug, do not catch this"))
+            if "RB_VALUE" not in dict_widgets[i] or dict_widgets[i]["RB_VALUE"] == "":
+                raise ValueError("{:s}.{:s}: line {:s} {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, 
+                  i, "parameter not specified for check button", "RB_VALUE",
+                  "represents a hidden bug, do not catch this"))
+            b.config(variable=dict_widgets[i]["RB_VAR"])
+            v = dict_widgets[i]["RB_TYPE"]()
+            v.set(dict_widgets[i]["RB_VALUE"])
+            setattr(caller, dict_widgets[i]["RB_VAR"], v)
+            b.config(variable=v)
+
         t_text    = ""
         t_relsize = 0
         t_pos     = ""
@@ -289,36 +310,6 @@ def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, 
     element.place(relx = d_w, rely = d_n, relheight = element_height, relwidth = element_width, anchor = tk.NW)     
     sb_h.place(relx = d_w, rely = d_n + element_height, relheight = rel_size_sb_y, relwidth = element_width, anchor = tk.NW)
     sb_v.place(relx = d_w + element_width, rely = d_n, relheight = element_height, relwidth = rel_size_sb_x, anchor = tk.NW)
-
-def create_checkboxes_from_dict(caller, dict_controls, frame, startpos, rgwidth, relsize, fon, orientation, bgcolor): # create Buttons in horizontal Frame
-    # calculate rel width considering the offsets
-    num_controls = 0
-    relw = 0.0
-    sum_offsets = 0
-    # part of frame to use for group of buttons
-    rel_group_width = rgwidth
-    for i in dict_controls:
-        sum_offsets = sum_offsets + dict_controls[i]["OFFSET"] 
-        num_controls += 1
-    relw  = (rel_group_width - sum_offsets) / num_controls
-    nextpos = startpos #<== set rel. start position
-    for i in dict_controls:
-        offset = dict_controls[i]["OFFSET"]
-        b = tk.Checkbutton(frame, text=dict_controls[i]["TEXT"], command=dict_controls[i]["CALLBACK"], anchor='w')
-        if orientation.upper() == "HORIZONTAL":
-            b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
-        elif orientation.upper() == "VERTICAL":
-            b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
-        else:
-            raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
-        b.configure(font=fon)
-        v = tk.IntVar()
-        v.set(dict_controls[i]["STATE"])
-        setattr(caller, dict_controls[i]["VAR"], b) # the variable for the control
-        setattr(caller, dict_controls[i]["VAR"] + "_var", v) # the variable
-        setattr(caller, dict_controls[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_controls[i]["TT"])) # the tooltip
-        b.configure(variable=v, background = bgcolor)
-        nextpos += relw + offset
 
 
 class Globals:

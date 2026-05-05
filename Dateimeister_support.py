@@ -1182,13 +1182,25 @@ class Dateimeister_support:
         tools.create_buttons_from_dict(self, dict_buttons, self.frame_camera_buttons, 0.005, 0.72, 0.99, self.text_font, "VERTICAL")
 
         # we create all checkboxes
-        dict_controls = {}
-        dict_controls["1"] = {"OFFSET":0.00,"VAR":"cb_recursive","TEXT":"recursive","CALLBACK":self.state_gen_required,"STATE":1,"TT":"include subdirs"}
-        dict_controls["2"] = {"OFFSET":0.00,"VAR":"cb_prefix","TEXT":"use cameraname as prefix","CALLBACK":self.state_gen_required,"STATE":1,"TT":"use cameraname as prefix"}
-        dict_controls["3"] = {"OFFSET":0.00,"VAR":"cb_newer","TEXT":"copy file only when newer or not existent","CALLBACK":self.state_gen_required,"STATE":0,"TT":"if checked existing files will ohnly be overridden when they are older than the source file"}
-        dict_controls["4"] = {"OFFSET":0.00,"VAR":"cb_addrelpath","TEXT":"add relative path","CALLBACK":self.state_gen_required,"STATE":0,"TT":"add relative path to filename to avoid duplicates"}
-        dict_controls["5"] = {"OFFSET":0.00,"VAR":"cb_num","TEXT":"numerate images in canvas","CALLBACK":self.on_cb_num_toggle,"STATE":0,"TT":"numerate images in canvas"}
-        tools.create_checkboxes_from_dict(self, dict_controls, self.frame_checkboxes, 0.0, .95, .8, self.text_font, "VERTICAL", _bgcolor)
+        relw_button = 0.9
+        relh_button = 0.8
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Checkbutton,"VAR":"cb_recursive","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.state_gen_required,
+          "RB_VAR":"cb_recursive_var","RB_TYPE":tk.IntVar,"RB_VALUE":"1","TEXT":"recursive","STATE":tk.NORMAL,"TT":"include all subdirs(recursive)","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Checkbutton,"VAR":"cb_prefix","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.state_gen_required,
+          "RB_VAR":"cb_prefix_var","RB_TYPE":tk.IntVar,"RB_VALUE":"1","TEXT":"use cameraname as prefix","STATE":tk.NORMAL,"TT":"make cameraname as first part of the filename(prefix)","FONT":self.text_font}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Checkbutton,"VAR":"cb_newer","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.state_gen_required,
+          "RB_VAR":"cb_newer_var","RB_TYPE":tk.IntVar,"RB_VALUE":"0","TEXT":"copy file only when newer or not existent","STATE":tk.NORMAL,"TT":"if checked existing files will ohnly be overridden when they are older than the source file","FONT":self.text_font}
+        dict_widgets["4"] = {
+          "WIDGET":tk.Checkbutton,"VAR":"cb_addrelpath","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.state_gen_required,
+          "RB_VAR":"cb_addrelpath_var","RB_TYPE":tk.IntVar,"RB_VALUE":"0","TEXT":"add relative path","STATE":tk.NORMAL,"TT":"add relative path for the targetfile (to avoid duplicate problem)","FONT":self.text_font}
+        dict_widgets["5"] = {
+          "WIDGET":tk.Checkbutton,"VAR":"cb_num","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.state_gen_required,
+          "RB_VAR":"cb_num_var","RB_TYPE":tk.IntVar,"RB_VALUE":"0","TEXT":"numerate images in canvas","STATE":tk.NORMAL,"TT":"numerate images in canvas (within image)","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.frame_checkboxes, "VERTICAL", font = self.text_font) # default font used for labels if none specified
 
         # get all camera information and fill camera-listbox
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
