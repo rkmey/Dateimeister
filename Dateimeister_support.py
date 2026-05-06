@@ -1202,20 +1202,22 @@ class Dateimeister_support:
         relw_button = 0.9
         relh_button = 0.8
         dict_widgets = {}
+        dict_widgets["6"] = {
+          "WIDGET":tk.Label,"VAR":"label_gen","OFFSET":0.0,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","TEXT":"Generate Parameters","FONT":self.text_font}
         dict_widgets["1"] = {
-          "WIDGET":tk.Checkbutton,"VAR":"cb_recursive","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.state_gen_required,
+          "WIDGET":tk.Checkbutton,"VAR":"cb_recursive","OFFSET":0.1,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.state_gen_required,
           "RB_VAR":"cb_recursive_var","RB_TYPE":tk.IntVar,"RB_VALUE":"1","TEXT":"recursive","STATE":tk.NORMAL,"TT":"include all subdirs(recursive)","FONT":self.text_font}
         dict_widgets["2"] = {
-          "WIDGET":tk.Checkbutton,"VAR":"cb_prefix","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.state_gen_required,
+          "WIDGET":tk.Checkbutton,"VAR":"cb_prefix","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.state_gen_required,
           "RB_VAR":"cb_prefix_var","RB_TYPE":tk.IntVar,"RB_VALUE":"1","TEXT":"use cameraname as prefix","STATE":tk.NORMAL,"TT":"make cameraname as first part of the filename(prefix)","FONT":self.text_font}
         dict_widgets["3"] = {
-          "WIDGET":tk.Checkbutton,"VAR":"cb_newer","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.state_gen_required,
+          "WIDGET":tk.Checkbutton,"VAR":"cb_newer","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.state_gen_required,
           "RB_VAR":"cb_newer_var","RB_TYPE":tk.IntVar,"RB_VALUE":"0","TEXT":"copy file only when newer or not existent","STATE":tk.NORMAL,"TT":"if checked existing files will ohnly be overridden when they are older than the source file","FONT":self.text_font}
         dict_widgets["4"] = {
-          "WIDGET":tk.Checkbutton,"VAR":"cb_addrelpath","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.state_gen_required,
+          "WIDGET":tk.Checkbutton,"VAR":"cb_addrelpath","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.state_gen_required,
           "RB_VAR":"cb_addrelpath_var","RB_TYPE":tk.IntVar,"RB_VALUE":"0","TEXT":"add relative path","STATE":tk.NORMAL,"TT":"add relative path for the targetfile (to avoid duplicate problem)","FONT":self.text_font}
         dict_widgets["5"] = {
-          "WIDGET":tk.Checkbutton,"VAR":"cb_num","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.state_gen_required,
+          "WIDGET":tk.Checkbutton,"VAR":"cb_num","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.state_gen_required,
           "RB_VAR":"cb_num_var","RB_TYPE":tk.IntVar,"RB_VALUE":"0","TEXT":"numerate images in canvas","STATE":tk.NORMAL,"TT":"numerate images in canvas (within image)","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_checkboxes, "VERTICAL", font = self.text_font) # default font used for labels if none specified
 

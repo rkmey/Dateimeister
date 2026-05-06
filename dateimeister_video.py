@@ -19,7 +19,7 @@ class VideoPlayer:
                    'infbuf': True, 'autoexit': True, 'framedrop': True}
         
         self.audio_player = MediaPlayer(video_source, ff_opts=ff_opts)
-        #self.audio_player.set_volume(0.0) # Startet stumm
+        #self.audio_player.set_volume(0.0) # Startet stumm 20260506 audkommentiert, kann harten Crash ohne Meldung verursachen
         
         # Metadaten laden
         meta = {}

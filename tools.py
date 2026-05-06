@@ -144,7 +144,7 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font):
                 raise ValueError("{:s}.{:s}: line {:s} {:s} {:s} ({:s})".format(__name__, inspect.currentframe().f_code.co_name, 
                   i, "parameter not specified for check button", "RB_VALUE",
                   "represents a hidden bug, do not catch this"))
-            b.config(variable=dict_widgets[i]["RB_VAR"])
+            b.config(variable=dict_widgets[i]["RB_VAR"], anchor = "w")
             v = dict_widgets[i]["RB_TYPE"]()
             v.set(dict_widgets[i]["RB_VALUE"])
             setattr(caller, dict_widgets[i]["RB_VAR"], v)
