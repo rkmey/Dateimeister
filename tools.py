@@ -48,7 +48,7 @@ def count_files_recursive(path):
     return total
 
 
-def create_widgets_from_dict(dict_widgets, parent, p_orientation, font): 
+def create_widgets_from_dict(dict_widgets, parent, p_orientation, font, bgcolor): 
     """
     Create multiple widgets in a horizontal or vertical line inside a parent widget (usually a frame).
     Supported widget types include Button, Radiobutton, Entry and Label. Other widget types may work but must be tested first.
@@ -117,7 +117,7 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font):
     nextpos = 0 # we always fill the whole parent area
     for i in dict_widgets:
         # construct the widget in parent
-        b = dict_widgets[i]["WIDGET"](parent)
+        b = dict_widgets[i]["WIDGET"](parent, background = bgcolor)
         # we have to find out if this widget is a radiobutton. if yes we need two special parameters: the variable associated with the group and the resp. value
         if dict_widgets[i]["WIDGET"] is tk.Radiobutton:
             if "RB_VAR" not in dict_widgets[i] or dict_widgets[i]["RB_VAR"] == "":

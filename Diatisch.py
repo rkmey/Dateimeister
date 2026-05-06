@@ -697,7 +697,7 @@ class Diatisch:
         print("Config Files xml from ini is: " + self.config_files_xml)
         self.platform = config["misc"]["platform"].upper()
         if self.platform != "UNIX" and self.platform != "WINDOWS":
-            messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + platform)
+            messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + self.platform)
             exit()
 
     def close_child_windows(self): #closes fs-images    

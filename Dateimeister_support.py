@@ -199,7 +199,7 @@ class MyCameraTreeview:
         dict_widgets["7"] = {
           "WIDGET":tk.Button,"VAR":"button_cancel","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
           "CALLBACK":self.cancel_new,"TEXT":"Cancel","STATE":tk.ACTIVE,"TT":"cancel changes","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.frame_camera_properties, "HORIZONTAL", font = self.text_font)
+        tools.create_widgets_from_dict(dict_widgets, self.frame_camera_properties, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
 
         # we create the labels for the camera entries and buttons for undo, redo
         # we get the rel x for the entry with relx = float(<widget>.place_info().get("relx", 0))
@@ -221,7 +221,7 @@ class MyCameraTreeview:
         dict_widgets["2"] = {
           "WIDGET":tk.Button,"VAR":"button_redo","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
           "CALLBACK":self.button_redo_h,"TEXT":"Redo","STATE":None,"TT":"redo action","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.frame_buttons, "HORIZONTAL", font = self.text_font) # default font used for labels if none specified
+        tools.create_widgets_from_dict(dict_widgets, self.frame_buttons, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
 
         self.root.bind('<Return>', self.apply_new)
 
@@ -939,7 +939,7 @@ class Dateimeister_support:
         self.max_outdirs     = config["misc"]["max_outdirs"]
         self.platform = config["misc"]["platform"].upper()
         if self.platform != "UNIX" and self.platform != "WINDOWS":
-            messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + platform)
+            messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + self.platform)
             exit()
         
         self.dict_templates = {}
@@ -1219,7 +1219,7 @@ class Dateimeister_support:
         dict_widgets["5"] = {
           "WIDGET":tk.Checkbutton,"VAR":"cb_num","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.state_gen_required,
           "RB_VAR":"cb_num_var","RB_TYPE":tk.IntVar,"RB_VALUE":"0","TEXT":"numerate images in canvas","STATE":tk.NORMAL,"TT":"numerate images in canvas (within image)","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.frame_checkboxes, "VERTICAL", font = self.text_font) # default font used for labels if none specified
+        tools.create_widgets_from_dict(dict_widgets, self.frame_checkboxes, "VERTICAL", font = self.text_font, bgcolor = _bgcolor)
 
         # get all camera information and fill camera-listbox
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
@@ -1309,7 +1309,7 @@ class Dateimeister_support:
         dict_widgets["6"] = {
           "WIDGET":tk.Label,"VAR":"label_num","OFFSET":0.01,"RELH":relh_label,"RELW":relw_label,"ANCHOR":"CENTER","FONT":self.text_font,
           "TITLE":"'num Images', .3, START"}
-        tools.create_widgets_from_dict(dict_widgets, self.Frame_mixed, "HORIZONTAL", font = self.text_font) # default font used for labels if none specified
+        tools.create_widgets_from_dict(dict_widgets, self.Frame_mixed, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
 
         # the sort radio buttons
         self.rbvalue = tk.StringVar()
@@ -1327,7 +1327,7 @@ class Dateimeister_support:
         dict_widgets["4"] = {
           "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas4","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
           "RB_VAR":self.rbvalue,"RB_VALUE":"4","TEXT":"sort mod. desc","STATE":tk.NORMAL,"TT":"sort images by modification date(descending)","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.Frame_sortbuttons, "HORIZONTAL", font = self.text_font) # default font used for labels if none specified
+        tools.create_widgets_from_dict(dict_widgets, self.Frame_sortbuttons, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
 
         self.rbvalue.set("1")
 
