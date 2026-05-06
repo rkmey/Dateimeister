@@ -5,6 +5,9 @@
 #  in conjunction with Tcl version 8.6
 #    Oct 14, 2023 03:20:47 PM CEST  platform: Windows NT
 
+import faulthandler
+faulthandler.enable()
+
 import sys
 import os
 import configparser 
@@ -54,6 +57,20 @@ from tools import Globals, INCLUDE, EXCLUDE
 from tools import MyThumbnail
 
 from enum import Enum
+import traceback
+
+def report_callback_exception(self, exc, val, tb):
+    print("TKINTER CALLBACK EXCEPTION:", exc, val)
+    traceback.print_tb(tb)
+
+tk.Tk.report_callback_exception = report_callback_exception
+
+def global_excepthook(exc_type, exc_value, exc_traceback):
+    print("=== GLOBAL EXCEPTION ===")
+    traceback.print_exception(exc_type, exc_value, exc_traceback)
+    print("========================")
+
+sys.excepthook = global_excepthook
 
 _bgcolor = 'grey90'
 _bgcolor_dbg = 'green'
