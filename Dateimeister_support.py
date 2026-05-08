@@ -982,7 +982,7 @@ class Dateimeister_support:
 
         # Subframe Frame_camera_buttons
         self.frame_camera_buttons = tk.Frame(self.frame_camera)
-        self.frame_camera_buttons.place(relx=0.75, rely=0.005, relheight=0.99, relwidth=0.245)
+        self.frame_camera_buttons.place(relx=0.75, rely=0.005, relheight=0.8, relwidth=0.245)
         self.frame_camera_buttons.configure(relief='flat', highlightbackground="black", highlightthickness=1, background = _bgcolor)
         self.frame_camera_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_camera_buttons.update()
@@ -1191,12 +1191,23 @@ class Dateimeister_support:
         self.H.update()
         
         # we create buttons for camera selection etc in a column (vertical)
-        dict_buttons = {}
-        dict_buttons["1"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_select_camera","TEXT":"Select Camera","CALLBACK":self.B_camera_press,"STATE":tk.ACTIVE,"TT":"Select Camera from Listbox"}
-        dict_buttons["2"] = {"WIDGET":tk.Button,"OFFSET":0.50,"VAR":"button_generate","TEXT":"Generate","CALLBACK":self.Button_generate_pressed,"STATE":tk.DISABLED,"TT":"Call Dateimeister for generating commands"}
-        dict_buttons["3"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_be","TEXT":"Browse / Edit Output","CALLBACK":self.Button_be_pressed,"STATE":tk.DISABLED,"TT":"Browse / Edit Output from Dateimeister"}
-        dict_buttons["4"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_duplicates","TEXT":"Show duplicates","CALLBACK":self.button_duplicates,"STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths"}
-        tools.create_buttons_from_dict(self, dict_buttons, self.frame_camera_buttons, 0.005, 0.72, 0.99, self.text_font, "VERTICAL")
+        #set some defaults
+        relw_button = 0.975
+        relh_button = 0.1
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Button,"VAR":"button_select_camera","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.B_camera_press,
+          "TEXT":"Select Camera","STATE":tk.NORMAL,"TT":"Select Camera from Listbox","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Button,"VAR":"button_generate","OFFSET":0.80,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.Button_generate_pressed,
+          "TEXT":"Generate","STATE":tk.DISABLED,"TT":"Call Dateimeister for generating commands","FONT":self.text_font}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Button,"VAR":"button_be","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.Button_be_pressed,
+          "TEXT":"Browse / Edit Output","STATE":tk.DISABLED,"TT":"Browse / Edit Output from Dateimeister","FONT":self.text_font}
+        dict_widgets["4"] = {
+          "WIDGET":tk.Button,"VAR":"button_duplicates","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.button_duplicates,
+          "TEXT":"Show duplicates","STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.frame_camera_buttons, "VERTICAL", font = self.text_font, bgcolor = _bgcolor)
 
         # we create all checkboxes
         relw_button = 0.9
