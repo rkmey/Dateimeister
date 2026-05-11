@@ -1069,10 +1069,16 @@ class Dateimeister_support:
         self.frame_indir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
         self.frame_indir_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_indir_buttons.update()
-        dict_buttons = {}
-        dict_buttons["1"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"b_button_indir","TEXT":"from file system","CALLBACK":self.Press_indir,"STATE":tk.ACTIVE,"TT":"Select Input Directory from filesystem"}
-        dict_buttons["2"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_indir_from_list","TEXT":"from list","CALLBACK":self.listbox_indir_double,"STATE":tk.ACTIVE,"TT":"Select Input Directory from list"}
-        tools.create_buttons_from_dict(self, dict_buttons, self.frame_indir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
+        relw_button = 0.975
+        relh_button = 1
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Button,"VAR":"b_button_indir","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.Press_indir,
+          "TEXT":"from file system","STATE":tk.ACTIVE,"TT":"Select Input Directory from filesystem","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Button,"VAR":"button_indir_from_list","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.listbox_indir_double,
+          "TEXT":"from list","STATE":tk.ACTIVE,"TT":"Select Input Directory from list","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.frame_indir_buttons, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
 
         # the listbox indir
         self.listbox_indir = tk.Listbox(self.frame_indir)
@@ -1119,9 +1125,16 @@ class Dateimeister_support:
         self.frame_outdir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
         self.frame_outdir_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_outdir_buttons.update()
-        dict_buttons["1"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"b_button_outdir","TEXT":"from file system","CALLBACK":self.Press_outdir,"STATE":tk.ACTIVE,"TT":"Select output Directory from filesystem"}
-        dict_buttons["2"] = {"WIDGET":tk.Button,"OFFSET":0.00,"VAR":"button_outdir_from_list","TEXT":"from list","CALLBACK":self.listbox_outdir_double,"STATE":tk.ACTIVE,"TT":"Select Output Directory from list"}
-        tools.create_buttons_from_dict(self, dict_buttons, self.frame_outdir_buttons, 0.005, 1, 1, self.text_font, "HORIZONTAL")
+        relw_button = 0.975
+        relh_button = 1
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Button,"VAR":"b_button_outdir","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.Press_outdir,
+          "TEXT":"from file system","STATE":tk.ACTIVE,"TT":"Select Output Directory from filesystem","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Button,"VAR":"button_outdir_from_list","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.listbox_outdir_double,
+          "TEXT":"from list","STATE":tk.ACTIVE,"TT":"Select Output Directory from list","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.frame_outdir_buttons, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
 
         # the listbox outdir
         self.listbox_outdir = tk.Listbox(self.frame_outdir)
@@ -1912,6 +1925,11 @@ class Dateimeister_support:
         print ("indir %s" % indir) if self.debug else True
         #self.clear_textbox(self.listbox_indir)
         self.label_indir.config(text = indir)
+        # gen required if new dir != old dir
+        olddir = self.label_indir.cget('text')
+        if not olddir or indir != olddir:
+            self.state_gen_required()
+            olddir = indir
 
     def Press_outdir(self, *args):
         #outdir = fd.askopenindir() 
@@ -1919,6 +1937,11 @@ class Dateimeister_support:
         print ("outdir %s" % outdir) if self.debug else True
         #self.clear_textbox(self.listbox_outdir)
         self.label_outdir.config(text = outdir)
+        # gen required if new dir != old dir
+        olddir = self.label_outdir.cget('text')
+        if not olddir or outdir != olddir:
+            self.state_gen_required()
+            olddir = outdir
 
     def B_camera_press(self, *args):
         # get selected indices

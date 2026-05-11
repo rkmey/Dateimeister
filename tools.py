@@ -261,32 +261,6 @@ def parse_title(s):
     text, relsize, pos = m.group(2), float(m.group(3)), m.group(4)
     return text, relsize, pos
 
-def create_buttons_from_dict(caller, dict_buttons, frame, startpos, rgwidth, relsize, fon, orientation): # create Buttons in horizontal Frame
-    # calculate rel width considering the offsets
-    num_buttons = 0
-    relw = 0.0
-    sum_offsets = 0
-    # part of frame to use for group of buttons
-    rel_group_width = rgwidth
-    for i in dict_buttons:
-        sum_offsets = sum_offsets + dict_buttons[i]["OFFSET"] 
-        num_buttons += 1
-    relw  = (rel_group_width - sum_offsets) / num_buttons
-    nextpos = startpos #<== set rel. start position
-    for i in dict_buttons:
-        offset = dict_buttons[i]["OFFSET"]
-        b = dict_buttons[i]["WIDGET"](frame, text=dict_buttons[i]["TEXT"], command=dict_buttons[i]["CALLBACK"], state=dict_buttons[i]["STATE"])
-        if orientation.upper() == "HORIZONTAL":
-            b.place(relx = nextpos + offset, rely=(1 - relsize) / 2, relheight=relsize, relwidth = relw)
-        elif orientation.upper() == "VERTICAL":
-            b.place(relx = (1 - relsize) / 2, rely=nextpos + offset, relheight=relw, relwidth = relsize)
-        else:
-            raise ValueError(orientation + ' Represents a hidden bug, do not catch this')
-        b.configure(font=fon)
-        setattr(caller, dict_buttons[i]["VAR"], b)
-        setattr(caller, dict_buttons[i]["VAR"] + "_tooltip", TT.ToolTip(b, dict_buttons[i]["TT"]))
-        nextpos += relw + offset
-
 def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w):
     # this function places a listbox or other scrollable element in a given Frame with horizontal and vertical scrollbars
     # element ist the element to be placed, sb_h and sb_v the scrollbars (horizonzal, vertical)
