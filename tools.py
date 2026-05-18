@@ -327,6 +327,25 @@ def info_box(nachricht, level="info"):
     else:
         mb.showinfo("Information", voller_text)
 
+"""
+this method determines if an object with item id is (partially) visible on the canvas - or scrolded away, for instance
+returns true if partially visible othewise false
+"""
+def is_visible(canvas, item):
+    bbox = canvas.bbox(item)
+    if bbox is None:
+        return False  # object does not exist
+
+    x1, y1, x2, y2 = bbox
+
+    vx1 = canvas.canvasx(0)
+    vy1 = canvas.canvasy(0)
+    vx2 = canvas.canvasx(canvas.winfo_width())
+    vy2 = canvas.canvasy(canvas.winfo_height())
+
+    # overlap of rectangles
+    return not (x2 < vx1 or x1 > vx2 or y2 < vy1 or y1 > vy2)
+
 class BusyDialog:
     def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):
         self.root = root
