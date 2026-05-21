@@ -3,6 +3,7 @@ import PIL.Image, PIL.ImageTk
 import time
 from ffpyplayer.player import MediaPlayer
 import tools
+import inspect
 
 class VideoPlayer:
     def __init__(self, window, video_source, canvas, canvas_width, canvas_height):
@@ -13,6 +14,12 @@ class VideoPlayer:
         self.canvas_id = None
         self.do_update = False
         self.liney = 0.95
+
+        # get stackframe of caller
+        frame = inspect.currentframe().f_back
+        # extract caller object (self)
+        caller = frame.f_locals.get("self", None)
+        self.debug = caller.debug
         
         # ff_opts optimiert für NAS/SSD
         ff_opts = {'sync': 'video', 'thread_lib': 'SDL', 
@@ -209,3 +216,4 @@ class VideoPlayer:
     def __del__(self):
         if self.audio_player:
             self.audio_player.close_player()
+        print("-- Deleted video player {:s}".format(str(self))) if self.debug else True

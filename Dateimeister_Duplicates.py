@@ -238,6 +238,7 @@ class MyDuplicates:
     def display_image(self, thumbnail):
         file = thumbnail.getShowfile()
         # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
+        self.stop_all_players()
         if file in self.dict_file_image:
             print ("FSImage exists for file: " + file)
             fs_image = self.dict_file_image[file]
@@ -375,6 +376,7 @@ class MyDuplicates:
         cs = self.lb_duplicates.curselection()
         self.thisduplicate = self.lb_duplicates.get(cs)
         #print("Duplicate selected: " + self.thisduplicate)
+        self.stop_all_players()
         self.display_duplicate(self.thisduplicate)
 
     def close_handler(self): #calles when window is closing

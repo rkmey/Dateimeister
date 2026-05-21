@@ -2416,6 +2416,8 @@ class Dateimeister_support:
                 Globals.dict_thumbnails[imagetype][file].setEnd(lastpos + image_width)
                 Globals.dict_thumbnails[imagetype][file].setId(id)
                 Globals.dict_thumbnails[imagetype][file].show_hide_frame()
+            print("Image {:s} visible: {:d}".format(file, tools.is_visible(self.canvas_gallery, id))) if self.debug else True
+            
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")
         self.canvas_gallery.tag_raise("rect")
@@ -2438,7 +2440,6 @@ class Dateimeister_support:
             self.canvas_gallery_width_all    = self.canvas_gallery.bbox('all')[2]
             #print ("Canvas_gallery totale Breite(Images): " + str(self.canvas_gallery_width_images) + " totale Breite(All): " + str(self.canvas_gallery_width_all) \
             #    + " visible: " + str(self.canvas_gallery_width_visible) + " lastposition: " + str(self.lastposition))
-        
         # Pfeiltasten für Scrollen einrichten
         self.canvas_gallery.focus_set()
         self.button_include.config(state = NORMAL)
