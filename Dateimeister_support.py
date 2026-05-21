@@ -21,6 +21,8 @@ import copy
 import subprocess
 import shutil
 import argparse
+import gc
+import psutil
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -2201,6 +2203,11 @@ class Dateimeister_support:
     # display images of given type
     def display_images(self, imagetype):
         t_start = time.time()
+        memory_before = 0 # to get the amount of memory needed especially for video players
+        if self.debug:
+            process = psutil.Process(os.getpid())
+            gc.collect()
+            memory_before = process.memory_info().rss        
         busy = tools.BusyDialog(self.root, text="Fotos werden geladen…")        
         filename = self.dict_gen_files[imagetype]
         subdir = self.dict_subdirs[imagetype]
@@ -2497,7 +2504,12 @@ class Dateimeister_support:
         tenths = int((elapsed * 10) % 10)
         diff_formatted = f"{self.num_images:d} in {hours:02d}:{minutes:02d}:{seconds:02d}.{tenths}"
         self.label_num.config(text = diff_formatted)
-        
+        if self.debug:
+            process = psutil.Process(os.getpid())
+            gc.collect()
+            memory_after = process.memory_info().rss        
+            print("Memory used total:", (memory_after - memory_before) / 1024 / 1024, "MB")
+            print("Memory used per Player:", ((memory_after - memory_before) / self.num_images) / 1024 / 1024, "MB")        
     def new_image(self, file, canvas_height):    
         img  = Image.open(file)
         image_width_orig, image_height_orig = img.size

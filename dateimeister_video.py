@@ -14,6 +14,7 @@ class VideoPlayer:
         self.canvas_id = None
         self.do_update = False
         self.liney = 0.95
+        self.after_id = None # needed for cleanup to destroy reference to player in after-call. otherwise we cannot destroy videoplayer object
 
         # get stackframe of caller
         frame = inspect.currentframe().f_back
@@ -163,9 +164,9 @@ class VideoPlayer:
 
             # Sync-Delay
             delay = max(int(val * 1000), 1)
-            self.window.after(delay, self.update)
+            self.after_id = self.window.after(delay, self.update)
         else:
-            self.window.after(5, self.update)
+            self.after_id = self.window.after(5, self.update)
 
     def stop_and_rewind(self):
         self.do_update = False
