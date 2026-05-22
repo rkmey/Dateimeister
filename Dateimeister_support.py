@@ -946,6 +946,7 @@ class Dateimeister_support:
         
         self.dict_templates = {}
         self.dict_file_image = {}
+        self.dict_visible_id_thumbnail = {} # holds all visible images, initially and after scrolling, key: canvas_id, value: thumbnail
 
         # Fenstergröße
         Globals.screen_width  = int(self.root.winfo_screenwidth() * 0.9)
@@ -2256,6 +2257,7 @@ class Dateimeister_support:
         self.lastposition = 0
         self.dict_thumbnails_lineno[imagetype] = {}
         self.num_images = 0
+        self.dict_visible_id_thumbnail[imagetype] = {}
         for file in self.dict_source_target[imagetype]:
             if busy.cancelled:
                 break
@@ -2423,7 +2425,14 @@ class Dateimeister_support:
                 Globals.dict_thumbnails[imagetype][file].setEnd(lastpos + image_width)
                 Globals.dict_thumbnails[imagetype][file].setId(id)
                 Globals.dict_thumbnails[imagetype][file].show_hide_frame()
-            print("Image {:s} visible: {:d}".format(file, tools.is_visible(self.canvas_gallery, id))) if self.debug else True
+            visible = tools.is_visible(self.canvas_gallery, id)
+            myimage.set_visible(visible) # store visibility in thumbnail
+            self.dict_visible_id_thumbnail[imagetype][id] = myimage
+            # delete video player. we only need it for initializing canvas. we need to delete the player because it needs a lot of memory
+            if player and not visible:
+                myimage.delete_player()
+                myimage.setPlayer(None)
+            print("Image {:s} visible: {:d}".format(file, visible)) if self.debug else True
             
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")
@@ -2510,6 +2519,18 @@ class Dateimeister_support:
             memory_after = process.memory_info().rss        
             print("Memory used total:", (memory_after - memory_before) / 1024 / 1024, "MB")
             print("Memory used per Player:", ((memory_after - memory_before) / self.num_images) / 1024 / 1024, "MB")        
+
+    def create_new_video_players(self, canvas, cw, ch):
+        # now we have to create new players for the thumbnails in dict_visible_id_thumbnail, dict_visible has to be filled correctly, i is the canvas_id for the image
+        for i in self.dict_visible_id_thumbnail[imagetype]:
+            t = self.dict_visible_id_thumbnail[imagetype][i] #the tumbnail
+            f = t.getFile()
+            player   = DV.VideoPlayer(self.root, f, canvas, cw, ch)
+            player.setId(i)
+            player.resize()
+            t.setPlayer(player)
+        
+        
     def new_image(self, file, canvas_height):    
         img  = Image.open(file)
         image_width_orig, image_height_orig = img.size

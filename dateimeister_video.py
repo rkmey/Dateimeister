@@ -43,6 +43,8 @@ class VideoPlayer:
         
         # Speicher für das letzte Roh-Frame (für Resize-Operationen)
         self.last_frame_obj = None
+        self.line_total = None
+        self.line_progress = None
 
     def _render_frame_to_photo(self, image_obj):
         """Hilfsfunktion: Wandelt ffpyplayer-Image in skaliertes PhotoImage um"""

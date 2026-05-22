@@ -452,6 +452,7 @@ class MyThumbnail:
         self.parent = parent
         self.duplicate = duplicate
         self.tooold = tooold
+        self.visible = False
         self.setState(self.state)
 
         statinfo = os.stat(file)
@@ -486,6 +487,10 @@ class MyThumbnail:
 
     def setPlayer(self, p):
         self.player = p
+
+    def delete_player(self):
+        self.player.pstop()
+        del self.player
         
     def setStart(self, start):
         self.start = start   
@@ -625,6 +630,12 @@ class MyThumbnail:
 
     def getPlayer(self):
         return self.player   
+
+    def get_visible(self):
+        return self.visible   
+    def set_visible(self, v):
+        self.visible = v   
+
 
     def getTargetfile(self):
         return self.targetfile   
