@@ -4,6 +4,7 @@ import time
 from ffpyplayer.player import MediaPlayer
 import tools
 import inspect
+from PIL import Image
 
 class VideoPlayer:
     def __init__(self, window, video_source, canvas, canvas_width, canvas_height):
@@ -26,13 +27,13 @@ class VideoPlayer:
         ff_opts = {'sync': 'video', 'thread_lib': 'SDL', 
                    'infbuf': True, 'autoexit': True, 'framedrop': True}
         
-        self.audio_player = MediaPlayer(video_source, ff_opts=ff_opts)
-        #self.audio_player.set_volume(0.0) # Startet stumm 20260506 audkommentiert, kann harten Crash ohne Meldung verursachen
+        self.vplayer = MediaPlayer(video_source, ff_opts=ff_opts)
+        #self.vplayer.set_volume(0.0) # Startet stumm 20260506 audkommentiert, kann harten Crash ohne Meldung verursachen
         
         # Metadaten laden
         meta = {}
         for _ in range(50):
-            meta = self.audio_player.get_metadata()
+            meta = self.vplayer.get_metadata()
             if meta and meta.get('duration'):
                 break
             time.sleep(0.02)
@@ -73,15 +74,15 @@ class VideoPlayer:
         """Wird bei Initialisierung"""
         # Falls wir schon ein Bild im Cache haben, nimm das (spart NAS/SSD Last)
         if self.last_frame_obj is None:
-            frame, val = self.audio_player.get_frame()
+            frame, val = self.vplayer.get_frame()
             retry = 0
             while frame is None and retry < 50:
                 time.sleep(0.01)
-                frame, val = self.audio_player.get_frame()
+                frame, val = self.vplayer.get_frame()
                 retry += 1
             if frame:
                 self.last_frame_obj, _ = frame
-                self.audio_player.set_pause(True)
+                self.vplayer.set_pause(True)
 
         if self.last_frame_obj:
             self.photo = self._render_frame_to_photo(self.last_frame_obj)
@@ -117,7 +118,7 @@ class VideoPlayer:
             self.y2 = self.y1
             
             # Fortschritt ermitteln
-            pts = self.audio_player.get_pts()
+            pts = self.vplayer.get_pts()
             progress = pts / self.duration if self.duration > 0 else 0
             current_x2 = self.x1 + int(self.image_width * progress)
 
@@ -143,10 +144,10 @@ class VideoPlayer:
         if not self.do_update:
             return
 
-        frame, val = self.audio_player.get_frame()
+        frame, val = self.vplayer.get_frame()
 
         # Check: Fast am Ende? (Verhindert Audio-Loop)
-        pts = self.audio_player.get_pts()
+        pts = self.vplayer.get_pts()
         if val == 'eof' or (self.duration > 0 and pts > self.duration - 0.2):
             self.stop_and_rewind()
             return
@@ -172,29 +173,29 @@ class VideoPlayer:
 
     def stop_and_rewind(self):
         self.do_update = False
-        self.audio_player.set_pause(True)
-        self.audio_player.set_volume(0.0)
-        self.audio_player.seek(0, relative=False)
+        self.vplayer.set_pause(True)
+        self.vplayer.set_volume(0.0)
+        self.vplayer.seek(0, relative=False)
         # Progressbar optisch zurück auf Start
         self.canvas.coords(self.line_progress, self.x1, self.y1, self.x1, self.y2)
 
     def restart(self):
         self.do_update = True
-        self.audio_player.set_volume(1.0)
-        self.audio_player.seek(0, relative=False)
-        self.audio_player.set_pause(False)
+        self.vplayer.set_volume(1.0)
+        self.vplayer.seek(0, relative=False)
+        self.vplayer.set_pause(False)
         self.update()
 
     def pstart(self):
         self.do_update = True
-        self.audio_player.set_volume(1.0)
-        self.audio_player.set_pause(False)
+        self.vplayer.set_volume(1.0)
+        self.vplayer.set_pause(False)
         self.update()
 
     def pstop(self):
         self.do_update = False
-        self.audio_player.set_pause(True)
-        self.audio_player.set_volume(0.0)
+        self.vplayer.set_pause(True)
+        self.vplayer.set_volume(0.0)
 
     # "alte" Funktionen
     def setId(self, id):
@@ -217,6 +218,6 @@ class VideoPlayer:
 
 
     def __del__(self):
-        if self.audio_player:
-            self.audio_player.close_player()
+        if self.vplayer:
+            self.vplayer.close_player()
         print("-- Deleted video player {:s}".format(str(self))) if self.debug else True

@@ -346,6 +346,25 @@ def is_visible(canvas, item):
     # overlap of rectangles
     return not (x2 < vx1 or x1 > vx2 or y2 < vy1 or y1 > vy2)
 
+""" sucht in einer Liste nach dem ersten Element, das in der Canvas sichtbar ist (> canvas.left)
+erwartet eine Liste, deshalb im Caller: thumb_list = list(thumbnails.values()). Dann kann man auch dort unmittelbar mit dem 
+zurückgegebenen Index arbeiten.
+"""
+def find_first_visible(thumbnails, canvas_left):
+    lo = 0
+    hi = len(thumbnails) - 1
+    result = None
+
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if thumbnails[mid].end_x >= canvas_left:
+            result = mid
+            hi = mid - 1
+        else:
+            lo = mid + 1
+
+    return result
+
 class BusyDialog:
     def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):
         self.root = root

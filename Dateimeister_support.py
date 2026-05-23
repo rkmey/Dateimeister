@@ -2306,7 +2306,6 @@ class Dateimeister_support:
                     player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height)
                 else:
                     player = Globals.dict_thumbnails[imagetype][file].getPlayer()
-                image_width, image_height, pimg = player.get_photo()
                 showfile = file
             else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
                 showfile = "none"
@@ -2330,6 +2329,9 @@ class Dateimeister_support:
                     else: # we can use the existing
                         pimg = Globals.dict_thumbnails[imagetype][file].getImage()
                     image_width, image_height = pimg.width(), pimg.height()
+                else: # video: player reused or new created
+                    image_width, image_height, pimg = player.get_photo()
+
                 # if resized we have to replace the thumbnail image with a new one with appropriate size
                 # an den Thumbnails führen wir einige Attribute, außerdem sorgt die Liste dafür, dass der Garbage-Kollektor das Bild nicht löscht.
                 # indem wir es in eine Liste einfügen, bleibt der Referenz-Count > 0
@@ -2866,6 +2868,9 @@ class Dateimeister_support:
         self.leftmost_thumbnail = thumbnail
         # display debug info for resize, this is very difficult to debug
         self.debug_info_resize("SCROLL") if self.debug_r else True
+        for i in Globals.dict_thumbnails[Globals.imagetype]:
+            t = Globals.dict_thumbnails[Globals.imagetype][i]
+            self.canvas_gallery.itemconfig(t.getId(), image=t.getImage())
 
     def text1_single(self, event): # synchronize text / gallery
         (row, col) = self.t_text1.index(tk.CURRENT).split(".")
