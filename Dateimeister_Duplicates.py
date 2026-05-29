@@ -461,7 +461,7 @@ class MyDuplicates:
                 canvas_width  = self.f.winfo_width()
                 self.canvas_width_visible = self.f.winfo_width() # Fensterbreite
                 player = None
-                if thumbnail.getPlayer() is not None: # Video
+                if thumbnail.get_imagetype() == "VIDEO": # Video
                     if (thumbnail not in self.dict_thumbnail_player): #we need a new one
                         print("try to create new videoplayer...")
                         # create new videoplayer
@@ -506,6 +506,7 @@ class MyDuplicates:
                 mts = os.stat(showfile).st_mtime
                 myimage = MyThumbnail(pimg, self.main, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
                     text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
+                myimage.set_imagetype(thumbnail.get_imagetype()) # from "parent"
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 myimage.setState(state)
                 self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
@@ -531,6 +532,7 @@ class MyDuplicates:
                 mts = os.stat(showfile).st_mtime
                 myimage = MyThumbnail(0, self.main, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
                     text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
+                myimage.set_imagetype(thumbnail.get_imagetype()) # from "parent"
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage
                 self.lastposition += image_width + Globals.gap 

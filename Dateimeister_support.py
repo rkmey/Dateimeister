@@ -2367,6 +2367,10 @@ class Dateimeister_support:
                         myimage.setImage(pimg)
                         myimage.setPlayer(player)
 
+                if player is not None:
+                    myimage.set_imagetype("VIDEO")
+                else:
+                    myimage.set_imagetype("STILL")
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE, None, False)
                     myimage.set_tooold(True)
@@ -2403,6 +2407,10 @@ class Dateimeister_support:
                 mts = os.stat(file).st_mtime
                 myimage = MyThumbnail(0, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
                     text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
+                if player is not None:
+                    myimage.set_imagetype("VIDEO")
+                else:
+                    myimage.set_imagetype("STILL")
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE, None, False)
                     myimage.set_tooold(True)

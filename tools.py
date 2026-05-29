@@ -472,6 +472,7 @@ class MyThumbnail:
         self.duplicate = duplicate
         self.tooold = tooold
         self.visible = False
+        self.imagetype = None # imagetype is VIDEO or STILL uppercase.
         self.setState(self.state)
 
         statinfo = os.stat(file)
@@ -503,6 +504,12 @@ class MyThumbnail:
     def setImage(self, image):
         #print("*** retrieve Image ")
         self.image = image    
+
+    def get_imagetype(self):
+        return self.imagetype    
+
+    def set_imagetype(self, t):
+        self.imagetype = t.upper()    
 
     def setPlayer(self, p):
         self.player = p

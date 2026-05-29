@@ -53,7 +53,7 @@ class MyFSImage:
         self.str_included = str_included
         self.str_excluded = str_excluded
         self.debug = debug
-        if thumbnail.getPlayer() is None: # still image
+        if thumbnail.get_imagetype() == "STILL": # still image
             self.image  = Image.open(file)
         self.file = file
         self.dict_caller = dict_caller
@@ -109,7 +109,7 @@ class MyFSImage:
         self.H_I = Scrollbar(self.f, orient = HORIZONTAL)
         self.H_I.config(command=self.f.xview)
         self.f.config(xscrollcommand=self.H_I.set)
-        if thumbnail.getPlayer() is None:
+        if thumbnail.get_imagetype() == "STILL":
             self.image.close
         self.zoomfaktor = 1.0
         self.V_I.pack(side=RIGHT, fill=Y)
@@ -122,7 +122,7 @@ class MyFSImage:
 
         self.zoomfaktor = 1.0 # wir fangen immer mit dem Bild in voller Auflösung an.
         self.f.focus_set()
-        if thumbnail.getPlayer() is None: # still image
+        if thumbnail.get_imagetype() == "STILL": # still image
             self.image_zoom(self.zoomfaktor)
             self.player = None
             self.w2.Button_pp.place_forget()
@@ -149,7 +149,7 @@ class MyFSImage:
             self.w2.Scale_fps.set(int(1000 / fps))
             self.playerstatus = 'play'
             self.w2.Button_pp.config(text = 'pause')
-            #self.image = self.player.get_image()
+            self.image = self.pimg
             
         # frame for Label displaying file info start at  0,75 (width of canvas
         self.text_font = Font(family="Helvetica", size=6)
@@ -316,7 +316,7 @@ class MyFSImage:
 
     def image_zoom(self, zoomfaktor):
         # zoomfaktor 0 heißt: selbst errechnen, so dass Bild formatfüllend ist.
-        if self.thumbnail.getPlayer() is None: # still image
+        if self.thumbnail.get_imagetype() == "STILL": # still image
             image_width_orig, image_height_orig = self.image.size
         else:
             image_width_orig  =self.image_width
@@ -338,7 +338,7 @@ class MyFSImage:
             
         newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
         #print("*** faktor is: " + str(faktor) + " canvas_height: " + str(canvas_height) + " origsize: " + str(self.image.size) + " newsize: " +str(newsize))
-        if self.thumbnail.getPlayer(): # Video we have to resize the player
+        if self.thumbnail.get_imagetype() == "VIDEO": # Video we have to resize the player
             # video size is calculated automatically as the display process uses the actual canvas size, but we have to redraw the progress bar
             # start the player again which has been stopped in on configure
             self.player.resize()

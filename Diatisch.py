@@ -200,7 +200,7 @@ class Thumbnail:
         if self.player is not None:
             self.player.pstop()
             del self.player
-        print("*** Deleting MyThumbnail-Objekt. " + self.file)
+        print("*** Deleting Thumbnail-Objekt. " + self.file)
 
 
 class Diatisch:
