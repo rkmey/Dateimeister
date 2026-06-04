@@ -2440,8 +2440,7 @@ class Dateimeister_support:
             self.dict_visible_id_thumbnail[imagetype][id] = myimage
             # delete video player. we only need it for initializing canvas. we need to delete the player because it needs a lot of memory
             if player and not visible:
-                myimage.delete_player()
-                myimage.setPlayer(None)
+                myimage.delete_player() # deletes player and sets player attribute to none
             print("Image {:s} visible: {:d}".format(file, visible)) if self.debug else True
             
         self.canvas_gallery.tag_raise("dup_rect")
@@ -2532,8 +2531,8 @@ class Dateimeister_support:
 
     def create_new_video_players(self, canvas, cw, ch):
         # now we have to create new players for the thumbnails in dict_visible_id_thumbnail, dict_visible has to be filled correctly, i is the canvas_id for the image
-        for i in self.dict_visible_id_thumbnail[imagetype]:
-            t = self.dict_visible_id_thumbnail[imagetype][i] #the tumbnail
+        for i in self.dict_visible_id_thumbnail[Globals.imagetype]:
+            t = self.dict_visible_id_thumbnail[Globals.imagetype][i] #the tumbnail
             f = t.getFile()
             player   = DV.VideoPlayer(self.root, f, canvas, cw, ch)
             player.setId(i)
@@ -3204,21 +3203,28 @@ class Dateimeister_support:
         o.insert('end', str)
 
     def get_thumbnail_by_position(self, canvas_x, canvas_y):
-        index = -1
-        found = False
+        index = None
+        thumbnail = None
         if Globals.imagetype != "":
-            for thumbnail in Globals.thumbnails[Globals.imagetype]:
-                start = thumbnail.getStart()
-                end   = thumbnail.getEnd()
-                if (canvas_x >= start and canvas_x <= end):
-                    index = Globals.thumbnails[Globals.imagetype].index(thumbnail)
-                    #print("retrieved " + thumbnail.getFile() + " Index: " + str(index))
-                    found = True
+            # binary search
+            left  = 0
+            right = len(Globals.thumbnails[Globals.imagetype]) - 1
+            result = -1
+            while left <= right:
+                mid = (left + right) // 2
+                start = Globals.thumbnails[Globals.imagetype][mid].getStart()
+                end   = Globals.thumbnails[Globals.imagetype][mid].getEnd()
+                if start <= canvas_x and end >= canvas_x:
+                    result = mid
                     break
-            if not found:
-                thumbnail = None
-                index = None
-        else:
+                elif start > canvas_x:
+                    right = mid - 1
+                else:
+                    left = mid + 1
+            if result >= 0:
+                thumbnail = Globals.thumbnails[Globals.imagetype][result]
+                index = result
+        else: # imagetype not available
             thumbnail = None
             index = None
         return (thumbnail, index)
