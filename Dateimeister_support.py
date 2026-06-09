@@ -1548,6 +1548,7 @@ class Dateimeister_support:
         if Globals.imagetype != "": # new sort of existing images
             if sort_method != self.dict_sort_method[Globals.imagetype]: # do something only if sort method is new
                 self.dict_sort_method[Globals.imagetype] = sort_method
+                self.leftmost_thumbnail = None
                 self.generate()
                 self.display_images(Globals.imagetype)
 
@@ -2258,6 +2259,9 @@ class Dateimeister_support:
         self.dict_thumbnails_lineno[imagetype] = {}
         self.num_images = 0
         self.dict_visible_id_thumbnail[imagetype] = {}
+        #if resized keep scroll-position else scroll to first position (0)
+        if not Globals.resized: # this is necessary because the bbox of the canvas would mean the possibly already scrolled canvas, which leads to is_visible not functioning
+           self.canvas_gallery.xview('moveto', 0)
         for file in self.dict_source_target[imagetype]:
             if busy.cancelled:
                 break
@@ -2433,15 +2437,16 @@ class Dateimeister_support:
                 Globals.dict_thumbnails[imagetype][file].setLineno(this_lineno)
                 Globals.dict_thumbnails[imagetype][file].setStart(lastpos)
                 Globals.dict_thumbnails[imagetype][file].setEnd(lastpos + image_width)
-                Globals.dict_thumbnails[imagetype][file].setId(id)
                 Globals.dict_thumbnails[imagetype][file].show_hide_frame()
+            Globals.dict_thumbnails[imagetype][file].setId(id) # set Id
             visible = tools.is_visible(self.canvas_gallery, id)
-            myimage.set_visible(visible) # store visibility in thumbnail
-            self.dict_visible_id_thumbnail[imagetype][id] = myimage
             # delete video player. we only need it for initializing canvas. we need to delete the player because it needs a lot of memory
-            if player and not visible:
-                myimage.delete_player() # deletes player and sets player attribute to none
-            print("Image {:s} visible: {:d}".format(file, visible)) if self.debug else True
+            if player:
+                if not visible:
+                    myimage.delete_player() # deletes player and sets player attribute to none
+                else: # keep this thumbnail in our dict of visible thumbnails
+                    self.dict_visible_id_thumbnail[imagetype][id] = myimage
+                print("Image {:s} visible: {:d}".format(file, visible)) if self.debug else True
             
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")
@@ -2509,11 +2514,6 @@ class Dateimeister_support:
             self.win_messages.close_handler()
             self.win_messages = None
             
-        #if resized keep scroll-position else scroll to first position (0)
-        if Globals.resized and self.leftmost_thumbnail:
-            self.scrollToImage(self.leftmost_thumbnail)
-        else:
-            self.canvas_gallery.xview('moveto', 0)
         busy.close()
         elapsed = time.time() - t_start
         hours = int(elapsed // 3600)
@@ -2528,6 +2528,10 @@ class Dateimeister_support:
             memory_after = process.memory_info().rss        
             print("Memory used total:", (memory_after - memory_before) / 1024 / 1024, "MB")
             print("Memory used per Player:", ((memory_after - memory_before) / self.num_images) / 1024 / 1024, "MB")        
+        if Globals.resized and self.leftmost_thumbnail:
+            self.scrollToImage(self.leftmost_thumbnail)
+        else:
+            self.canvas_gallery.xview('moveto', 0)
 
     def create_new_video_players(self, canvas, cw, ch):
         # now we have to create new players for the thumbnails in dict_visible_id_thumbnail, dict_visible has to be filled correctly, i is the canvas_id for the image
@@ -2750,7 +2754,7 @@ class Dateimeister_support:
         # wenn das aktuelle Bild nur teilweise zusehen ist, scrollen wir bei Linkstaste auf den Bildbeginn
         if len(args) == 3 and args[2] == "units":
             # den scrollbetrag auf die Größe des Bildes am linken Rand setzen
-            thumbnail, index = self.get_thumbnail_by_position(canvas_x + 11, canvas_y)
+            thumbnail, index = self.get_thumbnail_by_position(canvas_x + Globals.gap + 1, canvas_y)
             if thumbnail is not None:
                 if int(args[1]) > 0:
                     scrolldelta = (thumbnail.getEnd() - canvas_x + Globals.gap)
@@ -2870,7 +2874,7 @@ class Dateimeister_support:
         # for scroll after window resize we need the leftmost visible thumbnail
         canvas_x = int(self.canvas_gallery.canvasx(0))
         canvas_y = int(self.canvas_gallery.canvasy(0))
-        thumbnail, index = self.get_thumbnail_by_position(canvas_x + 11, canvas_y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x + Globals.gap + 1, canvas_y)
         # store reference in instance variable
         self.leftmost_thumbnail = thumbnail
         # display debug info for resize, this is very difficult to debug

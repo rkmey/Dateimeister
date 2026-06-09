@@ -334,7 +334,7 @@ returns true if partially visible othewise false
 def is_visible(canvas, item):
     bbox = canvas.bbox(item)
     if bbox is None:
-        return False  # object does not exist
+        infobox("object [:d] does not exist".format(item))  # object does not exist
 
     x1, y1, x2, y2 = bbox
 
@@ -453,7 +453,6 @@ class MyThumbnail:
         self.parent = parent
         self.duplicate = duplicate
         self.tooold = tooold
-        self.visible = False
         self.imagetype = None # imagetype is VIDEO or STILL uppercase.
         self.setState(self.state)
 
@@ -639,12 +638,6 @@ class MyThumbnail:
 
     def getPlayer(self):
         return self.player   
-
-    def get_visible(self):
-        return self.visible   
-    def set_visible(self, v):
-        self.visible = v   
-
 
     def getTargetfile(self):
         return self.targetfile   
