@@ -2879,6 +2879,40 @@ class Dateimeister_support:
         self.leftmost_thumbnail = thumbnail
         # display debug info for resize, this is very difficult to debug
         self.debug_info_resize("SCROLL") if self.debug_r else True
+        
+        # 20260610 we delete video players for not visible video images and create new ones for now visible
+        if Globals.imagetype == 'VIDEO':
+            for i in self.dict_visible_id_thumbnail[Globals.imagetype]:
+                t = self.dict_visible_id_thumbnail[Globals.imagetype][i]
+                if not tools.is_visible(self.canvas_gallery, i):
+                    if t.getPlayer():
+                        t.delete_player()
+                        print("Scroll - deleted Player for thumbnail file = {:s}".format(t.getFile())) if self.debug else True
+            #   now we create new video players for visible thumbnails and rebuild the dict of visibles
+            # we already retrieved the leftmost thumbnail
+            self.dict_visible_id_thumbnail[Globals.imagetype] = {}
+            visible = True
+            while visible:
+                if index < len(Globals.thumbnails[Globals.imagetype]):
+                    t = Globals.thumbnails[Globals.imagetype][index]
+                    id = t.getId()
+                    if tools.is_visible(self.canvas_gallery, id): # visible
+                        if not t.getPlayer(): # no player
+                            player = DV.VideoPlayer(self.root, t.getFile(), 
+                             self.canvas_gallery, self.canvas_gallery.winfo_width(), self.canvas_gallery.winfo_height())
+                            player.setId(id)
+                            player.get_photo() # necessary for initializing some instance variables...
+                            player.resize()
+                            t.setPlayer(player)
+                            print("Scroll - created Player for thumbnail file = {:s}".format(t.getFile())) if self.debug else True
+                        self.dict_visible_id_thumbnail[Globals.imagetype][id] = t # insert in dict 
+                    else:
+                        visible = False # stop while
+                else:
+                    visible = False
+                index += 1
+                
+                
         for i in Globals.dict_thumbnails[Globals.imagetype]:
             t = Globals.dict_thumbnails[Globals.imagetype][i]
             self.canvas_gallery.itemconfig(t.getId(), image=t.getImage())
@@ -3216,7 +3250,7 @@ class Dateimeister_support:
             result = -1
             while left <= right:
                 mid = (left + right) // 2
-                start = Globals.thumbnails[Globals.imagetype][mid].getStart()
+                start = Globals.thumbnails[Globals.imagetype][mid].getStart() - (Globals.gap + 1)
                 end   = Globals.thumbnails[Globals.imagetype][mid].getEnd()
                 if start <= canvas_x and end >= canvas_x:
                     result = mid

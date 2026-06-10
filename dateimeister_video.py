@@ -5,6 +5,7 @@ from ffpyplayer.player import MediaPlayer
 import tools
 import inspect
 from PIL import Image
+import math
 
 class VideoPlayer:
     def __init__(self, window, video_source, canvas, canvas_width, canvas_height):
@@ -161,8 +162,14 @@ class VideoPlayer:
             self.canvas.itemconfig(self.canvas_id, image=self.photo)
             
             # Progressbar (basierend auf pts)
-            progress = pts / self.duration if self.duration > 0 else 0
-            x2 = self.x1 + int(self.image_width * progress)
+            if not math.isnan(self.duration):
+                progress = pts / self.duration if self.duration > 0 else 0
+            else:
+                progress = 0
+            if not math.isnan(self.image_width):
+                x2 = self.x1 + int(self.image_width * progress)
+            else:
+                x2 = self.x1
             self.canvas.coords(self.line_progress, self.x1, self.y1, x2, self.y2)
 
             # Sync-Delay

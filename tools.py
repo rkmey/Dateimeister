@@ -334,8 +334,8 @@ returns true if partially visible othewise false
 def is_visible(canvas, item):
     bbox = canvas.bbox(item)
     if bbox is None:
-        infobox("object [:d] does not exist".format(item))  # object does not exist
-
+        info_box("object {:s} does not exist".format(item))  # object does not exist
+        return False
     x1, y1, x2, y2 = bbox
 
     vx1 = canvas.canvasx(0)
@@ -496,9 +496,10 @@ class MyThumbnail:
         self.player = p
 
     def delete_player(self):
-        self.player.pstop()
-        del self.player
-        self.player = None
+        if self.player:
+            #self.player.pstop()
+            del self.player
+            self.player = None
         
     def setStart(self, start):
         self.start = start   
