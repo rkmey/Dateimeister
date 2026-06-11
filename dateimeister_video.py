@@ -8,6 +8,7 @@ from PIL import Image
 import math
 
 class VideoPlayer:
+    _counter = 0
     def __init__(self, window, video_source, canvas, canvas_width, canvas_height):
         self.window = window
         self.video_source = video_source
@@ -17,6 +18,9 @@ class VideoPlayer:
         self.do_update = False
         self.liney = 0.95
         self.after_id = None # needed for cleanup to destroy reference to player in after-call. otherwise we cannot destroy videoplayer object
+        # Wir nutzen einen eindeutigen Tag pro Video-Instanz
+        self.my_tag = f"{type(self).__name__}_{VideoPlayer._counter}"
+        VideoPlayer._counter += 1
 
         # get stackframe of caller
         frame = inspect.currentframe().f_back
@@ -124,14 +128,12 @@ class VideoPlayer:
             current_x2 = self.x1 + int(self.image_width * progress)
 
             # 4. Linien aktualisieren oder neu erstellen
-            # Wir nutzen einen eindeutigen Tag pro Video-Instanz
-            my_tag = f"prog_{id(self)}"
             
-            if not self.canvas.find_withtag(my_tag):
+            if not self.canvas.find_withtag(self.my_tag):
                 self.line_total = self.canvas.create_line(self.x1, self.y1, self.x2, self.y2, 
-                                                          width=5, fill='white', tags=(my_tag, "line"))
+                                                          width=5, fill='white', tags=(self.my_tag, "line"))
                 self.line_progress = self.canvas.create_line(self.x1, self.y1, current_x2, self.y2, 
-                                                             width=3, fill='black', tags=(my_tag, "line"))
+                                                             width=3, fill='black', tags=(self.my_tag, "line"))
             else:
                 self.canvas.coords(self.line_total, self.x1, self.y1, self.x2, self.y2)
                 self.canvas.coords(self.line_progress, self.x1, self.y1, current_x2, self.y2)
@@ -205,9 +207,6 @@ class VideoPlayer:
         self.vplayer.set_volume(0.0)
 
     # "alte" Funktionen
-    def setId(self, id):
-        self.canvas_id = id
-
     def getRun(self):
         return self.do_update
     def getFPS(self):

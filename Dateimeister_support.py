@@ -2533,16 +2533,6 @@ class Dateimeister_support:
         else:
             self.canvas_gallery.xview('moveto', 0)
 
-    def create_new_video_players(self, canvas, cw, ch):
-        # now we have to create new players for the thumbnails in dict_visible_id_thumbnail, dict_visible has to be filled correctly, i is the canvas_id for the image
-        for i in self.dict_visible_id_thumbnail[Globals.imagetype]:
-            t = self.dict_visible_id_thumbnail[Globals.imagetype][i] #the tumbnail
-            f = t.getFile()
-            player   = DV.VideoPlayer(self.root, f, canvas, cw, ch)
-            player.setId(i)
-            player.resize()
-            t.setPlayer(player)
-        
         
     def new_image(self, file, canvas_height):    
         img  = Image.open(file)
@@ -2886,8 +2876,9 @@ class Dateimeister_support:
                 t = self.dict_visible_id_thumbnail[Globals.imagetype][i]
                 if not tools.is_visible(self.canvas_gallery, i):
                     if t.getPlayer():
+                        my_tag = t.getPlayer().my_tag
                         t.delete_player()
-                        print("Scroll - deleted Player for thumbnail file = {:s}".format(t.getFile())) if self.debug else True
+                        print("Scroll - deleted Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), my_tag)) if self.debug else True
             #   now we create new video players for visible thumbnails and rebuild the dict of visibles
             # we already retrieved the leftmost thumbnail
             self.dict_visible_id_thumbnail[Globals.imagetype] = {}
@@ -2900,11 +2891,11 @@ class Dateimeister_support:
                         if not t.getPlayer(): # no player
                             player = DV.VideoPlayer(self.root, t.getFile(), 
                              self.canvas_gallery, self.canvas_gallery.winfo_width(), self.canvas_gallery.winfo_height())
+                            print("Scroll - created Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), player.my_tag)) if self.debug else True
                             player.setId(id)
                             player.get_photo() # necessary for initializing some instance variables...
                             player.resize()
                             t.setPlayer(player)
-                            print("Scroll - created Player for thumbnail file = {:s}".format(t.getFile())) if self.debug else True
                         self.dict_visible_id_thumbnail[Globals.imagetype][id] = t # insert in dict 
                     else:
                         visible = False # stop while

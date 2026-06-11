@@ -463,7 +463,14 @@ class MyThumbnail:
         self.filemtime = datetime.fromtimestamp(st_mtime).strftime('%Y-%m-%d %H:%M')
         self.filesize  = os.stat(file).st_size/(1024*1024.0) 
         self.frame_selected = False # we need this for Resize of Window in order to hide / show dotted rect
-        
+        self.metadata = {
+            "EXIF": {},
+            "GPS": {},
+            "Video": {},
+            "Datei": {},
+            "Allgemein": {}
+        }        
+    
     def get_filectime(self):
         return self.filectime
         
@@ -497,7 +504,7 @@ class MyThumbnail:
 
     def delete_player(self):
         if self.player:
-            #self.player.pstop()
+            self.player.pstop()
             del self.player
             self.player = None
         
