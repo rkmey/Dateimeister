@@ -222,8 +222,11 @@ class VideoPlayer:
     def setId(self, id):
         self.canvas_id = id
 
-
-    def __del__(self):
+    def destroy(self): #cleanup of canvas resources
         if self.vplayer:
             self.vplayer.close_player()
-        print("-- Deleted video player {:s}".format(str(self))) if self.debug else True
+        # destroy all canvas objects i.e. the two lines for the progress bar.
+        self.canvas.delete(self.my_tag)
+
+    def __del__(self):
+        print("-- Destroyed video player {:s}".format(str(self))) if self.debug else True

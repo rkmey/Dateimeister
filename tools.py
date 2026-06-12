@@ -505,6 +505,7 @@ class MyThumbnail:
     def delete_player(self):
         if self.player:
             self.player.pstop()
+            self.player.destroy()
             del self.player
             self.player = None
         
