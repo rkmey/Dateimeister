@@ -9,7 +9,7 @@ import time
 import operator
 import threading
 import copy
-import subprocess
+import subprocess, json
 import shutil
 import argparse
 import inspect
@@ -32,6 +32,15 @@ import Tooltip as TT
 from time import gmtime, strftime
 
 from datetime import datetime, timezone
+from PIL import Image, ExifTags
+
+"""
+Aliasse
+"""
+Inner = dict[str, str]
+Metadata = dict[str, Inner]
+
+
 
 INCLUDE = 1
 EXCLUDE = 2
@@ -463,14 +472,183 @@ class MyThumbnail:
         self.filemtime = datetime.fromtimestamp(st_mtime).strftime('%Y-%m-%d %H:%M')
         self.filesize  = os.stat(file).st_size/(1024*1024.0) 
         self.frame_selected = False # we need this for Resize of Window in order to hide / show dotted rect
-        self.metadata = {
+        self.metadata: Metadata = {
             "EXIF": {},
             "GPS": {},
             "Video": {},
             "Datei": {},
             "Allgemein": {}
         }        
+        self.metadata_read = False
+        
+
+    def run_ffprobe(self, path: str) -> dict[str, str]:
+        """Hilfsfunktion: ffprobe aufrufen und Basisdaten extrahieren."""
+        try:
+            cmd = [
+                "ffprobe",
+                "-v", "error",
+                "-select_streams", "v:0",
+                "-show_entries", "stream=width,height,codec_name,duration",
+                "-of", "default=noprint_wrappers=1:nokey=0",
+                path
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            output = result.stdout
+
+            data: dict[str, str] = {}
+            for line in output.splitlines():
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    data[key.strip()] = value.strip()
+
+            return data
+
+        except Exception:
+            return {}
+
+    def set_metadata(self) -> None:
+        # Bereits geladen?
+        if self.metadata_read:
+            return
+
+        path = self.file
+        if not os.path.exists(path):
+            self.metadata_read = True
+            return
+
+        # -----------------------------
+        # FOTO: sinnvolle EXIF-Daten
+        # -----------------------------
+        if self.imagetype == "STILL":
+            ex = self.extract_useful_exif(path)
+            for k, v in ex.items():
+                self.metadata["EXIF"][k] = v
+
+        # -----------------------------
+        # VIDEO: sinnvolle Video-Daten
+        # -----------------------------
+        elif self.imagetype == "VIDEO":
+            vmeta = self.extract_useful_video_metadata(path)
+            for k, v in vmeta.items():
+                self.metadata["Video"][k] = v
+
+        # -----------------------------
+        # Datei-Infos (für beide)
+        # -----------------------------
+        try:
+            stat = os.stat(path)
+            self.metadata["Datei"]["Size"] = str(stat.st_size)
+            self.metadata["Datei"]["Modified"] = str(stat.st_mtime)
+        except Exception as e:
+            self.metadata["Datei"]["Error"] = str(e)
+
+        # Fertig
+        self.metadata_read = True
+
+    def extract_useful_exif(self, path: str) -> dict[str, str]:
+        useful: dict[str, str] = {}
+
+        try:
+            img = Image.open(path)
+            exif = img.getexif()
+            if not exif:
+                return useful
+
+            tag_map = {v: k for k, v in ExifTags.TAGS.items()}
+
+            def get(tag_name: str):
+                tag_id = tag_map.get(tag_name)
+                if tag_id in exif:
+                    return str(exif[tag_id])
+                return None
+
+            if (v := get("FNumber")):
+                useful["Blende"] = f"f/{v}"
+
+            if (v := get("ExposureTime")):
+                useful["Belichtungszeit"] = v
+
+            if (v := get("ISOSpeedRatings")):
+                useful["ISO"] = v
+
+            if (v := get("FocalLength")):
+                useful["Brennweite"] = v
+
+            if (v := get("Model")):
+                useful["Kamera"] = v
+
+            if (v := get("DateTimeOriginal")):
+                useful["Aufnahmedatum"] = v
+
+            if (v := get("ExposureBiasValue")):
+                useful["Belichtungskorrektur"] = v
+
+            if (v := get("WhiteBalance")):
+                useful["Weißabgleich"] = v
+
+            if (v := get("Orientation")):
+                useful["Orientierung"] = v
+
+            w, h = img.size
+            useful["Width"] = str(w)
+            useful["Height"] = str(h)
+
+        except Exception:
+            pass
+
+        return useful
+
+    def extract_useful_video_metadata(self, path: str) -> dict[str, str]:
+        cmd = [
+            "ffprobe",
+            "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries",
+            "stream=codec_name,width,height,avg_frame_rate,bit_rate,display_aspect_ratio,color_space:format=duration",
+            "-print_format", "json",
+            path
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        data = json.loads(result.stdout)
+
+        meta: dict[str, str] = {}
+
+        fmt = data.get("format", {})
+        if "duration" in fmt:
+            meta["Dauer"] = fmt["duration"]
+
+        streams = data.get("streams", [])
+        if streams:
+            s = streams[0]
+
+            if "codec_name" in s:
+                meta["Codec"] = s["codec_name"]
+
+            if "width" in s and "height" in s:
+                meta["Auflösung"] = f"{s['width']}×{s['height']}"
+
+            if "avg_frame_rate" in s and s["avg_frame_rate"] != "0/0":
+                meta["Framerate"] = s["avg_frame_rate"]
+
+            if "bit_rate" in s:
+                meta["Bitrate"] = s["bit_rate"]
+
+            if "display_aspect_ratio" in s:
+                meta["Seitenverhältnis"] = s["display_aspect_ratio"]
+
+            if "color_space" in s:
+                meta["Farbraum"] = s["color_space"]
+
+            if "rotation" in s.get("tags", {}):
+                meta["Rotation"] = s["tags"]["rotation"]
+
+        return meta
     
+    def get_metadata(self) -> Metadata | None:
+        True
+
     def get_filectime(self):
         return self.filectime
         

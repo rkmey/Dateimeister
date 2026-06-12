@@ -61,6 +61,14 @@ from tools import MyThumbnail
 from enum import Enum
 import traceback
 
+"""
+Aliasse
+"""
+
+Inner = dict[str, str]
+Metadata = dict[str, Inner]
+
+
 def report_callback_exception(self, exc, val, tb):
     print("TKINTER CALLBACK EXCEPTION:", exc, val)
     traceback.print_tb(tb)
@@ -2447,6 +2455,10 @@ class Dateimeister_support:
                 else: # keep this thumbnail in our dict of visible thumbnails
                     self.dict_visible_id_thumbnail[imagetype][id] = myimage
                 print("Image {:s} visible: {:d}".format(file, visible)) if self.debug else True
+            # if visible, we collect metadata
+            if visible:
+                myimage.set_metadata()
+                print (str(myimage.metadata)) if self.debug else True
             
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")
@@ -2869,6 +2881,24 @@ class Dateimeister_support:
         self.leftmost_thumbnail = thumbnail
         # display debug info for resize, this is very difficult to debug
         self.debug_info_resize("SCROLL") if self.debug_r else True
+
+        # 20260610 we build a list of visible images in order to get metadata and allocate new video players and rebuild dict visible
+        # for each visible thumbnail we call the get_metadata method (does nothing if already collected)
+        list_visible_thumbnails = []
+        visible = True
+        while visible:
+            if index < len(Globals.thumbnails[Globals.imagetype]):
+                t = Globals.thumbnails[Globals.imagetype][index]
+                id = t.getId()
+                if tools.is_visible(self.canvas_gallery, id): # visible
+                    list_visible_thumbnails.append(t)
+                    t.set_metadata()
+                    print (str(t.metadata)) if self.debug else True
+                else:
+                    visible = False # stop while
+            else:
+                visible = False
+            index += 1
         
         # 20260610 we delete video players for not visible video images and create new ones for now visible
         if Globals.imagetype == 'VIDEO':
@@ -2880,33 +2910,25 @@ class Dateimeister_support:
                         t.delete_player()
                         print("Scroll - deleted Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), my_tag)) if self.debug else True
             #   now we create new video players for visible thumbnails and rebuild the dict of visibles
-            # we already retrieved the leftmost thumbnail
             self.dict_visible_id_thumbnail[Globals.imagetype] = {}
-            visible = True
-            while visible:
-                if index < len(Globals.thumbnails[Globals.imagetype]):
-                    t = Globals.thumbnails[Globals.imagetype][index]
-                    id = t.getId()
-                    if tools.is_visible(self.canvas_gallery, id): # visible
-                        if not t.getPlayer(): # no player
-                            player = DV.VideoPlayer(self.root, t.getFile(), 
-                             self.canvas_gallery, self.canvas_gallery.winfo_width(), self.canvas_gallery.winfo_height())
-                            print("Scroll - created Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), player.my_tag)) if self.debug else True
-                            player.setId(id)
-                            player.get_photo() # necessary for initializing some instance variables...
-                            player.resize()
-                            t.setPlayer(player)
-                        self.dict_visible_id_thumbnail[Globals.imagetype][id] = t # insert in dict 
-                    else:
-                        visible = False # stop while
-                else:
-                    visible = False
-                index += 1
+            for t in list_visible_thumbnails:
+                id = t.getId()
+                if not t.getPlayer(): # no player
+                    player = DV.VideoPlayer(self.root, t.getFile(), 
+                     self.canvas_gallery, self.canvas_gallery.winfo_width(), self.canvas_gallery.winfo_height())
+                    print("Scroll - created Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), player.my_tag)) if self.debug else True
+                    player.setId(id)
+                    player.get_photo() # necessary for initializing some instance variables...
+                    player.resize()
+                    t.setPlayer(player)
+                self.dict_visible_id_thumbnail[Globals.imagetype][id] = t # insert in dict 
                 
-                
+        # we must call itemconfig because sometimes images "disappear"  after deleting video player      
         for i in Globals.dict_thumbnails[Globals.imagetype]:
             t = Globals.dict_thumbnails[Globals.imagetype][i]
-            self.canvas_gallery.itemconfig(t.getId(), image=t.getImage())
+            id = t.getId()
+            if t.imagetype == 'VIDEO' and tools.is_visible(self.canvas_gallery, id):
+                self.canvas_gallery.itemconfig(t.getId(), image=t.getImage())
 
     def text1_single(self, event): # synchronize text / gallery
         (row, col) = self.t_text1.index(tk.CURRENT).split(".")
