@@ -539,7 +539,7 @@ class MyThumbnail:
         try:
             stat = os.stat(path)
             self.metadata["Datei"]["Size"] = str(stat.st_size)
-            self.metadata["Datei"]["Modified"] = str(stat.st_mtime)
+            self.metadata["Datei"]["Modified"] = datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M')
         except Exception as e:
             self.metadata["Datei"]["Error"] = str(e)
 
