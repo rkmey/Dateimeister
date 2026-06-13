@@ -476,8 +476,8 @@ class MyThumbnail:
             "EXIF": {},
             "GPS": {},
             "Video": {},
-            "Datei": {},
-            "Allgemein": {}
+            "File": {},
+            "General": {}
         }        
         self.metadata_read = False
         
@@ -538,10 +538,10 @@ class MyThumbnail:
         # -----------------------------
         try:
             stat = os.stat(path)
-            self.metadata["Datei"]["Size"] = str(stat.st_size)
-            self.metadata["Datei"]["Modified"] = datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M')
+            self.metadata["File"]["Size"] = str(stat.st_size)
+            self.metadata["File"]["Modified"] = datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M')
         except Exception as e:
-            self.metadata["Datei"]["Error"] = str(e)
+            self.metadata["File"]["Error"] = str(e)
 
         # Fertig
         self.metadata_read = True
@@ -564,31 +564,31 @@ class MyThumbnail:
                 return None
 
             if (v := get("FNumber")):
-                useful["Blende"] = f"f/{v}"
+                useful["Aperture"] = f"f/{v}"
 
             if (v := get("ExposureTime")):
-                useful["Belichtungszeit"] = v
+                useful["Exposure Time"] = v
 
             if (v := get("ISOSpeedRatings")):
                 useful["ISO"] = v
 
             if (v := get("FocalLength")):
-                useful["Brennweite"] = v
+                useful["Focal Length"] = v
 
             if (v := get("Model")):
-                useful["Kamera"] = v
+                useful["Camera Model"] = v
 
             if (v := get("DateTimeOriginal")):
-                useful["Aufnahmedatum"] = v
+                useful["Original Date"] = v
 
             if (v := get("ExposureBiasValue")):
-                useful["Belichtungskorrektur"] = v
+                useful["Exposure Bias Value"] = v
 
             if (v := get("WhiteBalance")):
-                useful["Weißabgleich"] = v
+                useful["White Balance"] = v
 
             if (v := get("Orientation")):
-                useful["Orientierung"] = v
+                useful["Orientation"] = v
 
             w, h = img.size
             useful["Width"] = str(w)
@@ -617,7 +617,7 @@ class MyThumbnail:
 
         fmt = data.get("format", {})
         if "duration" in fmt:
-            meta["Dauer"] = fmt["duration"]
+            meta["Duration"] = fmt["duration"]
 
         streams = data.get("streams", [])
         if streams:
@@ -627,7 +627,7 @@ class MyThumbnail:
                 meta["Codec"] = s["codec_name"]
 
             if "width" in s and "height" in s:
-                meta["Auflösung"] = f"{s['width']}×{s['height']}"
+                meta["Resolution"] = f"{s['width']}×{s['height']}"
 
             if "avg_frame_rate" in s and s["avg_frame_rate"] != "0/0":
                 meta["Framerate"] = s["avg_frame_rate"]
@@ -636,10 +636,10 @@ class MyThumbnail:
                 meta["Bitrate"] = s["bit_rate"]
 
             if "display_aspect_ratio" in s:
-                meta["Seitenverhältnis"] = s["display_aspect_ratio"]
+                meta["Display Aspect Ratio"] = s["display_aspect_ratio"]
 
             if "color_space" in s:
-                meta["Farbraum"] = s["color_space"]
+                meta["Color Space"] = s["color_space"]
 
             if "rotation" in s.get("tags", {}):
                 meta["Rotation"] = s["tags"]["rotation"]
