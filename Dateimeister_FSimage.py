@@ -33,9 +33,9 @@ from time import gmtime, strftime
 from PIL import Image, ImageTk
 from datetime import datetime, timezone
 
-import Dateimeister
 import tools
 import dateimeister_video as DV
+import Tooltip as TT
 
 INCLUDE = 1
 EXCLUDE = 2
@@ -61,7 +61,138 @@ class MyFSImage:
         self.thumbnail.register_FSimage(self)
         # Create secondary (or popup) window.
         self.root = tk.Toplevel(name = "fsimage")
-        self.w2 = Dateimeister.Toplevel2(self.root)
+        # Fenstergröße
+        physical_width  = self.root.winfo_screenwidth()
+        physical_height = self.root.winfo_screenheight()
+        self.screen_width  = int(self.root.winfo_screenwidth() * .75) # adjust as needed
+        self.screen_height = int(self.root.winfo_screenheight() * .75) # adjust as needed
+        print("Bildschirm ist " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(physical_width) + " x " + str(physical_height))
+        v_dim=str(self.screen_width)+'x'+str(self.screen_height)
+        self.root.geometry(v_dim)
+        self.root.minsize(int(physical_width / 4), int(physical_height / 4))  # (minimum ) width , ( minimum) height
+        self.root.resizable(True, True)
+
+        # create widgets
+        self.Button_fit = tk.Button(self.root)
+        self.Button_fit.place(relx=0.783, rely=0.133, height=34, width=87)
+        self.Button_fit.configure(activebackground="beige")
+        self.Button_fit.configure(activeforeground="black")
+        self.Button_fit.configure(background="#d9d9d9")
+        self.Button_fit.configure(compound='left')
+        self.Button_fit.configure(disabledforeground="#a3a3a3")
+        self.Button_fit.configure(font="-family {Segoe UI} -size 9")
+        self.Button_fit.configure(foreground="black")
+        self.Button_fit.configure(highlightbackground="#d9d9d9")
+        self.Button_fit.configure(highlightcolor="black")
+        self.Button_fit.configure(pady="0")
+        self.Button_fit.configure(text='''Fit canvas''')
+        self.Button_fit_tooltip = \
+        TT.ToolTip(self.Button_fit, '''Zoom in / out''')
+
+        self.Button_fscale = tk.Button(self.root)
+        self.Button_fscale.place(relx=0.883, rely=0.133, height=34, width=87)
+        self.Button_fscale.configure(activebackground="beige")
+        self.Button_fscale.configure(activeforeground="black")
+        self.Button_fscale.configure(background="#d9d9d9")
+        self.Button_fscale.configure(compound='left')
+        self.Button_fscale.configure(disabledforeground="#a3a3a3")
+        self.Button_fscale.configure(font="-family {Segoe UI} -size 9")
+        self.Button_fscale.configure(foreground="black")
+        self.Button_fscale.configure(highlightbackground="#d9d9d9")
+        self.Button_fscale.configure(highlightcolor="black")
+        self.Button_fscale.configure(pady="0")
+        self.Button_fscale.configure(text='''Full scale''')
+        self.Button_fscale_tooltip = \
+        TT.ToolTip(self.Button_fscale, '''full resolution''')
+
+        self.Button_exclude = tk.Button(self.root)
+        self.Button_exclude.place(relx=0.783, rely=0.233, height=34, width=87)
+        self.Button_exclude.configure(activebackground="beige")
+        self.Button_exclude.configure(activeforeground="black")
+        self.Button_exclude.configure(background="#d9d9d9")
+        self.Button_exclude.configure(compound='left')
+        self.Button_exclude.configure(disabledforeground="#a3a3a3")
+        self.Button_exclude.configure(font="-family {Segoe UI} -size 9")
+        self.Button_exclude.configure(foreground="black")
+        self.Button_exclude.configure(highlightbackground="#d9d9d9")
+        self.Button_exclude.configure(highlightcolor="black")
+        self.Button_exclude.configure(pady="0")
+        self.Button_exclude.configure(text='''Exclude''')
+        self.Button_exclude_tooltip = \
+        TT.ToolTip(self.Button_exclude, '''include / exclude''')
+
+        self.Label_status = tk.Label(self.root)
+        self.Label_status.place(relx=0.875, rely=0.217, height=41, width=104)
+        self.Label_status.configure(activebackground="#f9f9f9")
+        self.Label_status.configure(activeforeground="black")
+        self.Label_status.configure(anchor='w')
+        self.Label_status.configure(background="#d9d9d9")
+        self.Label_status.configure(compound='left')
+        self.Label_status.configure(disabledforeground="#a3a3a3")
+        self.Label_status.configure(font="-family {Segoe UI} -size 9")
+        self.Label_status.configure(foreground="black")
+        self.Label_status.configure(highlightbackground="#d9d9d9")
+        self.Label_status.configure(highlightcolor="black")
+        self.Label_status.configure(text='''Label''')
+
+        self.Button_pp = tk.Button(self.root)
+        self.Button_pp.place(relx=0.783, rely=0.333, height=24, width=87)
+        self.Button_pp.configure(activebackground="beige")
+        self.Button_pp.configure(activeforeground="black")
+        self.Button_pp.configure(background="#d9d9d9")
+        self.Button_pp.configure(compound='left')
+        self.Button_pp.configure(disabledforeground="#a3a3a3")
+        self.Button_pp.configure(font="-family {Segoe UI} -size 9")
+        self.Button_pp.configure(foreground="black")
+        self.Button_pp.configure(highlightbackground="#d9d9d9")
+        self.Button_pp.configure(highlightcolor="black")
+        self.Button_pp.configure(pady="0")
+        self.Button_pp.configure(text='''play / pause''')
+
+        self.Button_restart = tk.Button(self.root)
+        self.Button_restart.place(relx=0.883, rely=0.333, height=24, width=87)
+        self.Button_restart.configure(activebackground="beige")
+        self.Button_restart.configure(activeforeground="black")
+        self.Button_restart.configure(background="#d9d9d9")
+        self.Button_restart.configure(compound='left')
+        self.Button_restart.configure(disabledforeground="#a3a3a3")
+        self.Button_restart.configure(font="-family {Segoe UI} -size 9")
+        self.Button_restart.configure(foreground="black")
+        self.Button_restart.configure(highlightbackground="#d9d9d9")
+        self.Button_restart.configure(highlightcolor="black")
+        self.Button_restart.configure(pady="0")
+        self.Button_restart.configure(text='''Restart''')
+        self.Button_restart_tooltip = \
+        TT.ToolTip(self.Button_restart, '''restart video from begin''')
+
+        self.Scale_fps =  tk.Scale(self.root, from_=1.0, to=200.0, resolution=1.0)
+        self.Scale_fps.place(relx=0.767, rely=0.417, relheight=0.327
+                , relwidth=0.038)
+        self.Scale_fps.configure(activebackground="beige")
+        self.Scale_fps.configure(background="#d9d9d9")
+        self.Scale_fps.configure(font="-family {Segoe UI} -size 9")
+        self.Scale_fps.configure(foreground="black")
+        self.Scale_fps.configure(highlightbackground="#d9d9d9")
+        self.Scale_fps.configure(highlightcolor="black")
+        self.Scale_fps.configure(label="fps")
+        self.Scale_fps.configure(length="196")
+        self.Scale_fps.configure(troughcolor="#d9d9d9")
+        self.Scale_fps_tooltip = \
+        TT.ToolTip(self.Scale_fps, '''fps''')
+
+        self.Label_fps = tk.Label(self.root)
+        self.Label_fps.place(relx=0.775, rely=0.75, height=21, width=114)
+        self.Label_fps.configure(activebackground="#f9f9f9")
+        self.Label_fps.configure(activeforeground="black")
+        self.Label_fps.configure(anchor='w')
+        self.Label_fps.configure(background="#d9d9d9")
+        self.Label_fps.configure(compound='left')
+        self.Label_fps.configure(disabledforeground="#a3a3a3")
+        self.Label_fps.configure(font="-family {Segoe UI} -size 9")
+        self.Label_fps.configure(foreground="black")
+        self.Label_fps.configure(highlightbackground="#d9d9d9")
+        self.Label_fps.configure(highlightcolor="black")
+        self.Label_fps.configure(text='''Frames per second''')
 
         # create the canvas
         self.f = tk.Canvas(self.root)
@@ -76,31 +207,24 @@ class MyFSImage:
         self.f.configure(selectforeground="black")
 
         if self.thumbnail.getState() == INCLUDE:
-            self.w2.Button_exclude.config(text = self.str_exclude)
-            self.w2.Label_status.config(text = self.str_included)
+            self.Button_exclude.config(text = self.str_exclude)
+            self.Label_status.config(text = self.str_included)
         else: # toggle to not exclude
-            self.w2.Button_exclude.config(text = self.str_include)
-            self.w2.Label_status.config(text = self.str_excluded)
+            self.Button_exclude.config(text = self.str_include)
+            self.Label_status.config(text = self.str_excluded)
         # zur Behandlung von Events brauchen wir den Imagefile-Namen. Darüber kommen wir an das Window und
         # das Image selbst. Das ist erforderlich, weil wir ja mehrere Fenster haben können
         # kurz gesagt: mit dieser Methode kann man Parameter an den Handler übergeben
-        self.w2.Button_fit.config(command = self.fit_handler)
-        self.w2.Button_fscale.config(command = self.fscale_handler)
-        self.w2.Button_exclude.config(command = self.exclude_handler)
-        self.w2.Button_pp.config(command = self.pp_handler)
-        self.w2.Button_restart.config(command = self.restart_handler)
-        self.w2.Scale_fps.config(command = self.setFps)
+        self.Button_fit.config(command = self.fit_handler)
+        self.Button_fscale.config(command = self.fscale_handler)
+        self.Button_exclude.config(command = self.exclude_handler)
+        self.Button_pp.config(command = self.pp_handler)
+        self.Button_restart.config(command = self.restart_handler)
+        self.Scale_fps.config(command = self.setFps)
         self.f.bind("<MouseWheel>", self.mousewheel_handler)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
         self.root.title(str_title_prefix + file)
-        screen_width  = int(self.root.winfo_screenwidth() * 0.9)
-        screen_height = int(self.root.winfo_screenheight() * 0.8)
-        print("Bildschirm ist " + str(screen_width) + " x " + str(screen_height))
-        width,height=screen_width,screen_height
-        v_dim=str(width)+'x'+str(height)
-        self.root.geometry(v_dim)
-        self.root.resizable(True, True)
 
         # Scrollbars
         self.V_I = Scrollbar(self.f)
@@ -125,13 +249,13 @@ class MyFSImage:
         if thumbnail.get_imagetype() == "STILL": # still image
             self.image_zoom(self.zoomfaktor)
             self.player = None
-            self.w2.Button_pp.place_forget()
-            self.w2.Button_restart.place_forget()
-            self.w2.Scale_fps.place_forget()
-            self.w2.Label_fps.place_forget()
+            self.Button_pp.place_forget()
+            self.Button_restart.place_forget()
+            self.Scale_fps.place_forget()
+            self.Label_fps.place_forget()
         else: #video, we need a new one the existing is for playing in thumbnal
-            self.w2.Button_fit.place_forget()
-            self.w2.Button_fscale.place_forget()
+            self.Button_fit.place_forget()
+            self.Button_fscale.place_forget()
             self.H_I.pack_forget()
             self.V_I.pack_forget()
             self.f.update()
@@ -146,9 +270,9 @@ class MyFSImage:
             self.player.pstart()
             fps = self.player.getFPS()
             self.player.setDelay(int(1000 / fps))
-            self.w2.Scale_fps.set(int(1000 / fps))
+            self.Scale_fps.set(int(1000 / fps))
             self.playerstatus = 'play'
-            self.w2.Button_pp.config(text = 'pause')
+            self.Button_pp.config(text = 'pause')
             self.image = self.pimg
             
         # frame for Label displaying file info start at  0,75 (width of canvas
@@ -229,19 +353,19 @@ class MyFSImage:
         if self.playerstatus == 'play': 
             self.player.pstop()
             self.playerstatus = 'pause'
-            self.w2.Button_pp.config(text = 'play')
+            self.Button_pp.config(text = 'play')
         else:
             self.player.pstart()
             self.playerstatus = 'play'
-            self.w2.Button_pp.config(text = 'pause')
+            self.Button_pp.config(text = 'pause')
 
     def setPlaystatus(self, newstatus):
         if newstatus == 'play': 
             self.playerstatus = 'play'
-            self.w2.Button_pp.config(text = 'pause')
+            self.Button_pp.config(text = 'pause')
         else:
             self.playerstatus = 'pause'
-            self.w2.Button_pp.config(text = 'play')
+            self.Button_pp.config(text = 'play')
 
     def restart_handler(self):
         self.player.restart()
@@ -256,23 +380,23 @@ class MyFSImage:
     def exclude_handler(self): # react to own Button, thumbnail can be from main or duplicates
         # Button -> this method -> thumbnail.setstate -> exclude_call
         if self.thumbnail.getState() == INCLUDE:
-            self.w2.Button_exclude.config(text = self.str_include)
-            self.w2.Label_status.config(text = self.str_excluded)
+            self.Button_exclude.config(text = self.str_include)
+            self.Label_status.config(text = self.str_excluded)
             self.thumbnail.setState(EXCLUDE)
         else: # toggle to not exclude, delete Item
-            self.w2.Button_exclude.config(text = self.str_exclude)
-            self.w2.Label_status.config(text = self.str_included)
+            self.Button_exclude.config(text = self.str_exclude)
+            self.Label_status.config(text = self.str_included)
             self.thumbnail.setState(INCLUDE)
         self.main.historize_process()
 
     def exclude_call(self, state): # react to request from outside
         print("MyFSImage.exclude_call, state = {:d}".format(state)) if self.debug else True
         if state == INCLUDE:
-            self.w2.Button_exclude.config(text = self.str_exclude)
-            self.w2.Label_status.config(text = self.str_included)
+            self.Button_exclude.config(text = self.str_exclude)
+            self.Label_status.config(text = self.str_included)
         else: # toggle to not exclude, delete Item
-            self.w2.Button_exclude.config(text = self.str_include)
-            self.w2.Label_status.config(text = self.str_excluded)
+            self.Button_exclude.config(text = self.str_include)
+            self.Label_status.config(text = self.str_excluded)
     
     def close_handler(self): #calles when window is closing: delete player and fsimage, remove from dict_file_image
         t = self.dict_caller[self.file]
