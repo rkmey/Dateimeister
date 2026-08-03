@@ -33,6 +33,8 @@ from time import gmtime, strftime
 
 from datetime import datetime, timezone
 from PIL import Image, ExifTags
+import hashlib
+
 
 """
 Aliasse
@@ -941,3 +943,15 @@ def _on_shiftmouse(event, widget):
             widget.xview_scroll(-1, 'units')
         elif event.num == 5:
             widget.xview_scroll(1, 'units')
+
+"""
+get hashsum as unique value for file
+"""
+def file_hash(filename: str) -> str:
+    h = hashlib.sha256()
+
+    with open(filename, "rb") as f:
+        while chunk := f.read(1024 * 1024):   # 1 MB pro Block
+            h.update(chunk)
+
+    return h.hexdigest()

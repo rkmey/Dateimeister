@@ -2135,7 +2135,8 @@ class Dateimeister_support:
             lineno = 0
             for this_sourcefile in self.dict_source_target[dateityp]:
                 lineno += 1
-                #print(this_sourcefile)
+                h = tools.file_hash(this_sourcefile)
+                print("### hashsum for {:s} = {:s}".format(this_sourcefile, h)) if self.debug else True
                 dupl_target_file = self.dict_source_target[dateityp][this_sourcefile].upper() #for duplicate target  check ignore case
                 if dupl_target_file not in Globals.dict_duplicates[dateityp]:
                     #self.clear_dict_2nd(Globals.dict_duplicates, dateityp)
