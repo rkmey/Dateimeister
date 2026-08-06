@@ -72,6 +72,15 @@ class MyFSImage:
         self.root.minsize(int(physical_width / 4), int(physical_height / 4))  # (minimum ) width , ( minimum) height
         self.root.resizable(True, True)
 
+        # we create the frames. on the left side we have the vanvas width width relw_frame_canvas, and the height relh_frame_canvas.
+        # on the right we have two frames for 2 columns of buttons resp. button / label
+        # beneath is the frame for the treeview displaying the metadata. The width of the two frames is (1 - relw_frame_canvas) / 2
+        # the width of the frame for the treeview is 1 - relw_frame_canvas. The right area is vertically divided according to relh_frame_1.
+        relw_frame_canvas = .75 # rel width of frame for canvas
+        relh_frame_canvas = 1.0 # rel height of frame for canvas
+        relw_frame_1      = (1 - relw_frame_canvas) / 2 # rel width for each of the 2 frames on top right
+        relw_frame_2      = (1 - relw_frame_canvas) # rel width for the frame bottom right (treeview for metadata)
+
         # create widgets
         self.Button_fit = tk.Button(self.root)
         self.Button_fit.place(relx=0.783, rely=0.133, height=34, width=87)
