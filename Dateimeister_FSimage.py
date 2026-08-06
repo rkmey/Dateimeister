@@ -77,9 +77,16 @@ class MyFSImage:
         # beneath is the frame for the treeview displaying the metadata. The width of the two frames is (1 - relw_frame_canvas) / 2
         # the width of the frame for the treeview is 1 - relw_frame_canvas. The right area is vertically divided according to relh_frame_1.
         relw_frame_canvas = .75 # rel width of frame for canvas
-        relh_frame_canvas = 1.0 # rel height of frame for canvas
+        relh_frame_canvas = 0.99 # rel height of frame for canvas
         relw_frame_1      = (1 - relw_frame_canvas) / 2 # rel width for each of the 2 frames on top right
         relw_frame_2      = (1 - relw_frame_canvas) # rel width for the frame bottom right (treeview for metadata)
+
+        # frame_canvas
+        self.frame_canvas = tk.Frame(self.root)
+        self.frame_canvas.place(relx=0.0, rely=0.005, relheight=relh_frame_canvas, relwidth=relw_frame_canvas)
+        self.frame_canvas.configure(relief='flat', background = tools._bgcolor)
+        self.frame_canvas.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_canvas.update()
 
         # create widgets
         self.Button_fit = tk.Button(self.root)
@@ -204,8 +211,8 @@ class MyFSImage:
         self.Label_fps.configure(text='''Frames per second''')
 
         # create the canvas
-        self.f = tk.Canvas(self.root)
-        self.f.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=0.75)
+        self.f = tk.Canvas(self.frame_canvas)
+        #self.f.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=1.0)
         self.f.configure(background="#d9d9d9")
         self.f.configure(borderwidth="2")
         self.f.configure(highlightbackground="#d9d9d9")
@@ -214,6 +221,23 @@ class MyFSImage:
         self.f.configure(relief="ridge")
         self.f.configure(selectbackground="#c4c4c4")
         self.f.configure(selectforeground="black")
+
+        # canvas scrollbars
+        self.V_I = Scrollbar(self.frame_canvas)
+        self.V_I.config(command=self.f.yview)
+        self.f.config(yscrollcommand=self.V_I.set)  
+        self.H_I = Scrollbar(self.frame_canvas, orient = HORIZONTAL)
+        self.H_I.config(command=self.f.xview)
+        self.f.config(xscrollcommand=self.H_I.set)
+
+        # position of canvas and scrollbars within frame
+        tools.place_box_with_scrollbars(self, self.frame_canvas, self.f, self.H_I, self.V_I, rw = 0.01, d_n = 0.0, d_e = 0.0, d_s = 0.0, d_w = 0.0)
+
+        # Bind keys to canvas for scrolling
+        self.f.bind("<Left>",  lambda event: self.scrollx(-1, "unit"))
+        self.f.bind("<Right>", lambda event: self.scrollx( 1, "unit"))
+        self.f.bind("<Up>",    lambda event: self.scrolly(-1, "unit"))
+        self.f.bind("<Down>",  lambda event: self.scrolly( 1, "unit"))
 
         if self.thumbnail.getState() == INCLUDE:
             self.Button_exclude.config(text = self.str_exclude)
@@ -235,25 +259,10 @@ class MyFSImage:
 
         self.root.title(str_title_prefix + file)
 
-        # Scrollbars
-        self.V_I = Scrollbar(self.f)
-        self.V_I.config(command=self.f.yview)
-        self.f.config(yscrollcommand=self.V_I.set)  
-        self.H_I = Scrollbar(self.f, orient = HORIZONTAL)
-        self.H_I.config(command=self.f.xview)
-        self.f.config(xscrollcommand=self.H_I.set)
+
         if thumbnail.get_imagetype() == "STILL":
             self.image.close
-        self.zoomfaktor = 1.0
-        self.V_I.pack(side=RIGHT, fill=Y)
-        self.H_I.pack(side=BOTTOM, fill=BOTH)
-        # Bind keys to canvas for scrolling
-        self.f.bind("<Left>",  lambda event: self.scrollx(-1, "unit"))
-        self.f.bind("<Right>", lambda event: self.scrollx( 1, "unit"))
-        self.f.bind("<Up>",    lambda event: self.scrolly(-1, "unit"))
-        self.f.bind("<Down>",  lambda event: self.scrolly( 1, "unit"))
-
-        self.zoomfaktor = 1.0 # wir fangen immer mit dem Bild in voller Auflösung an.
+        self.zoomfaktor = 1.0 # we always start with full resolution
         self.f.focus_set()
         if thumbnail.get_imagetype() == "STILL": # still image
             self.image_zoom(self.zoomfaktor)

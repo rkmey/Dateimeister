@@ -50,18 +50,6 @@ from tools import MyThumbnail
 
 from enum import Enum
 
-_bgcolor = 'grey90'
-_bgcolor_dbg = 'green'
-_fgcolor = 'black'
-_tabfg1 = 'black' 
-_tabfg2 = 'white' 
-_bgmode = 'light' 
-_tabbg1 = '#d9d9d9' 
-_tabbg2 = 'gray40' 
-
-_style_code_ran = 0
-
-
 INCLUDE = 1
 EXCLUDE = 2
 
@@ -80,7 +68,7 @@ class MyDuplicates:
         self.root.title(title + " for " + Globals.outdir)
         self.root.minsize(120, 100)
         self.root.maxsize(4000, 4000)
-        self.root.configure(background=_bgcolor)
+        self.root.configure(background=tools._bgcolor)
         self.root.configure(highlightbackground="#d9d9d9")
         self.root.configure(highlightcolor="black")
         self.player = None
@@ -112,8 +100,8 @@ class MyDuplicates:
         
         relheight = 1 - rely - rel_dist_bottom 
         self.frame_canvas.place(relx=0.005, rely=rely, relheight=relheight, relwidth=0.995)
-        self.frame_canvas.configure(relief='flat', background = _bgcolor)
-        self.frame_canvas.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_canvas.configure(relief='flat', background = tools._bgcolor)
+        self.frame_canvas.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_canvas.update()
 
         self.f = tk.Canvas(self.frame_canvas, bg="yellow")
@@ -135,8 +123,8 @@ class MyDuplicates:
         # Frame for listbox duplicates
         self.frame_lb_duplicates = tk.Frame(self.root)
         self.frame_lb_duplicates.place(relx=0.01, rely=0.01, relheight=0.4, relwidth=0.6)
-        self.frame_lb_duplicates.configure(relief='flat', highlightbackground="black", highlightthickness=1, background = _bgcolor)
-        self.frame_lb_duplicates.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_lb_duplicates.configure(relief='flat', highlightbackground="black", highlightthickness=1, background = tools._bgcolor)
+        self.frame_lb_duplicates.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_lb_duplicates.update()
 
         # Listbox duplicates

@@ -17,26 +17,6 @@ _location = os.path.dirname(__file__)
 
 import Dateimeister_support
 
-_bgcolor = '#d9d9d9'
-_fgcolor = 'black'
-_tabfg1 = 'black' 
-_tabfg2 = 'white' 
-_bgmode = 'light' 
-_tabbg1 = '#d9d9d9' 
-_tabbg2 = 'gray40' 
-
-_style_code_ran = 0
-def _style_code():
-    global _style_code_ran
-    if _style_code_ran: return        
-    try: Dateimeister_support.root.tk.call('source',
-                os.path.join(_location, 'themes', 'alt.tcl'))
-    except: pass
-    style = ttk.Style()
-    style.theme_use('alt')
-    style.configure('.', font = "TkDefaultFont")
-    _style_code_ran = 1
-
 import tkinter as tk
 from tkinter import ttk
 

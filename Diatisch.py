@@ -196,6 +196,9 @@ class Thumbnail:
     def getPlayer(self):
         return self.player   
 
+    def get_imagetype(self): # FSImage expects this method
+        return 'STILL'
+
     def __del__(self):
         if self.player is not None:
             self.player.pstop()
@@ -941,6 +944,7 @@ class Diatisch:
         tag_prefix = 'P'
         tag_no = 0
         directory = None
+        busy = tools.BusyDialog(self.root, text= " files are loaded…")        
         if p_imagefiles_source: # imagefiles given by caller, no directory needed
             self.image_files = p_imagefiles_source
         elif p_indir: #directory given by caller
@@ -961,7 +965,6 @@ class Diatisch:
                 files_total = tools.count_files_recursive(p_indir)
             else:
                 files_total = tools.count_files_top(p_indir)
-            busy = tools.BusyDialog(self.root, text= " files are loaded…")        
             self.dict_source_target, dict_source_target_jpeg, self.dict_source_target_tooold, self.dict_relpath = \
               DG.dateimeister(self.imagetype, self.imagetypes, directory, "", "n", recursive, False, "", None, self.sort_method, busy, files_total, self.debug)
             # copy result to image_files

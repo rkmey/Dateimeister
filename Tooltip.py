@@ -1,14 +1,6 @@
 import tkinter as tk
 from time import time, localtime, strftime
 
-_bgcolor = '#d9d9d9'
-_fgcolor = 'black'
-_tabfg1 = 'black' 
-_tabfg2 = 'white' 
-_bgmode = 'light' 
-_tabbg1 = '#d9d9d9' 
-_tabbg2 = 'gray40' 
-
 class ToolTip(tk.Toplevel):
     """ Provides a ToolTip widget for Tkinter. """
     def __init__(self, wdgt, msg=None, msgFunc=None, delay=0.5,
@@ -28,8 +20,8 @@ class ToolTip(tk.Toplevel):
         self.follow = follow
         self.visible = 0
         self.lastMotion = 0
-        self.msg = tk.Message(self, textvariable=self.msgVar, bg=_bgcolor,
-                   fg=_fgcolor, font="TkDefaultFont",
+        self.msg = tk.Message(self, textvariable=self.msgVar, bg='#d9d9d9',
+                   fg='black', font="TkDefaultFont",
                    aspect=1000)
         self.msg.grid()
         self.wdgt.bind('<Enter>', self.spawn, '+')

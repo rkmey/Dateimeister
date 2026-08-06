@@ -82,18 +82,6 @@ def global_excepthook(exc_type, exc_value, exc_traceback):
 
 sys.excepthook = global_excepthook
 
-_bgcolor = 'grey90'
-_bgcolor_dbg = 'green'
-_fgcolor = 'black'
-_tabfg1 = 'black' 
-_tabfg2 = 'white' 
-_bgmode = 'light' 
-_tabbg1 = '#d9d9d9' 
-_tabbg2 = 'gray40' 
-
-_style_code_ran = 0
-
-
 # File Menu menuitem names
 MENUITEM_FILE_NEW               = 0
 MENUITEM_FILE_OPEN_CONFIG       = 1
@@ -131,7 +119,7 @@ class MyCameraTreeview:
         self.Frame_treeview = tk.Frame(self.root)
         self.Frame_treeview.place(relx=0.015, rely=0.012, relheight=0.8, relwidth=0.985)
         self.Frame_treeview.configure(relief='flat')
-        self.Frame_treeview.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_treeview.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         style = ttk.Style()
         style.configure("Treeview", font = self.text_font)          # Inhalt
@@ -175,7 +163,7 @@ class MyCameraTreeview:
         self.frame_camera_properties = tk.Frame(self.root)
         self.frame_camera_properties.place(relx=0.01, rely=.82, relheight=0.07, relwidth=0.98)
         self.frame_camera_properties.configure(relief='flat')
-        self.frame_camera_properties.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_camera_properties.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_camera_properties.update()
         
         # now create the buttons and entries, see documentation in utils for the function
@@ -209,7 +197,7 @@ class MyCameraTreeview:
         dict_widgets["7"] = {
           "WIDGET":tk.Button,"VAR":"button_cancel","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
           "CALLBACK":self.cancel_new,"TEXT":"Cancel","STATE":tk.ACTIVE,"TT":"cancel changes","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.frame_camera_properties, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
+        tools.create_widgets_from_dict(dict_widgets, self.frame_camera_properties, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         # we create the labels for the camera entries and buttons for undo, redo
         # we get the rel x for the entry with relx = float(<widget>.place_info().get("relx", 0))
@@ -221,7 +209,7 @@ class MyCameraTreeview:
         self.frame_buttons = tk.Frame(self.root)
         self.frame_buttons.place(relx=.01, rely=.9, relheight=0.07, relwidth=.2)
         self.frame_buttons.configure(relief='flat')
-        self.frame_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_buttons.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_buttons.update()
 
         dict_widgets = {}
@@ -231,7 +219,7 @@ class MyCameraTreeview:
         dict_widgets["2"] = {
           "WIDGET":tk.Button,"VAR":"button_redo","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
           "CALLBACK":self.button_redo_h,"TEXT":"Redo","STATE":None,"TT":"redo action","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.frame_buttons, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
+        tools.create_widgets_from_dict(dict_widgets, self.frame_buttons, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         self.root.bind('<Return>', self.apply_new)
 
@@ -867,11 +855,11 @@ class Dateimeister_support:
         root.maxsize(4000, 4000)
         root.resizable(1,  1)
         root.title("Dateimeister")
-        root.configure(background=_bgcolor)
+        root.configure(background=tools._bgcolor)
         root.configure(highlightbackground="#d9d9d9")
         root.configure(highlightcolor="black")
 
-        self.menubar = tk.Menu(root,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
+        self.menubar = tk.Menu(root,font="TkMenuFont",bg=tools._bgcolor,fg=tools._fgcolor)
         root.configure(menu = self.menubar)
 
         self.dict_process_image = {}
@@ -973,29 +961,29 @@ class Dateimeister_support:
         # Frame_checkboxes
         self.frame_checkboxes = tk.Frame(self.root)
         self.frame_checkboxes.place(relx=0.005, rely=0.005, relheight=0.11, relwidth=0.28)
-        self.frame_checkboxes.configure(relief='flat', background = _bgcolor)
-        self.frame_checkboxes.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_checkboxes.configure(relief='flat', background = tools._bgcolor)
+        self.frame_checkboxes.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_checkboxes.update()
         
         # Frame_camera with elements (listboxes, ...)
         self.frame_camera = tk.Frame(self.root)
         self.frame_camera.place(relx=0.005, rely=0.12, relheight=0.55, relwidth=0.28)
-        self.frame_camera.configure(relief='flat', background = _bgcolor)
-        self.frame_camera.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_camera.configure(relief='flat', background = tools._bgcolor)
+        self.frame_camera.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_camera.update()
 
         # Subframe Frame_camera_listboxes
         self.Frame_camera_listboxes = tk.Frame(self.frame_camera)
         self.Frame_camera_listboxes.place(relx=0.005, rely=0.005, relheight=0.99, relwidth=0.745)
-        self.Frame_camera_listboxes.configure(relief='flat', highlightbackground="black", highlightthickness=1, background = _bgcolor)
-        self.Frame_camera_listboxes.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_camera_listboxes.configure(relief='flat', highlightbackground="black", highlightthickness=1, background = tools._bgcolor)
+        self.Frame_camera_listboxes.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_camera_listboxes.update()
 
         # Subframe Frame_camera_buttons
         self.frame_camera_buttons = tk.Frame(self.frame_camera)
         self.frame_camera_buttons.place(relx=0.75, rely=0.005, relheight=0.8, relwidth=0.245)
-        self.frame_camera_buttons.configure(relief='flat', highlightbackground="black", highlightthickness=1, background = _bgcolor)
-        self.frame_camera_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_camera_buttons.configure(relief='flat', highlightbackground="black", highlightthickness=1, background = tools._bgcolor)
+        self.frame_camera_buttons.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_camera_buttons.update()
 
         # Listbox camera
@@ -1061,24 +1049,24 @@ class Dateimeister_support:
         # Frame_indir with elements (listboxe, ...)
         self.frame_indir = tk.Frame(self.root)
         self.frame_indir.place(relx=0.29, rely=0.005, relheight=0.24, relwidth=0.35)
-        self.frame_indir.configure(relief='flat', background = _bgcolor)
-        self.frame_indir.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_indir.configure(relief='flat', background = tools._bgcolor)
+        self.frame_indir.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_indir.update()
 
         self.frame_indir_label_height = .05
         self.label_indir_select = tk.Label(self.frame_indir, text = "Select Indir", anchor='w')
         self.label_indir_select.place(relx=0.0, rely=0.0, relheight=self.frame_indir_label_height, relwidth=.3)
-        self.label_indir_select.configure(font=self.text_font, background = _bgcolor)
+        self.label_indir_select.configure(font=self.text_font, background = tools._bgcolor)
 
         self.label_indir = tk.Label(self.frame_indir, text = "Select Indir", anchor='w')
         self.label_indir.place(relx=0.0, rely=1-self.frame_indir_label_height, relheight=self.frame_indir_label_height, relwidth=.9)
-        self.label_indir.configure(font=self.text_font, background = _bgcolor)
+        self.label_indir.configure(font=self.text_font, background = tools._bgcolor)
         self.label_indir.update()
 
         # we create buttons for choosing dir from list or file system (horizontal) in own frame
-        self.frame_indir_buttons = tk.Frame(self.frame_indir, relief='flat', background = _bgcolor)
+        self.frame_indir_buttons = tk.Frame(self.frame_indir, relief='flat', background = tools._bgcolor)
         self.frame_indir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
-        self.frame_indir_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_indir_buttons.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_indir_buttons.update()
         relw_button = 0.975
         relh_button = 1
@@ -1089,7 +1077,7 @@ class Dateimeister_support:
         dict_widgets["2"] = {
           "WIDGET":tk.Button,"VAR":"button_indir_from_list","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.listbox_indir_double,
           "TEXT":"from list","STATE":tk.ACTIVE,"TT":"Select Input Directory from list","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.frame_indir_buttons, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
+        tools.create_widgets_from_dict(dict_widgets, self.frame_indir_buttons, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         # the listbox indir
         self.listbox_indir = tk.Listbox(self.frame_indir)
@@ -1118,23 +1106,23 @@ class Dateimeister_support:
         # Frame_outdir with elements (listboxe, ...)
         self.frame_outdir = tk.Frame(self.root)
         self.frame_outdir.place(relx=0.645, rely=0.005, relheight=0.24, relwidth=0.35)
-        self.frame_outdir.configure(relief='flat', background = _bgcolor)
-        self.frame_outdir.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_outdir.configure(relief='flat', background = tools._bgcolor)
+        self.frame_outdir.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_outdir.update()
 
         self.frame_outdir_label_height = .05
         self.label_outdir_select = tk.Label(self.frame_outdir, text = "Select Outdir", anchor='w')
         self.label_outdir_select.place(relx=0.0, rely=0.0, relheight=self.frame_outdir_label_height, relwidth=.3)
-        self.label_outdir_select.configure(font=self.text_font, background = _bgcolor)
+        self.label_outdir_select.configure(font=self.text_font, background = tools._bgcolor)
 
         self.label_outdir = tk.Label(self.frame_outdir, text = "Select Indir", anchor='w')
         self.label_outdir.place(relx=0.0, rely=1-self.frame_outdir_label_height, relheight=self.frame_outdir_label_height, relwidth=.9)
-        self.label_outdir.configure(font=self.text_font, background = _bgcolor)
+        self.label_outdir.configure(font=self.text_font, background = tools._bgcolor)
 
         # we create buttons for choosing dir from list or file system (horizontal) in own frame
-        self.frame_outdir_buttons = tk.Frame(self.frame_outdir, relief='flat', background = _bgcolor)
+        self.frame_outdir_buttons = tk.Frame(self.frame_outdir, relief='flat', background = tools._bgcolor)
         self.frame_outdir_buttons.place(relx=0.5, rely=0.005, relheight=0.1, relwidth=0.39)
-        self.frame_outdir_buttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_outdir_buttons.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_outdir_buttons.update()
         relw_button = 0.975
         relh_button = 1
@@ -1145,7 +1133,7 @@ class Dateimeister_support:
         dict_widgets["2"] = {
           "WIDGET":tk.Button,"VAR":"button_outdir_from_list","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.listbox_outdir_double,
           "TEXT":"from list","STATE":tk.ACTIVE,"TT":"Select Output Directory from list","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.frame_outdir_buttons, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
+        tools.create_widgets_from_dict(dict_widgets, self.frame_outdir_buttons, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         # the listbox outdir
         self.listbox_outdir = tk.Listbox(self.frame_outdir)
@@ -1174,8 +1162,8 @@ class Dateimeister_support:
         # Frame_text with elements (text1, ...)
         self.frame_text = tk.Frame(self.root)
         self.frame_text.place(relx=0.29, rely=0.25, relheight=0.42, relwidth=0.705)
-        self.frame_text.configure(relief='flat', background = _bgcolor)
-        self.frame_text.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_text.configure(relief='flat', background = tools._bgcolor)
+        self.frame_text.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_text.update()
         # scrollbar width as fraction of frame-width
         rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
@@ -1185,7 +1173,7 @@ class Dateimeister_support:
         self.frame_text_label_height = .05
         self.l_label1 = tk.Label(self.frame_text)
         self.l_label1.place(relx=0.0, rely=0.0, relheight=self.frame_text_label_height, relwidth=1)
-        self.l_label1.configure(font=self.text_font, background = _bgcolor)
+        self.l_label1.configure(font=self.text_font, background = tools._bgcolor)
 
         self.t_text1 = tk.Text(self.frame_text)
         self.t_text1.place(relx=0.0, rely=self.frame_text_label_height, relheight=1-self.frame_text_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
@@ -1231,7 +1219,7 @@ class Dateimeister_support:
         dict_widgets["4"] = {
           "WIDGET":tk.Button,"VAR":"button_duplicates","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.button_duplicates,
           "TEXT":"Show duplicates","STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.frame_camera_buttons, "VERTICAL", font = self.text_font, bgcolor = _bgcolor)
+        tools.create_widgets_from_dict(dict_widgets, self.frame_camera_buttons, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         # we create all checkboxes
         relw_button = 0.9
@@ -1254,7 +1242,7 @@ class Dateimeister_support:
         dict_widgets["5"] = {
           "WIDGET":tk.Checkbutton,"VAR":"cb_num","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.state_gen_required,
           "RB_VAR":"cb_num_var","RB_TYPE":tk.IntVar,"RB_VALUE":"0","TEXT":"numerate images in canvas","STATE":tk.NORMAL,"TT":"numerate images in canvas (within image)","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.frame_checkboxes, "VERTICAL", font = self.text_font, bgcolor = _bgcolor)
+        tools.create_widgets_from_dict(dict_widgets, self.frame_checkboxes, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         # get all camera information and fill camera-listbox
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
@@ -1272,8 +1260,8 @@ class Dateimeister_support:
         print("frame_canvas x1, y1, x2, y2 is {:f}, {:f} {:f}, {:f}".format(x1, x2, y1, y2)) if self.debug else True      
         self.frame_canvas = tk.Frame(self.root)
         self.frame_canvas.place(relx = x1, rely = c_rely, relheight = 1 - c_rely, relwidth = 1.0)
-        self.frame_canvas.configure(relief='flat', background = _bgcolor)
-        self.frame_canvas.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_canvas.configure(relief='flat', background = tools._bgcolor)
+        self.frame_canvas.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_canvas.update()
 
         # we need a frame for sort method radio buttons. we want to place them above the right upper corner of the canvas
@@ -1304,15 +1292,15 @@ class Dateimeister_support:
         # 20260504 as we want to unify the creation of widgets and the new method always fills the complete frame, we need to divide the frame 60:40
         self.Frame_mixed = tk.Frame(self.root)
         self.Frame_mixed.place(relx = relx1, rely = rely1 + .005, relheight = relh, relwidth = relw * 0.6)
-        self.Frame_mixed.configure(relief='flat', background = _bgcolor)
-        self.Frame_mixed.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_mixed.configure(relief='flat', background = tools._bgcolor)
+        self.Frame_mixed.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_mixed.update()
         # 20260504 new Frame_sortbuttons 
         relx1 = self.Frame_mixed.winfo_width() / parent_width + .1 # we want a gap between th 2 frames
         self.Frame_sortbuttons = tk.Frame(self.root)
         self.Frame_sortbuttons.place(relx = relx1, rely = rely1 + .005, relheight = relh, relwidth = relw * 0.3)
-        self.Frame_sortbuttons.configure(relief='flat', background = _bgcolor)
-        self.Frame_sortbuttons.configure(background=_bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_sortbuttons.configure(relief='flat', background = tools._bgcolor)
+        self.Frame_sortbuttons.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_sortbuttons.update()
         
         # we create undo/redo/include/exclude/exec buttons
@@ -1344,7 +1332,7 @@ class Dateimeister_support:
         dict_widgets["6"] = {
           "WIDGET":tk.Label,"VAR":"label_num","OFFSET":0.01,"RELH":relh_label,"RELW":relw_label,"ANCHOR":"CENTER","FONT":self.text_font,
           "TITLE":"'num Images', .3, START"}
-        tools.create_widgets_from_dict(dict_widgets, self.Frame_mixed, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
+        tools.create_widgets_from_dict(dict_widgets, self.Frame_mixed, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         # the sort radio buttons
         self.rbvalue = tk.StringVar()
@@ -1362,7 +1350,7 @@ class Dateimeister_support:
         dict_widgets["4"] = {
           "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas4","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
           "RB_VAR":self.rbvalue,"RB_VALUE":"4","TEXT":"sort mod. desc","STATE":tk.NORMAL,"TT":"sort images by modification date(descending)","FONT":self.text_font}
-        tools.create_widgets_from_dict(dict_widgets, self.Frame_sortbuttons, "HORIZONTAL", font = self.text_font, bgcolor = _bgcolor)
+        tools.create_widgets_from_dict(dict_widgets, self.Frame_sortbuttons, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         self.rbvalue.set("1")
 
