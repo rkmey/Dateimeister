@@ -80,6 +80,8 @@ class MyFSImage:
         relh_frame_canvas = 0.99 # rel height of frame for canvas
         relw_frame_1      = (1 - relw_frame_canvas) / 2 # rel width for each of the 2 frames on top right
         relw_frame_2      = (1 - relw_frame_canvas) # rel width for the frame bottom right (treeview for metadata)
+        relh_1            =.3 # the height the top frames
+        relh_2            = 1 - relh_1 # the height of the bottom frame
 
         # frame_canvas
         self.frame_canvas = tk.Frame(self.root)
@@ -87,6 +89,20 @@ class MyFSImage:
         self.frame_canvas.configure(relief='flat', background = tools._bgcolor)
         self.frame_canvas.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_canvas.update()
+
+        # frame_1_1 for 1 label and 2 buttons vertically
+        self.frame_1_1 = tk.Frame(self.root)
+        self.frame_1_1.place(relx=relw_frame_canvas, rely=0.005, relheight=relh_1, relwidth=relw_frame_1)
+        self.frame_1_1.configure(relief='flat', background = tools._bgcolor)
+        self.frame_1_1.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_1_1.update()
+
+        # frame_1_2 for 1 label and 1 button vertically
+        self.frame_1_2 = tk.Frame(self.root)
+        self.frame_1_2.place(relx=relw_frame_canvas + relw_frame_1, rely=0.005, relheight=relh_1, relwidth=relw_frame_1)
+        self.frame_1_2.configure(relief='flat', background = tools._bgcolor)
+        self.frame_1_2.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_1_2.update()
 
         # create widgets
         self.Button_fit = tk.Button(self.root)

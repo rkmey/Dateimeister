@@ -72,7 +72,7 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font, bgcolor)
     Because mixed widget types are now supported, the function always fills the entire parent area.
     Offsets and sizes are normalized so that their total always equals 1.
     we calculate throughout with relative values
-    RELH / RELW representsand the widget height when orientare the relative height / width of the widget
+    RELH / RELW represent and the widget height when orientare the relative height / width of the widget
 
     If orientation is HORIZONTAL:
         - If widget height >= parent height, the widget height is clamped to the parent height.
