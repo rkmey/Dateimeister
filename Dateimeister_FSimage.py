@@ -76,50 +76,51 @@ class MyFSImage:
         # on the right we have two frames for 2 columns of buttons resp. button / label
         # beneath is the frame for the treeview displaying the metadata. The width of the two frames is (1 - relw_frame_canvas) / 2
         # the width of the frame for the treeview is 1 - relw_frame_canvas. The right area is vertically divided according to relh_frame_1.
+        gap = .005 # frame around frame
         relw_frame_canvas = .75 # rel width of frame for canvas
-        relh_frame_canvas = 0.99 # rel height of frame for canvas
-        relw_frame_1      = (1 - relw_frame_canvas) / 2 # rel width for each of the 2 frames on top right
-        relw_frame_2      = (1 - relw_frame_canvas) # rel width for the frame bottom right (treeview for metadata)
-        relh_1            =.3 # the height the top frames
-        relh_2            = 1 - relh_1 # the height of the bottom frame
+        relh_frame_canvas = 1-gap # rel height of frame for canvas
+        relw_frame_1      = (1 - relw_frame_canvas) / 2 - 2* gap # rel width for each of the 2 frames on top right
+        relw_frame_2      = (1 - relw_frame_canvas) - gap # rel width for the frame bottom right (treeview for metadata)
+        relh_1            =.3 - gap # the height the top frames
+        relh_2            = 1 - relh_1 - gap # the height of the bottom frame
 
         # frame_canvas
         self.frame_canvas = tk.Frame(self.root)
-        self.frame_canvas.place(relx=0.0, rely=0.005, relheight=relh_frame_canvas, relwidth=relw_frame_canvas)
+        self.frame_canvas.place(relx=gap, rely=gap, relheight=relh_frame_canvas, relwidth=relw_frame_canvas)
         self.frame_canvas.configure(relief='flat', background = tools._bgcolor)
         self.frame_canvas.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_canvas.update()
 
         # frame_1_1 for 1 label and 2 buttons vertically
         self.frame_1_1 = tk.Frame(self.root)
-        self.frame_1_1.place(relx=relw_frame_canvas, rely=0.005, relheight=relh_1, relwidth=relw_frame_1)
+        self.frame_1_1.place(relx=relw_frame_canvas+2*gap, rely=gap, relheight=relh_1, relwidth=relw_frame_1)
         self.frame_1_1.configure(relief='flat', background = tools._bgcolor)
         self.frame_1_1.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_1_1.update()
 
         # frame_1_2 for 1 label and 1 button vertically
         self.frame_1_2 = tk.Frame(self.root)
-        self.frame_1_2.place(relx=relw_frame_canvas + relw_frame_1, rely=0.005, relheight=relh_1, relwidth=relw_frame_1)
+        self.frame_1_2.place(relx=relw_frame_canvas + relw_frame_1 + 3*gap, rely=gap, relheight=relh_1, relwidth=relw_frame_1)
         self.frame_1_2.configure(relief='flat', background = tools._bgcolor)
         self.frame_1_2.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_1_2.update()
 
         # create widgets
-        self.Button_fit = tk.Button(self.root)
-        self.Button_fit.place(relx=0.783, rely=0.133, height=34, width=87)
-        self.Button_fit.configure(activebackground="beige")
-        self.Button_fit.configure(activeforeground="black")
-        self.Button_fit.configure(background="#d9d9d9")
-        self.Button_fit.configure(compound='left')
-        self.Button_fit.configure(disabledforeground="#a3a3a3")
-        self.Button_fit.configure(font="-family {Segoe UI} -size 9")
-        self.Button_fit.configure(foreground="black")
-        self.Button_fit.configure(highlightbackground="#d9d9d9")
-        self.Button_fit.configure(highlightcolor="black")
-        self.Button_fit.configure(pady="0")
-        self.Button_fit.configure(text='''Fit canvas''')
-        self.Button_fit_tooltip = \
-        TT.ToolTip(self.Button_fit, '''Zoom in / out''')
+        self.text_font = Font(family="Helvetica", size=6)
+        relw_button = 0.975
+        relh_button = .25
+
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Label,"VAR":"Label_fileinfo","OFFSET":0.00,"RELH":.6,"RELW":relw_button,"ANCHOR":"START","TEXT":"file info","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Button,"VAR":"Button_fit","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.fit_handler,
+          "TEXT":"Fit Canvas","STATE":tk.ACTIVE,"TT":"Zoom in / out","FONT":self.text_font}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Button,"VAR":"Button_exclude","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.exclude_handler,
+          "TEXT":"Exclude","STATE":tk.ACTIVE,"TT":"include / exclude","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.frame_1_1, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
+        self.Button_exclude.config(command = self.exclude_handler)
 
         self.Button_fscale = tk.Button(self.root)
         self.Button_fscale.place(relx=0.883, rely=0.133, height=34, width=87)
@@ -136,22 +137,6 @@ class MyFSImage:
         self.Button_fscale.configure(text='''Full scale''')
         self.Button_fscale_tooltip = \
         TT.ToolTip(self.Button_fscale, '''full resolution''')
-
-        self.Button_exclude = tk.Button(self.root)
-        self.Button_exclude.place(relx=0.783, rely=0.233, height=34, width=87)
-        self.Button_exclude.configure(activebackground="beige")
-        self.Button_exclude.configure(activeforeground="black")
-        self.Button_exclude.configure(background="#d9d9d9")
-        self.Button_exclude.configure(compound='left')
-        self.Button_exclude.configure(disabledforeground="#a3a3a3")
-        self.Button_exclude.configure(font="-family {Segoe UI} -size 9")
-        self.Button_exclude.configure(foreground="black")
-        self.Button_exclude.configure(highlightbackground="#d9d9d9")
-        self.Button_exclude.configure(highlightcolor="black")
-        self.Button_exclude.configure(pady="0")
-        self.Button_exclude.configure(text='''Exclude''')
-        self.Button_exclude_tooltip = \
-        TT.ToolTip(self.Button_exclude, '''include / exclude''')
 
         self.Label_status = tk.Label(self.root)
         self.Label_status.place(relx=0.875, rely=0.217, height=41, width=104)
@@ -264,9 +249,7 @@ class MyFSImage:
         # zur Behandlung von Events brauchen wir den Imagefile-Namen. Darüber kommen wir an das Window und
         # das Image selbst. Das ist erforderlich, weil wir ja mehrere Fenster haben können
         # kurz gesagt: mit dieser Methode kann man Parameter an den Handler übergeben
-        self.Button_fit.config(command = self.fit_handler)
         self.Button_fscale.config(command = self.fscale_handler)
-        self.Button_exclude.config(command = self.exclude_handler)
         self.Button_pp.config(command = self.pp_handler)
         self.Button_restart.config(command = self.restart_handler)
         self.Scale_fps.config(command = self.setFps)
@@ -309,18 +292,10 @@ class MyFSImage:
             self.Button_pp.config(text = 'pause')
             self.image = self.pimg
             
-        # frame for Label displaying file info start at  0,75 (width of canvas
-        self.text_font = Font(family="Helvetica", size=6)
-        self.Frame_labels = tk.Frame(self.root)
-        self.Frame_labels.place(relx=.75, rely=0.00, relheight=0.1, relwidth=0.2)
-        self.Frame_labels.configure(relief='flat')
-        self.Frame_labels.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
-        self.Label_fileinfo = tk.Label(self.Frame_labels)
-        self.Label_fileinfo.place(relx=0.0, rely=0.0, relheight=1, relwidth=1)
-        self.Label_fileinfo.configure(anchor=tk.NW)
-        self.Label_fileinfo.configure(font=self.text_font)
+        # set fileinfo
         mytext = "{:s}\n created {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
         self.Label_fileinfo.configure(text=mytext)
+        
         self.width  = 0
         self.height = 0
         self.adjust_zoom = 0
