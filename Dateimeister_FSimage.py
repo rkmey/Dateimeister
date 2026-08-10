@@ -119,8 +119,10 @@ class MyFSImage:
         dict_widgets["3"] = {
           "WIDGET":tk.Button,"VAR":"Button_exclude","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.exclude_handler,
           "TEXT":"Exclude","STATE":tk.ACTIVE,"TT":"include / exclude","FONT":self.text_font}
+        dict_widgets["4"] = {
+          "WIDGET":tk.Button,"VAR":"Button_pp","OFFSET":0.1,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.pp_handler,
+          "TEXT":"play / pause","STATE":tk.ACTIVE,"TT":"play / pause video player","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_1_1, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
-        self.Button_exclude.config(command = self.exclude_handler)
 
         self.Button_fscale = tk.Button(self.root)
         self.Button_fscale.place(relx=0.883, rely=0.133, height=34, width=87)
@@ -151,20 +153,6 @@ class MyFSImage:
         self.Label_status.configure(highlightbackground="#d9d9d9")
         self.Label_status.configure(highlightcolor="black")
         self.Label_status.configure(text='''Label''')
-
-        self.Button_pp = tk.Button(self.root)
-        self.Button_pp.place(relx=0.783, rely=0.333, height=24, width=87)
-        self.Button_pp.configure(activebackground="beige")
-        self.Button_pp.configure(activeforeground="black")
-        self.Button_pp.configure(background="#d9d9d9")
-        self.Button_pp.configure(compound='left')
-        self.Button_pp.configure(disabledforeground="#a3a3a3")
-        self.Button_pp.configure(font="-family {Segoe UI} -size 9")
-        self.Button_pp.configure(foreground="black")
-        self.Button_pp.configure(highlightbackground="#d9d9d9")
-        self.Button_pp.configure(highlightcolor="black")
-        self.Button_pp.configure(pady="0")
-        self.Button_pp.configure(text='''play / pause''')
 
         self.Button_restart = tk.Button(self.root)
         self.Button_restart.place(relx=0.883, rely=0.333, height=24, width=87)
@@ -250,7 +238,6 @@ class MyFSImage:
         # das Image selbst. Das ist erforderlich, weil wir ja mehrere Fenster haben können
         # kurz gesagt: mit dieser Methode kann man Parameter an den Handler übergeben
         self.Button_fscale.config(command = self.fscale_handler)
-        self.Button_pp.config(command = self.pp_handler)
         self.Button_restart.config(command = self.restart_handler)
         self.Scale_fps.config(command = self.setFps)
         self.f.bind("<MouseWheel>", self.mousewheel_handler)
