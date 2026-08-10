@@ -112,63 +112,34 @@ class MyFSImage:
 
         dict_widgets = {}
         dict_widgets["1"] = {
-          "WIDGET":tk.Label,"VAR":"Label_fileinfo","OFFSET":0.00,"RELH":.6,"RELW":relw_button,"ANCHOR":"START","TEXT":"file info","FONT":self.text_font}
-        dict_widgets["2"] = {
-          "WIDGET":tk.Button,"VAR":"Button_fit","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.fit_handler,
-          "TEXT":"Fit Canvas","STATE":tk.ACTIVE,"TT":"Zoom in / out","FONT":self.text_font}
+          "WIDGET":tk.Label,"VAR":"future_use","OFFSET":0.00,"RELH":.6,"RELW":relw_button,"ANCHOR":"START","TEXT":"future_use","FONT":self.text_font}
+        if thumbnail.get_imagetype() == "STILL": # still image
+            dict_widgets["2"] = {
+              "WIDGET":tk.Button,"VAR":"Button_fit","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.fit_handler,
+              "TEXT":"Fit Canvas","STATE":tk.ACTIVE,"TT":"Scale Image to fit","FONT":self.text_font}
         dict_widgets["3"] = {
           "WIDGET":tk.Button,"VAR":"Button_exclude","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.exclude_handler,
           "TEXT":"Exclude","STATE":tk.ACTIVE,"TT":"include / exclude","FONT":self.text_font}
-        dict_widgets["4"] = {
-          "WIDGET":tk.Button,"VAR":"Button_pp","OFFSET":0.1,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.pp_handler,
-          "TEXT":"play / pause","STATE":tk.ACTIVE,"TT":"play / pause video player","FONT":self.text_font}
+        if thumbnail.get_imagetype() == "VIDEO": # video image
+            dict_widgets["4"] = {
+              "WIDGET":tk.Button,"VAR":"Button_pp","OFFSET":0.0,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.pp_handler,
+              "TEXT":"play / pause","STATE":tk.ACTIVE,"TT":"play / pause video player","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_1_1, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
-        self.Button_fscale = tk.Button(self.root)
-        self.Button_fscale.place(relx=0.883, rely=0.133, height=34, width=87)
-        self.Button_fscale.configure(activebackground="beige")
-        self.Button_fscale.configure(activeforeground="black")
-        self.Button_fscale.configure(background="#d9d9d9")
-        self.Button_fscale.configure(compound='left')
-        self.Button_fscale.configure(disabledforeground="#a3a3a3")
-        self.Button_fscale.configure(font="-family {Segoe UI} -size 9")
-        self.Button_fscale.configure(foreground="black")
-        self.Button_fscale.configure(highlightbackground="#d9d9d9")
-        self.Button_fscale.configure(highlightcolor="black")
-        self.Button_fscale.configure(pady="0")
-        self.Button_fscale.configure(text='''Full scale''')
-        self.Button_fscale_tooltip = \
-        TT.ToolTip(self.Button_fscale, '''full resolution''')
-
-        self.Label_status = tk.Label(self.root)
-        self.Label_status.place(relx=0.875, rely=0.217, height=41, width=104)
-        self.Label_status.configure(activebackground="#f9f9f9")
-        self.Label_status.configure(activeforeground="black")
-        self.Label_status.configure(anchor='w')
-        self.Label_status.configure(background="#d9d9d9")
-        self.Label_status.configure(compound='left')
-        self.Label_status.configure(disabledforeground="#a3a3a3")
-        self.Label_status.configure(font="-family {Segoe UI} -size 9")
-        self.Label_status.configure(foreground="black")
-        self.Label_status.configure(highlightbackground="#d9d9d9")
-        self.Label_status.configure(highlightcolor="black")
-        self.Label_status.configure(text='''Label''')
-
-        self.Button_restart = tk.Button(self.root)
-        self.Button_restart.place(relx=0.883, rely=0.333, height=24, width=87)
-        self.Button_restart.configure(activebackground="beige")
-        self.Button_restart.configure(activeforeground="black")
-        self.Button_restart.configure(background="#d9d9d9")
-        self.Button_restart.configure(compound='left')
-        self.Button_restart.configure(disabledforeground="#a3a3a3")
-        self.Button_restart.configure(font="-family {Segoe UI} -size 9")
-        self.Button_restart.configure(foreground="black")
-        self.Button_restart.configure(highlightbackground="#d9d9d9")
-        self.Button_restart.configure(highlightcolor="black")
-        self.Button_restart.configure(pady="0")
-        self.Button_restart.configure(text='''Restart''')
-        self.Button_restart_tooltip = \
-        TT.ToolTip(self.Button_restart, '''restart video from begin''')
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Label,"VAR":"Label_fileinfo","OFFSET":0.00,"RELH":.6,"RELW":relw_button,"ANCHOR":"START","TEXT":"file info","FONT":self.text_font}
+        if thumbnail.get_imagetype() == "STILL": # still image
+            dict_widgets["2"] = {
+              "WIDGET":tk.Button,"VAR":"Button_fscale","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.fscale_handler,
+              "TEXT":"Full scale","STATE":tk.ACTIVE,"TT":"show image in full resolution","FONT":self.text_font}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Label,"VAR":"Label_status","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","TEXT":"In/Ex","FONT":self.text_font}
+        if thumbnail.get_imagetype() == "VIDEO": # video image
+            dict_widgets["4"] = {
+              "WIDGET":tk.Button,"VAR":"Button_restart","OFFSET":0.0,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.restart_handler,
+              "TEXT":"Restart Video","STATE":tk.ACTIVE,"TT":"restart video from begin","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.frame_1_2, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         self.Scale_fps =  tk.Scale(self.root, from_=1.0, to=200.0, resolution=1.0)
         self.Scale_fps.place(relx=0.767, rely=0.417, relheight=0.327
@@ -237,8 +208,6 @@ class MyFSImage:
         # zur Behandlung von Events brauchen wir den Imagefile-Namen. Darüber kommen wir an das Window und
         # das Image selbst. Das ist erforderlich, weil wir ja mehrere Fenster haben können
         # kurz gesagt: mit dieser Methode kann man Parameter an den Handler übergeben
-        self.Button_fscale.config(command = self.fscale_handler)
-        self.Button_restart.config(command = self.restart_handler)
         self.Scale_fps.config(command = self.setFps)
         self.f.bind("<MouseWheel>", self.mousewheel_handler)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
@@ -253,13 +222,13 @@ class MyFSImage:
         if thumbnail.get_imagetype() == "STILL": # still image
             self.image_zoom(self.zoomfaktor)
             self.player = None
-            self.Button_pp.place_forget()
-            self.Button_restart.place_forget()
-            self.Scale_fps.place_forget()
-            self.Label_fps.place_forget()
+            self.Button_pp.place_forget() if not self.debug else True
+            self.Button_restart.place_forget() if not self.debug else True
+            self.Scale_fps.place_forget() if not self.debug else True
+            self.Label_fps.place_forget() if not self.debug else True
         else: #video, we need a new one the existing is for playing in thumbnal
-            self.Button_fit.place_forget()
-            self.Button_fscale.place_forget()
+            self.Button_fit.place_forget() if not self.debug else True
+            self.Button_fscale.place_forget() if not self.debug else True
             self.H_I.pack_forget()
             self.V_I.pack_forget()
             self.f.update()

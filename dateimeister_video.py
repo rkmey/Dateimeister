@@ -19,8 +19,9 @@ class VideoPlayer:
         self.liney = 0.95
         self.after_id = None # needed for cleanup to destroy reference to player in after-call. otherwise we cannot destroy videoplayer object
         # Wir nutzen einen eindeutigen Tag pro Video-Instanz
-        self.my_tag = f"{type(self).__name__}_{VideoPlayer._counter}"
         VideoPlayer._counter += 1
+        self.my_tag = f"{type(self).__name__}_{VideoPlayer._counter}"
+        #print ("Mytag: {:s}".format(self.my_tag))
 
         # get stackframe of caller
         frame = inspect.currentframe().f_back
