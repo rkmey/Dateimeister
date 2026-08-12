@@ -257,7 +257,7 @@ class MyFSImage:
         self.adjust_zoom = 0
         self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
-    
+        self. root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
         
     def on_configure(self, event):
         x = event.widget
