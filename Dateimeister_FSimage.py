@@ -128,7 +128,8 @@ class MyFSImage:
 
         dict_widgets = {}
         dict_widgets["1"] = {
-          "WIDGET":tk.Label,"VAR":"Label_fileinfo","OFFSET":0.00,"RELH":.6,"RELW":relw_button,"ANCHOR":"START","TEXT":"file info","FONT":self.text_font}
+          "WIDGET":tk.Label,"VAR":"Label_fileinfo","OFFSET":0.00,"RELH":.6,"RELW":relw_button,"ANCHOR":"START","TEXT":"file info","FONT":self.text_font,
+          "JUSTIFY":"left"}
         if thumbnail.get_imagetype() == "STILL": # still image
             dict_widgets["2"] = {
               "WIDGET":tk.Button,"VAR":"Button_fscale","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.fscale_handler,
@@ -249,7 +250,7 @@ class MyFSImage:
             self.image = self.pimg
             
         # set fileinfo
-        mytext = "{:s}\n created {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
+        mytext = "{:s}\ncreated {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
         self.Label_fileinfo.configure(text=mytext)
         
         self.width  = 0
@@ -282,9 +283,9 @@ class MyFSImage:
             self.width  = new_width
             self.height = new_height
             # we have to change fontsize according to Minimum of new Height / width
-            fontsize_width  = int(new_width * .025) 
+            fontsize_width  = int(new_width * .01) 
             #fontsize_height = int(.7 * min(12.0, new_height * .75))
-            fontsize_height = int(new_height * .025)
+            fontsize_height = int(new_height * .01)
             fontsize_use = min(fontsize_width, fontsize_height)
             # we calculate the correction factor for zoom
             if old_width != 0 and old_height != 0 and new_width != 0 and new_height != 0:
@@ -293,6 +294,9 @@ class MyFSImage:
                 self.adjust_zoom = 1.0
             print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}, old width = {old_width}, old height = {old_height}, zoomadjust = {self.adjust_zoom}") if self.debug else True
             self.text_font.configure(size=fontsize_use) 
+            # as tkinter tends to make the label text too large, we reduce the length a little bit_length
+            self.Label_fileinfo.update()
+            self.Label_fileinfo.configure(wraplength=int(self.Label_fileinfo.winfo_width() * 0.95))
         self.zoomfaktor = self.zoomfaktor * self.adjust_zoom
         self.image_zoom(self.zoomfaktor)
 

@@ -100,6 +100,7 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font, bgcolor)
         - TT:tooltip
         - STATE:state
         - FONT:font
+        - JUSTIFY:left, right,...
         - TITLE: string defining title (s.o.)
     
     for radiobuttons we check if associated variable RB_VAR and value RB_VALUE are given
@@ -170,7 +171,7 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font, bgcolor)
         t_text    = ""
         t_relsize = 0
         t_pos     = ""
-        t_font = font # this is the default font if non i specified for the widget
+        t_font = font # this is the default font if non is specified for the widget
         if "TITLE" in dict_widgets[i] and dict_widgets[i]["TITLE"] is not None:
             result = parse_title(dict_widgets[i]["TITLE"])
             if result is None:
@@ -255,6 +256,8 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font, bgcolor)
             nextpos += relh + offset
         if "TEXT" in dict_widgets[i] and dict_widgets[i]["TEXT"] is not None: 
             b.config(text=dict_widgets[i]["TEXT"])
+        if "JUSTIFY" in dict_widgets[i] and dict_widgets[i]["JUSTIFY"] is not None: 
+            b.config(justify=dict_widgets[i]["JUSTIFY"])
         if "CALLBACK" in dict_widgets[i] and dict_widgets[i]["CALLBACK"] is not None: 
             b.config(command=dict_widgets[i]["CALLBACK"])
         if "STATE" in dict_widgets[i] and dict_widgets[i]["STATE"] is not None: 
