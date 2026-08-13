@@ -62,14 +62,14 @@ class MyFSImage:
         # Create secondary (or popup) window.
         self.root = tk.Toplevel(name = "fsimage")
         # Fenstergröße
-        physical_width  = self.root.winfo_screenwidth()
-        physical_height = self.root.winfo_screenheight()
+        self.physical_width  = self.root.winfo_screenwidth()
+        self.physical_height = self.root.winfo_screenheight()
         self.screen_width  = int(self.root.winfo_screenwidth() * .75) # adjust as needed
         self.screen_height = int(self.root.winfo_screenheight() * .75) # adjust as needed
-        print("Bildschirm ist " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(physical_width) + " x " + str(physical_height))
+        print("Bildschirm ist " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(self.physical_width) + " x " + str(self.physical_height))
         v_dim=str(self.screen_width)+'x'+str(self.screen_height)
         self.root.geometry(v_dim)
-        self.root.minsize(int(physical_width / 4), int(physical_height / 4))  # (minimum ) width , ( minimum) height
+        self.root.minsize(int(self.physical_width / 4), int(self.physical_height / 4))  # (minimum ) width , ( minimum) height
         self.root.resizable(True, True)
 
         # we create the frames. on the left side we have the vanvas width width relw_frame_canvas, and the height relh_frame_canvas.
@@ -258,7 +258,7 @@ class MyFSImage:
         self.adjust_zoom = 0
         self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
-        self. root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
+        self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
         
     def on_configure(self, event):
         x = event.widget
@@ -282,18 +282,12 @@ class MyFSImage:
             # store new values
             self.width  = new_width
             self.height = new_height
-            # we have to change fontsize according to Minimum of new Height / width
-            fontsize_width  = int(new_width * .01) 
-            #fontsize_height = int(.7 * min(12.0, new_height * .75))
-            fontsize_height = int(new_height * .01)
-            fontsize_use = min(fontsize_width, fontsize_height)
             # we calculate the correction factor for zoom
             if old_width != 0 and old_height != 0 and new_width != 0 and new_height != 0:
                 self.adjust_zoom = min(new_width / old_width, new_height / old_height)
             else:    
                 self.adjust_zoom = 1.0
-            print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}, old width = {old_width}, old height = {old_height}, zoomadjust = {self.adjust_zoom}") if self.debug else True
-            self.text_font.configure(size=fontsize_use) 
+            self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug)) 
             # as tkinter tends to make the label text too large, we reduce the length a little bit_length
             self.Label_fileinfo.update()
             self.Label_fileinfo.configure(wraplength=int(self.Label_fileinfo.winfo_width() * 0.95))

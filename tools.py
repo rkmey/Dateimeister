@@ -494,30 +494,6 @@ class MyThumbnail:
         self.metadata_read = False
         
 
-    def run_ffprobe(self, path: str) -> dict[str, str]:
-        """Hilfsfunktion: ffprobe aufrufen und Basisdaten extrahieren."""
-        try:
-            cmd = [
-                "ffprobe",
-                "-v", "error",
-                "-select_streams", "v:0",
-                "-show_entries", "stream=width,height,codec_name,duration",
-                "-of", "default=noprint_wrappers=1:nokey=0",
-                path
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            output = result.stdout
-
-            data: dict[str, str] = {}
-            for line in output.splitlines():
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    data[key.strip()] = value.strip()
-
-            return data
-
-        except Exception:
-            return {}
 
     def set_metadata(self) -> None:
         # Bereits geladen?
@@ -965,3 +941,19 @@ def file_hash(filename: str) -> str:
             h.update(chunk)
 
     return h.hexdigest()
+    
+    
+""" 
+calculate best fontsize initially and after resizing window.
+we want to use this algorithm for all windows
+for possible future use we also need physical screen size
+"""
+def calc_fontsize(physical_width: int, physical_height: int, new_width: int, new_height: int, debug: bool) -> int:
+    # we have to change fontsize according to Minimum of new Height / width
+    fontsize_width  = int(new_width * .01) 
+    #fontsize_height = int(.7 * min(12.0, new_height * .75))
+    fontsize_height = int(new_height * .01)
+    fontsize_use = min(fontsize_width, fontsize_height)
+    print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}") if debug else True
+    return fontsize_use
+    

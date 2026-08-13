@@ -224,20 +224,21 @@ class Diatisch:
         self.root.title(self.title)
         #print("List Imagefiles is: " + str(list_imagefiles))
         # Fenstergröße
-        physical_width  = self.root.winfo_screenwidth()
-        physical_height = self.root.winfo_screenheight()
+        self.physical_width  = self.root.winfo_screenwidth()
+        self.physical_height = self.root.winfo_screenheight()
         self.screen_width  = int(self.root.winfo_screenwidth() * .75) # adjust as needed
         self.screen_height = int(self.root.winfo_screenheight() * .5) # adjust as needed
-        print("Bildschirm ist " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(physical_width) + " x " + str(physical_height))
+        print("Bildschirm ist " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(self.physical_width) + " x " + str(self.physical_height))
         v_dim=str(self.screen_width)+'x'+str(self.screen_height)
         self.root.geometry(v_dim)
-        self.root.minsize(int(physical_width / 2), int(physical_height / 2))  # (minimum ) width , ( minimum) height
+        self.root.minsize(int(self.physical_width / 2), int(self.physical_height / 2))  # (minimum ) width , ( minimum) height
 
         self.m, self.n = 10, 5
         self.image_width = 1500  # Adjust as needed
         self.row_height  = 200
         self.xpos = 0
         self.ypos = 0
+        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         
         print("Diatisch Debug is: ", debug)
         if debug == 'Y' or debug == 'y':
@@ -253,7 +254,6 @@ class Diatisch:
             print("Debug parameter {:s} not allowed, only j, n or p".format(debug))
             exit(-1)
 
-        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.width  = 0
         self.height = 0
         self.text_font = Font(family="Helvetica", size=6)
@@ -614,6 +614,10 @@ class Diatisch:
         self.dict_file_FSImage_target = {} # dict for keeping track of FS Images
         self.sort_method = 0
         self.read_ini()
+
+        self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
+        self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
+
         self.init()
         # historize initial state
         self.historize_process("initial")
@@ -912,18 +916,29 @@ class Diatisch:
                 messagebox.showerror("error", "Outdir: " + sel + " does not exist, choose another one")
 
     def on_configure(self, event):
-        x = str(event.widget)
-        if x == ".": # . is toplevel window
-            if (self.width != event.width):
-                self.width = event.width
-                #print(f"The width of Toplevel is {self.width}") if self.debug else True
-            if (self.height != event.height):
-                self.height = event.height
-                self.Label_source_ctr.update()
-                l_height = self.Label_source_ctr.winfo_height()
-                fontsize_use = int(.8 * min(12.0, l_height * .75))
-                print(f"The height of Toplevel is {self.height}, label height is {l_height} set fontsize to {fontsize_use}") if self.debug else True
-                self.text_font.configure(size=fontsize_use)                
+        x = event.widget
+        if x == self.root:
+            #print("Onconfigure widget = {:s}".format(str(event.widget)))
+            if (self.width != event.width or self.height != event.height):
+                self.timer.start()
+
+    def resize(self):
+        # display debug info for resize, this is very difficult to debug
+        self.debug_info_resize("TIMER") if self.debug else True
+        old_width  = self.width
+        old_height = self.height
+        # we use the new dimension of the frame for calculating fontsize needed
+        self.root.update()
+        new_width  = self.root.winfo_width()
+        new_height = self.root.winfo_height()
+        if (old_width != new_width or old_height != new_height):
+            # store new values
+            self.width  = new_width
+            self.height = new_height
+            self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug)) 
+
+    def debug_info_resize(self, text):
+        print("{:s} elapsed start resize".format(text))
                 
 
     def load_images(self, p_indir = None, p_imagefiles_source = None, p_imagefiles_target = None):

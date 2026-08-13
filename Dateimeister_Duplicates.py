@@ -59,6 +59,8 @@ class MyDuplicates:
     def __init__(self, pmain, debug):
         # Creates a toplevel widget.
         self.root = tk.Toplevel()
+        self.physical_width  = self.root.winfo_screenwidth()
+        self.physical_height = self.root.winfo_screenheight()
         width,height=Globals.screen_width,Globals.screen_height
         v_dim=str(width)+'x'+str(height)
         self.root.geometry(v_dim)
@@ -182,6 +184,7 @@ class MyDuplicates:
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
         self.thisduplicate = None
+        self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
 
     def exclude_call(self, parent, state): # react to request from outside, outside is root - thumbnail
         print("MyDuplicate.Exclude called, State = " + str(state))
@@ -412,14 +415,7 @@ class MyDuplicates:
             # store new values
             self.width  = new_width
             self.height = new_height
-            # we have to change fontsize according to Minimum of new Height / width
-            fontsize_width  = int(new_width * .01) 
-            #fontsize_height = int(.7 * min(12.0, new_height * .75))
-            fontsize_height = int(new_height * .01)
-            fontsize_use = min(fontsize_width, fontsize_height)
-            # we calculate the correction factor for zoom
-            print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}, old width = {old_width}, old height = {old_height}") if self.debug else True
-            self.text_font.configure(size=fontsize_use) 
+            self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug)) 
         if self.thisduplicate:
             self.display_duplicate(self.thisduplicate)
 

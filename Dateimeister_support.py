@@ -945,8 +945,10 @@ class Dateimeister_support:
         self.dict_visible_id_thumbnail = {} # holds all visible images, initially and after scrolling, key: canvas_id, value: thumbnail
 
         # Fenstergröße
-        Globals.screen_width  = int(self.root.winfo_screenwidth() * 0.9)
-        Globals.screen_height = int(self.root.winfo_screenheight() * 0.8)
+        self.physical_width   = self.root.winfo_screenwidth()
+        self.physical_height  = self.root.winfo_screenheight()
+        Globals.screen_width  = int(self.physical_width * 0.9)
+        Globals.screen_height = int(self.physical_height * 0.8)
         print("Bildschirm ist " + str(Globals.screen_width) + " x " + str(Globals.screen_height))
         width,height=Globals.screen_width,Globals.screen_height
         v_dim=str(width)+'x'+str(height)
@@ -1537,6 +1539,7 @@ class Dateimeister_support:
         self.timer = tools.RestartableTimer(root, 333, self.resize)  # ms
         self.list_running_players = [] # we keep a list of running players so we can restart after stop_all players
         self.resize_start = False
+        self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
 
     def rb_sort(self, event = None):
         sort_method = self.rbvalue.get()
@@ -1602,12 +1605,7 @@ class Dateimeister_support:
             # store new values
             self.width  = new_width
             self.height = new_height
-            # we have to change fontsize according to Minimum of new Height / width
-            fontsize_width  = int(new_width * .01) 
-            fontsize_height = int(new_height * .01)
-            fontsize_use = min(fontsize_width, fontsize_height)
-            self.text_font.configure(size=fontsize_use) 
-            print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}, old width = {old_width}, old height = {old_height}") if self.debug else True
+            self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug))
 
             # adjust some widgets     
             rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
