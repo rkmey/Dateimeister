@@ -74,15 +74,15 @@ class MyFSImage:
 
         # we create the frames. on the left side we have the vanvas width width relw_frame_canvas, and the height relh_frame_canvas.
         # on the right we have two frames for 2 columns of buttons resp. button / label
-        # beneath is the frame for the treeview displaying the metadata. The width of the two frames is (1 - relw_frame_canvas) / 2
-        # the width of the frame for the treeview is 1 - relw_frame_canvas. The right area is vertically divided according to relh_frame_1.
+        # beneath is the frame for the Scale (playback speed), followed by a frame for the treeview displaying the metadata. 
         gap = .005 # frame around frame
         relw_frame_canvas = .75 # rel width of frame for canvas
         relh_frame_canvas = 1-gap # rel height of frame for canvas
         relw_frame_1      = (1 - relw_frame_canvas) / 2 - 2* gap # rel width for each of the 2 frames on top right
         relw_frame_2      = (1 - relw_frame_canvas) - gap # rel width for the frame bottom right (treeview for metadata)
         relh_1            =.3 - gap # the height the top frames
-        relh_2            = 1 - relh_1 - gap # the height of the bottom frame
+        relh_2            = .07 # relh for speed scale
+        relh_3            = 1-relh_1 -relh_2 -2*gap # relh for metadata frame
 
         # frame_canvas
         self.frame_canvas = tk.Frame(self.root)
@@ -98,12 +98,19 @@ class MyFSImage:
         self.frame_1_1.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_1_1.update()
 
-        # frame_1_2 for 1 label and 1 button vertically
+        # frame_1_2 for 1 label and 2 buttons vertically
         self.frame_1_2 = tk.Frame(self.root)
         self.frame_1_2.place(relx=relw_frame_canvas + relw_frame_1 + 3*gap, rely=gap, relheight=relh_1, relwidth=relw_frame_1)
         self.frame_1_2.configure(relief='flat', background = tools._bgcolor)
         self.frame_1_2.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_1_2.update()
+
+        # frame_2 for speed scale
+        self.frame_2 = tk.Frame(self.root)
+        self.frame_2.place(relx=relw_frame_canvas+2*gap, rely=relh_1 + 3*gap, relheight=relh_2, relwidth=relw_frame_2 - 2* gap)
+        self.frame_2.configure(relief='flat', background = tools._bgcolor)
+        self.frame_2.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.frame_2.update()
 
         # create widgets
         self.text_font = Font(family="Helvetica", size=6)
@@ -142,34 +149,22 @@ class MyFSImage:
               "TEXT":"Restart Video","STATE":tk.ACTIVE,"TT":"restart video from begin","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_1_2, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
-        self.Scale_fps =  tk.Scale(self.root, from_=1.0, to=200.0, resolution=1.0)
-        self.Scale_fps.place(relx=0.767, rely=0.417, relheight=0.327
-                , relwidth=0.038)
-        self.Scale_fps.configure(activebackground="beige")
-        self.Scale_fps.configure(background="#d9d9d9")
-        self.Scale_fps.configure(font="-family {Segoe UI} -size 9")
-        self.Scale_fps.configure(foreground="black")
-        self.Scale_fps.configure(highlightbackground="#d9d9d9")
-        self.Scale_fps.configure(highlightcolor="black")
-        self.Scale_fps.configure(label="fps")
-        self.Scale_fps.configure(length="196")
-        self.Scale_fps.configure(troughcolor="#d9d9d9")
-        self.Scale_fps_tooltip = \
-        TT.ToolTip(self.Scale_fps, '''fps''')
-
-        self.Label_fps = tk.Label(self.root)
-        self.Label_fps.place(relx=0.775, rely=0.75, height=21, width=114)
-        self.Label_fps.configure(activebackground="#f9f9f9")
-        self.Label_fps.configure(activeforeground="black")
-        self.Label_fps.configure(anchor='w')
-        self.Label_fps.configure(background="#d9d9d9")
-        self.Label_fps.configure(compound='left')
-        self.Label_fps.configure(disabledforeground="#a3a3a3")
-        self.Label_fps.configure(font="-family {Segoe UI} -size 9")
-        self.Label_fps.configure(foreground="black")
-        self.Label_fps.configure(highlightbackground="#d9d9d9")
-        self.Label_fps.configure(highlightcolor="black")
-        self.Label_fps.configure(text='''Frames per second''')
+        if thumbnail.get_imagetype() == "VIDEO": # still image          
+            self.Scale_fps =  tk.Scale(self.frame_2, from_=0.1, to=8.0, resolution=0.1, orient = tk.HORIZONTAL)
+            rel_dist_from_frame_x = self.frame_2.winfo_width() / self.root.winfo_width() / 20
+            rel_dist_from_frame_y = rel_dist_from_frame_x * (self.frame_2.winfo_width() / self.frame_2.winfo_height())
+            self.Scale_fps.place(relx=rel_dist_from_frame_x, rely=rel_dist_from_frame_y, relheight=1 - 2* rel_dist_from_frame_y, relwidth=1 - 2* rel_dist_from_frame_x)
+            self.Scale_fps.configure(activebackground="beige")
+            self.Scale_fps.configure(background="#d9d9d9")
+            self.Scale_fps.configure(font="-family {Segoe UI} -size 9")
+            self.Scale_fps.configure(foreground="black")
+            self.Scale_fps.configure(highlightbackground="#d9d9d9")
+            self.Scale_fps.configure(highlightcolor="black")
+            self.Scale_fps.configure(label="playback speed")
+            self.Scale_fps.configure(length="196")
+            self.Scale_fps.configure(troughcolor="#d9d9d9")
+            self.Scale_fps_tooltip = TT.ToolTip(self.Scale_fps, '''set the playback speed''')
+            self.Scale_fps.config(command = self.set_playback_speed)
 
         # create the canvas
         self.f = tk.Canvas(self.frame_canvas)
@@ -209,7 +204,6 @@ class MyFSImage:
         # zur Behandlung von Events brauchen wir den Imagefile-Namen. Darüber kommen wir an das Window und
         # das Image selbst. Das ist erforderlich, weil wir ja mehrere Fenster haben können
         # kurz gesagt: mit dieser Methode kann man Parameter an den Handler übergeben
-        self.Scale_fps.config(command = self.setFps)
         self.f.bind("<MouseWheel>", self.mousewheel_handler)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
@@ -223,10 +217,6 @@ class MyFSImage:
         if thumbnail.get_imagetype() == "STILL": # still image
             self.image_zoom(self.zoomfaktor)
             self.player = None
-            self.Button_pp.place_forget() if not self.debug else True
-            self.Button_restart.place_forget() if not self.debug else True
-            self.Scale_fps.place_forget() if not self.debug else True
-            self.Label_fps.place_forget() if not self.debug else True
         else: #video, we need a new one the existing is for playing in thumbnal
             self.Button_fit.place_forget() if not self.debug else True
             self.Button_fscale.place_forget() if not self.debug else True
@@ -244,7 +234,7 @@ class MyFSImage:
             self.player.pstart()
             fps = self.player.getFPS()
             self.player.setDelay(int(1000 / fps))
-            self.Scale_fps.set(int(1000 / fps))
+            self.Scale_fps.set(1.0)
             self.playerstatus = 'play'
             self.Button_pp.config(text = 'pause')
             self.image = self.pimg
@@ -337,8 +327,10 @@ class MyFSImage:
     def fscale_handler(self):
         self.image_zoom(1) # damit bringt image_zoom das Foto in höchster Auflösung zur Anzeige
         
-    def setFps(self, value):
-        self.player.setDelay(int(1000 / int(value)))
+    def set_playback_speed(self, value):
+        f_value = float(value)
+        print ("player speed is: " + str(f_value)) if self.debug else True
+        #self.player.set_playback_speed(f_value)
 
     def exclude_handler(self): # react to own Button, thumbnail can be from main or duplicates
         # Button -> this method -> thumbnail.setstate -> exclude_call
