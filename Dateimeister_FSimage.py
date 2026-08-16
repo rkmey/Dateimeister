@@ -81,7 +81,7 @@ class MyFSImage:
         relw_frame_1      = (1 - relw_frame_canvas) / 2 - 2* gap # rel width for each of the 2 frames on top right
         relw_frame_2      = (1 - relw_frame_canvas) - gap # rel width for the frame bottom right (treeview for metadata)
         relh_1            =.3 - gap # the height the top frames
-        relh_2            = .07 # relh for speed scale
+        relh_2            = .1 # relh for speed scale
         relh_3            = 1-relh_1 -relh_2 -2*gap # relh for metadata frame
 
         # frame_canvas
@@ -150,22 +150,24 @@ class MyFSImage:
         tools.create_widgets_from_dict(dict_widgets, self.frame_1_2, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         if thumbnail.get_imagetype() == "VIDEO": # still image          
-            self.Scale_fps =  tk.Scale(self.frame_2, from_=0.1, to=8.0, resolution=0.1, orient = tk.HORIZONTAL)
+            self.scale_progress =  tk.Scale(self.frame_2, from_=0, to=8.0, resolution=0.1, orient = tk.HORIZONTAL)
             rel_dist_from_frame_x = self.frame_2.winfo_width() / self.root.winfo_width() / 20
             rel_dist_from_frame_y = rel_dist_from_frame_x * (self.frame_2.winfo_width() / self.frame_2.winfo_height())
-            self.Scale_fps.place(relx=rel_dist_from_frame_x, rely=rel_dist_from_frame_y, relheight=1 - 2* rel_dist_from_frame_y, relwidth=1 - 2* rel_dist_from_frame_x)
-            self.Scale_fps.configure(activebackground="beige")
-            self.Scale_fps.configure(background="#d9d9d9")
-            self.Scale_fps.configure(font="-family {Segoe UI} -size 9")
-            self.Scale_fps.configure(foreground="black")
-            self.Scale_fps.configure(highlightbackground="#d9d9d9")
-            self.Scale_fps.configure(highlightcolor="black")
-            self.Scale_fps.configure(label="playback speed")
-            self.Scale_fps.configure(length="196")
-            self.Scale_fps.configure(troughcolor="#d9d9d9")
-            self.Scale_fps_tooltip = TT.ToolTip(self.Scale_fps, '''set the playback speed''')
-            self.Scale_fps.config(command = self.set_playback_speed)
-
+            self.scale_progress.place(relx=rel_dist_from_frame_x, rely=rel_dist_from_frame_y, relheight=1 - 2* rel_dist_from_frame_y, relwidth=1 - 2* rel_dist_from_frame_x)
+            self.scale_progress.configure(activebackground="beige")
+            self.scale_progress.configure(background="#d9d9d9")
+            self.scale_progress.configure(font="-family {Segoe UI} -size 9")
+            self.scale_progress.configure(foreground="black")
+            self.scale_progress.configure(highlightbackground="#d9d9d9")
+            self.scale_progress.configure(highlightcolor="black")
+            self.scale_progress.configure(label="playback speed")
+            self.scale_progress.configure(length="196")
+            self.scale_progress.configure(troughcolor="#d9d9d9")
+            self.scale_progress_tooltip = TT.ToolTip(self.scale_progress, '''set the playback speed''')
+            self.scale_progress.config(command = self.on_position)
+            self.scale_progress.bind("<ButtonPress-1>", self.on_press)
+            self.scale_progress.bind("<ButtonRelease-1>", self.on_release)
+            
         # create the canvas
         self.f = tk.Canvas(self.frame_canvas)
         #self.f.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=1.0)
@@ -234,10 +236,14 @@ class MyFSImage:
             self.player.pstart()
             fps = self.player.getFPS()
             self.player.setDelay(int(1000 / fps))
-            self.Scale_fps.set(1.0)
             self.playerstatus = 'play'
             self.Button_pp.config(text = 'pause')
             self.image = self.pimg
+            # we update the progress scale
+            # register our function which will becalled during playback
+            self.player.register_callback(self.display_progress)
+            self.scale_progress.set(0)
+            self.scale_progress.config(to = int(self.player.get_duration()))
             
         # set fileinfo
         mytext = "{:s}\ncreated {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
@@ -250,6 +256,9 @@ class MyFSImage:
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
         
+    def display_progress(self, progress: int):
+        self.scale_progress.set(progress)
+   
     def on_configure(self, event):
         x = event.widget
         self.adjust_zoom = 1.0
@@ -327,10 +336,25 @@ class MyFSImage:
     def fscale_handler(self):
         self.image_zoom(1) # damit bringt image_zoom das Foto in höchster Auflösung zur Anzeige
         
-    def set_playback_speed(self, value):
+    def on_position(self, value): # called during movement of slider
         f_value = float(value)
-        print ("player speed is: " + str(f_value)) if self.debug else True
-        #self.player.set_playback_speed(f_value)
+        #print ("Slider position is: " + str(f_value)) if self.debug else True
+
+    def on_press(self, value):  # called on press of slider
+        value = self.scale_progress.get()
+        f_value = float(value)
+        #print ("Slider press position is: " + str(f_value)) if self.debug else True
+        self.player.user_scrubbing = True
+
+    def on_release(self, value):  # calles on release of slider
+        value = self.scale_progress.get()
+        f_value = float(value)
+        print ("Slider release position is: " + str(f_value)) if self.debug else True
+        if not self.player.getRun():
+            self.player.pstart()
+        
+        self.player.jump_to((f_value))
+        self.player.user_scrubbing = False
 
     def exclude_handler(self): # react to own Button, thumbnail can be from main or duplicates
         # Button -> this method -> thumbnail.setstate -> exclude_call

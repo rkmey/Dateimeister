@@ -43,6 +43,7 @@ class VideoPlayer:
             if meta and meta.get('duration'):
                 break
             time.sleep(0.02)
+        print (str(meta)) if self.debug else True
             
         self.duration = meta.get('duration') or 0.0
         self.fps = meta.get('fps') or 25.0
@@ -52,6 +53,8 @@ class VideoPlayer:
         self.last_frame_obj = None
         self.line_total = None
         self.line_progress = None
+        self.on_progress = None # can be set in reister-function and will be called during update()
+        self.user_scrubbing = False
 
     def _render_frame_to_photo(self, image_obj):
         """Hilfsfunktion: Wandelt ffpyplayer-Image in skaliertes PhotoImage um"""
@@ -170,11 +173,25 @@ class VideoPlayer:
             else:
                 progress = 0
             if not math.isnan(self.image_width):
-                x2 = self.x1 + int(self.image_width * progress)
+                try:
+                    x2 = self.x1 + int(self.image_width * progress)
+                except Exception as e:
+                    print("Exception:", e)
+                    print("x1 =", self.x1)
+                    print("image_width =", self.image_width)
+                    print("progress =", progress)
             else:
                 x2 = self.x1
             self.canvas.coords(self.line_progress, self.x1, self.y1, x2, self.y2)
-
+            # notify caller for position of scale slider
+            if not self.user_scrubbing:
+                pts = self.vplayer.get_pts()
+                if self.on_progress:
+                    try:
+                        self.on_progress(pts)
+                    except:
+                        pass
+            
             # Sync-Delay
             delay = max(int(val * 1000), 1)
             self.after_id = self.window.after(delay, self.update)
@@ -195,6 +212,9 @@ class VideoPlayer:
         self.vplayer.seek(0, relative=False)
         self.vplayer.set_pause(False)
         self.update()
+        
+    def jump_to(self, second: int):
+        self.vplayer.seek(second, relative=False)
 
     def pstart(self):
         self.do_update = True
@@ -222,7 +242,14 @@ class VideoPlayer:
         self.delay = delay
     def setId(self, id):
         self.canvas_id = id
-
+        
+    # register callback function for slider etc. if defined will be called in update and supplies the current duration
+    def register_callback(self, on_progress=None):
+        self.on_progress = on_progress
+        
+    def get_duration(self):
+        return self.duration
+    
     def destroy(self): #cleanup of canvas resources
         if self.vplayer:
             self.vplayer.close_player()
