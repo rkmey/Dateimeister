@@ -169,7 +169,10 @@ class VideoPlayer:
             
             # Progressbar (basierend auf pts)
             if not math.isnan(self.duration):
-                progress = pts / self.duration if self.duration > 0 else 0
+                if not math.isnan(pts):
+                    progress = pts / self.duration if self.duration > 0 else 0
+                else:
+                    progress = 0
             else:
                 progress = 0
             if not math.isnan(self.image_width):

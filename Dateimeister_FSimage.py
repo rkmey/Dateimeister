@@ -36,6 +36,7 @@ from datetime import datetime, timezone
 import tools
 import dateimeister_video as DV
 import Tooltip as TT
+from videoplayer_preview import VideoPreviewEngine
 
 INCLUDE = 1
 EXCLUDE = 2
@@ -220,8 +221,6 @@ class MyFSImage:
             self.image_zoom(self.zoomfaktor)
             self.player = None
         else: #video, we need a new one the existing is for playing in thumbnal
-            self.Button_fit.place_forget() if not self.debug else True
-            self.Button_fscale.place_forget() if not self.debug else True
             self.H_I.pack_forget()
             self.V_I.pack_forget()
             self.f.update()
@@ -244,6 +243,12 @@ class MyFSImage:
             self.player.register_callback(self.display_progress)
             self.scale_progress.set(0)
             self.scale_progress.config(to = int(self.player.get_duration()))
+            self.preview_engine = VideoPreviewEngine(self.player.video_source, self.root)
+            # event handler necessary for preview
+            self.preview_engine = VideoPreviewEngine(self.player.video_source, self.root)
+            self.scale_progress.bind("<Motion>", self.on_scale_motion)
+            self.scale_progress.bind("<Leave>", lambda e: self.preview_engine and self.preview_engine.hide())
+
             
         # set fileinfo
         mytext = "{:s}\ncreated {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
@@ -259,6 +264,11 @@ class MyFSImage:
     def display_progress(self, progress: int):
         self.scale_progress.set(progress)
    
+    def on_scale_motion(self, event):
+        value = self.scale_progress.get()
+        target_time = value / 1000.0  # oder deine eigene Umrechnung
+        self.preview_engine.show_preview(target_time, event)
+
     def on_configure(self, event):
         x = event.widget
         self.adjust_zoom = 1.0
