@@ -2324,7 +2324,7 @@ class Dateimeister_support:
             if  process_type != "none":
                 if process_type != 'VIDEO': # we have to convert image to photoimage
                     if new_image_required or new_thumbnail_required: # we need a new image
-                        pimg, image_width, image_height = self.new_image(showfile, canvas_height)
+                        pimg, image_width, image_height = tools.new_image(file = showfile, height = canvas_height)
                     else: # we can use the existing
                         pimg = Globals.dict_thumbnails[imagetype][file].getImage()
                     image_width, image_height = pimg.width(), pimg.height()
@@ -2531,22 +2531,6 @@ class Dateimeister_support:
             self.scrollToImage(self.leftmost_thumbnail)
         else:
             self.canvas_gallery.xview('moveto', 0)
-
-        
-    def new_image(self, file, canvas_height):    
-        img  = Image.open(file)
-        image_width_orig, image_height_orig = img.size
-        faktor = canvas_height / image_height_orig
-        newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
-        r_img = img
-        r_img.thumbnail(newsize)
-        #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
-        #   + " factor is " + str(faktor))
-        pimg = ImageTk.PhotoImage(r_img)
-        image_width, image_height = pimg.width(), pimg.height()
-        img.close()
-        return pimg, image_width, image_height
-
 
     def state_gen_required(self):
         self.button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera

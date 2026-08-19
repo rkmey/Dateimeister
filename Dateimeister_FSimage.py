@@ -243,9 +243,10 @@ class MyFSImage:
             self.player.register_callback(self.display_progress)
             self.scale_progress.set(0)
             self.scale_progress.config(to = int(self.player.get_duration()))
-            self.preview_engine = VideoPreviewEngine(self.player.video_source, self.root)
+            
+            # for preview on scale
+            self.preview_engine = VideoPreviewEngine(self.player.video_source, self.root, debug = self.debug)
             # event handler necessary for preview
-            self.preview_engine = VideoPreviewEngine(self.player.video_source, self.root)
             self.scale_progress.bind("<Motion>", self.on_scale_motion)
             self.scale_progress.bind("<Leave>", lambda e: self.preview_engine and self.preview_engine.hide())
 

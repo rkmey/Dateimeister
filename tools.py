@@ -32,7 +32,7 @@ import Tooltip as TT
 from time import gmtime, strftime
 
 from datetime import datetime, timezone
-from PIL import Image, ExifTags
+from PIL import Image, ImageTk, ExifTags
 import hashlib
 
 
@@ -956,4 +956,26 @@ def calc_fontsize(physical_width: int, physical_height: int, new_width: int, new
     fontsize_use = min(fontsize_width, fontsize_height)
     print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}") if debug else True
     return fontsize_use
+    
+""" creates a new image from <file> with the height <height> abd width according to image size
+returns the image, width and height. if img is supplied dont open file else open file
+"""
+def new_image(file = None, height = 100, pic = None):    
+    if file:
+        img  = Image.open(file)
+    else:
+        img = pic
+    image_width_orig, image_height_orig = img.size
+    faktor = height / image_height_orig
+    newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
+    r_img = img
+    r_img.thumbnail(newsize)
+    #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
+    #   + " factor is " + str(faktor))
+    pimg = ImageTk.PhotoImage(r_img)
+    image_width, image_height = pimg.width(), pimg.height()
+    if file:
+        img.close()
+    return pimg, image_width, image_height
+
     
