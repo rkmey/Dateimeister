@@ -245,10 +245,10 @@ class MyFSImage:
             self.scale_progress.config(to = int(self.player.get_duration()))
             
             # for preview on scale
-            self.preview_engine = VideoPreviewEngine(self.player.video_source, self.root, debug = self.debug)
+            #self.preview_engine = VideoPreviewEngine(self.player.video_source, self.root, debug = self.debug, meta_data = self.player.meta)
             # event handler necessary for preview
             self.scale_progress.bind("<Motion>", self.on_scale_motion)
-            self.scale_progress.bind("<Leave>", lambda e: self.preview_engine and self.preview_engine.hide())
+            #self.scale_progress.bind("<Leave>", lambda e: self.preview_engine and self.preview_engine.hide())
 
             
         # set fileinfo
@@ -266,9 +266,7 @@ class MyFSImage:
         self.scale_progress.set(progress)
    
     def on_scale_motion(self, event):
-        value = self.scale_progress.get()
-        target_time = value / 1000.0  # oder deine eigene Umrechnung
-        self.preview_engine.show_preview(target_time, event)
+        self.preview_engine.show_preview(event, self.scale_progress.winfo_width())
 
     def on_configure(self, event):
         x = event.widget

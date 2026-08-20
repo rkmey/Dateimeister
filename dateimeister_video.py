@@ -37,16 +37,16 @@ class VideoPlayer:
         #self.vplayer.set_volume(0.0) # Startet stumm 20260506 audkommentiert, kann harten Crash ohne Meldung verursachen
         
         # Metadaten laden
-        meta = {}
+        self.meta = {}
         for _ in range(50):
-            meta = self.vplayer.get_metadata()
-            if meta and meta.get('duration'):
+            self.meta = self.vplayer.get_metadata()
+            if self.meta and self.meta.get('duration'):
                 break
             time.sleep(0.02)
-        print (str(meta)) if self.debug else True
+        print (str(self.meta)) if self.debug else True
             
-        self.duration = meta.get('duration') or 0.0
-        self.fps = meta.get('fps') or 25.0
+        self.duration = self.meta.get('duration') or 0.0
+        self.fps = self.meta.get('fps') or 25.0
         self.frames_total = int(self.duration * self.fps)
         
         # Speicher für das letzte Roh-Frame (für Resize-Operationen)
