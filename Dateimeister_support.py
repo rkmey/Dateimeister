@@ -2979,7 +2979,8 @@ class Dateimeister_support:
         else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file) if self.debug else True
-                self.stop_all_players() # we dont want noise from players in Main Window
+                if Globals.imagetype == 'VIDEO':
+                    self.stop_all_players() # we dont want noise from players in Main Window
                 fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, "", "Include", "Exclude", "Included", "Excluded", self.debug)
                 self.dict_file_image[file] = fs_image
 

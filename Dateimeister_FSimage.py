@@ -61,7 +61,7 @@ class MyFSImage:
         # register at thumbnail, so it can call us for reacting to state
         self.thumbnail.register_FSimage(self)
         # Create secondary (or popup) window.
-        self.root = tk.Toplevel(name = "fsimage")
+        self.root = tk.Toplevel()
         # Fenstergröße
         self.physical_width  = self.root.winfo_screenwidth()
         self.physical_height = self.root.winfo_screenheight()
