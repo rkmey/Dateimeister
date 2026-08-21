@@ -245,10 +245,10 @@ class MyFSImage:
             self.scale_progress.config(to = int(self.player.get_duration()))
             
             # for preview on scale
-            #self.preview_engine = VideoPreviewEngine(self.player.video_source, self.root, debug = self.debug, meta_data = self.player.meta)
+            self.preview_engine = VideoPreviewEngine(self.player.video_source, self.root, debug = self.debug, meta_data = self.player.meta)
             # event handler necessary for preview
             self.scale_progress.bind("<Motion>", self.on_scale_motion)
-            #self.scale_progress.bind("<Leave>", lambda e: self.preview_engine and self.preview_engine.hide())
+            self.scale_progress.bind("<Leave>", lambda e: self.preview_engine and self.preview_engine.hide())
 
             
         # set fileinfo
