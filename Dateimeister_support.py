@@ -923,6 +923,7 @@ class Dateimeister_support:
         Globals.config_files_subdir = config["dirs"]["config_files_subdir"]
         Globals.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
         Globals.config_files_xml = config["misc"]["config_files_xml"]
+        Globals.temp_files_subdir    = config["dirs"]["temp_files_subdir"]
         
         # read process_types from ini because depemdent on dateimeister implementation
         self.dict_proctypes = config["proc_types"]

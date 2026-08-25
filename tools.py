@@ -317,6 +317,7 @@ class Globals:
     config_files_xml    = None
     config_files_subdir = None
     cmd_files_subdir    = None
+    temp_files_subdir    = None
     datadir = ""
     dict_thumbnails = {}
     dict_duplicates = {}
