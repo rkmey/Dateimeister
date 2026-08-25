@@ -58,7 +58,7 @@ class VideoPreviewEngine:
         self.duration = meta.get('duration') or 10
         self.frames_total = int(self.duration * self.fps)
 
-        self.preview_pts, self.preview = self.create_previews(100)
+        self.preview_pts, self.preview = self.create_previews(20)
         del self.preview_player
 
     def create_previews(self, pcount=100, size=(160, 90)):
@@ -122,7 +122,7 @@ class VideoPreviewEngine:
         # der erwarteten Reihenfolge geliefert hat
         preview_pts.sort()
 
-        print ("PREView ptst: ", str(preview_pts))
+        print ("PREView ptst: ", str(preview_pts)) if self.debug else True
         return preview_pts, preview    
     
 

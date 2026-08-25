@@ -278,6 +278,20 @@ class MyFSImage:
                 self.timer.start()
 
     def resize(self):
+        try:
+            if not self.root.winfo_exists():
+                # Fenster wurde bereits zerstört -> Timer deaktivieren
+                if hasattr(self, 'timer') and self.timer:
+                    try:
+                        self.timer.cancel()
+                    except:
+                        pass
+                    self.timer = None
+                return
+        except:
+            # Bei jedem Fehler einfach zurückkehren
+            return
+        
         # display debug info for resize, this is very difficult to debug
         self.debug_info_resize("TIMER") if self.debug else True
         old_width  = self.width
