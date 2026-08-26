@@ -68,6 +68,21 @@ Aliasse
 Inner = dict[str, str]
 Metadata = dict[str, Inner]
 
+""" 
+# FFmpeg-Pfad setzen (VOR dem Import von pyvidplayer2!)
+Todo read path from ini-File
+"""
+
+ffmpeg_bin = r"C:\Users\rkmey\AppData\Local\Programs\Python\Python312\share\ffpyplayer\ffmpeg\bin"  # Passe diesen Pfad an!
+if os.path.exists(ffmpeg_bin):
+    os.environ["PATH"] = ffmpeg_bin + os.pathsep + os.environ["PATH"]
+    print(f"FFmpeg-Pfad hinzugefügt: {ffmpeg_bin}")
+else:
+    print(f"FFmpeg-Ordner nicht gefunden: {ffmpeg_bin}")
+    print("   Bitte installiere FFmpeg und passe den Pfad an.")
+    sys.exit(1)
+
+
 
 def report_callback_exception(self, exc, val, tb):
     print("TKINTER CALLBACK EXCEPTION:", exc, val)
@@ -923,7 +938,6 @@ class Dateimeister_support:
         Globals.config_files_subdir = config["dirs"]["config_files_subdir"]
         Globals.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
         Globals.config_files_xml = config["misc"]["config_files_xml"]
-        Globals.temp_files_subdir    = config["dirs"]["temp_files_subdir"]
         
         # read process_types from ini because depemdent on dateimeister implementation
         self.dict_proctypes = config["proc_types"]
@@ -1562,6 +1576,7 @@ class Dateimeister_support:
         
         self.clear_text(self.t_text1)
         self.canvas_gallery.delete("all")
+        self.canvas_gallery.update_idletasks()
         
         # get imagetype to display from listbox
         if not self.lb_gen.curselection() == ():
