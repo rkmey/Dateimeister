@@ -76,10 +76,10 @@ Todo read path from ini-File
 ffmpeg_bin = r"C:\Users\rkmey\AppData\Local\Programs\Python\Python312\share\ffpyplayer\ffmpeg\bin"  # Passe diesen Pfad an!
 if os.path.exists(ffmpeg_bin):
     os.environ["PATH"] = ffmpeg_bin + os.pathsep + os.environ["PATH"]
-    print(f"FFmpeg-Pfad hinzugefügt: {ffmpeg_bin}")
+    print(f"FFmpeg-path added: {ffmpeg_bin}")
 else:
-    print(f"FFmpeg-Ordner nicht gefunden: {ffmpeg_bin}")
-    print("   Bitte installiere FFmpeg und passe den Pfad an.")
+    print(f"FFmpeg-folder not found: {ffmpeg_bin}")
+    print("   please install FFmpeg correct the path.")
     sys.exit(1)
 
 

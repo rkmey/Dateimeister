@@ -24,3 +24,6 @@ git rdiff <dateiname>
 
 lokal geänderte Datei auf Stand des letzten Commits zurücksetzen:
 git restore Dateimeister_processlist.py
+
+lokale Sicherungen:
+20260826 video_player gesihert in E:\Arbeit\DATEIMEISTER_SAVE - Umbau auf pyvidplayer2
