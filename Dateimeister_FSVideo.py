@@ -378,8 +378,7 @@ class MyFSVideo:
 
     
     def _on_scale_position_leave(self, event):
-        # Todo: what happens if mouse leaves scale
-        True
+        self.tooltip.hide()
 
     def on_volume_change(self, value):
         if self.mpv_ipc:

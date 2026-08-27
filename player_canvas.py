@@ -51,11 +51,16 @@ if __name__ == "__main__":
         print(f"MPV_DIR {mpv_path} does not exist")
         exit(1)
 
+    if debug in ('y', 'Y', 'j', 'J'):
+        b_d = True
+    else:
+        b_d = False
+    print (f"debug is {b_d}")
     root = tk.Tk()
     app = MyFSVideo(
         root = root, 
         file = file, 
-        debug = debug, 
+        debug = b_d, 
         temp_dir = temp_dir, 
         anz_thumbnails = anz_thumbnails, 
         mpv_path = mpv_path,
