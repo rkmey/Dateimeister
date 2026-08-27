@@ -32,6 +32,35 @@ def format_time(seconds):
         return f"{h}:{m:02d}:{s:02d}"
     return f"{m:02d}:{s:02d}"
 
+# window for displaying thumb on position scale
+class PreviewTooltip(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.overrideredirect(True)  # no window border
+        self.label = tk.Label(self, bg="black")
+        self.label.pack()
+        self.withdraw()  # start hidden
+
+        # keep tooltip above its master
+        self.transient(master)
+        self.lift(master)
+        self.attributes("-topmost", True)
+
+    def show(self, x, y, photo):
+        # clamp position to screen (no negative coords)
+        x = max(0, x)
+        y = max(0, y)
+
+        self.label.config(image=photo)
+        self.label.image = photo  # keep reference
+        self.geometry(f"+{x}+{y}")
+        self.deiconify()
+        self.lift()
+        self.attributes("-topmost", True)
+
+    def hide(self):
+        self.withdraw()
+
 
 class MpvIPC:
     """Kleine Hilfsklasse zum Steuern einer mpv-Instanz über ihre
@@ -182,6 +211,9 @@ class MyFSVideo:
         self.pipe_name_thumb = rf"\\.\pipe\mpvthumb_{uuid.uuid4().hex}" # we need a unique name
         self.anz_t = anz_thumbnails
         
+        # create the small window for previewing frames on the psition scale
+        self.tooltip = PreviewTooltip(self.root)
+
         self.preview_photos = []
         self.preview_photos = self.generate_thumbnails(self.anz_t)
         xpos = 0
@@ -267,6 +299,8 @@ class MyFSVideo:
         self.scale_position.grid(row=0, column=5, padx=8, pady=2, sticky="ew")
         self.scale_position.bind("<ButtonPress-1>", self._on_seek_press)
         self.scale_position.bind("<ButtonRelease-1>", self._on_seek_release)
+        self.scale_position.bind("<Motion>", self._on_scale_position_motion)
+        self.scale_position.bind("<Leave>",  self._on_scale_position_leave)
 
         f.grid_columnconfigure(5, weight=1)
 
@@ -315,6 +349,37 @@ class MyFSVideo:
             self.mpv_ipc.seek(target, "absolute")
             self.lbl_time.config(text=f"{format_time(target)} / {format_time(self.duration)}")
         self._seeking = False
+
+    def _on_scale_position_motion(self, event):
+        # show thumbnail according to position
+        scale_width = self.scale_position.winfo_width()
+
+        # mouse position relative to scale
+        x = event.x
+
+        # limit to width of scale
+        x = max(0, min(x, scale_width))
+
+        # relative number representing the position
+        fraction = x / scale_width
+        
+        num_thumbs = len(self.preview_photos)
+        idx_thumb = int(num_thumbs * fraction)
+
+        #print(f"PREView fraction is {fraction} index of photo is {idx_thumb}") if self.debug else True
+
+        photo = self.preview_photos[idx_thumb]    
+        if photo is not None:
+            x = event.x_root + 10
+            y = event.y_root - (photo.height() + 40)
+            self.tooltip.show(x, y, photo)
+        else:
+            self.tooltip.hide()
+
+    
+    def _on_scale_position_leave(self, event):
+        # Todo: what happens if mouse leaves scale
+        True
 
     def on_volume_change(self, value):
         if self.mpv_ipc:
