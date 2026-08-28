@@ -507,6 +507,8 @@ class MyFSVideo:
 
         for i in range(n):
             t = i * step
+            if i == 0:
+                t = min(0.1, duration * 0.01)  # kleiner Offset, erzwingt echten Seek
             filenum = i+1
             filename = os.path.join(self.temp_dir, f"thumb_{filenum:02d}.png")
 
