@@ -19,6 +19,7 @@ import subprocess
 import threading
 import queue
 import uuid
+import tools
 
     
 def format_time(seconds):
@@ -179,34 +180,30 @@ class MyFSVideo:
         
         # Frames und canvas
         self.frame_video  = tk.Frame(self.root, bg="black")
-        self.frame_preview = tk.Frame(self.root, bg="gray")
+        self.frame_info = tk.Frame(self.root, bg="gray")
         self.frame_controls = tk.Frame(self.root, bg="gray20")
 
         self.frame_video.grid(row=0, column=0, sticky="nsew")
-        self.frame_preview.grid(row=1, column=0, sticky="nsew")
-        self.frame_controls.grid(row=2, column=0, sticky="ew")
+        self.frame_controls.grid(row=1, column=0, sticky="ew")
+        self.frame_info.grid(row=2, column=0, sticky="nsew")
 
         self.root.grid_rowconfigure(0, weight=9)
-        self.root.grid_rowconfigure(1, weight=1)
-        self.root.grid_rowconfigure(2, weight=0)
+        self.root.grid_rowconfigure(1, weight=0)
+        self.root.grid_rowconfigure(2, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
 
         self.canvas_gallery = tk.Canvas(self.frame_video, bg="black")
-        self.canvas_preview = tk.Canvas(self.frame_preview, bg="gray")
 
         # WICHTIG: Canvas darf keine eigene Höhe verlangen
         self.canvas_gallery.configure(height=1)
-        self.canvas_preview.configure(height=1)
 
         self.canvas_gallery.pack(fill="both", expand=True)
-        self.canvas_preview.pack(fill="both", expand=True)
         self.root.update_idletasks()
         print("NACH LAYOUT:")
         print("root       :", self.root.winfo_width(), self.root.winfo_height())
         print("frame video:", self.frame_video.winfo_width(), self.frame_video.winfo_height())
-        print("frame prev :", self.frame_preview.winfo_width(), self.frame_preview.winfo_height())
+        print("frame prev :", self.frame_info.winfo_width(), self.frame_info.winfo_height())
         print("canvas vid :", self.canvas_gallery.winfo_width(), self.canvas_gallery.winfo_height())
-        print("canvas prev:", self.canvas_preview.winfo_width(), self.canvas_preview.winfo_height())
 
         self.pipe_name_thumb = rf"\\.\pipe\mpvthumb_{uuid.uuid4().hex}" # we need a unique name
         self.anz_t = anz_thumbnails
@@ -215,14 +212,7 @@ class MyFSVideo:
         self.tooltip = PreviewTooltip(self.root)
 
         self.preview_photos = []
-        self.preview_photos = self.generate_thumbnails(self.anz_t)
-        xpos = 0
-        ypos = 0
-        for photo in self.preview_photos:
-            self.canvas_preview.create_image(xpos, ypos, image=photo, anchor="nw")
-            width = photo.width()
-            #print (f"Photo Breite ist {width}")
-            xpos += width
+        self.preview_photos = self.generate_thumbnails(self.anz_t, self.frame_video.winfo_height() // 15)
         
         video_path = self.file
         wid = self.canvas_gallery.winfo_id()
@@ -317,6 +307,20 @@ class MyFSVideo:
             variable=self.var_volume, length=140, command=self.on_volume_change,
         )
         scale_volume.grid(row=0, column=8, padx=(0, 8), pady=2)
+        
+        # scrolled treeview, button inclue/exclude nd label in frame info
+        f = self.frame_info
+        self.tv = tools.ScrolledTreeView(f)
+        self.tv.configure(columns="Col1, Col2, Col3")
+        f.grid_columnconfigure(0, weight=8)
+ 
+        btn_inex = tk.Button(f, text="inex", width=15, command=self.inex)
+        btn_inex.grid(row=0, column=1, padx=2, pady=2, sticky="ew")
+        f.grid_columnconfigure(1, weight=1)
+
+        lbl_inex = tk.Label(f, text="inex", bg="gray20", fg="white")
+        lbl_inex.grid(row=0, column=2, padx=2, pady=2)
+        f.grid_columnconfigure(2, weight=1)
 
     def toggle_playpause(self):
         if self.mpv_ipc:
@@ -388,6 +392,10 @@ class MyFSVideo:
         if self.mpv_ipc:
             self.mpv_ipc.set_property("mute", bool(self.var_mute.get()))
 
+    def inex(self):
+        # implementation what happens if button include / exlude pressed
+        pass
+        
     def on_close(self):
         self._stop_polling = True
         if self.mpv_ipc:
@@ -431,7 +439,7 @@ class MyFSVideo:
             print("ffprobe Exception:", repr(e))
             return None
 
-    def generate_thumbnails(self, n):
+    def generate_thumbnails(self, n, thumb_height):
         video_path = os.path.abspath(self.file).replace("\\", "/")
 
         duration = self.get_video_duration(video_path)
@@ -443,7 +451,6 @@ class MyFSVideo:
         self.duration = duration
 
         print(f"PIPE Name = {self.pipe_name_thumb}")
-        thumb_height = self.canvas_preview.winfo_height()
         mpv_thumb_proc = subprocess.Popen([
             self.mpv_path,
             "--idle=yes",
