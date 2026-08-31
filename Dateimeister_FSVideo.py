@@ -8,6 +8,7 @@ import socket
 import json
 
 import tkinter as tk
+from tkinter import ttk
 import gc
 #gc.disable() # disable garbage collection
 
@@ -178,20 +179,37 @@ class MyFSVideo:
 
         self.root.update()
         
-        # Frames und canvas
-        self.frame_video  = tk.Frame(self.root, bg="black")
-        self.frame_info = tk.Frame(self.root, bg="gray")
-        self.frame_controls = tk.Frame(self.root, bg="gray20")
+        self.is_fullscreen = False
+        self._last_mouse_pos = None
+        self._hide_timer_id = None
+        self._mouse_watch_id = None
+        
+        # Frames and canvas
+        # PanedWindow ersetzt die 3 root-Grid-Zeilen
+        self.paned = ttk.PanedWindow(self.root, orient="vertical")
+        self.paned.grid(row=0, column=0, sticky="nsew")
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
+
+        # Container für den oberen Bereich (video + controls, 9:1 fix)
+        self.top_container = tk.Frame(self.paned)
+        self.top_container.grid_rowconfigure(0, weight=9)
+        self.top_container.grid_rowconfigure(1, weight=0)
+        self.top_container.grid_columnconfigure(0, weight=1)
+
+        # Deine Frames -- ab hier unverändert nutzbar
+        self.frame_video    = tk.Frame(self.top_container, bg="black")
+        self.frame_controls = tk.Frame(self.top_container, bg="gray20")
+        self.frame_info     = tk.Frame(self.paned, bg="gray")
 
         self.frame_video.grid(row=0, column=0, sticky="nsew")
         self.frame_controls.grid(row=1, column=0, sticky="ew")
-        self.frame_info.grid(row=2, column=0, sticky="nsew")
 
-        self.root.grid_rowconfigure(0, weight=9)
-        self.root.grid_rowconfigure(1, weight=0)
-        self.root.grid_rowconfigure(2, weight=1)
-        self.root.grid_columnconfigure(0, weight=1)
-
+        # Panes hinzufügen
+        self.paned.add(self.top_container, weight=9)
+        self.paned.add(self.frame_info, weight=1)
+        
+        
         self.canvas_gallery = tk.Canvas(self.frame_video, bg="black")
 
         # WICHTIG: Canvas darf keine eigene Höhe verlangen
@@ -277,7 +295,11 @@ class MyFSVideo:
         self.btn_playpause.grid(row=0, column=2, padx=2, pady=2)
         btn_fwd.grid(row=0, column=3, padx=2, pady=2)
 
+        self.btn_fullscreen = tk.Button(f, text="⛶", width=3, command=self.toggle_fullscreen)
+        self.btn_fullscreen.grid(row=0, column=9, padx=(8, 2), pady=2)        
+        
         self.var_position = tk.DoubleVar(value=0.0)
+        
         self.lbl_time = tk.Label(f, text=f"00:00 / {format_time(self.duration)}",
                                   bg="gray20", fg="white", width=12)
         self.lbl_time.grid(row=0, column=4, padx=(8, 4), pady=2)
@@ -321,6 +343,74 @@ class MyFSVideo:
         lbl_inex = tk.Label(f, text="inex", bg="gray20", fg="white")
         lbl_inex.grid(row=0, column=2, padx=2, pady=2)
         f.grid_columnconfigure(2, weight=1)
+
+    # all the functions for fullscreen and back to window including small controll panel in full screen modus
+    def toggle_fullscreen(self):
+        if self.is_fullscreen:
+            self.exit_fullscreen()
+            return
+
+        self.is_fullscreen = True
+
+        self.paned.forget(self.frame_info)
+
+        self.frame_controls.grid_remove()
+        self.top_container.grid_rowconfigure(0, weight=1)
+        self.top_container.grid_rowconfigure(1, weight=0)
+
+        self.root.attributes("-fullscreen", True)
+        self.root.bind("<Escape>", self.exit_fullscreen)
+
+        self._show_controls_overlay()
+        self._start_mouse_watch()
+
+    def exit_fullscreen(self, event=None):
+        if not self.is_fullscreen:
+            return
+        self.is_fullscreen = False
+
+        # Timer/Polling stoppen
+        if self._hide_timer_id:
+            self.root.after_cancel(self._hide_timer_id)
+            self._hide_timer_id = None
+        if self._mouse_watch_id:
+            self.root.after_cancel(self._mouse_watch_id)
+            self._mouse_watch_id = None
+
+        self.root.attributes("-fullscreen", False)
+        self.root.unbind("<Escape>")
+
+        self.frame_controls.place_forget()
+        self.frame_controls.grid()
+        self.top_container.grid_rowconfigure(0, weight=9)
+        self.top_container.grid_rowconfigure(1, weight=0)
+
+        self.paned.add(self.frame_info, weight=1)
+
+    def _show_controls_overlay(self):
+        self.frame_controls.place(in_=self.top_container, relx=0, rely=1.0,
+                                   anchor="sw", relwidth=1.0)
+        self.frame_controls.lift()
+
+        if self._hide_timer_id:
+            self.root.after_cancel(self._hide_timer_id)
+        self._hide_timer_id = self.root.after(2500, self._hide_controls_overlay)
+
+    def _hide_controls_overlay(self):
+        self._hide_timer_id = None
+        if self.is_fullscreen:
+            self.frame_controls.place_forget()
+
+    def _start_mouse_watch(self):
+        pos = (self.root.winfo_pointerx(), self.root.winfo_pointery())
+        if pos != self._last_mouse_pos:
+            self._last_mouse_pos = pos
+            self._show_controls_overlay()
+
+        if self.is_fullscreen:
+            self._mouse_watch_id = self.root.after(150, self._start_mouse_watch)
+    # End: all the functions for fullscreen and back to window including small controll panel in full screen modus
+
 
     def toggle_playpause(self):
         if self.mpv_ipc:
