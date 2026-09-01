@@ -324,6 +324,10 @@ class Globals:
     outdir = ""
     list_result_diatisch = []
     resized = False # only temporary set to True on resize window
+    temp_files_path = None # path for temporarily generated video thumbnails
+    mpv_path = None # path to mpv video player
+    ffprobe_path = None # path to ffprobe, needed vor video duration
+    num_thumbnails = None # num thumbnails for previes on viedeo player slider
 
 def info_box(nachricht, level="info"):
     """

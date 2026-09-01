@@ -154,14 +154,31 @@ class MpvIPC:
 
 class MyFSVideo:
 
-    # The class "constructor" - It's actually an initializer 
-    def __init__(self, root = None, file = None, temp_dir = None, debug = False, anz_thumbnails = None, mpv_path = None, ffprobe_path = None): 
+    def __init__(self, 
+        file = None, 
+        root = None,
+        thumbnail = None, 
+        dict_caller = None,
+        pmain = None,
+        str_title_prefix = None,
+        str_include = None,
+        str_exclude = None,
+        str_included = None,
+        str_excluded = None,
+        temp_dir = None,
+        num_thumbnails = None, 
+        mpv_path = None, 
+        ffprobe_path = None,
+        debug = None
+    ): 
         self.player = None
         self.file = file
         self.debug = debug
         self.mpv_path = mpv_path
         self.ffprobe_path = ffprobe_path
         self.temp_dir = temp_dir
+        self.dict_caller = dict_caller
+        self.thumbnail = thumbnail
         if root is None:
             self.root = tk.Toplevel()
         else:
@@ -224,13 +241,13 @@ class MyFSVideo:
         print("canvas vid :", self.canvas_gallery.winfo_width(), self.canvas_gallery.winfo_height())
 
         self.pipe_name_thumb = rf"\\.\pipe\mpvthumb_{uuid.uuid4().hex}" # we need a unique name
-        self.anz_t = anz_thumbnails
+        self.num_t = num_thumbnails
         
         # create the small window for previewing frames on the psition scale
         self.tooltip = PreviewTooltip(self.root)
 
         self.preview_photos = []
-        self.preview_photos = self.generate_thumbnails(self.anz_t, self.frame_video.winfo_height() // 15)
+        self.preview_photos = self.generate_thumbnails(self.num_t, self.frame_video.winfo_height() // 15)
         
         video_path = self.file
         wid = self.canvas_gallery.winfo_id()
@@ -497,7 +514,21 @@ class MyFSVideo:
                 except OSError:
                     pass
         self.root.destroy()
-            
+
+        if self.dict_caller:
+            # now unregister at thumbnail and remove entry from dict
+            t = self.dict_caller[self.file]
+            self.thumbnail.register_FSimage(None)
+            self.dict_caller.pop(self.file)
+            del t
+    
+    def close_handler_external(self): # called from external. Do the same things as close_handler, except remove from dict_file_image
+        # can be called from main window or Duplicates-Window which use different dicts
+        if self.dict_caller:
+            t = self.dict_caller[self.file]
+            self.thumbnail.register_FSimage(None)
+            self.root.destroy()
+            del t
 
     def mpv_cmd(pipe, cmd):
         msg = json.dumps(cmd) + "\n"

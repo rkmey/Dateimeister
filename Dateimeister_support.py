@@ -50,6 +50,7 @@ import Diatisch as DIAT
 import dateimeister_generator as DG
 import Undo_Redo as UR
 import Dateimeister_FSimage as FS
+import Dateimeister_FSVideo as FV
 import Dateimeister_messages as DM
 import Dateimeister_Duplicates as DD
 
@@ -67,22 +68,6 @@ Aliasse
 
 Inner = dict[str, str]
 Metadata = dict[str, Inner]
-
-""" 
-# FFmpeg-Pfad setzen (VOR dem Import von pyvidplayer2!)
-Todo read path from ini-File
-"""
-
-ffmpeg_bin = r"C:\Users\rkmey\AppData\Local\Programs\Python\Python312\share\ffpyplayer\ffmpeg\bin"  # Passe diesen Pfad an!
-if os.path.exists(ffmpeg_bin):
-    os.environ["PATH"] = ffmpeg_bin + os.pathsep + os.environ["PATH"]
-    print(f"FFmpeg-path added: {ffmpeg_bin}")
-else:
-    print(f"FFmpeg-folder not found: {ffmpeg_bin}")
-    print("   please install FFmpeg correct the path.")
-    sys.exit(1)
-
-
 
 def report_callback_exception(self, exc, val, tb):
     print("TKINTER CALLBACK EXCEPTION:", exc, val)
@@ -937,7 +922,23 @@ class Dateimeister_support:
         Globals.datadir = config["dirs"]["datadir"]
         Globals.config_files_subdir = config["dirs"]["config_files_subdir"]
         Globals.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
+        Globals.temp_files_path    = os.path.join(Globals.datadir, config["dirs"]["temp_files_subdir"])
+        Globals.mpv_path      = config["dirs"]["mpv_path"]
+        Globals.ffprobe_path  = config["dirs"]["ffprobe_path"]
+
+        if not os.path.exists(Globals.temp_files_path):
+            print(f"TEMP_DIR {Globals.temp_files_path} does not exist")
+            exit(1)
+        if not os.path.exists(Globals.mpv_path):
+            print(f"MVP_DIR {Globals.mpv_path} does not exist")
+            exit(1)
+        if not os.path.exists(Globals.ffprobe_path):
+            print(f"FFPROBE_DIR {Globals.ffprobe_path} does not exist")
+            exit(1)
+
         Globals.config_files_xml = config["misc"]["config_files_xml"]
+        Globals.num_video_thumbnails = int(config["misc"]["num_video_thumbnails"])
+        print(f"num thumbnails preview is {Globals.num_video_thumbnails}") if self.debug else True
         
         # read process_types from ini because depemdent on dateimeister implementation
         self.dict_proctypes = config["proc_types"]
@@ -2997,7 +2998,26 @@ class Dateimeister_support:
                 print ("FSImage does not exist for file: " + file) if self.debug else True
                 if Globals.imagetype == 'VIDEO':
                     self.stop_all_players() # we dont want noise from players in Main Window
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, "", "Include", "Exclude", "Included", "Excluded", self.debug)
+                    fs_image = FV.MyFSVideo(
+                        file = file, 
+                        root = None,
+                        thumbnail = thumbnail, 
+                        dict_caller = self.dict_file_image,
+                        pmain = self,
+                        str_title_prefix = "",
+                        str_include = "Include",
+                        str_exclude = "Exclude",
+                        str_included = "Included",
+                        str_excluded = "Excluded",
+                        temp_dir = Globals.temp_files_path,
+                        num_thumbnails = Globals.num_video_thumbnails, 
+                        mpv_path = Globals.mpv_path, 
+                        ffprobe_path = Globals.ffprobe_path,
+                        debug = self.debug
+                    )
+                    
+                else: # STILL    
+                    fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, "", "Include", "Exclude", "Included", "Excluded", self.debug)
                 self.dict_file_image[file] = fs_image
 
     def show_context_menu(self, event):

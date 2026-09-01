@@ -10,7 +10,7 @@ if __name__ == "__main__":
     argParser.add_argument("-f", "--file",    help="Video File")
     argParser.add_argument("-d", "--debug",   help="Debug Mode")
     argParser.add_argument("-t", "--tempdir", help="dir for storing temp. files")
-    argParser.add_argument("-n", "--anz_thumbnails", help="number of thumbnails for preview")
+    argParser.add_argument("-n", "--num_thumbnails", help="number of thumbnails for preview")
     args = argParser.parse_args()
     print("args=%s" % args)
     print("args.debug=%s" % args.debug)
@@ -18,15 +18,15 @@ if __name__ == "__main__":
     file = None
     temp_dir = None
     temp_dir = None
-    anz_thumbnails = None
+    num_thumbnails = None
     if args.file:
         file = args.file
     if args.tempdir:
         temp_dir = args.tempdir
     if args.debug:
         debug = args.debug.upper()
-    if args.anz_thumbnails:
-        anz_thumbnails = int(args.anz_thumbnails)
+    if args.num_thumbnails:
+        num_thumbnails = int(args.num_thumbnails)
 
     if not file:
         print("File -f or --file must be given")
@@ -34,8 +34,8 @@ if __name__ == "__main__":
     if not temp_dir:
         print("Temp_dir -t or --tempdir must be given")
         sys.exit(1)
-    if not anz_thumbnails:
-        print("anz_thumbnails -n or --anz_thumbnails must be given")
+    if not num_thumbnails:
+        print("num_thumbnails -n or --num_thumbnails must be given")
         sys.exit(1)
 
     # check paths
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         file = file, 
         debug = b_d, 
         temp_dir = temp_dir, 
-        anz_thumbnails = anz_thumbnails, 
+        num_thumbnails = num_thumbnails, 
         mpv_path = mpv_path,
         ffprobe_path = ffprobe_path
     )  # when run as main we have no list of image files and no result list, no callback
