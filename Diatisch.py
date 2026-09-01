@@ -12,6 +12,8 @@ from time import gmtime, strftime
 import operator
 import argparse
 
+import ctypes
+import sys
 import hashlib
 import re
 import configparser 
@@ -21,7 +23,8 @@ import dateimeister_generator as DG
 import Dateimeister_messages as DM
 import Dateimeister_FSimage as FS
 import Dateimeister_processlist as DP
-import tools 
+import tools
+from ini_validator import load_and_validate_ini 
 
 import cv2
 import matplotlib.pyplot as plt
@@ -689,23 +692,22 @@ class Diatisch:
 
     def read_ini(self):
         inifile = "Dateimeister.ini" 
-        config = configparser.ConfigParser() 
-        config.read(inifile)
-        self.default_indir  = config["dirs"]["indir"]
-        self.datadir = config["dirs"]["datadir"]
-        self.config_files_subdir = config["dirs"]["config_files_subdir"]
-        self.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
-        self.config_files_xml = config["misc"]["config_files_diatisch_xml"]
-        self.templatefile = config["misc"]["templatefile_diatisch"]
-        self.max_configfiles = config["misc"]["max_configfiles_diatisch"]
-        self.max_indirs  = config["misc"]["max_indirs_diatisch"]
-        self.max_outdirs = config["misc"]["max_outdirs_diatisch"]
-        self.uncomment = config["misc"]["uncomment"] + " "        
-        print("Config Files xml from ini is: " + self.config_files_xml)
-        self.platform = config["misc"]["platform"].upper()
+        # Properties
+        # we let ini_validator.py do te work
+        from diatisch_ini_properties import dict_ini_spec # contains all the properties
+        # we create the attributes in 'self' except those which have a "target" (Globals) in the line. the attributes are also generated in cfg
+        # diatisch only needs attributes in self, so the parameter for the target_registry is set to None
+        cfg, has_errors, has_warnings, problems = load_and_validate_ini(inifile, spec = dict_ini_spec, target = self, target_registry=None)
+        print("Ini-Datei ist vollständig und gültig.")
+        print("Beispiel: config_files_xml =", self.config_files_xml, type(self.config_files_xml), self.uncomment)
+        
+        # some operations on selected properties
+        self.platform = self.platform.upper()
+        self.uncomment += " "
         if self.platform != "UNIX" and self.platform != "WINDOWS":
             messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + self.platform)
             exit()
+        # end properties
 
     def close_child_windows(self): #closes fs-images    
         # cleanup
@@ -2576,6 +2578,15 @@ class HistObj:
 
 
 if __name__ == "__main__":
+    # MUSS die aller erste Aktion sein, bevor irgendein Tk-Fenster erzeugt wird!
+    if sys.platform == "win32":
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PER_MONITOR_DPI_AWARE
+        except Exception:
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()  # Fallback für alte Windows-Versionen
+            except Exception:
+                pass
     argParser = argparse.ArgumentParser()
     argParser.add_argument("-d", "--debug", help="Debug Mode")
     args = argParser.parse_args()

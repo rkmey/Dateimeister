@@ -307,27 +307,18 @@ def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, 
     sb_v.place(relx = d_w + element_width, rely = d_n, relheight = element_height, relwidth = rel_size_sb_x, anchor = tk.NW)
 
 
+# some attributes will be added from inifile-processing
 class Globals:
     imagetype = ""
     generated = False # set to true if generated, set to false after selection of camera
     screen_width = 0
     screen_height = 0
-    uncomment = ""
     gap = 10
-    config_files_xml    = None
-    config_files_subdir = None
-    cmd_files_subdir    = None
-    temp_files_subdir    = None
-    datadir = ""
     dict_thumbnails = {}
     dict_duplicates = {}
     outdir = ""
     list_result_diatisch = []
     resized = False # only temporary set to True on resize window
-    temp_files_path = None # path for temporarily generated video thumbnails
-    mpv_path = None # path to mpv video player
-    ffprobe_path = None # path to ffprobe, needed vor video duration
-    num_thumbnails = None # num thumbnails for previes on viedeo player slider
 
 def info_box(nachricht, level="info"):
     """

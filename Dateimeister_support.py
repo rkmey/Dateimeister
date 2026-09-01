@@ -61,6 +61,8 @@ from tools import MyThumbnail
 
 from enum import Enum
 import traceback
+import ast
+from ini_validator import load_and_validate_ini
 
 """
 Aliasse
@@ -914,47 +916,27 @@ class Dateimeister_support:
         
         print("Codepage is: " + str(self.codepage) + " language is: " + self.language)
         
-        inifile = "Dateimeister.ini" 
-        config = configparser.ConfigParser() 
-        config.read(inifile)
-        default_indir  = config["dirs"]["indir"]
-        default_outdir = config["dirs"]["outdir"]
-        Globals.datadir = config["dirs"]["datadir"]
-        Globals.config_files_subdir = config["dirs"]["config_files_subdir"]
-        Globals.cmd_files_subdir    = config["dirs"]["cmd_files_subdir"]
-        Globals.temp_files_path    = os.path.join(Globals.datadir, config["dirs"]["temp_files_subdir"])
-        Globals.mpv_path      = config["dirs"]["mpv_path"]
-        Globals.ffprobe_path  = config["dirs"]["ffprobe_path"]
-
-        if not os.path.exists(Globals.temp_files_path):
-            print(f"TEMP_DIR {Globals.temp_files_path} does not exist")
-            exit(1)
-        if not os.path.exists(Globals.mpv_path):
-            print(f"MVP_DIR {Globals.mpv_path} does not exist")
-            exit(1)
-        if not os.path.exists(Globals.ffprobe_path):
-            print(f"FFPROBE_DIR {Globals.ffprobe_path} does not exist")
-            exit(1)
-
-        Globals.config_files_xml = config["misc"]["config_files_xml"]
-        Globals.num_video_thumbnails = int(config["misc"]["num_video_thumbnails"])
+        inifile = "Dateimeister.ini"
+        # Properties
+        # we let ini_validator.py do te work
+        from dateimeister_ini_properties import dict_ini_spec # contains all the properties
+        # we create the attributes in 'self' except those which have a "target" (Globals) in the line. the attributes are also generated in cfg
+        cfg, has_errors, has_warnings, problems = load_and_validate_ini(inifile, spec = dict_ini_spec, target = self, target_registry={"Globals": tools.Globals})
+        print("Ini-Datei ist vollständig und gültig.")
+        print("Beispiel: cfg.max_configfiles =", cfg.max_configfiles, type(cfg.max_configfiles), cfg.templatefile_diatisch, cfg.dict_proctypes, tools.Globals.config_files_xml)
+        
         print(f"num thumbnails preview is {Globals.num_video_thumbnails}") if self.debug else True
         
-        # read process_types from ini because depemdent on dateimeister implementation
-        self.dict_proctypes = config["proc_types"]
         for t in self.dict_proctypes:
             print("Proctype: " + self.dict_proctypes[t]) 
-        
-        Globals.uncomment = config["misc"]["uncomment"] + " "        
-        self.templatefile = config["misc"]["templatefile"]
-        #max number of config_file-, indir-, outdir-entries in xml
-        self.max_configfiles = config["misc"]["max_configfiles"]
-        self.max_indirs      = config["misc"]["max_indirs"]
-        self.max_outdirs     = config["misc"]["max_outdirs"]
-        self.platform = config["misc"]["platform"].upper()
+       
+        # some operations on selected properties
+        Globals.temp_files_path    = os.path.join(Globals.datadir, Globals.temp_files_subdir)
+        self.platform = self.platform.upper()
         if self.platform != "UNIX" and self.platform != "WINDOWS":
             messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + self.platform)
             exit()
+        # end properties
         
         self.dict_templates = {}
         self.dict_file_image = {}
@@ -1428,8 +1410,8 @@ class Dateimeister_support:
         self.listbox_indir.bind("<<ListboxSelect>>", lambda event: self.listbox_indir_check_exist(event))
         self.listbox_outdir.bind("<<ListboxSelect>>", lambda event: self.listbox_outdir_check_exist(event))
         
-        self.label_indir.config(text = default_indir)   # may be overridden later with first listbox entry
-        self.label_outdir.config(text = default_outdir) # may be overridden later with first listbox entry
+        self.label_indir.config(text = self.default_indir)   # may be overridden later with first listbox entry
+        self.label_outdir.config(text = self.default_outdir) # may be overridden later with first listbox entry
         self.l_label1.config(text = "Messages")
         self.label_num.config(text = "0")
         self.dict_gen_files = {}
@@ -3474,6 +3456,15 @@ class Dateimeister_support:
 # #############################################################
 if __name__ == '__main__':
     '''Main entry point for the application.'''
+    # MUSS die aller erste Aktion sein, bevor irgendein Tk-Fenster erzeugt wird!
+    if sys.platform == "win32":
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PER_MONITOR_DPI_AWARE
+        except Exception:
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()  # Fallback für alte Windows-Versionen
+            except Exception:
+                pass
     argParser = argparse.ArgumentParser()
     argParser.add_argument("-d", "--debug", help="Debug Mode")
     args = argParser.parse_args()

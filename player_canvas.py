@@ -1,3 +1,4 @@
+import ctypes
 import sys
 import os
 import argparse
@@ -6,6 +7,15 @@ import tkinter as tk
 from Dateimeister_FSVideo import MyFSVideo
 
 if __name__ == "__main__":
+    # MUSS die aller erste Aktion sein, bevor irgendein Tk-Fenster erzeugt wird!
+    if sys.platform == "win32":
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PER_MONITOR_DPI_AWARE
+        except Exception:
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()  # Fallback für alte Windows-Versionen
+            except Exception:
+                pass
     argParser = argparse.ArgumentParser()
     argParser.add_argument("-f", "--file",    help="Video File")
     argParser.add_argument("-d", "--debug",   help="Debug Mode")
