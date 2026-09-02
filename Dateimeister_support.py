@@ -2303,6 +2303,9 @@ class Dateimeister_support:
                     # create new videoplayer
                     player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height)
                 else:
+                    if not Globals.dict_thumbnails[imagetype][file].getPlayer(): # player may have been deleted by srolling
+                        player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height)
+                        Globals.dict_thumbnails[imagetype][file].setPlayer(player)
                     player = Globals.dict_thumbnails[imagetype][file].getPlayer()
                 showfile = file
             else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen

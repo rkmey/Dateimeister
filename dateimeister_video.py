@@ -260,4 +260,4 @@ class VideoPlayer:
         self.canvas.delete(self.my_tag)
 
     def __del__(self):
-        print("-- Destroyed video player {:s}".format(str(self))) if self.debug else True
+        print(f"-- Destroyed video player for file:{self.video_source}") if self.debug else True
