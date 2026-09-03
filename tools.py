@@ -34,7 +34,7 @@ from time import gmtime, strftime
 from datetime import datetime, timezone
 from PIL import Image, ImageTk, ExifTags
 import hashlib
-
+from io import BytesIO
 
 """
 Aliasse
@@ -51,6 +51,21 @@ EXCLUDE = 2
 _bgcolor = 'grey90'
 _bgcolor_dbg = 'green'
 _fgcolor = 'black'
+
+def get_first_frame(video_path: str) -> Image.Image:
+    """Extrahiert den ersten Frame eines Videos und gibt ihn als PIL Image zurück."""
+    result = subprocess.run(
+        [
+            "ffmpeg", "-i", video_path,
+            "-frames:v", "1",
+            "-f", "image2pipe",
+            "-vcodec", "png",
+            "-"
+        ],
+        capture_output=True,
+        check=True,
+    )
+    return Image.open(BytesIO(result.stdout))
 
 
 # some universal functions
