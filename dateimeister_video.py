@@ -109,7 +109,7 @@ class VideoPlayer:
             # 2. Das vorhandene Bild-Objekt auf dem Canvas aktualisieren
             if self.canvas_id:
                 self.canvas.itemconfig(self.canvas_id, image=self.photo)
-                print("... resize the video")
+                print("... resize the video") if self.debug else True
             else:
                 tools.info_box("canvas_id not found")
                 exit()
@@ -202,33 +202,60 @@ class VideoPlayer:
             self.after_id = self.window.after(5, self.update)
 
     def stop_and_rewind(self):
-        self.do_update = False
-        self.vplayer.set_pause(True)
-        self.vplayer.set_volume(0.0)
-        self.vplayer.seek(0, relative=False)
-        # Progressbar optisch zurück auf Start
-        self.canvas.coords(self.line_progress, self.x1, self.y1, self.x1, self.y2)
+        if self._check_player():
+            self.do_update = False
+            self.vplayer.set_pause(True)
+            self.vplayer.set_volume(0.0)
+            self.vplayer.seek(0, relative=False)
+            # Progressbar optisch zurück auf Start
+            self.canvas.coords(self.line_progress, self.x1, self.y1, self.x1, self.y2)
+        else: 
+            return
 
     def restart(self):
-        self.do_update = True
-        self.vplayer.set_volume(1.0)
-        self.vplayer.seek(0, relative=False)
-        self.vplayer.set_pause(False)
-        self.update()
+        if self._check_player():
+            self.do_update = True
+            self.vplayer.set_volume(1.0)
+            self.vplayer.seek(0, relative=False)
+            self.vplayer.set_pause(False)
+            self.update()
+        else: 
+            return
         
     def jump_to(self, second: int):
-        self.vplayer.seek(second, relative=False)
+        if self._check_player():
+            self.vplayer.seek(second, relative=False)
+        else: 
+            return
 
     def pstart(self):
-        self.do_update = True
-        self.vplayer.set_volume(1.0)
-        self.vplayer.set_pause(False)
-        self.update()
+        if self._check_player():
+            self.do_update = True
+            self.vplayer.set_volume(1.0)
+            self.vplayer.set_pause(False)
+            self.update()
+        else:
+            return
 
     def pstop(self):
-        self.do_update = False
-        self.vplayer.set_pause(True)
-        self.vplayer.set_volume(0.0)
+        if self._check_player():
+            self.do_update = False
+            self.vplayer.set_pause(True)
+            self.vplayer.set_volume(0.0)
+        else:
+            return
+        
+    def _check_player(self): # check if player exists
+        if not self.vplayer:
+            # get stackframe of caller
+            frame = inspect.currentframe().f_back
+            # extract caller object (self)
+            caller = frame.f_locals.get("self", None)
+            tools.info_box(f"command: {caller} video player for {self.file} does not exist", "fehler")
+            return False
+        else:
+            return True
+      
 
     # "alte" Funktionen
     def getRun(self):

@@ -1534,7 +1534,7 @@ class Dateimeister_support:
         self.leftmost_thumbnail = None
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
-        self.timer = tools.RestartableTimer(root, 333, self.resize)  # ms
+        self.timer = tools.RestartableTimer(root, 666, self.resize)  # ms
         self.list_running_players = [] # we keep a list of running players so we can restart after stop_all players
         self.resize_start = False
         self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
@@ -2352,7 +2352,7 @@ class Dateimeister_support:
                 line_west  = self.canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
                 frameids = (line_north, line_east, line_south, line_west)
                 
-                if player is not None:
+                if process_type == 'VIDEO' and player is not None:
                     player.setId(id)
                     player.resize()
                 mts = os.stat(file).st_mtime
@@ -2368,7 +2368,7 @@ class Dateimeister_support:
                         myimage.setImage(pimg)
                         myimage.setPlayer(player)
 
-                if player is not None:
+                if process_type == 'VIDEO':
                     myimage.set_imagetype("VIDEO")
                 else:
                     myimage.set_imagetype("STILL")
@@ -2408,7 +2408,7 @@ class Dateimeister_support:
                 mts = os.stat(file).st_mtime
                 myimage = MyThumbnail(0, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
                     text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
-                if player is not None:
+                if process_type == 'VIDEO':
                     myimage.set_imagetype("VIDEO")
                 else:
                     myimage.set_imagetype("STILL")
