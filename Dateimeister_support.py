@@ -1535,9 +1535,12 @@ class Dateimeister_support:
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
         self.timer = tools.RestartableTimer(root, 666, self.resize)  # ms
-        self.list_running_players = [] # we keep a list of running players so we can restart after stop_all players
         self.resize_start = False
         self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
+
+        # create a timer for managing players and metadata
+        self.timer_players_and_metadata = tools.RestartableTimer(root, 1500, self.manage_players_and_metadata)  # ms
+        self.list_visible_thumbnails = []
 
     def rb_sort(self, event = None):
         sort_method = self.rbvalue.get()
@@ -1587,7 +1590,7 @@ class Dateimeister_support:
             if (self.width != event.width or self.height != event.height):
                 if not self.resize_start:
                     # we have to stop all video players to reduce CPU load, resizing would not work else
-                    self.list_running_players = self.stop_all_players()
+                    self.stop_all_players()
                 self.resize_start = True
                 self.timer.start()
 
@@ -1619,12 +1622,7 @@ class Dateimeister_support:
             if Globals.imagetype != "": # new sort of existing images
                 Globals.resized = True
                 self.display_images(Globals.imagetype)
-                # restart the players 
-                for p in self.list_running_players:
-                    print("PLAYER Restart {:s}".format(p.video_source)) if self.debug else True
-                    p.pstart() # restart
                 Globals.resized = False
-            self.list_running_players = [] # list is only needed within resize logic, so we shoul clear it here
             self.resize_start = False
 
     def debug_info_resize(self, text):
@@ -2352,9 +2350,6 @@ class Dateimeister_support:
                 line_west  = self.canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
                 frameids = (line_north, line_east, line_south, line_west)
                 
-                if process_type == 'VIDEO' and player is not None:
-                    player.setId(id)
-                    player.resize()
                 mts = os.stat(file).st_mtime
                 # if new thumbnail or new image required
                 if new_thumbnail_required:
@@ -2370,8 +2365,14 @@ class Dateimeister_support:
 
                 if process_type == 'VIDEO':
                     myimage.set_imagetype("VIDEO")
+                    if player is not None:
+                        player.setId(id)
+                        player.get_photo() # necessary for initializing some instance variables...
+                        player.resize()
+                        myimage.setImage(player.photo)   # remains even if player is deleted
                 else:
                     myimage.set_imagetype("STILL")
+                    
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE, None, False)
                     myimage.set_tooold(True)
@@ -2854,24 +2855,31 @@ class Dateimeister_support:
         self.leftmost_thumbnail = thumbnail
         # display debug info for resize, this is very difficult to debug
         self.debug_info_resize("SCROLL") if self.debug_r else True
+        
+        # now restart the timer - to avoid timing toubles with ffpyplayer
+        self.timer_players_and_metadata.start()
 
-        # 20260610 we build a list of visible images in order to get metadata and allocate new video players and rebuild dict visible
-        # for each visible thumbnail we call the get_metadata method (does nothing if already collected)
-        list_visible_thumbnails = []
+        # 20260610 we build a list of visible images and call itemconfig because images from videos disappear
+        self.list_visible_thumbnails = []
         visible = True
         while visible:
             if index < len(Globals.thumbnails[Globals.imagetype]):
                 t = Globals.thumbnails[Globals.imagetype][index]
                 id = t.getId()
                 if tools.is_visible(self.canvas_gallery, id): # visible
-                    list_visible_thumbnails.append(t)
-                    t.set_metadata()
-                    print (str(t.metadata)) if self.debug else True
+                    self.canvas_gallery.itemconfig(id, image=t.getImage())
+                    self.list_visible_thumbnails.append(t)
                 else:
                     visible = False # stop while
             else:
                 visible = False
             index += 1
+
+        
+    def manage_players_and_metadata(self): 
+        # for each visible thumbnail we call the get_metadata method (does nothing if already collected)
+        for t in self.list_visible_thumbnails:
+            t.set_metadata()
         
         # 20260610 we delete video players for not visible video images and create new ones for now visible
         if Globals.imagetype == 'VIDEO':
@@ -2884,7 +2892,7 @@ class Dateimeister_support:
                         print("Scroll - deleted Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), my_tag)) if self.debug else True
             #   now we create new video players for visible thumbnails and rebuild the dict of visibles
             self.dict_visible_id_thumbnail[Globals.imagetype] = {}
-            for t in list_visible_thumbnails:
+            for t in self.list_visible_thumbnails:
                 id = t.getId()
                 if not t.getPlayer(): # no player
                     player = DV.VideoPlayer(self.root, t.getFile(), 
@@ -2894,14 +2902,15 @@ class Dateimeister_support:
                     player.get_photo() # necessary for initializing some instance variables...
                     player.resize()
                     t.setPlayer(player)
+                    t.setImage(player.photo)   # NEU – sonst zeigt der Fixup-Loop weiter unten ein veraltetes Bild
                 self.dict_visible_id_thumbnail[Globals.imagetype][id] = t # insert in dict 
                 
-        # we must call itemconfig because sometimes images "disappear"  after deleting video player      
-        for i in Globals.dict_thumbnails[Globals.imagetype]:
-            t = Globals.dict_thumbnails[Globals.imagetype][i]
-            id = t.getId()
-            if t.imagetype == 'VIDEO' and tools.is_visible(self.canvas_gallery, id):
-                self.canvas_gallery.itemconfig(t.getId(), image=t.getImage())
+            # we must call itemconfig because sometimes images "disappear"  after deleting video player      
+            for i in Globals.dict_thumbnails[Globals.imagetype]:
+                t = Globals.dict_thumbnails[Globals.imagetype][i]
+                id = t.getId()
+                if t.imagetype == 'VIDEO' and tools.is_visible(self.canvas_gallery, id):
+                    self.canvas_gallery.itemconfig(t.getId(), image=t.getImage())
 
     def text1_single(self, event): # synchronize text / gallery
         (row, col) = self.t_text1.index(tk.CURRENT).split(".")

@@ -17,6 +17,7 @@ class VideoPlayer:
         self.canvas_id = None
         self.do_update = False
         self.liney = 0.95
+        self.destroyed = False
         self.after_id = None # needed for cleanup to destroy reference to player in after-call. otherwise we cannot destroy videoplayer object
         # Wir nutzen einen eindeutigen Tag pro Video-Instanz
         VideoPlayer._counter += 1
@@ -245,17 +246,10 @@ class VideoPlayer:
         else:
             return
         
-    def _check_player(self): # check if player exists
-        if not self.vplayer:
-            # get stackframe of caller
-            frame = inspect.currentframe().f_back
-            # extract caller object (self)
-            caller = frame.f_locals.get("self", None)
-            tools.info_box(f"command: {caller} video player for {self.file} does not exist", "fehler")
+    def _check_player(self):
+        if self.vplayer is None or getattr(self, "destroyed", False):
             return False
-        else:
-            return True
-      
+        return True      
 
     # "alte" Funktionen
     def getRun(self):
@@ -281,8 +275,14 @@ class VideoPlayer:
         return self.duration
     
     def destroy(self): #cleanup of canvas resources
+        if self.after_id:
+            self.window.after_cancel(self.after_id)
+            self.after_id = None
+        self.do_update = False
         if self.vplayer:
             self.vplayer.close_player()
+        self.vplayer = None          # NEU
+        self.destroyed = True        # NEU
         # destroy all canvas objects i.e. the two lines for the progress bar.
         self.canvas.delete(self.my_tag)
 
