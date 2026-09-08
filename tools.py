@@ -954,6 +954,7 @@ def file_hash(filename: str) -> str:
     return h.hexdigest()
     
     
+
 """ 
 calculate best fontsize initially and after resizing window.
 we want to use this algorithm for all windows
@@ -961,11 +962,23 @@ for possible future use we also need physical screen size
 """
 def calc_fontsize(physical_width: int, physical_height: int, new_width: int, new_height: int, debug: bool) -> int:
     # we have to change fontsize according to Minimum of new Height / width
-    fontsize_width  = int(new_width * .01) 
+    
+    # get caller info
+    caller = inspect.currentframe().f_back
+    file = os.path.basename(caller.f_code.co_filename)
+    line = caller.f_lineno
+    function = caller.f_code.co_name
+    
+    # construct string
+    c = caller.f_locals.get('self').__class__.__name__ + "." if 'self' in caller.f_locals else ""
+    source_info = f"[file: {file} -> {c}{function}() -> Zeile {line}]"
+    # get caller info end
+    
+    fontsize_width  = int(new_width * .007) 
     #fontsize_height = int(.7 * min(12.0, new_height * .75))
-    fontsize_height = int(new_height * .01)
+    fontsize_height = int(new_height * .007)
     fontsize_use = min(fontsize_width, fontsize_height)
-    print(f"RESIZE: new width {new_width} new height {new_height} set fontsize to {fontsize_use}") if debug else True
+    print(f"RESIZE: ({source_info}) new width {new_width} new height {new_height} set fontsize to {fontsize_use}") if debug else True
     return fontsize_use
     
 """ creates a new image from <file> with the height <height> abd width according to image size
