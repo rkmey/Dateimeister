@@ -64,6 +64,7 @@ import traceback
 import ast
 from ini_validator import load_and_validate_ini
 import print_utils
+from print_preview import PrintPreview
 
 """
 Aliasse
@@ -1551,6 +1552,7 @@ class Dateimeister_support:
         self.list_visible_thumbnails = []
         self.printer = None
         self.list_print = []
+        self.preview = None
 
     #printing
     def choose_printer(self):
@@ -1567,7 +1569,10 @@ class Dateimeister_support:
             print(f"PRINT: add {file} to printer queue {self.printer}")
             self.list_print.append(file)
             self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=NORMAL)
-            
+            if self.preview is None:
+                self.preview = PrintPreview(self.root, rows=3, preview_dir = Globals.temp_files_path)
+            self.preview.add_photo(file)            
+
     def print_selected(self):
         num_printed = print_utils.print_photos(
             files = self.list_print, 
