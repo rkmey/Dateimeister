@@ -36,6 +36,7 @@ class PrintPreview:
         dry_run: bool = False,
         preview_dir: str = None,
         debug: bool = False,
+        close_callback: str = None
     ):
         """
         rows : number of rows that should fit in the currently visible
@@ -61,6 +62,7 @@ class PrintPreview:
         self.printer = printer
         self.preview_dir = preview_dir
         self.debug = debug
+        self.close_callback = close_callback
 
         self.photos = []  # ordered list of dicts, see add_photo()
         self.item_to_index = {}  # canvas image item id -> index in self.photos
@@ -89,6 +91,7 @@ class PrintPreview:
 
         self.resize_timer = tools.RestartableTimer(self.window, 250, self._on_resize_settled)
         self.canvas_frame.bind("<Configure>", self._on_canvas_configure)
+        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
 
     # ------------------------------------------------------------------ #
     # UI construction
@@ -450,3 +453,8 @@ class PrintPreview:
 
     def _update_printer_label(self):
         self.printer_label.config(text=f"Printer: {self.printer or '(none)'}")
+
+    def on_close(self):
+        self.close_callback()
+        self.window.destroy()
+        

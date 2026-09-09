@@ -1552,7 +1552,7 @@ class Dateimeister_support:
         self.list_visible_thumbnails = []
         self.printer = None
         self.list_print = []
-        self.preview = None
+        self.dict_preview = {} # imagetype -> player
 
     #printing
     def choose_printer(self):
@@ -1564,15 +1564,22 @@ class Dateimeister_support:
         t = self.get_thumbnail(self.event)
         if t:
             file = t.getFile()
-            if not self.printer: # printer has not yet been selected
-                self.printer = print_utils.choose_printer(self.root)
-            print(f"PRINT: add {file} to printer queue {self.printer}")
+            print(f"PRINT: add {file} to print queue {self.printer}")
             self.list_print.append(file)
             self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=NORMAL)
-            if self.preview is None:
-                self.preview = PrintPreview(self.root, rows=3, preview_dir = Globals.temp_files_path)
-            self.preview.add_photo(file)            
+            if not self.dict_preview.get(Globals.imagetype) or not self.dict_preview[Globals.imagetype]:
+                self.dict_preview[Globals.imagetype] = PrintPreview(
+                    self.root, rows=3, 
+                    preview_dir = Globals.temp_files_path,
+                    close_callback=lambda: self.preview_closed(Globals.imagetype)
+                )
+            self.dict_preview[Globals.imagetype].add_photo(file)            
 
+    def preview_closed(self, imagetype):
+        print(f"PRINT Preview close imagetype = {imagetype}") if self.debug else True
+        if imagetype:
+            self.dict_preview[imagetype] = None
+    
     def print_selected(self):
         num_printed = print_utils.print_photos(
             files = self.list_print, 
