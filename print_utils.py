@@ -5,6 +5,7 @@
 """
 
 import os
+import sys
 import subprocess
 import time
 from pathlib import Path
@@ -148,13 +149,21 @@ def choose_printer(parent: Optional[tk.Misc] = None) -> Optional[str]:
 
     return result["printer"]
 
-def print_photos(files: List[str], printer: Optional[str] = None, delay: float = 2.0) -> int:
+def print_photos(
+    files: List[str],
+    printer: Optional[str] = None,
+    delay: float = 2.0,
+    orientation: str = "auto",
+    dry_run: bool = False,
+    preview_dir: Optional[str] = None,
+) -> int:
     """
     Print one or more image files, in the given order.
 
-    On Windows, files are sent to the shell's "print" action associated
-    with the file type ("printto" when a specific printer is requested) -
-    this typically works out of the box for jpg/png/bmp via the Photos app.
+    On Windows, images are rendered and sent directly to the printer via
+    GDI (requires pywin32 and Pillow) - this avoids relying on the Photos
+    app's shell print handling, which is unreliable when targeting a
+    specific (non-default) printer.
     On macOS/Linux, files are sent via CUPS ('lp'), which must be
     installed and have a printer configured.
 
@@ -164,15 +173,28 @@ def print_photos(files: List[str], printer: Optional[str] = None, delay: float =
         Full paths (including filename) of the images to print.
     printer : str, optional
         Name of the target printer. If omitted, the system default
-        printer is used.
+        printer is used. Ignored when dry_run is True.
     delay : float, optional
         Seconds to wait between print jobs, giving the spooler time to
         pick up each job before the next one is sent. Default: 2.0.
+    orientation : str, optional
+        "auto" (default) picks landscape or portrait per image based on
+        its aspect ratio. Can be forced to "landscape" or "portrait" for
+        all images instead.
+    dry_run : bool, optional
+        If True, nothing is actually sent to a printer. Instead, a PNG
+        preview of the page (paper size, orientation, scaling and
+        centering) is saved next to the source image (or in preview_dir)
+        and opened for viewing. Useful for testing without wasting ink
+        or paper.
+    preview_dir : str, optional
+        Folder to save dry-run previews into. Defaults to the same
+        folder as each source image.
 
     Returns
     -------
     int
-        Number of files that were successfully sent to the printer.
+        Number of files that were successfully processed.
     """
     success_count = 0
 
@@ -187,25 +209,92 @@ def print_photos(files: List[str], printer: Optional[str] = None, delay: float =
             print(f"[WARNING] Unsupported image format, skipped: {path}")
             continue
 
-        print(f"Printing: {path}" + (f" -> {printer}" if printer else ""))
+        print(
+            f"{'[DRY RUN] Previewing' if dry_run else 'Printing'}: {path}"
+            + (f" -> {printer}" if printer and not dry_run else "")
+        )
 
         try:
-            if os.name == "nt":
-                _print_windows(path, printer)
+            if dry_run:
+                _preview_photo(path, orientation, preview_dir)
+            elif os.name == "nt":
+                _print_windows(path, printer, orientation)
             else:
-                _print_unix(path, printer)
+                _print_unix(path, printer, orientation)
         except Exception as e:
-            print(f"[ERROR] Failed to print {path}: {e}")
+            print(f"[ERROR] Failed to process {path}: {e}")
             continue
 
         time.sleep(delay)
         success_count += 1
 
-    print(f"Done: {success_count} of {len(files)} file(s) sent to the printer.")
+    print(f"Done: {success_count} of {len(files)} file(s) processed.")
     return success_count
 
 
-def _print_windows(path: Path, printer: Optional[str]) -> None:
+def _preview_photo(
+    path: Path,
+    orientation: str,
+    preview_dir: Optional[str] = None,
+    dpi: int = 150,
+    page_size_mm: tuple = (210, 297),  # A4
+) -> None:
+    """Render a PNG preview of the printed page, without using a printer."""
+    from PIL import Image, ImageOps
+
+    img = Image.open(path)
+    img = ImageOps.exif_transpose(img)
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+
+    landscape = _resolve_landscape(img, orientation)
+    page_w_mm, page_h_mm = page_size_mm
+    if landscape:
+        page_w_mm, page_h_mm = page_h_mm, page_w_mm
+
+    page_w_px = int(page_w_mm / 25.4 * dpi)
+    page_h_px = int(page_h_mm / 25.4 * dpi)
+
+    scale = min(page_w_px / img.width, page_h_px / img.height)
+    out_w = int(img.width * scale)
+    out_h = int(img.height * scale)
+    x_offset = (page_w_px - out_w) // 2
+    y_offset = (page_h_px - out_h) // 2
+
+    page = Image.new("RGB", (page_w_px, page_h_px), "white")
+    resized = img.resize((out_w, out_h), Image.LANCZOS)
+    page.paste(resized, (x_offset, y_offset))
+
+    out_dir = Path(preview_dir) if preview_dir else path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    preview_path = out_dir / f"preview_{path.stem}.png"
+    page.save(preview_path)
+
+    print(
+        f"[DRY RUN] Preview saved: {preview_path} "
+        f"({'landscape' if landscape else 'portrait'}, {page_w_mm}x{page_h_mm}mm)"
+    )
+
+    try:
+        if os.name == "nt":
+            os.startfile(str(preview_path))  # type: ignore[attr-defined]
+        elif sys.platform == "darwin":
+            subprocess.run(["open", str(preview_path)])
+        else:
+            subprocess.run(["xdg-open", str(preview_path)])
+    except Exception:
+        pass  # opening the preview is a convenience, not essential
+
+
+def _resolve_landscape(img, orientation: str) -> bool:
+    if orientation == "landscape":
+        return True
+    if orientation == "portrait":
+        return False
+    return img.width >= img.height  # "auto"
+
+
+def _print_windows(path: Path, printer: Optional[str], orientation: str) -> None:
     # We deliberately do NOT use the shell "print"/"printto" verbs here.
     # On modern Windows, image files are associated with the Photos app,
     # which frequently does not implement "printto" correctly and fails
@@ -218,6 +307,7 @@ def _print_windows(path: Path, printer: Optional[str]) -> None:
         import win32print
         import win32ui
         import win32con
+        import win32gui
     except ImportError as e:
         raise RuntimeError(
             "Printing on Windows requires pywin32 (pip install pywin32)."
@@ -226,15 +316,36 @@ def _print_windows(path: Path, printer: Optional[str]) -> None:
 
     printer_name = printer or win32print.GetDefaultPrinter()
 
-    hdc = win32ui.CreateDC()
-    hdc.CreatePrinterDC(printer_name)
-
     img = Image.open(path)
     img = ImageOps.exif_transpose(img)  # respect camera orientation
     if img.mode != "RGB":
         img = img.convert("RGB")
 
-    # printable area of the page, in device pixels
+    landscape = _resolve_landscape(img, orientation)
+
+    # set the page orientation on the printer's DEVMODE before creating the DC
+    hprinter = win32print.OpenPrinter(printer_name)
+    try:
+        devmode = win32print.GetPrinter(hprinter, 2)["pDevMode"]
+        devmode.Orientation = (
+            win32con.DMORIENT_LANDSCAPE if landscape else win32con.DMORIENT_PORTRAIT
+        )
+        win32print.DocumentProperties(
+            0,
+            hprinter,
+            printer_name,
+            devmode,
+            devmode,
+            win32con.DM_IN_BUFFER | win32con.DM_OUT_BUFFER,
+        )
+    finally:
+        win32print.ClosePrinter(hprinter)
+
+    hdc_handle = win32gui.CreateDC("WINSPOOL", printer_name, devmode)
+    hdc = win32ui.CreateDCFromHandle(hdc_handle)
+
+    # printable area of the page, in device pixels (already reflects the
+    # orientation set above)
     printable_w = hdc.GetDeviceCaps(win32con.HORZRES)
     printable_h = hdc.GetDeviceCaps(win32con.VERTRES)
 
@@ -255,9 +366,15 @@ def _print_windows(path: Path, printer: Optional[str]) -> None:
     hdc.DeleteDC()
 
 
-def _print_unix(path: Path, printer: Optional[str]) -> None:
+def _print_unix(path: Path, printer: Optional[str], orientation: str) -> None:
+    from PIL import Image
+
+    landscape = _resolve_landscape(Image.open(path), orientation)
+
     cmd = ["lp"]
     if printer:
         cmd += ["-d", printer]
+    # CUPS: 4 = landscape, 3 = portrait
+    cmd += ["-o", f"orientation-requested={4 if landscape else 3}"]
     cmd.append(str(path))
     subprocess.run(cmd, check=True)

@@ -1,3 +1,5 @@
+das hier mal in CRs umwandeln (github)
+
 generate erzeugt die Skripte. Dabei ist exc_ovw bereits berücksichtigr.
 Wenn jetzt manuell images excluded oder included werden, sollten die Buttons copy und delete disabled werden,
 weil ja das, was passieren wird, nicht mit dem, was zu sehen ist, übereinstimmt.
@@ -41,3 +43,18 @@ Das ist sie heute nicht, sondern erst, wenn browse / edit gedrückt wird
 +++ stimmt nicht oder wurde zwischenzeitlich korrigiert
 
 Sowas wie Alben unterstützen?
+
+============================================== 2026-09-08 ===========================
+apply config: da treten irgendwelche Fehler wegen Typ bei state aufgerufen
+Schriftgröße: Skalierung noch nicht ideal
+FSVideo: Funktionalität (exclude,...) von FSImage übernehmen
+Duplicates: FSVideo für Videos aufrufen
+Dublettenerkennung von Dateinamen auf Hashsummen umstellen (Size -> Hashsum -> filename
+Diatisch Historisierung: prüfen, ob sich was geändert hat, machen wie ja später sowieso mit den Hashsummen
+Distisch: Strg -X, Strg-Video-Ton
+Diatisch: Größe ändern mit Mausrad
+Print-Dialog: Fenster mit zu druckenden Fotos, delete, print, select printer,...)
+
+
+
+

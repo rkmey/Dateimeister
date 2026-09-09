@@ -63,6 +63,7 @@ from enum import Enum
 import traceback
 import ast
 from ini_validator import load_and_validate_ini
+import print_utils
 
 """
 Aliasse
@@ -91,7 +92,9 @@ MENUITEM_FILE_OPEN_APPLY_CONFIG = 2
 MENUITEM_FILE_SAVE_CONFIG       = 3
 MENUITEM_FILE_SAVE_CONFIG_AS    = 4
 MENUITEM_FILE_APPLY_CONFIG      = 5
-MENUITEM_FILE_RECENT            = 6
+MENUITEM_FILE_CHOOSE_PRINTER    = 6
+MENUITEM_FILE_PRINT             = 7
+MENUITEM_FILE_RECENT            = 8
    
 
 
@@ -1367,6 +1370,7 @@ class Dateimeister_support:
         self.context_menu.add_command(label="Exclude", command=self.canvas_image_exclude)    
         self.context_menu.add_command(label="Show"   , command=self.canvas_image_show)    
         self.context_menu.add_command(label="Restart", command=self.canvas_video_restart)    
+        self.context_menu.add_command(label="Print", command=self.print_photo)    
       
         # Events
         # Button 1 single haben wir deaktiviert, weil double immer auch zuerst single auslöst
@@ -1433,6 +1437,8 @@ class Dateimeister_support:
         self.filemenu.add_command(label="Save config", command=self.save_config)
         self.filemenu.add_command(label="Save config as...", command=self.saveas_config)
         self.filemenu.add_command(label="Apply config", command=self.apply_config)
+        self.filemenu.add_command(label="Choose Printer...", command=self.choose_printer)
+        self.filemenu.add_command(label="Print selected", command=self.print_selected)
         menubar.add_cascade(label="File", menu=self.filemenu)
         self.recentmenu = Menu(menubar, tearoff=0)
         self.filemenu.add_cascade(label="Open Recent", menu=self.recentmenu)
@@ -1444,6 +1450,8 @@ class Dateimeister_support:
         self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG, state=DISABLED)
         self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=DISABLED)
         self.filemenu.entryconfig(MENUITEM_FILE_APPLY_CONFIG, state=DISABLED)
+        self.filemenu.entryconfig(MENUITEM_FILE_CHOOSE_PRINTER, state=NORMAL)
+        self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=DISABLED)
         self.filemenu.entryconfig(MENUITEM_FILE_RECENT, state=DISABLED)
         
         # camera menu
@@ -1541,6 +1549,45 @@ class Dateimeister_support:
         # create a timer for managing players and metadata
         self.timer_players_and_metadata = tools.RestartableTimer(root, 1500, self.manage_players_and_metadata)  # ms
         self.list_visible_thumbnails = []
+        self.printer = None
+        self.list_print = []
+
+    #printing
+    def choose_printer(self):
+        ret = print_utils.choose_printer(self.root)
+        print(f"Printer selected is {ret}")
+        self.printer = ret
+
+    def print_photo(self):
+        t = self.get_thumbnail(self.event)
+        if t:
+            file = t.getFile()
+            if not self.printer: # printer has not yet been selected
+                self.printer = print_utils.choose_printer(self.root)
+            print(f"PRINT: add {file} to printer queue {self.printer}")
+            self.list_print.append(file)
+            self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=NORMAL)
+            
+    def print_selected(self):
+        num_printed = print_utils.print_photos(
+            files = self.list_print, 
+            printer = self.printer,
+            preview_dir = Globals.temp_files_path,
+            dry_run = True
+        )
+        self.list_print = []
+
+    def get_thumbnail(self, event):
+        #print('bbox', self.canvas_gallery.bbox('images'))
+        self.canvas_gallery.focus_set()
+
+        canvas_x = self.canvas_gallery.canvasx(event.x)
+        canvas_y = self.canvas_gallery.canvasy(event.y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
+        if thumbnail is not None:
+            return thumbnail
+        else:
+            return None
 
     def rb_sort(self, event = None):
         sort_method = self.rbvalue.get()
