@@ -32,6 +32,7 @@ from time import gmtime, strftime
 
 from PIL import Image, ImageTk
 from datetime import datetime, timezone
+from typing import Callable
 
 import tools
 import dateimeister_video as DV
@@ -45,7 +46,20 @@ EXCLUDE = 2
 class MyFSImage:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, file, thumbnail, dict_caller, pmain, str_title_prefix, str_include, str_exclude, str_included, str_excluded, debug): 
+    def __init__(
+        self, 
+        file: str = None, 
+        thumbnail: tools.MyThumbnail = None, 
+        dict_caller: dict = None, 
+        pmain: str = None, # can be several class instances, we dont enumerate all the candidates
+        str_title_prefix: str = None, 
+        str_include: str = None,
+        str_exclude: str = None,
+        str_included: str = None,
+        str_excluded: str = None,
+        debug: bool = False
+    ): 
+        
         self.main = pmain
         self.thumbnail = thumbnail
         self.player = None

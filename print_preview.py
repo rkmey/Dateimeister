@@ -21,6 +21,7 @@ from PIL import Image, ImageOps, ImageTk
 
 import tools
 import print_utils
+from typing import Callable
 
 
 class PrintPreview:
@@ -36,7 +37,7 @@ class PrintPreview:
         dry_run: bool = False,
         preview_dir: str = None,
         debug: bool = False,
-        close_callback: str = None
+        close_callback: Callable = None
     ):
         """
         rows : number of rows that should fit in the currently visible

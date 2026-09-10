@@ -1571,6 +1571,8 @@ class Dateimeister_support:
                 self.dict_preview[Globals.imagetype] = PrintPreview(
                     self.root, rows=3, 
                     preview_dir = Globals.temp_files_path,
+                    # parameters returned to preview_closed, no changes required if parameters are added in the called class (PrintPreview)
+                    # the parameters have just to added in our own callback function (preview_closed)
                     close_callback=lambda: self.preview_closed(Globals.imagetype)
                 )
             self.dict_preview[Globals.imagetype].add_photo(file)            
