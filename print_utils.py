@@ -1,13 +1,18 @@
 """
-    from print_utils import print_photos
+Add this to tools.py. Usage from any other script:
+
+    from tools import print_photos
     print_photos(["/path/to/img1.jpg", "/path/to/img2.png"])
     print_photos(["/path/to/img1.jpg"], printer="Office Laser")
 """
 
+import hashlib
 import os
-import sys
 import subprocess
+import sys
+import tempfile
 import time
+import re
 from pathlib import Path
 from typing import List, Optional
 import tkinter as tk
@@ -15,13 +20,11 @@ from tkinter import ttk
 
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
-"""
-Usage from another script:
-
-    printer = print_utils.choose_printer(self.root)   # self.root = your Tk root/parent window
-    print_photos(files, printer=printer)              # printer may be None -> default printer is used
-"""
-
+# Windows' built-in "print to file" virtual printers - these need an
+# explicit output filename passed to StartDoc(), otherwise Windows tries
+# to show its own save dialog internally, which crashes hard (native
+# "Windows fatal exception: code 0x80040155 / REGDB_E_CLASSNOTREG") when
+# there is no interactive UI thread to host that dialog.
 
 def list_printers() -> List[str]:
     """Return the names of all printers installed on this machine."""
@@ -146,8 +149,72 @@ def choose_printer(parent: Optional[tk.Misc] = None) -> Optional[str]:
 
     if owns_root:
         parent.destroy()
+        
+    printer = result["printer"]
+    file_ext = _file_printer_extension(printer)
+    print(f"printer chosen is {printer}, ext is {file_ext}")
 
-    return result["printer"]
+    return printer
+
+
+def _file_printer_extension(printer_name: str) -> Optional[str]:
+    file_ext = None
+    match = re.search(rf".*?microsoft.*?pdf", printer_name, re.I)
+    if match:
+        file_ext = filetype = ".pdf"
+    else:
+        match = re.search(rf".*?microsoft.*?writer", printer_name, re.I)
+        if match:
+            file_ext = filetype = ".xps"
+    return file_ext
+
+
+
+def configure_printer(printer_name: str, parent_hwnd: int = 0):
+    """
+    Opens the printer's native settings dialog (as provided by the
+    manufacturer's driver) so the user can pick options that have no
+    generic Windows API equivalent - most importantly a borderless photo
+    paper / media type, which each vendor names and exposes differently.
+
+    Call this once, then pass the returned object as `devmode` to
+    print_photos()/_print_windows() to reuse exactly those settings for
+    every subsequent print job.
+
+    Parameters
+    ----------
+    printer_name : str
+        Name of the printer to configure (e.g. from choose_printer()).
+    parent_hwnd : int, optional
+        Window handle to attach the dialog to, e.g. self.root.winfo_id()
+        in a Tk app. Defaults to 0 (no parent).
+
+    Returns
+    -------
+    DEVMODE or None
+        The configured settings, or None if the user cancelled the dialog.
+        Windows-only.
+    """
+    import win32print
+    import win32con
+
+    hprinter = win32print.OpenPrinter(printer_name)
+    try:
+        devmode = win32print.GetPrinter(hprinter, 2)["pDevMode"]
+        result = win32print.DocumentProperties(
+            parent_hwnd,
+            hprinter,
+            printer_name,
+            devmode,
+            devmode,
+            win32con.DM_IN_PROMPT | win32con.DM_IN_BUFFER | win32con.DM_OUT_BUFFER,
+        )
+        if result != 1:  # IDOK
+            return None
+        return devmode
+    finally:
+        win32print.ClosePrinter(hprinter)
+
 
 def print_photos(
     files: List[str],
@@ -156,6 +223,7 @@ def print_photos(
     orientation: str = "auto",
     dry_run: bool = False,
     preview_dir: Optional[str] = None,
+    devmode=None,
 ) -> int:
     """
     Print one or more image files, in the given order.
@@ -173,14 +241,16 @@ def print_photos(
         Full paths (including filename) of the images to print.
     printer : str, optional
         Name of the target printer. If omitted, the system default
-        printer is used. Ignored when dry_run is True.
+        printer is used. Ignored when dry_run is True, or when devmode
+        is given (the devmode already targets a specific printer).
     delay : float, optional
         Seconds to wait between print jobs, giving the spooler time to
         pick up each job before the next one is sent. Default: 2.0.
     orientation : str, optional
         "auto" (default) picks landscape or portrait per image based on
         its aspect ratio. Can be forced to "landscape" or "portrait" for
-        all images instead.
+        all images instead. Ignored when devmode is given - the
+        orientation from configure_printer() is used as-is.
     dry_run : bool, optional
         If True, nothing is actually sent to a printer. Instead, a PNG
         preview of the page (paper size, orientation, scaling and
@@ -188,8 +258,18 @@ def print_photos(
         and opened for viewing. Useful for testing without wasting ink
         or paper.
     preview_dir : str, optional
-        Folder to save dry-run previews into. Defaults to the same
-        folder as each source image.
+        Folder used for two purposes that never overlap in a single
+        call: (1) dry-run PNG previews, and (2) the actual output file
+        when printing to a virtual "print to file" printer such as
+        "Microsoft Print to PDF" or "Microsoft XPS Document Writer".
+        Defaults to a "dateimeister_print_preview" folder inside the
+        system temp directory (not the source photo's folder, to avoid
+        cluttering NAS/photo directories).
+    devmode : DEVMODE, optional
+        Windows only. Settings obtained from configure_printer(), e.g.
+        to enable a borderless photo paper media type that has no
+        generic API equivalent. When given, this is used as-is instead
+        of building a fresh devmode from `printer`/`orientation`.
 
     Returns
     -------
@@ -211,14 +291,14 @@ def print_photos(
 
         print(
             f"{'[DRY RUN] Previewing' if dry_run else 'Printing'}: {path}"
-            + (f" -> {printer}" if printer and not dry_run else "")
+            + (f" -> {printer}" if printer and not dry_run and devmode is None else "")
         )
 
         try:
             if dry_run:
                 _preview_photo(path, orientation, preview_dir)
             elif os.name == "nt":
-                _print_windows(path, printer, orientation)
+                _print_windows(path, printer, orientation, devmode, preview_dir)
             else:
                 _print_unix(path, printer, orientation)
         except Exception as e:
@@ -265,9 +345,12 @@ def _preview_photo(
     resized = img.resize((out_w, out_h), Image.LANCZOS)
     page.paste(resized, (x_offset, y_offset))
 
-    out_dir = Path(preview_dir) if preview_dir else path.parent
+    out_dir = Path(preview_dir) if preview_dir else Path(tempfile.gettempdir()) / "dateimeister_print_preview"
     out_dir.mkdir(parents=True, exist_ok=True)
-    preview_path = out_dir / f"preview_{path.stem}.png"
+    # include a short hash of the full source path so that same-named files
+    # from different folders don't collide/overwrite each other
+    unique = hashlib.md5(str(path.resolve()).encode("utf-8")).hexdigest()[:8]
+    preview_path = out_dir / f"preview_{path.stem}_{unique}.png"
     page.save(preview_path)
 
     print(
@@ -294,7 +377,13 @@ def _resolve_landscape(img, orientation: str) -> bool:
     return img.width >= img.height  # "auto"
 
 
-def _print_windows(path: Path, printer: Optional[str], orientation: str) -> None:
+def _print_windows(
+    path: Path,
+    printer: Optional[str],
+    orientation: str,
+    devmode=None,
+    preview_dir: Optional[str] = None,
+) -> None:
     # We deliberately do NOT use the shell "print"/"printto" verbs here.
     # On modern Windows, image files are associated with the Photos app,
     # which frequently does not implement "printto" correctly and fails
@@ -321,43 +410,52 @@ def _print_windows(path: Path, printer: Optional[str], orientation: str) -> None
     if img.mode != "RGB":
         img = img.convert("RGB")
 
-    landscape = _resolve_landscape(img, orientation)
-
-    # set the page orientation on the printer's DEVMODE before creating the DC
-    hprinter = win32print.OpenPrinter(printer_name)
-    try:
-        devmode = win32print.GetPrinter(hprinter, 2)["pDevMode"]
-        devmode.Orientation = (
-            win32con.DMORIENT_LANDSCAPE if landscape else win32con.DMORIENT_PORTRAIT
-        )
-        win32print.DocumentProperties(
-            0,
-            hprinter,
-            printer_name,
-            devmode,
-            devmode,
-            win32con.DM_IN_BUFFER | win32con.DM_OUT_BUFFER,
-        )
-    finally:
-        win32print.ClosePrinter(hprinter)
+    if devmode is not None:
+        # Use the caller-configured settings as-is (e.g. from
+        # configure_printer(), which may include a borderless photo
+        # paper media type - that has no generic API equivalent, so we
+        # don't touch orientation/paper size ourselves here).
+        printer_name = devmode.DeviceName or printer_name
+    else:
+        landscape = _resolve_landscape(img, orientation)
+        hprinter = win32print.OpenPrinter(printer_name)
+        try:
+            devmode = win32print.GetPrinter(hprinter, 2)["pDevMode"]
+            devmode.Orientation = (
+                win32con.DMORIENT_LANDSCAPE if landscape else win32con.DMORIENT_PORTRAIT
+            )
+            win32print.DocumentProperties(
+                0,
+                hprinter,
+                printer_name,
+                devmode,
+                devmode,
+                win32con.DM_IN_BUFFER | win32con.DM_OUT_BUFFER,
+            )
+        finally:
+            win32print.ClosePrinter(hprinter)
 
     hdc_handle = win32gui.CreateDC("WINSPOOL", printer_name, devmode)
     hdc = win32ui.CreateDCFromHandle(hdc_handle)
 
-    # printable area of the page, in device pixels (already reflects the
-    # orientation set above)
+    # printable area of the page, in device pixels (reflects orientation
+    # and, if a borderless media type was configured, the full page size)
     printable_w = hdc.GetDeviceCaps(win32con.HORZRES)
     printable_h = hdc.GetDeviceCaps(win32con.VERTRES)
 
-    # scale the image to fit the page while keeping its aspect ratio,
-    # then center it on the page
-    scale = min(printable_w / img.width, printable_h / img.height)
+    # For borderless printing we want to fill the page completely rather
+    # than fit-with-margins, so we scale to *cover* the page and crop any
+    # overhang instead of scaling to fit inside it.
+    if devmode is not None:
+        scale = max(printable_w / img.width, printable_h / img.height)
+    else:
+        scale = min(printable_w / img.width, printable_h / img.height)
     out_w = int(img.width * scale)
     out_h = int(img.height * scale)
     x_offset = (printable_w - out_w) // 2
     y_offset = (printable_h - out_h) // 2
 
-    hdc.StartDoc(path.name)
+    hdc.StartDoc(path.name, _build_file_printer_output(printer_name, path, preview_dir))
     hdc.StartPage()
     dib = ImageWin.Dib(img)
     dib.draw(hdc.GetHandleOutput(), (x_offset, y_offset, x_offset + out_w, y_offset + out_h))
@@ -366,7 +464,31 @@ def _print_windows(path: Path, printer: Optional[str], orientation: str) -> None
     hdc.DeleteDC()
 
 
+def _build_file_printer_output(printer_name: str, path: Path, preview_dir: Optional[str]):
+    """
+    For virtual "print to file" printers (Microsoft Print to PDF / XPS
+    Document Writer), build and return the output file path that must be
+    passed to StartDoc(). Returns None for regular printers, where the
+    spooler handles the destination itself.
+    """
+    ext = _file_printer_extension(printer_name)
+    if ext is None:
+        return None
+
+    out_dir = Path(preview_dir) if preview_dir else Path(tempfile.gettempdir()) / "dateimeister_print_output"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    unique = hashlib.md5(str(path.resolve()).encode("utf-8")).hexdigest()[:8]
+    output_path = out_dir / f"{path.stem}_{unique}{ext}"
+    print(f"[INFO] '{printer_name}' writes to a file instead of paper: {output_path} ext is {ext}")
+    return str(output_path)
+
+
 def _print_unix(path: Path, printer: Optional[str], orientation: str) -> None:
+    # Note: true borderless printing on CUPS also depends on the driver.
+    # Many photo-capable drivers (e.g. Gutenprint) expose a borderless
+    # media size, typically named like "na_index-4x6_4x6.borderless" or
+    # similar - run `lpoptions -p <printer> -l` to see what your driver
+    # calls it, then pass it via cmd += ["-o", "media=<that-name>"].
     from PIL import Image
 
     landscape = _resolve_landscape(Image.open(path), orientation)
