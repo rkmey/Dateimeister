@@ -334,6 +334,7 @@ class Globals:
     outdir = ""
     list_result_diatisch = []
     resized = False # only temporary set to True on resize window
+    eventManager = None
 
 def info_box(nachricht, level="info"):
     """
@@ -378,7 +379,44 @@ def is_visible(canvas, item):
     # overlap of rectangles
     return not (x2 < vx1 or x1 > vx2 or y2 < vy1 or y1 > vy2)
 
+""" 
+20260915 keeps a dict of event_names, values are list of functions to be called when event is fired
+listeners must call bind, giving the event_name and a callback-function
+when the listener is destroyed it must call unbind to prevent the event manager from calling a function from no more existing object
+when someone wants to trigger the manager it must call generate with an event of appropriate type which is passed to callback functions
+"""
+class EventManager:
 
+    def __init__(self):
+        self.listeners = {}
+
+    def bind(self, event_name, callback):
+        if event_name not in self.listeners:
+            self.listeners[event_name] = []
+
+        self.listeners[event_name].append(callback)
+
+    def unbind(self, event_name, callback):
+        if event_name in self.listeners:
+            if callback in self.listeners[event_name]:
+                self.listeners[event_name].remove(callback)
+
+            if not self.listeners[event_name]:
+                del self.listeners[event_name]
+
+    def generate(self, event_name, event): # iterate over COPY of list to cope with parallel bind / unbind / generate
+        for callback in list(self.listeners.get(event_name, [])):
+            callback(event)
+ 
+""" 
+an event which is passed by EventManager, the data are also passed to the listeners
+"""
+class FileStateEvent:
+    def __init__(self, filename: str, state: int, do_historize: bool = True):
+        self.filename = filename
+        self.state = state
+        self.do_historize = do_historize        
+            
 class BusyDialog:
     def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):
         self.root = root
@@ -716,7 +754,7 @@ class MyThumbnail:
     def getDuplicate(self):
         return self.duplicate    
 
-    def setState(self, state, caller = None, do_save = True):
+    def setState(self, state: int = 0, caller:callable = None) -> bool:
         if state != self.state:
             state_changed = True
         else:
@@ -760,9 +798,7 @@ class MyThumbnail:
             if caller != self.dupl: # to avoid loop
                 self.dupl.exclude_call(self, state) # synchronisiert das Duplicate, falls vorhanden
                 #print("Duplicate Exclude-Call")
-        if state_changed and do_save:
-            self.main.write_cmdfile(Globals.imagetype)
-            print ("setState: SAVE requested")
+        return state_changed
     def getState(self):
         return self.state   
 

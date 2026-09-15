@@ -56,7 +56,7 @@ import Dateimeister_Duplicates as DD
 
 import Tooltip as TT
 import tools
-from tools import Globals, INCLUDE, EXCLUDE
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent
 from tools import MyThumbnail
 
 from enum import Enum
@@ -97,7 +97,7 @@ MENUITEM_FILE_CHOOSE_PRINTER    = 6
 MENUITEM_FILE_PRINT             = 7
 MENUITEM_FILE_RECENT            = 8
    
-
+#print("Tk-Version:", tk.TkVersion)
 
 # Camera Treeview
 class MyCameraTreeview:
@@ -945,6 +945,8 @@ class Dateimeister_support:
         self.dict_templates = {}
         self.dict_file_image = {}
         self.dict_visible_id_thumbnail = {} # holds all visible images, initially and after scrolling, key: canvas_id, value: thumbnail
+        # initialize the event handler which we use for communication between windows (include / exclude)
+        Globals.eventManager = tools.EventManager()
 
         # Fenstergröße
         self.physical_width   = self.root.winfo_screenwidth()
@@ -1540,6 +1542,9 @@ class Dateimeister_support:
         for ii in indexes:
             self.listbox_outdir.itemconfig(ii, fg="gray")
         
+        # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handler
+        Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed)
+
         self.leftmost_thumbnail = None
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
@@ -1775,16 +1780,15 @@ class Dateimeister_support:
             if image in Globals.dict_thumbnails[Globals.imagetype]:
                 if Globals.dict_thumbnails[Globals.imagetype][image] in Globals.thumbnails[Globals.imagetype]:
                     if mystate == INCLUDE:
-                        Globals.dict_thumbnails[Globals.imagetype][image].setState(INCLUDE, None, False)
+                        Globals.dict_thumbnails[Globals.imagetype][image].setState(INCLUDE)
                     else:
-                        Globals.dict_thumbnails[Globals.imagetype][image].setState(EXCLUDE, None, False)
+                        Globals.dict_thumbnails[Globals.imagetype][image].setState(EXCLUDE)
                 else:
                     print("thumbnail for " + Globals.imagetype + " file " + image + " not found") if self.debug else True
                     print(Globals.thumbnails) if self.debug else True
             else:
                 print("Imagefile: " + image + " not found in _dict thumdnails of type " + Globals.imagetype) if self.debug else True
         self.historize_process()
-        self.write_cmdfile(Globals.imagetype)
 
 
     def save_config(self): # Config-xml speichern
@@ -2435,7 +2439,7 @@ class Dateimeister_support:
                     myimage.set_imagetype("STILL")
                     
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
-                    myimage.setState(EXCLUDE, None, False)
+                    myimage.setState(EXCLUDE)
                     myimage.set_tooold(True)
                     self.canvas_gallery.itemconfig(text_id, text="EXC OVW")
                 Globals.thumbnails[imagetype].append(myimage)
@@ -2475,7 +2479,7 @@ class Dateimeister_support:
                 else:
                     myimage.set_imagetype("STILL")
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
-                    myimage.setState(EXCLUDE, None, False)
+                    myimage.setState(EXCLUDE)
                     myimage.set_tooold(True)
                     self.canvas_gallery.itemconfig(text_id, text="EXC OVW")
                 Globals.thumbnails[imagetype].append(myimage)
@@ -2713,6 +2717,10 @@ class Dateimeister_support:
         if self.win_messages is not None: # stop MyMessagesWindow-Objekt
             self.win_messages.close_handler()
             self.win_messages = None
+        # write the cmd files fresh right before they are used - this is now
+        # the single point where they get persisted, instead of after every
+        # individual include/exclude change
+        self.write_cmdfile(Globals.imagetype)
         self.win_messages = DM.MyMessagesWindow(self, Globals.datadir, Globals.cmd_files_subdir, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], self.dict_gen_files_delrelpath[Globals.imagetype]) 
 
     def write_cmdfiles(self):
@@ -3105,35 +3113,60 @@ class Dateimeister_support:
             print("Text sroll to lineno: ", str(thumbnail.getLineno())) if self.debug else True
             thumbnail.scrollTextToLineno()
 
-    def canvas_gallery_exclude(self, event):
-        #print('bbox', self.canvas_gallery.bbox('images'))
+    # 20260915 for better maintenace we convert the whole mechanism from callbacks to events
+    def canvas_gallery_exclude(self, event): # react to own Button
+        # we just determine the new state, setting of new state in event handler, so we avoid finding out if already done
+        # Button / context menu -> this method -> fire event
         self.canvas_gallery.focus_set()
-
         canvas_x = self.canvas_gallery.canvasx(event.x)
         canvas_y = self.canvas_gallery.canvasy(event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
-            linenew = ""
             #print("State is: " + str(thumbnail.getState()))
             if thumbnail.getState() == INCLUDE:
-                thumbnail.setState(EXCLUDE)
+                new_state = EXCLUDE
             else: # toggle to not exclude, delete Item
-                thumbnail.setState(INCLUDE)
-        self.historize_process()
+                new_state = INCLUDE
+            Globals.eventManager.generate(
+                "FileStateChanged",
+                FileStateEvent(thumbnail.getFile(), new_state)
+            )
+ 
+    # the event handler for our file_state_changed event
+    def on_file_state_changed(self, event):
+        #we need the thumbnail
+        t = Globals.dict_thumbnails[Globals.imagetype][event.filename]
+        print(f"Dateimeister_support received state changed event, file: {t.getFile()} event-file: {event.filename} state: {t.getState()} new state: {event.state}") if self.debug else True
+        t.setState(event.state)
+        # when called by include_all / exclude_all we dont want historization for each thumbnail but only for the end result - which is done in include_all / exclude all
+        if event.do_historize:
+            self.historize_process()
         
     def button_exclude_all(self, *args):
+        new_state = EXCLUDE
+        change_count = 0
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
             if thumbnail.getState() == INCLUDE:
-                thumbnail.setState(EXCLUDE, None, False)
-        self.historize_process()
-        self.write_cmdfile(Globals.imagetype)
+                Globals.eventManager.generate(
+                    "FileStateChanged",
+                    FileStateEvent(thumbnail.getFile(), new_state)
+                )
+                change_count += 1
+        if change_count > 0: # only if at least 1 has to be changed
+            self.historize_process() # this is safe, because the event manager works synchronous
                 
     def button_include_all(self, *args):
+        new_state = INCLUDE
+        change_count = 0
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
             if thumbnail.getState() == EXCLUDE:
-                thumbnail.setState(INCLUDE, None, False)
-        self.historize_process()
-        self.write_cmdfile(Globals.imagetype)
+                Globals.eventManager.generate(
+                    "FileStateChanged",
+                    FileStateEvent(thumbnail.getFile(), new_state)
+                )
+                change_count += 1
+        if change_count > 0: # only if at least 1 has to be changed
+            self.historize_process() # this is safe, because the event manager works synchronous
      
     def canvas_image_exclude(self): # used for exclude and include
         print("Context menu exlude") if self.debug else True
@@ -3199,9 +3232,8 @@ class Dateimeister_support:
         # set thumbnail-states according actual processid
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
             image = thumbnail.getImage()
-            thumbnail.setState(self.dict_status_image[process_id][image], None, False)
+            thumbnail.setState(self.dict_status_image[process_id][image])
         self.update_button_state()
-        self.write_cmdfile(Globals.imagetype)
         
     def historize_process(self):
         self.UR.historize_process()

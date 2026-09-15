@@ -39,9 +39,7 @@ import dateimeister_video as DV
 import Tooltip as TT
 from videoplayer_preview import VideoPreviewEngine
 
-INCLUDE = 1
-EXCLUDE = 2
-
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent
 
 class MyFSImage:
 
@@ -140,7 +138,7 @@ class MyFSImage:
               "WIDGET":tk.Button,"VAR":"Button_fit","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.fit_handler,
               "TEXT":"Fit Canvas","STATE":tk.ACTIVE,"TT":"Scale Image to fit","FONT":self.text_font}
         dict_widgets["3"] = {
-          "WIDGET":tk.Button,"VAR":"Button_exclude","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.exclude_handler,
+          "WIDGET":tk.Button,"VAR":"Button_exclude","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.on_button_state,
           "TEXT":"Exclude","STATE":tk.ACTIVE,"TT":"include / exclude","FONT":self.text_font}
         if thumbnail.get_imagetype() == "VIDEO": # video image
             dict_widgets["4"] = {
@@ -225,7 +223,9 @@ class MyFSImage:
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
         self.root.title(str_title_prefix + file)
-
+        
+        # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handler
+        Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed)
 
         if thumbnail.get_imagetype() == "STILL":
             self.image.close
@@ -393,17 +393,33 @@ class MyFSImage:
         self.player.jump_to((f_value))
         self.player.user_scrubbing = False
 
-    def exclude_handler(self): # react to own Button, thumbnail can be from main or duplicates
-        # Button -> this method -> thumbnail.setstate -> exclude_call
-        if self.thumbnail.getState() == INCLUDE:
-            self.Button_exclude.config(text = self.str_include)
-            self.Label_status.config(text = self.str_excluded)
-            self.thumbnail.setState(EXCLUDE)
-        else: # toggle to not exclude, delete Item
-            self.Button_exclude.config(text = self.str_exclude)
-            self.Label_status.config(text = self.str_included)
-            self.thumbnail.setState(INCLUDE)
-        self.main.historize_process()
+    # 20260915 for better maintenace we convert the whole mechanism from callbacks to events
+    def on_button_state(self): # react to own Button, thumbnail can be from main or duplicates
+        # we just determine the new state, setting of new state in event handler, so we avoid finding out if already done
+        # Button -> this method -> fire event
+        if self.thumbnail.getState() == INCLUDE: 
+            new_state = EXCLUDE
+        else: 
+            new_state = INCLUDE
+        Globals.eventManager.generate(
+            "FileStateChanged",
+            FileStateEvent(self.file, new_state)
+        )
+        
+    # the event handler for our file_state_changed event
+    def on_file_state_changed(self, event):
+        print(f"FSIMAGE received state changed event, file: {self.file} event-file: {event.filename} state: {self.thumbnail.getState()} new state: {event.state}") if self.debug else True
+        if self.file == event.filename: # otherwise we are not meant
+            if self.thumbnail.getState() == INCLUDE:
+                self.Button_exclude.config(text = self.str_include)
+                self.Label_status.config(text = self.str_excluded)
+            else: # toggle to not exclude, delete Item
+                self.Button_exclude.config(text = self.str_exclude)
+                self.Label_status.config(text = self.str_included)
+            self.thumbnail.setState(event.state)
+            # historize is now done in Dateimeister_support because it listens to the same event
+            #self.main.historize_process()
+    # 20260915
 
     def exclude_call(self, state): # react to request from outside
         print("MyFSImage.exclude_call, state = {:d}".format(state)) if self.debug else True
@@ -415,6 +431,9 @@ class MyFSImage:
             self.Label_status.config(text = self.str_excluded)
     
     def close_handler(self): #calles when window is closing: delete player and fsimage, remove from dict_file_image
+        # 20260915 important to avoid call after object is destroyed!
+        Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
+
         t = self.dict_caller[self.file]
         self.thumbnail.register_FSimage(None)
         self.dict_caller.pop(self.file)
