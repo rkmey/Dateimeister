@@ -409,14 +409,26 @@ class EventManager:
             callback(event)
  
 """ 
-an event which is passed by EventManager, the data are also passed to the listeners
+events with their data are passed to EventManager, which calls the registrated listeners
 """
+# file state (include / exclude) changes
 class FileStateEvent:
     def __init__(self, filename: str, state: int, do_historize: bool = True):
         self.filename = filename
         self.state = state
         self.do_historize = do_historize        
+"""
+window is closing
+works in both directions: 
+if FS is closed caller deletes from dict filename -> FS if FS is (not == !) event.obj 
+if Parent is closed, FS closes itself if parent is event.obj 
+"""          
+class ClosingEvent:
+    def __init__(self, filename: str, obj: object):
+        self.filename = filename
+        self.obj = obj # an object of Type MyFSImage or MyFSVideo or Dateimeister_support or Dateimeister_duplicates
             
+
 class BusyDialog:
     def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):
         self.root = root
@@ -852,18 +864,12 @@ class MyThumbnail:
         else:
             self.canvas.itemconfigure("imageframe", state = 'hidden')
  
-    def register_FSimage(self, fsimage):
-        self.fsimage = fsimage
-
-    def register_Dupl(self, dupl):
-        self.dupl = dupl
-
-    def getPlayer(self):
-        return self.player   
-
     def getTargetfile(self):
         return self.targetfile   
 
+    def getPlayer(self):
+        return self.player   
+    
     def __del__(self):
         if self.player is not None:
             self.player.pstop()

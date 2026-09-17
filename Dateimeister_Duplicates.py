@@ -375,7 +375,6 @@ class MyDuplicates:
         self.stop_all_players() # unregister to avoid calls after duplicate has been destroyed
         for child in self.dict_child_parent:
             parent = self.dict_child_parent[child]
-            parent.register_Dupl(None)
         self.root.destroy()
         for t in self.dict_file_image: # destroy all FSImages
             u = self.dict_file_image[t]
@@ -524,7 +523,6 @@ class MyDuplicates:
             # register at parent-thumbnail, so it can call us for reacting to state
             # we need a dict with child-parent-thumbnails in order to unregister on close
             self.dict_child_parent[myimage] = thumbnail # child -> parent
-            thumbnail.register_Dupl(self)
         # Globals.gap haben wir einmal zuviel (fürs letzte) gezählt
         self.lastposition -= Globals.gap
         # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein

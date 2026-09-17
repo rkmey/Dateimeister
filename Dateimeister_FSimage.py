@@ -39,7 +39,7 @@ import dateimeister_video as DV
 import Tooltip as TT
 from videoplayer_preview import VideoPreviewEngine
 
-from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent
 
 class MyFSImage:
 
@@ -49,7 +49,7 @@ class MyFSImage:
         file: str = None, 
         thumbnail: tools.MyThumbnail = None, 
         dict_caller: dict = None, 
-        pmain: str = None, # can be several class instances, we dont enumerate all the candidates
+        caller: object = None, # can be several class instances, we dont enumerate all the candidates
         str_title_prefix: str = None, 
         str_include: str = None,
         str_exclude: str = None,
@@ -58,7 +58,7 @@ class MyFSImage:
         debug: bool = False
     ): 
         
-        self.main = pmain
+        self.caller = caller
         self.thumbnail = thumbnail
         self.player = None
         self.str_include = str_include
@@ -70,8 +70,6 @@ class MyFSImage:
             self.image  = Image.open(file)
         self.file = file
         self.dict_caller = dict_caller
-        # register at thumbnail, so it can call us for reacting to state
-        self.thumbnail.register_FSimage(self)
         # Create secondary (or popup) window.
         self.root = tk.Toplevel()
         # Fenstergröße
@@ -224,8 +222,9 @@ class MyFSImage:
 
         self.root.title(str_title_prefix + file)
         
-        # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handler
-        Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed)
+        # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handlers
+        Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed) # include<=>exclude
+        Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
 
         if thumbnail.get_imagetype() == "STILL":
             self.image.close
@@ -406,52 +405,35 @@ class MyFSImage:
             FileStateEvent(self.file, new_state)
         )
         
+    def on_closing(self, event): # if parent closes close own window 
+        if event.obj is self.caller:
+            self.close_handler()
+            
+        
     # the event handler for our file_state_changed event
     def on_file_state_changed(self, event):
-        print(f"FSIMAGE received state changed event, file: {self.file} event-file: {event.filename} state: {self.thumbnail.getState()} new state: {event.state}") if self.debug else True
         if self.file == event.filename: # otherwise we are not meant
-            if self.thumbnail.getState() == INCLUDE:
-                self.Button_exclude.config(text = self.str_include)
-                self.Label_status.config(text = self.str_excluded)
-            else: # toggle to not exclude, delete Item
+            print(f"FSIMAGE received state changed event, file: {self.file} event-file: {event.filename} state: {self.thumbnail.getState()} new state: {event.state}") if self.debug else True
+            if event.state == INCLUDE:
                 self.Button_exclude.config(text = self.str_exclude)
                 self.Label_status.config(text = self.str_included)
+            else: # toggle to not exclude, delete Item
+                self.Button_exclude.config(text = self.str_include)
+                self.Label_status.config(text = self.str_excluded)
             self.thumbnail.setState(event.state)
             # historize is now done in Dateimeister_support because it listens to the same event
-            #self.main.historize_process()
     # 20260915
 
-    def exclude_call(self, state): # react to request from outside
-        print("MyFSImage.exclude_call, state = {:d}".format(state)) if self.debug else True
-        if state == INCLUDE:
-            self.Button_exclude.config(text = self.str_exclude)
-            self.Label_status.config(text = self.str_included)
-        else: # toggle to not exclude, delete Item
-            self.Button_exclude.config(text = self.str_include)
-            self.Label_status.config(text = self.str_excluded)
     
-    def close_handler(self): #calles when window is closing: delete player and fsimage, remove from dict_file_image
+    def close_handler(self): #called when window is closing: unbind event handlers send closing event and destroy window
         # 20260915 important to avoid call after object is destroyed!
         Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
-
-        t = self.dict_caller[self.file]
-        self.thumbnail.register_FSimage(None)
-        self.dict_caller.pop(self.file)
-        if self.player is not None:
-            self.player.pstop()
-            del self.player
+        Globals.eventManager.unbind("Closing", self.on_closing)
+        Globals.eventManager.generate(
+            "Closing",
+            ClosingEvent(self.file, self) # file, self, see tools
+        )
         self.root.destroy()
-        del t
-        
-    def close_handler_external(self): # called from external. Do the same things as close_handler, except remove from dict_file_image
-        # can be called from main window or Duplicates-Window which use different dicts
-        t = self.dict_caller[self.file]
-        self.thumbnail.register_FSimage(None)
-        if self.player is not None:
-            self.player.pstop()
-            del self.player
-        self.root.destroy()
-        del t
         
     def mousewheel_handler(self, event):
         if self.player is None: # exception when used for video

@@ -159,7 +159,7 @@ class MyFSVideo:
         root = None,
         thumbnail = None, 
         dict_caller = None,
-        pmain = None,
+        caller = None,
         str_title_prefix = None,
         str_include = None,
         str_exclude = None,
@@ -518,7 +518,6 @@ class MyFSVideo:
         if self.dict_caller:
             # now unregister at thumbnail and remove entry from dict
             t = self.dict_caller[self.file]
-            self.thumbnail.register_FSimage(None)
             self.dict_caller.pop(self.file)
             del t
     
@@ -526,7 +525,6 @@ class MyFSVideo:
         # can be called from main window or Duplicates-Window which use different dicts
         if self.dict_caller:
             t = self.dict_caller[self.file]
-            self.thumbnail.register_FSimage(None)
             self.root.destroy()
             del t
 

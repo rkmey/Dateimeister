@@ -56,7 +56,7 @@ import Dateimeister_Duplicates as DD
 
 import Tooltip as TT
 import tools
-from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent
 from tools import MyThumbnail
 
 from enum import Enum
@@ -853,7 +853,7 @@ class Dateimeister_support:
             self.root = tk.Toplevel()
         else:
             self.root = root
-        self.root.protocol( 'WM_DELETE_WINDOW' , self.root.destroy)
+        self.root.protocol( 'WM_DELETE_WINDOW' , self.close_handler)
 
         # Creates a toplevel widget.
         root.geometry("1446x921+31+20")
@@ -1544,6 +1544,7 @@ class Dateimeister_support:
         
         # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handler
         Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed)
+        Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
 
         self.leftmost_thumbnail = None
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
@@ -1558,6 +1559,12 @@ class Dateimeister_support:
         self.printer = None
         self.list_print = []
         self.dict_preview = {} # imagetype -> player
+
+    # 20260915: event handler for closing event
+    def on_closing(self, event): #if a FS exists in dict_file_image delete entry
+        if event.filename in self.dict_file_image:
+            if self.dict_file_image[event.filename] is event.obj: # has been created by us, not by someone else
+                del self.dict_file_image[event.filename]
 
     #printing
     def choose_printer(self):
@@ -1616,7 +1623,7 @@ class Dateimeister_support:
                 self.dict_sort_method[Globals.imagetype] = sort_method
                 self.leftmost_thumbnail = None
                 self.generate()
-                self.display_images(Globals.imagetype)
+                self.display_images(Globals.imagetype, close_childs = False)
 
     def Button_be_pressed(self, *args):
         # reset all process-states
@@ -1640,7 +1647,7 @@ class Dateimeister_support:
         Globals.imagetype = ",".join([self.lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
         self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
         Globals.dict_thumbnails[Globals.imagetype] = {} # necessary to initialize first level
-        self.display_images(Globals.imagetype)
+        self.display_images(Globals.imagetype, close_childs = True)
 
     def Button_generate_pressed(self, *args): # event handler for button Generate
         # set globals generated to false and call generate
@@ -1687,7 +1694,7 @@ class Dateimeister_support:
             self.t_text1.update()
             if Globals.imagetype != "": # new sort of existing images
                 Globals.resized = True
-                self.display_images(Globals.imagetype)
+                self.display_images(Globals.imagetype, close_childs = False)
                 Globals.resized = False
             self.resize_start = False
 
@@ -2260,7 +2267,7 @@ class Dateimeister_support:
         self.write_cmdfiles()
     
     # display images of given type
-    def display_images(self, imagetype):
+    def display_images(self, imagetype:str = "", close_childs:bool = False):
         t_start = time.time()
         memory_before = 0 # to get the amount of memory needed especially for video players
         if self.debug:
@@ -2276,8 +2283,9 @@ class Dateimeister_support:
         self.clear_dict_2nd(Globals.thumbnails, imagetype)
         # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
         Globals.thumbnails[imagetype] = []
-        # cleanup
-        self.close_child_windows()
+        # cleanup if requested, not for sort, resize
+        if close_childs:
+            self.close_child_windows()
         self.rbvalue.set(self.dict_sort_method[imagetype])
         
         self.l_label1.config(text = "Output from Dateimeister : " + filename)
@@ -2684,10 +2692,13 @@ class Dateimeister_support:
         if self.win_duplicates is not None: # stop MyDuplicates-Objekt
             self.win_duplicates.close_handler()
             self.win_duplicates = None
-        # delete all fsimage by close-call
-        for t in self.dict_file_image:
-            u = self.dict_file_image[t]
-            u.close_handler_external()
+        # 20260915 generate close_event for all FS_Images
+        # delete all fsimage by close-call. we must use a copy because each event generated changes the list by on_closing
+        for filename, fs in list(self.dict_file_image.items()):
+            Globals.eventManager.generate(
+                "Closing",
+                ClosingEvent(filename, self) # file, self, see tools
+            )
         self.dict_file_image = {}
         if self.win_messages is not None: # stop MyMessagesWindow-Objekt
             self.win_messages.close_handler()
@@ -3066,7 +3077,7 @@ class Dateimeister_support:
                         root = None,
                         thumbnail = thumbnail, 
                         dict_caller = self.dict_file_image,
-                        pmain = self,
+                        caller = self,
                         str_title_prefix = "",
                         str_include = "Include",
                         str_exclude = "Exclude",
@@ -3558,6 +3569,15 @@ class Dateimeister_support:
            thiscmdfile.write(ii + '\n') 
         thiscmdfile.close()
 
+    def close_handler(self): #called when window is closing: unbind event handlers send closing event and destroy window
+        # 20260915 important to avoid call after object is destroyed!
+        Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
+        Globals.eventManager.unbind("Closing", self.on_closing)
+        Globals.eventManager.generate(
+            "Closing",
+            ClosingEvent("", self) # file, self, see tools
+        )
+        self.root.destroy()
 # #############################################################
 if __name__ == '__main__':
     '''Main entry point for the application.'''
