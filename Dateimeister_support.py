@@ -3072,6 +3072,11 @@ class Dateimeister_support:
                 print ("FSImage does not exist for file: " + file) if self.debug else True
                 if Globals.imagetype == 'VIDEO':
                     self.stop_all_players() # we dont want noise from players in Main Window
+                    # we check if we already have a print preview. if yes we pass it to FSVideo
+                    if Globals.imagetype in self.dict_preview and self.dict_preview[Globals.imagetype]:
+                        pp = self.dict_preview[Globals.imagetype]
+                    else:
+                        pp = None
                     fs_image = FV.MyFSVideo(
                         file = file, 
                         root = None,
@@ -3087,7 +3092,8 @@ class Dateimeister_support:
                         num_thumbnails = Globals.num_video_thumbnails, 
                         mpv_path = Globals.mpv_path, 
                         ffprobe_path = Globals.ffprobe_path,
-                        debug = self.debug
+                        debug = self.debug,
+                        print_preview = pp
                     )
                     
                 else: # STILL    

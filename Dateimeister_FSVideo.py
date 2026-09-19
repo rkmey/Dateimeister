@@ -155,6 +155,11 @@ class MpvIPC:
 
 class MyFSVideo:
 
+    # class-level (shared across all MyFSVideo instances/windows), so that
+    # frames printed from several videos opened one after another end up in
+    # the same preview, as long as the user hasn't closed it in between
+    _shared_print_preview = None
+
     def __init__(self, 
         file = None, 
         root = None,
@@ -182,7 +187,6 @@ class MyFSVideo:
         self.dict_caller = dict_caller
         self.thumbnail = thumbnail
         self.print_preview_ext = print_preview  # von aussen mitgegeben, falls vorhanden
-        self.print_preview_own = None           # falls keine mitgegeben wurde, hier selbst eine anlegen
         self.is_paused = False                  # mpv startet standardmässig abspielend
         if root is None:
             self.root = tk.Toplevel()
@@ -503,19 +507,33 @@ class MyFSVideo:
 
     def _get_print_preview(self):
         if self.print_preview_ext is not None:
-            return self.print_preview_ext
-        if self.print_preview_own is None:
-            self.print_preview_own = PrintPreview(
-                self.root,
-                close_callback=self._on_own_print_preview_closed,
-            )
-        return self.print_preview_own
+            if self._is_preview_window_alive(self.print_preview_ext):
+                return self.print_preview_ext
+            # der Aufrufer (bzw. dessen Anwender) hat dieses Fenster
+            # geschlossen - ab jetzt verwalten wir unsere eigene Instanz,
+            # unabhaengig davon, wer urspruenglich verantwortlich war
+            self.print_preview_ext = None
 
-    def _on_own_print_preview_closed(self):
-        # der Anwender hat das selbst erzeugte Print-Preview-Fenster
-        # geschlossen - beim naechsten Print-Klick soll ein neues entstehen,
-        # statt die (jetzt zerstoerte) alte Instanz weiterzuverwenden
-        self.print_preview_own = None
+        if MyFSVideo._shared_print_preview is None or not self._is_preview_window_alive(MyFSVideo._shared_print_preview):
+            MyFSVideo._shared_print_preview = PrintPreview(
+                self.root,
+                close_callback=self._on_shared_print_preview_closed,
+            )
+        return MyFSVideo._shared_print_preview
+
+    @staticmethod
+    def _is_preview_window_alive(preview):
+        try:
+            return bool(preview.window.winfo_exists())
+        except tk.TclError:
+            return False
+
+    def _on_shared_print_preview_closed(self):
+        # der Anwender hat das (von irgendeinem Video-Fenster) selbst
+        # erzeugte Print-Preview-Fenster geschlossen - beim naechsten
+        # Print-Klick, egal von welchem offenen Video-Fenster, soll ein
+        # neues gemeinsames entstehen
+        MyFSVideo._shared_print_preview = None
 
     def restart_video(self):
         if self.mpv_ipc:
