@@ -456,6 +456,7 @@ class PrintPreview:
         self.printer_label.config(text=f"Printer: {self.printer or '(none)'}")
 
     def on_close(self):
-        self.close_callback()
+        if self.close_callback:
+            self.close_callback()
         self.window.destroy()
         

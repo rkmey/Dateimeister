@@ -21,6 +21,7 @@ import threading
 import queue
 import uuid
 import tools
+from print_preview import PrintPreview
 
     
 def format_time(seconds):
@@ -169,6 +170,7 @@ class MyFSVideo:
         num_thumbnails = None, 
         mpv_path = None, 
         ffprobe_path = None,
+        print_preview = None,
         debug = None
     ): 
         self.player = None
@@ -179,6 +181,9 @@ class MyFSVideo:
         self.temp_dir = temp_dir
         self.dict_caller = dict_caller
         self.thumbnail = thumbnail
+        self.print_preview_ext = print_preview  # von aussen mitgegeben, falls vorhanden
+        self.print_preview_own = None           # falls keine mitgegeben wurde, hier selbst eine anlegen
+        self.is_paused = False                  # mpv startet standardmässig abspielend
         if root is None:
             self.root = tk.Toplevel()
         else:
@@ -269,6 +274,12 @@ class MyFSVideo:
 
         threading.Thread(target=self._connect_main_ipc, daemon=True).start()
 
+        # Leertaste pausiert/setzt fort, unabhängig davon, welches Kind-Widget
+        # gerade den Fokus hat (siehe takefocus=0 an den Control-Buttons weiter
+        # unten, sonst würde ein zuvor angeklickter Button die Leertaste selbst
+        # abfangen statt sie hierher durchzureichen)
+        self.root.bind("<space>", self._on_space_key)
+
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     # ------------------------------------------------------------------
@@ -287,65 +298,74 @@ class MyFSVideo:
         while not self._stop_polling:
             if self.mpv_ipc and not self._seeking:
                 pos = self.mpv_ipc.get_property("time-pos")
+                paused = self.mpv_ipc.get_property("pause")
                 if pos is not None and self.duration:
                     pct = max(0.0, min(100.0, (pos / self.duration) * 100.0))
                     try:
-                        self.root.after(0, lambda p=pct, t=pos: self._update_position_ui(p, t))
+                        self.root.after(0, lambda p=pct, t=pos, pa=paused: self._update_position_ui(p, t, pa))
                     except RuntimeError:
                         break  # Fenster bereits zerstört
             time.sleep(0.5)
 
-    def _update_position_ui(self, pct, current_seconds):
+    def _update_position_ui(self, pct, current_seconds, paused=None):
         self.var_position.set(pct)
         self.lbl_time.config(text=f"{format_time(current_seconds)} / {format_time(self.duration)}")
+        if paused is not None:
+            self._set_paused_state(bool(paused))
 
     def build_controls(self):
         f = self.frame_controls
 
-        btn_restart = tk.Button(f, text="⏮", width=3, command=self.restart_video)
-        btn_back    = tk.Button(f, text="⏪10s", command=lambda: self.seek_relative(-10))
-        self.btn_playpause = tk.Button(f, text="⏯", width=3, command=self.toggle_playpause)
-        btn_fwd     = tk.Button(f, text="10s⏩", command=lambda: self.seek_relative(10))
+        btn_restart = tk.Button(f, text="⏮", width=3, command=self.restart_video, takefocus=0)
+        btn_back    = tk.Button(f, text="⏪10s", command=lambda: self.seek_relative(-10), takefocus=0)
+        btn_frame_back = tk.Button(f, text="|◀", width=3, command=self.frame_step_backward, takefocus=0)
+        self.btn_playpause = tk.Button(f, text="⏯", width=3, command=self.toggle_playpause, takefocus=0)
+        btn_frame_fwd  = tk.Button(f, text="▶|", width=3, command=self.frame_step_forward, takefocus=0)
+        btn_fwd     = tk.Button(f, text="10s⏩", command=lambda: self.seek_relative(10), takefocus=0)
+        self.btn_print = tk.Button(f, text="🖶 Print", command=self.print_frame, takefocus=0, state=tk.DISABLED)
 
         btn_restart.grid(row=0, column=0, padx=2, pady=2)
         btn_back.grid(row=0, column=1, padx=2, pady=2)
-        self.btn_playpause.grid(row=0, column=2, padx=2, pady=2)
-        btn_fwd.grid(row=0, column=3, padx=2, pady=2)
+        btn_frame_back.grid(row=0, column=2, padx=2, pady=2)
+        self.btn_playpause.grid(row=0, column=3, padx=2, pady=2)
+        btn_frame_fwd.grid(row=0, column=4, padx=2, pady=2)
+        btn_fwd.grid(row=0, column=5, padx=2, pady=2)
+        self.btn_print.grid(row=0, column=6, padx=(8, 2), pady=2)
 
-        self.btn_fullscreen = tk.Button(f, text="⛶", width=3, command=self.toggle_fullscreen)
-        self.btn_fullscreen.grid(row=0, column=9, padx=(8, 2), pady=2)        
+        self.btn_fullscreen = tk.Button(f, text="⛶", width=3, command=self.toggle_fullscreen, takefocus=0)
+        self.btn_fullscreen.grid(row=0, column=13, padx=(8, 2), pady=2)        
         
         self.var_position = tk.DoubleVar(value=0.0)
         
         self.lbl_time = tk.Label(f, text=f"00:00 / {format_time(self.duration)}",
                                   bg="gray20", fg="white", width=12)
-        self.lbl_time.grid(row=0, column=4, padx=(8, 4), pady=2)
+        self.lbl_time.grid(row=0, column=7, padx=(8, 4), pady=2)
 
         self.scale_position = tk.Scale(
             f, from_=0, to=100, orient="horizontal", showvalue=False,
             resolution=0.1, variable=self.var_position, length=300,
         )
-        self.scale_position.grid(row=0, column=5, padx=8, pady=2, sticky="ew")
+        self.scale_position.grid(row=0, column=8, padx=8, pady=2, sticky="ew")
         self.scale_position.bind("<ButtonPress-1>", self._on_seek_press)
         self.scale_position.bind("<ButtonRelease-1>", self._on_seek_release)
         self.scale_position.bind("<Motion>", self._on_scale_position_motion)
         self.scale_position.bind("<Leave>",  self._on_scale_position_leave)
 
-        f.grid_columnconfigure(5, weight=1)
+        f.grid_columnconfigure(8, weight=1)
 
         self.var_mute = tk.BooleanVar(value=False)
         chk_mute = tk.Checkbutton(f, text="Stumm", variable=self.var_mute,
                                    command=self.on_mute_toggle, bg="gray20", fg="white",
-                                   selectcolor="gray30")
-        chk_mute.grid(row=0, column=6, padx=4, pady=2)
+                                   selectcolor="gray30", takefocus=0)
+        chk_mute.grid(row=0, column=9, padx=4, pady=2)
 
-        tk.Label(f, text="Vol", bg="gray20", fg="white").grid(row=0, column=7, padx=(8, 0))
+        tk.Label(f, text="Vol", bg="gray20", fg="white").grid(row=0, column=10, padx=(8, 0))
         self.var_volume = tk.IntVar(value=100)
         scale_volume = tk.Scale(
             f, from_=0, to=150, orient="horizontal", showvalue=True,
             variable=self.var_volume, length=140, command=self.on_volume_change,
         )
-        scale_volume.grid(row=0, column=8, padx=(0, 8), pady=2)
+        scale_volume.grid(row=0, column=11, padx=(0, 8), pady=2)
         
         # scrolled treeview, button inclue/exclude nd label in frame info
         f = self.frame_info
@@ -432,6 +452,70 @@ class MyFSVideo:
     def toggle_playpause(self):
         if self.mpv_ipc:
             self.mpv_ipc.toggle_pause()
+            self._sync_paused_state_now()
+
+    def _on_space_key(self, event=None):
+        self.toggle_playpause()
+        return "break"
+
+    def frame_step_forward(self):
+        if self.mpv_ipc:
+            self.mpv_ipc.command(["frame-step"])  # pausiert automatisch, falls noch am Abspielen
+            self._sync_paused_state_now()
+
+    def frame_step_backward(self):
+        if self.mpv_ipc:
+            self.mpv_ipc.command(["frame-back-step"])  # pausiert automatisch, falls noch am Abspielen
+            self._sync_paused_state_now()
+
+    def _sync_paused_state_now(self):
+        """Fragt den Pause-Status sofort synchron ab, statt auf den naechsten
+        Poll-Zyklus (bis zu 0.5s) zu warten - fuer direktes Feedback nach
+        einer Nutzeraktion (Play/Pause-Taste, Frame-Step)."""
+        if not self.mpv_ipc:
+            return
+        paused = self.mpv_ipc.get_property("pause")
+        if paused is not None:
+            self._set_paused_state(bool(paused))
+
+    def _set_paused_state(self, paused: bool):
+        self.is_paused = paused
+        self.btn_print.config(state=tk.NORMAL if paused else tk.DISABLED)
+
+    def print_frame(self):
+        if not self.mpv_ipc or not self.is_paused:
+            return  # Button sollte ohnehin disabled sein, doppelt haelt besser
+
+        filename = os.path.join(self.temp_dir, f"print_frame_{uuid.uuid4().hex}.png")
+        self.mpv_ipc.command(["screenshot-to-file", filename, "video"])
+
+        for _ in range(100):
+            if os.path.exists(filename):
+                break
+            time.sleep(0.01)
+
+        if not os.path.exists(filename):
+            tools.info_box("Konnte den aktuellen Frame nicht erfassen.", "fehler")
+            return
+
+        preview = self._get_print_preview()
+        preview.add_photo(filename)
+
+    def _get_print_preview(self):
+        if self.print_preview_ext is not None:
+            return self.print_preview_ext
+        if self.print_preview_own is None:
+            self.print_preview_own = PrintPreview(
+                self.root,
+                close_callback=self._on_own_print_preview_closed,
+            )
+        return self.print_preview_own
+
+    def _on_own_print_preview_closed(self):
+        # der Anwender hat das selbst erzeugte Print-Preview-Fenster
+        # geschlossen - beim naechsten Print-Klick soll ein neues entstehen,
+        # statt die (jetzt zerstoerte) alte Instanz weiterzuverwenden
+        self.print_preview_own = None
 
     def restart_video(self):
         if self.mpv_ipc:
@@ -439,6 +523,7 @@ class MyFSVideo:
             self.mpv_ipc.set_property("pause", False)
             self.var_position.set(0.0)
             self.lbl_time.config(text=f"00:00 / {format_time(self.duration)}")
+            self._sync_paused_state_now()
 
     def seek_relative(self, secs):
         if self.mpv_ipc:
