@@ -800,16 +800,6 @@ class MyThumbnail:
                 self.text.insert(lstart, line)
                 self.text.tag_add("exclude", lstart, lend) # exclude foreground(grey)
                 self.scrollTextToLineno()
-        if self.parent is not None:
-            self.parent.setState(state, caller)
-        if self.fsimage is not None:
-            self.fsimage.exclude_call(state) # synchronisiert das FSImge, falls vorhanden
-            print("FSImage Exclude-Call")
-        if self.dupl is not None:
-            #print("dupl is: " + str(self.dupl) + "caller is: " + str(caller))
-            if caller != self.dupl: # to avoid loop
-                self.dupl.exclude_call(self, state) # synchronisiert das Duplicate, falls vorhanden
-                #print("Duplicate Exclude-Call")
         return state_changed
     def getState(self):
         return self.state   

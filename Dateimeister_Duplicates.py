@@ -45,7 +45,7 @@ import Dateimeister_Duplicates as DD
 import Tooltip as TT
 
 import tools
-from tools import Globals, INCLUDE, EXCLUDE
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent
 from tools import MyThumbnail
 
 from enum import Enum
@@ -185,20 +185,29 @@ class MyDuplicates:
         self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
         self.thisduplicate = None
         self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
+        # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handler
+        Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed)
+        Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
 
-    def exclude_call(self, parent, state): # react to request from outside, outside is root - thumbnail
-        print("MyDuplicate.Exclude called, State = " + str(state))
-        # we have to find child for parent ( this is the thumbnail in main window)
-        for child in self.dict_child_parent:
-            myparent = self.dict_child_parent[child]
-            if myparent == parent:
-                break
-        child.setState(state, self)
-    
+    # 20260915: event handler for closing event
+    def on_closing(self, event): #if a FS exists in dict_file_image delete entry
+        if event.filename in self.dict_file_image:
+            if self.dict_file_image[event.filename] is event.obj: # has been created by us, not by someone else
+                del self.dict_file_image[event.filename]
+
+    # the event handler for our file_state_changed event
+    def on_file_state_changed(self, event):
+        #we need the thumbnail
+        t = Globals.dict_thumbnails[Globals.imagetype][event.filename]
+        print(f"Dateimeister_support received state changed event, file: {t.getFile()} event-file: {event.filename} state: {t.getState()} new state: {event.state}") if self.debug else True
+        t.setState(event.state)
+        # no historization here because this will be done bei Dateimeister_support
+        
     def canvas_image_exclude(self): # calls canvas_exclude with self.event
         print("Context menu exlude")
         self.canvas_exclude(self.event)
 
+    # 20260915 for better maintenace we convert the whole mechanism from callbacks to events
     def canvas_exclude(self, event):
         self.f.focus_set()
 
@@ -206,11 +215,15 @@ class MyDuplicates:
         canvas_y = self.f.canvasy(event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
+            #print("State is: " + str(thumbnail.getState()))
             if thumbnail.getState() == INCLUDE:
-                thumbnail.setState(EXCLUDE, self)
+                new_state = EXCLUDE
             else: # toggle to not exclude, delete Item
-                thumbnail.setState(INCLUDE, self)
-            self.main.historize_process()
+                new_state = INCLUDE
+            Globals.eventManager.generate(
+                "FileStateChanged",
+                FileStateEvent(thumbnail.getFile(), new_state)
+            )
 
     def canvas_image_show(self):
         print("Context menu show")
@@ -240,7 +253,7 @@ class MyDuplicates:
                 fs_image.setPlaystatus('play') # Status, Buttontext
         else: # ein neues Objekt anlegen und in self.dict_file_image eintragen
             print ("FSImage does not exist for file: " + file)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self.main, "", "Include", "Exclude", "Included", "Excluded", self.main.debug)
+            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, "Duplicate:", "Include", "Exclude", "Included", "Excluded", self.main.debug)
             self.dict_file_image[file] = fs_image
 
     def canvas_video_restart(self):
@@ -371,16 +384,16 @@ class MyDuplicates:
         self.display_duplicate(self.thisduplicate)
 
     def close_handler(self): #calles when window is closing
-        print("ToDo, cleanup when window is closed")
         self.stop_all_players() # unregister to avoid calls after duplicate has been destroyed
-        for child in self.dict_child_parent:
-            parent = self.dict_child_parent[child]
-        self.root.destroy()
-        for t in self.dict_file_image: # destroy all FSImages
-            u = self.dict_file_image[t]
-            u.close_handler_external()
+        Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
+        Globals.eventManager.unbind("Closing", self.on_closing)
+        Globals.eventManager.generate(
+            "Closing",
+            ClosingEvent("", self) # file, self, see tools
+        )
         self.main.button_duplicates.config(state = NORMAL)
         self.main.win_duplicates = None
+        self.root.destroy()
         
     def stop_all_players(self):
         # stop all video players

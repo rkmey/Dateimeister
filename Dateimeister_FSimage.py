@@ -398,6 +398,7 @@ class MyFSImage:
         )
         
     def on_closing(self, event): # if parent closes close own window 
+        print(f"Duplicate closing: {event.obj} {self.caller}") if self.debug else True
         if event.obj is self.caller:
             self.close_handler()
             

@@ -2692,13 +2692,11 @@ class Dateimeister_support:
         if self.win_duplicates is not None: # stop MyDuplicates-Objekt
             self.win_duplicates.close_handler()
             self.win_duplicates = None
-        # 20260915 generate close_event for all FS_Images
-        # delete all fsimage by close-call. we must use a copy because each event generated changes the list by on_closing
-        for filename, fs in list(self.dict_file_image.items()):
-            Globals.eventManager.generate(
-                "Closing",
-                ClosingEvent(filename, self) # file, self, see tools
-            )
+        # 20260915 generate closing event, FS-Childs will close themselves
+        Globals.eventManager.generate(
+            "Closing",
+            ClosingEvent("", self) # file, self, see tools
+        )
         self.dict_file_image = {}
         if self.win_messages is not None: # stop MyMessagesWindow-Objekt
             self.win_messages.close_handler()
@@ -3579,10 +3577,7 @@ class Dateimeister_support:
         # 20260915 important to avoid call after object is destroyed!
         Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
         Globals.eventManager.unbind("Closing", self.on_closing)
-        Globals.eventManager.generate(
-            "Closing",
-            ClosingEvent("", self) # file, self, see tools
-        )
+        self.close_child_windows()
         self.root.destroy()
 # #############################################################
 if __name__ == '__main__':
