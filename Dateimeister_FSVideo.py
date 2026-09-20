@@ -22,6 +22,7 @@ import queue
 import uuid
 import tools
 from print_preview import PrintPreview
+import Tooltip as TT
 
     
 def format_time(seconds):
@@ -321,12 +322,19 @@ class MyFSVideo:
         f = self.frame_controls
 
         btn_restart = tk.Button(f, text="⏮", width=3, command=self.restart_video, takefocus=0)
+        TT.ToolTip(btn_restart, 'restart from begin')
         btn_back    = tk.Button(f, text="⏪10s", command=lambda: self.seek_relative(-10), takefocus=0)
+        TT.ToolTip(btn_back, '10 sec. back')
         btn_frame_back = tk.Button(f, text="|◀", width=3, command=self.frame_step_backward, takefocus=0)
+        TT.ToolTip(btn_frame_back, 'frame(s) back')
         self.btn_playpause = tk.Button(f, text="⏯", width=3, command=self.toggle_playpause, takefocus=0)
+        TT.ToolTip(self.btn_playpause, 'play / pause')
         btn_frame_fwd  = tk.Button(f, text="▶|", width=3, command=self.frame_step_forward, takefocus=0)
+        TT.ToolTip(btn_frame_fwd, 'frame(s) forward')
         btn_fwd     = tk.Button(f, text="10s⏩", command=lambda: self.seek_relative(10), takefocus=0)
+        TT.ToolTip(btn_fwd, '10 sec. forward')
         self.btn_print = tk.Button(f, text="🖶 Print", command=self.print_frame, takefocus=0, state=tk.DISABLED)
+        TT.ToolTip(self.btn_print, 'send frame to print preview')
 
         btn_restart.grid(row=0, column=0, padx=2, pady=2)
         btn_back.grid(row=0, column=1, padx=2, pady=2)
@@ -337,6 +345,7 @@ class MyFSVideo:
         self.btn_print.grid(row=0, column=6, padx=(8, 2), pady=2)
 
         self.btn_fullscreen = tk.Button(f, text="⛶", width=3, command=self.toggle_fullscreen, takefocus=0)
+        TT.ToolTip(self.btn_fullscreen, 'full screen, esc to return to window')
         self.btn_fullscreen.grid(row=0, column=13, padx=(8, 2), pady=2)        
         
         self.var_position = tk.DoubleVar(value=0.0)
@@ -377,8 +386,9 @@ class MyFSVideo:
         self.tv.configure(columns="Col1, Col2, Col3")
         f.grid_columnconfigure(0, weight=8)
  
-        btn_inex = tk.Button(f, text="inex", width=15, command=self.inex)
-        btn_inex.grid(row=0, column=1, padx=2, pady=2, sticky="ew")
+        self.btn_inex = tk.Button(f, text="inex", width=15, command=self.inex)
+        TT.ToolTip(self.btn_inex, 'include / exclude video')
+        self.btn_inex.grid(row=0, column=1, padx=2, pady=2, sticky="ew")
         f.grid_columnconfigure(1, weight=1)
 
         lbl_inex = tk.Label(f, text="inex", bg="gray20", fg="white")

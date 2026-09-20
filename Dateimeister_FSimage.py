@@ -37,7 +37,6 @@ from typing import Callable
 import tools
 import dateimeister_video as DV
 import Tooltip as TT
-from videoplayer_preview import VideoPreviewEngine
 
 from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent
 
@@ -256,13 +255,6 @@ class MyFSImage:
             self.player.register_callback(self.display_progress)
             self.scale_progress.set(0)
             self.scale_progress.config(to = int(self.player.get_duration()))
-            
-            # for preview on scale
-            self.preview_engine = VideoPreviewEngine(self.player.video_source, self.root, debug = self.debug, meta_data = self.player.meta)
-            # event handler necessary for preview
-            self.scale_progress.bind("<Motion>", self.on_scale_motion)
-            self.scale_progress.bind("<Leave>", lambda e: self.preview_engine and self.preview_engine.hide())
-
             
         # set fileinfo
         mytext = "{:s}\ncreated {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
