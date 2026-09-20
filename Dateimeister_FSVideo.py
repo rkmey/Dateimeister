@@ -189,6 +189,11 @@ class MyFSVideo:
         self.thumbnail = thumbnail
         self.print_preview_ext = print_preview  # von aussen mitgegeben, falls vorhanden
         self.is_paused = False                  # mpv startet standardmässig abspielend
+
+        # fuer "gedrueckt halten" bei den Frame-Step-Buttons
+        self._frame_hold_after_id = None
+        self._frame_hold_step_func = None
+        self._frame_hold_press_time = None
         if root is None:
             self.root = tk.Toplevel()
         else:
@@ -325,16 +330,21 @@ class MyFSVideo:
         TT.ToolTip(btn_restart, 'restart from begin')
         btn_back    = tk.Button(f, text="⏪10s", command=lambda: self.seek_relative(-10), takefocus=0)
         TT.ToolTip(btn_back, '10 sec. back')
-        btn_frame_back = tk.Button(f, text="|◀", width=3, command=self.frame_step_backward, takefocus=0)
+        btn_frame_back = tk.Button(f, text="|◀", width=3, takefocus=0)
         TT.ToolTip(btn_frame_back, 'frame(s) back')
         self.btn_playpause = tk.Button(f, text="⏯", width=3, command=self.toggle_playpause, takefocus=0)
         TT.ToolTip(self.btn_playpause, 'play / pause')
-        btn_frame_fwd  = tk.Button(f, text="▶|", width=3, command=self.frame_step_forward, takefocus=0)
+        btn_frame_fwd  = tk.Button(f, text="▶|", width=3, takefocus=0)
         TT.ToolTip(btn_frame_fwd, 'frame(s) forward')
         btn_fwd     = tk.Button(f, text="10s⏩", command=lambda: self.seek_relative(10), takefocus=0)
         TT.ToolTip(btn_fwd, '10 sec. forward')
         self.btn_print = tk.Button(f, text="🖶 Print", command=self.print_frame, takefocus=0, state=tk.DISABLED)
         TT.ToolTip(self.btn_print, 'send frame to print preview')
+
+        btn_frame_back.bind("<ButtonPress-1>", lambda e: self._on_frame_button_press(self.frame_step_backward))
+        btn_frame_back.bind("<ButtonRelease-1>", lambda e: self._on_frame_button_release())
+        btn_frame_fwd.bind("<ButtonPress-1>", lambda e: self._on_frame_button_press(self.frame_step_forward))
+        btn_frame_fwd.bind("<ButtonRelease-1>", lambda e: self._on_frame_button_release())
 
         btn_restart.grid(row=0, column=0, padx=2, pady=2)
         btn_back.grid(row=0, column=1, padx=2, pady=2)
@@ -472,6 +482,11 @@ class MyFSVideo:
         self.toggle_playpause()
         return "break"
 
+    FRAME_HOLD_THRESHOLD_MS = 1000   # so lange halten, bevor die Wiederholung einsetzt
+    FRAME_HOLD_REPEAT_MS = 250       # 4 Frames pro Sekunde waehrend des Haltens
+    FRAME_HOLD_FAST_AFTER_S = 4.0    # ab so vielen Sekunden Gesamt-Haltedauer schneller
+    FRAME_HOLD_REPEAT_FAST_MS = 125  # 8 Frames pro Sekunde ab dann
+
     def frame_step_forward(self):
         if self.mpv_ipc:
             self.mpv_ipc.command(["frame-step"])  # pausiert automatisch, falls noch am Abspielen
@@ -481,6 +496,36 @@ class MyFSVideo:
         if self.mpv_ipc:
             self.mpv_ipc.command(["frame-back-step"])  # pausiert automatisch, falls noch am Abspielen
             self._sync_paused_state_now()
+
+    def _on_frame_button_press(self, step_func):
+        self._cancel_frame_hold_timer()
+        self._frame_hold_step_func = step_func
+        self._frame_hold_press_time = time.time()
+        step_func()  # der normale Einzelschritt, wie bisher bei einem kurzen Klick
+        self._frame_hold_after_id = self.root.after(
+            self.FRAME_HOLD_THRESHOLD_MS, self._start_frame_hold_repeat
+        )
+
+    def _start_frame_hold_repeat(self):
+        if self._frame_hold_step_func is None:
+            return  # zwischenzeitlich losgelassen
+        self._frame_hold_step_func()
+        elapsed = time.time() - self._frame_hold_press_time
+        interval = (
+            self.FRAME_HOLD_REPEAT_FAST_MS
+            if elapsed >= self.FRAME_HOLD_FAST_AFTER_S
+            else self.FRAME_HOLD_REPEAT_MS
+        )
+        self._frame_hold_after_id = self.root.after(interval, self._start_frame_hold_repeat)
+
+    def _on_frame_button_release(self):
+        self._cancel_frame_hold_timer()
+        self._frame_hold_step_func = None
+
+    def _cancel_frame_hold_timer(self):
+        if self._frame_hold_after_id is not None:
+            self.root.after_cancel(self._frame_hold_after_id)
+            self._frame_hold_after_id = None
 
     def _sync_paused_state_now(self):
         """Fragt den Pause-Status sofort synchron ab, statt auf den naechsten
@@ -618,6 +663,7 @@ class MyFSVideo:
         
     def on_close(self):
         self._stop_polling = True
+        self._cancel_frame_hold_timer()
         if self.mpv_ipc:
             self.mpv_ipc.close()
         for proc in (getattr(self, "mpv_proc", None),):
