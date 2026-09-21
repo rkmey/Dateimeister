@@ -47,7 +47,6 @@ class MyFSImage:
         self, 
         file: str = None, 
         thumbnail: tools.MyThumbnail = None, 
-        dict_caller: dict = None, 
         caller: object = None, # can be several class instances, we dont enumerate all the candidates
         str_title_prefix: str = None, 
         str_include: str = None,
@@ -68,7 +67,6 @@ class MyFSImage:
         if thumbnail.get_imagetype() == "STILL": # still image
             self.image  = Image.open(file)
         self.file = file
-        self.dict_caller = dict_caller
         # Create secondary (or popup) window.
         self.root = tk.Toplevel()
         # Fenstergröße

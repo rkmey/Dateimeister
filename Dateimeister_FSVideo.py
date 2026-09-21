@@ -161,23 +161,22 @@ class MyFSVideo:
     # the same preview, as long as the user hasn't closed it in between
     _shared_print_preview = None
 
-    def __init__(self, 
-        file = None, 
-        root = None,
-        thumbnail = None, 
-        dict_caller = None,
-        caller = None,
-        str_title_prefix = None,
-        str_include = None,
-        str_exclude = None,
-        str_included = None,
-        str_excluded = None,
-        temp_dir = None,
-        num_thumbnails = None, 
-        mpv_path = None, 
-        ffprobe_path = None,
-        print_preview = None,
-        debug = None
+    def __init__(
+        self, 
+        file: str = None, 
+        thumbnail: tools.MyThumbnail = None, 
+        caller: object = None, # can be several class instances, we dont enumerate all the candidates
+        str_title_prefix: str = None, 
+        str_include: str = None,
+        str_exclude: str = None,
+        str_included: str = None,
+        str_excluded: str = None,
+        temp_dir: str = None,
+        num_thumbnails: int = None, 
+        mpv_path: str = None, 
+        ffprobe_path: str = None,
+        print_preview: str = None,
+        debug: bool = False
     ): 
         self.player = None
         self.file = file
@@ -185,7 +184,6 @@ class MyFSVideo:
         self.mpv_path = mpv_path
         self.ffprobe_path = ffprobe_path
         self.temp_dir = temp_dir
-        self.dict_caller = dict_caller
         self.thumbnail = thumbnail
         self.print_preview_ext = print_preview  # von aussen mitgegeben, falls vorhanden
         self.is_paused = False                  # mpv startet standardmässig abspielend
@@ -194,10 +192,7 @@ class MyFSVideo:
         self._frame_hold_after_id = None
         self._frame_hold_step_func = None
         self._frame_hold_press_time = None
-        if root is None:
-            self.root = tk.Toplevel()
-        else:
-            self.root = root
+        self.root = tk.Toplevel()
         # Fenstergröße
         self.physical_width  = self.root.winfo_screenwidth()
         self.physical_height = self.root.winfo_screenheight()
@@ -673,19 +668,6 @@ class MyFSVideo:
                 except OSError:
                     pass
         self.root.destroy()
-
-        if self.dict_caller:
-            # now unregister at thumbnail and remove entry from dict
-            t = self.dict_caller[self.file]
-            self.dict_caller.pop(self.file)
-            del t
-    
-    def close_handler_external(self): # called from external. Do the same things as close_handler, except remove from dict_file_image
-        # can be called from main window or Duplicates-Window which use different dicts
-        if self.dict_caller:
-            t = self.dict_caller[self.file]
-            self.root.destroy()
-            del t
 
     def mpv_cmd(pipe, cmd):
         msg = json.dumps(cmd) + "\n"

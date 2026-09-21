@@ -3077,9 +3077,7 @@ class Dateimeister_support:
                         pp = None
                     fs_image = FV.MyFSVideo(
                         file = file, 
-                        root = None,
                         thumbnail = thumbnail, 
-                        dict_caller = self.dict_file_image,
                         caller = self,
                         str_title_prefix = "",
                         str_include = "Include",
