@@ -23,6 +23,7 @@ import uuid
 import tools
 from print_preview import PrintPreview
 import Tooltip as TT
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent
 
     
 def format_time(seconds):
@@ -156,11 +157,6 @@ class MpvIPC:
 
 class MyFSVideo:
 
-    # class-level (shared across all MyFSVideo instances/windows), so that
-    # frames printed from several videos opened one after another end up in
-    # the same preview, as long as the user hasn't closed it in between
-    _shared_print_preview = None
-
     def __init__(
         self, 
         file: str = None, 
@@ -186,7 +182,9 @@ class MyFSVideo:
         self.temp_dir = temp_dir
         self.thumbnail = thumbnail
         self.print_preview_ext = print_preview  # von aussen mitgegeben, falls vorhanden
+        self.print_preview_own = None           # falls keine mitgegeben wurde, hier selbst eine anlegen
         self.is_paused = False                  # mpv startet standardmässig abspielend
+        self._auto_paused_by_focus = False      # True, wenn WIR wegen Fokusverlust pausiert haben
 
         # fuer "gedrueckt halten" bei den Frame-Step-Buttons
         self._frame_hold_after_id = None
@@ -284,8 +282,16 @@ class MyFSVideo:
         # unten, sonst würde ein zuvor angeklickter Button die Leertaste selbst
         # abfangen statt sie hierher durchzureichen)
         self.root.bind("<space>", self._on_space_key)
+        
+        # get / loose focus: trigger play / pause
+        self.root.bind("<FocusIn>", self.on_focus_in)
+        self.root.bind("<FocusOut>", self.on_focus_out)
+        self.root.focus_set()
 
-        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
+        # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handlers
+        Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed) # include<=>exclude
+        Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
 
     # ------------------------------------------------------------------
     # Steuerung des Hauptplayers (mpv_proc) über IPC
@@ -340,6 +346,12 @@ class MyFSVideo:
         btn_frame_back.bind("<ButtonRelease-1>", lambda e: self._on_frame_button_release())
         btn_frame_fwd.bind("<ButtonPress-1>", lambda e: self._on_frame_button_press(self.frame_step_forward))
         btn_frame_fwd.bind("<ButtonRelease-1>", lambda e: self._on_frame_button_release())
+        
+        self.root.bind("<KeyPress-Left>", lambda e: self._on_frame_button_press(self.frame_step_backward))
+        self.root.bind("<KeyRelease-Left>", lambda e: self._on_frame_button_release())
+        self.root.bind("<KeyPress-Right>", lambda e: self._on_frame_button_press(self.frame_step_forward))
+        self.root.bind("<KeyRelease-Right>", lambda e: self._on_frame_button_release())
+
 
         btn_restart.grid(row=0, column=0, padx=2, pady=2)
         btn_back.grid(row=0, column=1, padx=2, pady=2)
@@ -399,6 +411,36 @@ class MyFSVideo:
         lbl_inex = tk.Label(f, text="inex", bg="gray20", fg="white")
         lbl_inex.grid(row=0, column=2, padx=2, pady=2)
         f.grid_columnconfigure(2, weight=1)
+
+    def on_focus_in(self, event):
+        if not self.mpv_ipc:
+            return
+        # nur fortsetzen, wenn WIR es waren, die wegen Fokusverlust pausiert
+        # haben - ein manuelles Pausieren (Leertaste, Frame-Step) oder ein
+        # Print-Vorbereiten darf durch einen Fokuswechsel nicht aufgehoben
+        # werden
+        if self._auto_paused_by_focus and self.is_paused:
+            print("got focus back - resuming (was auto-paused on focus loss)") if self.debug else True
+            self.toggle_playpause()
+        self._auto_paused_by_focus = False
+
+    def on_focus_out(self, event):
+        if not self.mpv_ipc:
+            return
+        if not self.is_paused:
+            print("lost focus - auto-pausing") if self.debug else True
+            self.toggle_playpause()
+            self._auto_paused_by_focus = True
+        else:
+            # war schon pausiert (manuell oder per Frame-Step) - das war
+            # nicht unser Auto-Pause, also beim Fokus-Zurueckerhalten NICHT
+            # automatisch fortsetzen
+            self._auto_paused_by_focus = False
+
+    def activate(self):
+        self.root.deiconify()      # falls minimiert
+        self.root.lift()
+        self.root.focus_force()
 
     # all the functions for fullscreen and back to window including small controll panel in full screen modus
     def toggle_fullscreen(self):
@@ -564,12 +606,35 @@ class MyFSVideo:
             # unabhaengig davon, wer urspruenglich verantwortlich war
             self.print_preview_ext = None
 
-        if MyFSVideo._shared_print_preview is None or not self._is_preview_window_alive(MyFSVideo._shared_print_preview):
-            MyFSVideo._shared_print_preview = PrintPreview(
-                self.root,
-                close_callback=self._on_shared_print_preview_closed,
-            )
-        return MyFSVideo._shared_print_preview
+        if self.print_preview_own is None or not self._is_preview_window_alive(self.print_preview_own):
+            self.print_preview_own = PrintPreview(self._get_app_root())
+        return self.print_preview_own
+
+    def _get_app_root(self):
+        """Liefert das eigentliche, dauerhafte Tk-Root-Fenster der Anwendung
+        (nicht dieses Video-Fensters). Wichtig: eine hier selbst angelegte
+        PrintPreview muss an DIESEM Root haengen, nicht an self.root -
+        sonst wuerde sie beim Schliessen dieses Video-Fensters automatisch
+        mitzerstoert (Tkinter zerstoert beim destroy() eines Toplevels alle
+        an ihm haengenden Kind-Fenster, auch andere Toplevels)."""
+        try:
+            return self.root.nametowidget('.')
+        except Exception:
+            return self.root
+
+    def get_print_preview(self):
+        """Oeffentlicher Getter: gibt die aktuell fuer dieses Video zustaendige
+        PrintPreview zurueck (egal ob von aussen uebergeben oder selbst
+        angelegt), oder None, falls (noch) keine existiert bzw. sie bereits
+        geschlossen wurde. Wird beim Schliessen dieses Video-Fensters NICHT
+        zerstoert - der Aufrufer kann das Ergebnis an das naechste MyFSVideo
+        weiterreichen (Parameter print_preview=...), um Stills aus mehreren
+        Videos in derselben PrintPreview zu sammeln."""
+        if self.print_preview_ext is not None and self._is_preview_window_alive(self.print_preview_ext):
+            return self.print_preview_ext
+        if self.print_preview_own is not None and self._is_preview_window_alive(self.print_preview_own):
+            return self.print_preview_own
+        return None
 
     @staticmethod
     def _is_preview_window_alive(preview):
@@ -577,13 +642,6 @@ class MyFSVideo:
             return bool(preview.window.winfo_exists())
         except tk.TclError:
             return False
-
-    def _on_shared_print_preview_closed(self):
-        # der Anwender hat das (von irgendeinem Video-Fenster) selbst
-        # erzeugte Print-Preview-Fenster geschlossen - beim naechsten
-        # Print-Klick, egal von welchem offenen Video-Fenster, soll ein
-        # neues gemeinsames entstehen
-        MyFSVideo._shared_print_preview = None
 
     def restart_video(self):
         if self.mpv_ipc:
@@ -656,7 +714,7 @@ class MyFSVideo:
         # implementation what happens if button include / exlude pressed
         pass
         
-    def on_close(self):
+    def close_handler(self):
         self._stop_polling = True
         self._cancel_frame_hold_timer()
         if self.mpv_ipc:
@@ -667,6 +725,13 @@ class MyFSVideo:
                     proc.terminate()
                 except OSError:
                     pass
+        # 20260915 important to avoid call after object is destroyed!
+        Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
+        Globals.eventManager.unbind("Closing", self.on_closing)
+        Globals.eventManager.generate(
+            "Closing",
+            ClosingEvent(self.file, self) # file, self, see tools
+        )
         self.root.destroy()
 
     def mpv_cmd(pipe, cmd):
@@ -794,7 +859,7 @@ class MyFSVideo:
                             img.load()
                             photo = ImageTk.PhotoImage(img)
                             photos.append(photo)
-                            print(f"Photo from {filename} generated") if self.debug else True
+                            #print(f"Photo from {filename} generated") if self.debug else True
                         break
                     except OSError:
                         time.sleep(0.01)
@@ -805,4 +870,39 @@ class MyFSVideo:
         mpv_thumb_proc.terminate()
         pipe.close()
         return photos
+
+    # the include / exlude and close logic
+    # 20260915 for better maintenace we convert the whole mechanism from callbacks to events
+    def on_button_state(self): # react to own Button, thumbnail can be from main or duplicates
+        # we just determine the new state, setting of new state in event handler, so we avoid finding out if already done
+        # Button -> this method -> fire event
+        if self.thumbnail.getState() == INCLUDE: 
+            new_state = EXCLUDE
+        else: 
+            new_state = INCLUDE
+        Globals.eventManager.generate(
+            "FileStateChanged",
+            FileStateEvent(self.file, new_state)
+        )
+        
+    def on_closing(self, event): # if parent closes close own window 
+        print(f"Duplicate closing: {event.obj} {self.caller}") if self.debug else True
+        if event.obj is self.caller:
+            self.close_handler()
+            
+        
+    # the event handler for our file_state_changed event
+    def on_file_state_changed(self, event):
+        if self.file == event.filename: # otherwise we are not meant
+            print(f"FSIMAGE received state changed event, file: {self.file} event-file: {event.filename} state: {self.thumbnail.getState()} new state: {event.state}") if self.debug else True
+            if event.state == INCLUDE:
+                self.btn_inex.config(text = self.str_exclude)
+                self.lbl_inex.config(text = self.str_included)
+            else: # toggle to not exclude, delete Item
+                self.btn_inex.config(text = self.str_include)
+                self.lbl_inex.config(text = self.str_excluded)
+            self.thumbnail.setState(event.state)
+            # historize is now done in Dateimeister_support because it listens to the same event
+    # 20260915
+
 

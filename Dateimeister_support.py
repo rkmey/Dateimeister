@@ -1563,7 +1563,13 @@ class Dateimeister_support:
     # 20260915: event handler for closing event
     def on_closing(self, event): #if a FS exists in dict_file_image delete entry
         if event.filename in self.dict_file_image:
-            if self.dict_file_image[event.filename] is event.obj: # has been created by us, not by someone else
+            thisobj = self.dict_file_image[event.filename]
+            if thisobj is event.obj: # has been created by us, not by someone else
+                # get a print preview used by FSVideo (if frames have been printed)
+                if Globals.imagetype == 'VIDEO': # Video
+                    pp = thisobj.get_print_preview()
+                    if pp: # keep this PrintPreview
+                        self.dict_preview[Globals.imagetype] = pp
                 del self.dict_file_image[event.filename]
 
     #printing
@@ -1574,20 +1580,24 @@ class Dateimeister_support:
 
     def print_photo(self):
         t = self.get_thumbnail(self.event)
+        print(f"add {Globals.imagetype} photo {t.getFile()} to print queue") if self.debug else True
         if t:
-            file = t.getFile()
-            print(f"PRINT: add {file} to print queue {self.printer}")
-            self.list_print.append(file)
-            self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=NORMAL)
-            if not self.dict_preview.get(Globals.imagetype) or not self.dict_preview[Globals.imagetype]:
-                self.dict_preview[Globals.imagetype] = PrintPreview(
-                    self.root, rows=3, 
-                    preview_dir = Globals.temp_files_path,
-                    # parameters returned to preview_closed, no changes required if parameters are added in the called class (PrintPreview)
-                    # the parameters have just to added in our own callback function (preview_closed)
-                    close_callback=lambda: self.preview_closed(Globals.imagetype)
-                )
-            self.dict_preview[Globals.imagetype].add_photo(file)            
+            if Globals.imagetype != 'VIDEO':
+                file = t.getFile()
+                print(f"PRINT: add {file} to print queue {self.printer}")
+                self.list_print.append(file)
+                self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=NORMAL)
+                if not self.dict_preview.get(Globals.imagetype) or not self.dict_preview[Globals.imagetype]:
+                    self.dict_preview[Globals.imagetype] = PrintPreview(
+                        self.root, rows=3, 
+                        preview_dir = Globals.temp_files_path,
+                        # parameters returned to preview_closed, no changes required if parameters are added in the called class (PrintPreview)
+                        # the parameters have just to added in our own callback function (preview_closed)
+                        close_callback=lambda: self.preview_closed(Globals.imagetype)
+                    )
+                self.dict_preview[Globals.imagetype].add_photo(file)
+            else: # VIDEO open Video player 
+                self.display_image(t)
 
     def preview_closed(self, imagetype):
         print(f"PRINT Preview close imagetype = {imagetype}") if self.debug else True
@@ -1979,8 +1989,10 @@ class Dateimeister_support:
                         duration_in_seconds = fc / frames_per_second
                         #print ("FPS is: ", fps, " Total Num of Frames is: ", fc, " Delay is: ", delay, " calc duration is: " + str(duration_in_seconds))
                         self.context_menu.entryconfig(2, state="normal")
+                        self.context_menu.entryconfig(3, label="Print from video detail")
                     else:
                         self.context_menu.entryconfig(2, state="disabled")
+                        self.context_menu.entryconfig(3, label="Print")
 
     def focus_out(self, event):
         #print("***lost Focus")
@@ -3060,11 +3072,7 @@ class Dateimeister_support:
         if file in self.dict_file_image:
             print ("FSImage exists for file: " + file) if self.debug else True
             fs_image = self.dict_file_image[file]
-            player = fs_image.getPlayer()
-            if player is not None: # this is a video
-                print ("FSImage restart file: " + file) if self.debug else True
-                player.restart()
-                fs_image.setPlaystatus('play') # Status, Buttontext
+            fs_image.activate()
         else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file) if self.debug else True
@@ -3075,6 +3083,7 @@ class Dateimeister_support:
                         pp = self.dict_preview[Globals.imagetype]
                     else:
                         pp = None
+                    print(f"Video Print peview is{pp}") if self.debug else True
                     fs_image = FV.MyFSVideo(
                         file = file, 
                         thumbnail = thumbnail, 
@@ -3093,7 +3102,18 @@ class Dateimeister_support:
                     )
                     
                 else: # STILL    
-                    fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, "", "Include", "Exclude", "Included", "Excluded", self.debug)
+                    fs_image = FS.MyFSImage(
+                        file = file, 
+                        thumbnail = thumbnail, 
+                        caller = self,
+                        str_title_prefix = "Dateimeister: ", 
+                        str_include = "Include",
+                        str_exclude = "Exclude",
+                        str_included = "Included",
+                        str_excluded = "Excluded",
+                        debug = self.debug
+                    )
+
                 self.dict_file_image[file] = fs_image
 
     def show_context_menu(self, event):

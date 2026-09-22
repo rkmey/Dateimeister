@@ -271,6 +271,11 @@ class MyFSImage:
     def on_scale_motion(self, event):
         self.preview_engine.show_preview(event, self.scale_progress.winfo_width())
 
+    def activate(self):
+        self.root.deiconify()      # falls minimiert
+        self.root.lift()
+        self.root.focus_force()
+
     def on_configure(self, event):
         x = event.widget
         self.adjust_zoom = 1.0
