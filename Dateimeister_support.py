@@ -1565,12 +1565,14 @@ class Dateimeister_support:
         if event.filename in self.dict_file_image:
             thisobj = self.dict_file_image[event.filename]
             if thisobj is event.obj: # has been created by us, not by someone else
-                # get a print preview used by FSVideo (if frames have been printed)
-                if Globals.imagetype == 'VIDEO': # Video
-                    pp = thisobj.get_print_preview()
-                    if pp: # keep this PrintPreview
-                        self.dict_preview[Globals.imagetype] = pp
                 del self.dict_file_image[event.filename]
+
+        # get a print preview used by FSVideo (if frames have been printed)
+        if Globals.imagetype == 'VIDEO': # Video
+            if event.filename: # not optimal this means it is an FS object not duplicates window
+                pp = event.obj.get_print_preview()
+                if pp: # keep this PrintPreview
+                    self.dict_preview[Globals.imagetype] = pp
 
     #printing
     def choose_printer(self):
@@ -3315,7 +3317,12 @@ class Dateimeister_support:
                 for mysource in mylist:
                     print("   " + mysource) if self.debug else True
         self.stop_all_players()
-        self.win_duplicates = DD.MyDuplicates(self, self.debug) 
+        # we pass a printPreview object to duplicates, which in turn passes it to FS
+        if Globals.imagetype in self.dict_preview:
+            pp = self.dict_preview[Globals.imagetype]
+        else: 
+            pp = None
+        self.win_duplicates = DD.MyDuplicates(self, print_preview = pp, debug = self.debug) 
        
     def menu_cameras_edit(self):
         self.win_camera = MyCameraTreeview(self, self.debug) 

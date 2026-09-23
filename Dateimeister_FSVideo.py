@@ -176,11 +176,16 @@ class MyFSVideo:
     ): 
         self.player = None
         self.file = file
+        self.str_include = str_include
+        self.str_exclude = str_exclude
+        self.str_included = str_included
+        self.str_excluded = str_excluded
         self.debug = debug
         self.mpv_path = mpv_path
         self.ffprobe_path = ffprobe_path
         self.temp_dir = temp_dir
         self.thumbnail = thumbnail
+        self.caller = caller
         self.print_preview_ext = print_preview  # von aussen mitgegeben, falls vorhanden
         self.print_preview_own = None           # falls keine mitgegeben wurde, hier selbst eine anlegen
         self.is_paused = False                  # mpv startet standardmässig abspielend
@@ -406,13 +411,13 @@ class MyFSVideo:
         self.tv.configure(columns="Col1, Col2, Col3")
         f.grid_columnconfigure(0, weight=8)
  
-        self.btn_inex = tk.Button(f, text="inex", width=15, command=self.inex)
+        self.btn_inex = tk.Button(f, text="inex", width=15, command=self.on_button_state)
         TT.ToolTip(self.btn_inex, 'include / exclude video')
         self.btn_inex.grid(row=0, column=1, padx=2, pady=2, sticky="ew")
         f.grid_columnconfigure(1, weight=1)
 
-        lbl_inex = tk.Label(f, text="inex", bg="gray20", fg="white")
-        lbl_inex.grid(row=0, column=2, padx=2, pady=2)
+        self.lbl_inex = tk.Label(f, text="inex", bg="gray20", fg="white")
+        self.lbl_inex.grid(row=0, column=2, padx=2, pady=2)
         f.grid_columnconfigure(2, weight=1)
 
     def on_focus_in(self, event):
@@ -732,10 +737,6 @@ class MyFSVideo:
         if self.mpv_ipc:
             self.mpv_ipc.set_property("mute", bool(self.var_mute.get()))
 
-    def inex(self):
-        # implementation what happens if button include / exlude pressed
-        pass
-        
     def close_handler(self):
         self._stop_polling = True
         self._frame_key_down = False
@@ -909,7 +910,7 @@ class MyFSVideo:
         )
         
     def on_closing(self, event): # if parent closes close own window 
-        print(f"Duplicate closing: {event.obj} {self.caller}") if self.debug else True
+        print(f"Caller closing: {event.obj} {self.caller}") if self.debug else True
         if event.obj is self.caller:
             self.close_handler()
             

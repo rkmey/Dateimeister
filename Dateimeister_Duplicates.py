@@ -39,6 +39,7 @@ import Diatisch as DIAT
 import dateimeister_generator as DG
 import Undo_Redo as UR
 import Dateimeister_FSimage as FS
+import Dateimeister_FSVideo as FV
 import Dateimeister_messages as DM
 import Dateimeister_Duplicates as DD
 
@@ -56,7 +57,7 @@ EXCLUDE = 2
 class MyDuplicates:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, pmain, debug):
+    def __init__(self, caller: object = None, print_preview: object = None, debug: bool = False):
         # Creates a toplevel widget.
         self.root = tk.Toplevel()
         self.physical_width  = self.root.winfo_screenwidth()
@@ -74,8 +75,10 @@ class MyDuplicates:
         self.root.configure(highlightbackground="#d9d9d9")
         self.root.configure(highlightcolor="black")
         self.player = None
-        self.main = pmain
+        self.caller = caller
         self.debug = debug
+        self.print_preview = print_preview
+        
         self.thumbnails_duplicates = {}
         self.dict_thumbnails_duplicates = {}
         # register at thumbnail, so it can call us for reacting to state
@@ -180,7 +183,7 @@ class MyDuplicates:
         
         self.dict_file_image = {}
         self.dict_thumbnail_player = {}
-        self.main.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
+        self.caller.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
         self.thisduplicate = None
@@ -242,19 +245,46 @@ class MyDuplicates:
     def display_image(self, thumbnail):
         file = thumbnail.getShowfile()
         # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
-        self.stop_all_players()
         if file in self.dict_file_image:
-            print ("FSImage exists for file: " + file)
+            print ("FSImage exists for file: " + file) if self.debug else True
             fs_image = self.dict_file_image[file]
-            player = fs_image.getPlayer()
-            if player is not None: # this is a video
-                print ("FSImage restart file: " + file)
-                player.restart()
-                fs_image.setPlaystatus('play') # Status, Buttontext
-        else: # ein neues Objekt anlegen und in self.dict_file_image eintragen
-            print ("FSImage does not exist for file: " + file)
-            fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_image, self, "Duplicate:", "Include", "Exclude", "Included", "Excluded", self.main.debug)
-            self.dict_file_image[file] = fs_image
+            fs_image.activate()
+        else: # ein neues Objekt anlegen und in dict_file_image eintragen
+            if file != 'none':
+                print ("FSImage does not exist for file: " + file) if self.debug else True
+                if Globals.imagetype == 'VIDEO':
+                    self.stop_all_players() # we dont want noise from players in Main Window
+                    fs_image = FV.MyFSVideo(
+                        file = file, 
+                        thumbnail = thumbnail, 
+                        caller = self,
+                        str_title_prefix = "",
+                        str_include = "Include",
+                        str_exclude = "Exclude",
+                        str_included = "Included",
+                        str_excluded = "Excluded",
+                        temp_dir = Globals.temp_files_path,
+                        num_thumbnails = Globals.num_video_thumbnails, 
+                        mpv_path = Globals.mpv_path, 
+                        ffprobe_path = Globals.ffprobe_path,
+                        debug = self.debug,
+                        print_preview = self.print_preview
+                    )
+                    
+                else: # STILL    
+                    fs_image = FS.MyFSImage(
+                        file = file, 
+                        thumbnail = thumbnail, 
+                        caller = self,
+                        str_title_prefix = "Dateimeister: ", 
+                        str_include = "Include",
+                        str_exclude = "Exclude",
+                        str_included = "Included",
+                        str_excluded = "Excluded",
+                        debug = self.debug
+                    )
+
+                self.dict_file_image[file] = fs_image
 
     def canvas_video_restart(self):
         print("Context menu restart")
@@ -389,15 +419,15 @@ class MyDuplicates:
         Globals.eventManager.unbind("Closing", self.on_closing)
         Globals.eventManager.generate(
             "Closing",
-            ClosingEvent("", self) # file, self, see tools
+            ClosingEvent(None, self) # file, self, see tools, file = None means this is no FS
         )
-        self.main.button_duplicates.config(state = NORMAL)
-        self.main.win_duplicates = None
+        self.caller.button_duplicates.config(state = NORMAL)
+        self.caller.win_duplicates = None
         self.root.destroy()
         
     def stop_all_players(self):
         # stop all video players
-        self.main.button_duplicates.config(state = DISABLED)
+        self.caller.button_duplicates.config(state = DISABLED)
         if Globals.imagetype in self.thumbnails_duplicates:
             for t in self.thumbnails_duplicates[Globals.imagetype]: # stop all running players
                 thisplayer = t.getPlayer()
@@ -411,7 +441,7 @@ class MyDuplicates:
         if x == self.root:
             if (self.width != event.width or self.height != event.height):
                 if self.player: # Video we have to pause the player
-                    self.main.stop_all_players() # should not continue running 
+                    self.caller.stop_all_players() # should not continue running 
                 self.timer.start()
 
     def resize(self):
@@ -435,7 +465,7 @@ class MyDuplicates:
         print("{:s} elapsed start resize".format(text))
 
     def display_duplicate(self, target_file):
-        self.main.stop_all_players() # should not continue running 
+        self.caller.stop_all_players() # should not continue running 
         self.f.delete('all')
         self.thumbnails_duplicates[Globals.imagetype] = []
         self.dict_thumbnails_duplicates[Globals.imagetype] = {}
@@ -500,7 +530,7 @@ class MyDuplicates:
                     player.resize()
                 # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
                 mts = os.stat(showfile).st_mtime
-                myimage = MyThumbnail(pimg, self.main, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
+                myimage = MyThumbnail(pimg, self.caller, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
                     text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
                 myimage.set_imagetype(thumbnail.get_imagetype()) # from "parent"
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
@@ -526,7 +556,7 @@ class MyDuplicates:
                 self.f.tag_raise("text")
                 #self.f.tag_raise("imageframe")
                 mts = os.stat(showfile).st_mtime
-                myimage = MyThumbnail(0, self.main, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
+                myimage = MyThumbnail(0, self.caller, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
                     text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
                 myimage.set_imagetype(thumbnail.get_imagetype()) # from "parent"
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
