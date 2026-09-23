@@ -190,6 +190,7 @@ class MyFSVideo:
         self._frame_hold_after_id = None
         self._frame_hold_step_func = None
         self._frame_hold_press_time = None
+        self._frame_key_down = False       # verhindert Tkinter-Key-Auto-Repeat
         self.root = tk.Toplevel()
         # Fenstergröße
         self.physical_width  = self.root.winfo_screenwidth()
@@ -347,10 +348,12 @@ class MyFSVideo:
         btn_frame_fwd.bind("<ButtonPress-1>", lambda e: self._on_frame_button_press(self.frame_step_forward))
         btn_frame_fwd.bind("<ButtonRelease-1>", lambda e: self._on_frame_button_release())
         
-        self.root.bind("<KeyPress-Left>", lambda e: self._on_frame_button_press(self.frame_step_backward))
-        self.root.bind("<KeyRelease-Left>", lambda e: self._on_frame_button_release())
-        self.root.bind("<KeyPress-Right>", lambda e: self._on_frame_button_press(self.frame_step_forward))
-        self.root.bind("<KeyRelease-Right>", lambda e: self._on_frame_button_release())
+        self.root.bind("<KeyPress-Left>",
+                       lambda e: self._on_frame_key_press(self.frame_step_backward))
+        self.root.bind("<KeyRelease-Left>", self._on_frame_key_release)
+        self.root.bind("<KeyPress-Right>",
+                       lambda e: self._on_frame_key_press(self.frame_step_forward))
+        self.root.bind("<KeyRelease-Right>", self._on_frame_key_release)
 
 
         btn_restart.grid(row=0, column=0, padx=2, pady=2)
@@ -534,6 +537,25 @@ class MyFSVideo:
             self.mpv_ipc.command(["frame-back-step"])  # pausiert automatisch, falls noch am Abspielen
             self._sync_paused_state_now()
 
+    def _on_frame_key_press(self, step_func):
+        # Windows/Tkinter erzeugt bei gehaltener Taste automatisch weitere
+        # KeyPress-Events. Diese duerfen unseren Hold-Mechanismus nicht
+        # jedes Mal neu starten.
+        if self._frame_key_down:
+            return "break"
+
+        self._frame_key_down = True
+        self._on_frame_button_press(step_func)
+        return "break"
+
+    def _on_frame_key_release(self, event=None):
+        if not self._frame_key_down:
+            return "break"
+
+        self._frame_key_down = False
+        self._on_frame_button_release()
+        return "break"
+
     def _on_frame_button_press(self, step_func):
         self._cancel_frame_hold_timer()
         self._frame_hold_step_func = step_func
@@ -716,6 +738,7 @@ class MyFSVideo:
         
     def close_handler(self):
         self._stop_polling = True
+        self._frame_key_down = False
         self._cancel_frame_hold_timer()
         if self.mpv_ipc:
             self.mpv_ipc.close()
