@@ -429,6 +429,20 @@ class ClosingEvent:
         self.obj = obj # an object of Type MyFSImage or MyFSVideo or Dateimeister_support or Dateimeister_duplicates
             
 
+class PrintRequestEvent:
+    """Wird gefeuert, wenn irgendwo ein Druckwunsch entsteht.
+    Die zentrale Drucklogik (Dateimeister_support) verarbeitet ihn.
+
+    filename:  vollständiger Pfad der zu druckenden Datei
+    imagetype: 'STILL' oder 'VIDEO'
+    source:    das Objekt, das den Request ausgelöst hat (FSImage, FSVideo,
+               MyDuplicates, Dateimeister_support, ...) - dient nur zur
+               Unterscheidung / zum Debuggen
+    """
+    def __init__(self, filename: str, source: object = None):
+        self.filename = filename
+        self.source = source
+
 class BusyDialog:
     def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):
         self.root = root

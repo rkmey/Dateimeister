@@ -38,7 +38,7 @@ import tools
 import dateimeister_video as DV
 import Tooltip as TT
 
-from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent
 
 class MyFSImage:
 
@@ -155,6 +155,10 @@ class MyFSImage:
             dict_widgets["4"] = {
               "WIDGET":tk.Button,"VAR":"Button_restart","OFFSET":0.0,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.restart_handler,
               "TEXT":"Restart Video","STATE":tk.ACTIVE,"TT":"restart video from begin","FONT":self.text_font}
+        if thumbnail.get_imagetype() == "STILL": # still image: Print-Button
+            dict_widgets["5"] = {
+              "WIDGET":tk.Button,"VAR":"Button_print","OFFSET":0.0,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.print_handler,
+              "TEXT":"Print","STATE":tk.ACTIVE,"TT":"send image to print preview","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_1_2, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         if thumbnail.get_imagetype() == "VIDEO": # still image          
@@ -264,6 +268,7 @@ class MyFSImage:
         self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
+
         
     def display_progress(self, progress: int):
         self.scale_progress.set(progress)
@@ -352,6 +357,15 @@ class MyFSImage:
             self.playerstatus = 'play'
             self.Button_pp.config(text = 'pause')
 
+    def print_handler(self):
+        """Print-Button in MyFSImage: feuert einen PrintRequestEvent.
+        Die eigentliche Drucklogik (PrintPreview-Verwaltung, Registry,
+        Printer-Auswahl) liegt ausschliesslich in Dateimeister_support."""
+        Globals.eventManager.generate(
+            "PrintRequestEvent",
+            PrintRequestEvent(self.file, self)
+        )
+        
     def setPlaystatus(self, newstatus):
         if newstatus == 'play': 
             self.playerstatus = 'play'

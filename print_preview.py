@@ -187,6 +187,19 @@ class PrintPreview:
         self.photos.append(entry)
         self._relayout()
 
+    def bring_to_front(self):
+        """Bringt das PrintPreview-Fenster in den Vordergrund und gibt ihm
+        den Fokus. Wird nach jedem add_photo aufgerufen, damit der Nutzer
+        sofort sieht, dass etwas passiert ist."""
+        try:
+            self.window.deiconify()      # falls minimiert
+            self.window.lift()
+            self.window.attributes("-topmost", True)
+            self.window.after(200, lambda: self.window.attributes("-topmost", False))
+            self.window.focus_force()
+        except tk.TclError:
+            pass
+
     # ------------------------------------------------------------------ #
     # Layout / scaling
     # ------------------------------------------------------------------ #

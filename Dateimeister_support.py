@@ -56,7 +56,7 @@ import Dateimeister_Duplicates as DD
 
 import Tooltip as TT
 import tools
-from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent
 from tools import MyThumbnail
 
 from enum import Enum
@@ -947,6 +947,9 @@ class Dateimeister_support:
         self.dict_visible_id_thumbnail = {} # holds all visible images, initially and after scrolling, key: canvas_id, value: thumbnail
         # initialize the event handler which we use for communication between windows (include / exclude)
         Globals.eventManager = tools.EventManager()
+        # zentrale Drucklogik: nimmt PrintRequestEvent von überall entgegen
+        Globals.eventManager.bind("PrintRequestEvent", self.handle_print_request)        
+        
 
         # Fenstergröße
         self.physical_width   = self.root.winfo_screenwidth()
@@ -1373,8 +1376,8 @@ class Dateimeister_support:
         self.context_menu.add_command(label="Exclude", command=self.canvas_image_exclude)    
         self.context_menu.add_command(label="Show"   , command=self.canvas_image_show)    
         self.context_menu.add_command(label="Restart", command=self.canvas_video_restart)    
-        self.context_menu.add_command(label="Print", command=self.print_photo)    
-      
+        self.context_menu.add_command(label="Print", command=self.canvas_image_print)    
+        
         # Events
         # Button 1 single haben wir deaktiviert, weil double immer auch zuerst single auslöst
         # deshalb exlude und show über Kontext-Menü (rechte Maustaste), Show zusätzlich auch mit Doppelclick
@@ -1557,22 +1560,19 @@ class Dateimeister_support:
         self.timer_players_and_metadata = tools.RestartableTimer(root, 1500, self.manage_players_and_metadata)  # ms
         self.list_visible_thumbnails = []
         self.printer = None
-        self.list_print = []
-        self.dict_preview = {} # imagetype -> player
+        self.preview = None
 
+    # 20260915: event handler for closing event
     # 20260915: event handler for closing event
     def on_closing(self, event): #if a FS exists in dict_file_image delete entry
         if event.filename in self.dict_file_image:
             thisobj = self.dict_file_image[event.filename]
             if thisobj is event.obj: # has been created by us, not by someone else
                 del self.dict_file_image[event.filename]
-
-        # get a print preview used by FSVideo (if frames have been printed)
-        if Globals.imagetype == 'VIDEO': # Video
-            if event.filename: # not optimal this means it is an FS object not duplicates window
-                pp = event.obj.get_print_preview()
-                if pp: # keep this PrintPreview
-                    self.dict_preview[Globals.imagetype] = pp
+        # Kein "Retten" des PrintPreview mehr noetig: die Registry wird
+        # ausschliesslich hier gefuehrt (siehe handle_print_request), die
+        # PrintPreview-Instanz gehoert uns und wird beim Schliessen eines
+        # FS-Fensters nicht mitzerstoert.
 
     #printing
     def choose_printer(self):
@@ -1580,40 +1580,51 @@ class Dateimeister_support:
         print(f"Printer selected is {ret}")
         self.printer = ret
 
-    def print_photo(self):
-        t = self.get_thumbnail(self.event)
-        print(f"add {Globals.imagetype} photo {t.getFile()} to print queue") if self.debug else True
-        if t:
-            if Globals.imagetype != 'VIDEO':
-                file = t.getFile()
-                print(f"PRINT: add {file} to print queue {self.printer}")
-                self.list_print.append(file)
-                self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=NORMAL)
-                if not self.dict_preview.get(Globals.imagetype) or not self.dict_preview[Globals.imagetype]:
-                    self.dict_preview[Globals.imagetype] = PrintPreview(
-                        self.root, rows=3, 
-                        preview_dir = Globals.temp_files_path,
-                        # parameters returned to preview_closed, no changes required if parameters are added in the called class (PrintPreview)
-                        # the parameters have just to added in our own callback function (preview_closed)
-                        close_callback=lambda: self.preview_closed(Globals.imagetype)
-                    )
-                self.dict_preview[Globals.imagetype].add_photo(file)
-            else: # VIDEO open Video player 
-                self.display_image(t)
+    def handle_print_request(self, event):
+        """Zentrale Drucklogik: nimmt PrintRequestEvent entgegen, egal ob aus
+        MyFSImage, MyFSVideo, MyDuplicates oder aus dem eigenen Context-Menu.
+        Erzeugt / holt den einen PrintPreview und ruft add_photo(filename)."""
+        filename = event.filename
+        print(f"Print request: file={filename} source={event.source}") if self.debug else True
 
-    def preview_closed(self, imagetype):
-        print(f"PRINT Preview close imagetype = {imagetype}") if self.debug else True
-        if imagetype:
-            self.dict_preview[imagetype] = None
-    
+        if self.preview is None or not self._is_preview_window_alive(self.preview):
+            self.preview = PrintPreview(
+                self.root,
+                rows=3,
+                preview_dir=Globals.temp_files_path,
+                printer=self.printer,
+                close_callback=self.preview_closed
+            )
+        self.preview.add_photo(filename)
+        self.preview.bring_to_front()
+
+        # File-Menue: "Print selected" ist sinnvoll, sobald ein PrintPreview
+        # existiert.
+        self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=NORMAL)
+
+
+    @staticmethod
+    def _is_preview_window_alive(preview):
+        try:
+            return bool(preview.window.winfo_exists())
+        except tk.TclError:
+            return False
+
+    def preview_closed(self):
+        """Callback, den PrintPreview beim Schliessen aufruft. Setzt die
+        Referenz auf None, damit beim naechsten Print ein neuer PrintPreview
+        erzeugt wird, und deaktiviert das File-Menue-Item."""
+        print("PRINT Preview closed") if self.debug else True
+        self.preview = None
+        self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=DISABLED)
+
     def print_selected(self):
-        num_printed = print_utils.print_photos(
-            files = self.list_print, 
-            printer = self.printer,
-            preview_dir = Globals.temp_files_path,
-            dry_run = True
-        )
-        self.list_print = []
+        """File-Menue 'Print selected': leitet an den aktuell sichtbaren
+        PrintPreview weiter. Der PrintPreview kennt seine Auswahl und seinen
+        Drucker selbst - hier wird nichts mehr gesammelt."""
+        if self.preview is None or not self._is_preview_window_alive(self.preview):
+            return
+        self.preview.print_selected()
 
     def get_thumbnail(self, event):
         #print('bbox', self.canvas_gallery.bbox('images'))
@@ -3080,12 +3091,6 @@ class Dateimeister_support:
                 print ("FSImage does not exist for file: " + file) if self.debug else True
                 if Globals.imagetype == 'VIDEO':
                     self.stop_all_players() # we dont want noise from players in Main Window
-                    # we check if we already have a print preview. if yes we pass it to FSVideo
-                    if Globals.imagetype in self.dict_preview and self.dict_preview[Globals.imagetype]:
-                        pp = self.dict_preview[Globals.imagetype]
-                    else:
-                        pp = None
-                    print(f"Video Print peview is{pp}") if self.debug else True
                     fs_image = FV.MyFSVideo(
                         file = file, 
                         thumbnail = thumbnail, 
@@ -3099,8 +3104,7 @@ class Dateimeister_support:
                         num_thumbnails = Globals.num_video_thumbnails, 
                         mpv_path = Globals.mpv_path, 
                         ffprobe_path = Globals.ffprobe_path,
-                        debug = self.debug,
-                        print_preview = pp
+                        debug = self.debug
                     )
                     
                 else: # STILL    
@@ -3206,6 +3210,30 @@ class Dateimeister_support:
     def canvas_image_exclude(self): # used for exclude and include
         print("Context menu exlude") if self.debug else True
         self.canvas_gallery_exclude(self.event)
+
+    def canvas_image_print(self):
+        """Context-Menue 'Print' im Hauptfenster.
+        - VIDEO: niemals direkt drucken, sondern das MyFSVideo-Fenster
+          oeffnen. Der Nutzer pausiert dort auf dem gewuenschten Frame und
+          drueckt dort den Print-Button; MyFSVideo.print_frame erzeugt dann
+          den PNG-Screenshot und feuert selbst einen PrintRequestEvent.
+        - STILL: direkt drucken ueber PrintRequestEvent."""
+        print("Context menu print") if self.debug else True
+        t = self.get_thumbnail(self.event)
+        if t is None:
+            return
+
+        if Globals.imagetype == 'VIDEO':
+            # Video: nur das Detail-Fenster oeffnen - der Nutzer entscheidet
+            # dort, welcher Frame gedruckt wird.
+            self.display_image(t)
+            return
+
+        Globals.eventManager.generate(
+            "PrintRequestEvent",
+            PrintRequestEvent(t.getFile(), self)
+        )
+
 
     def canvas_video_restart(self):
         print("Context menu restart") if self.debug else True
@@ -3317,12 +3345,7 @@ class Dateimeister_support:
                 for mysource in mylist:
                     print("   " + mysource) if self.debug else True
         self.stop_all_players()
-        # we pass a printPreview object to duplicates, which in turn passes it to FS
-        if Globals.imagetype in self.dict_preview:
-            pp = self.dict_preview[Globals.imagetype]
-        else: 
-            pp = None
-        self.win_duplicates = DD.MyDuplicates(self, print_preview = pp, debug = self.debug) 
+        self.win_duplicates = DD.MyDuplicates(self, debug = self.debug) 
        
     def menu_cameras_edit(self):
         self.win_camera = MyCameraTreeview(self, self.debug) 
@@ -3602,8 +3625,10 @@ class Dateimeister_support:
         # 20260915 important to avoid call after object is destroyed!
         Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
         Globals.eventManager.unbind("Closing", self.on_closing)
+        Globals.eventManager.unbind("PrintRequestEvent", self.handle_print_request)
         self.close_child_windows()
         self.root.destroy()
+
 # #############################################################
 if __name__ == '__main__':
     '''Main entry point for the application.'''

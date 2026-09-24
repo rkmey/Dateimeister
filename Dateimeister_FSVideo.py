@@ -21,9 +21,8 @@ import threading
 import queue
 import uuid
 import tools
-from print_preview import PrintPreview
 import Tooltip as TT
-from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent
 
     
 def format_time(seconds):
@@ -171,7 +170,6 @@ class MyFSVideo:
         num_thumbnails: int = None, 
         mpv_path: str = None, 
         ffprobe_path: str = None,
-        print_preview: str = None,
         debug: bool = False
     ): 
         self.player = None
@@ -186,8 +184,6 @@ class MyFSVideo:
         self.temp_dir = temp_dir
         self.thumbnail = thumbnail
         self.caller = caller
-        self.print_preview_ext = print_preview  # von aussen mitgegeben, falls vorhanden
-        self.print_preview_own = None           # falls keine mitgegeben wurde, hier selbst eine anlegen
         self.is_paused = False                  # mpv startet standardmässig abspielend
         self._auto_paused_by_focus = False      # True, wenn WIR wegen Fokusverlust pausiert haben
 
@@ -298,6 +294,7 @@ class MyFSVideo:
         # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handlers
         Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed) # include<=>exclude
         Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
+
 
     # ------------------------------------------------------------------
     # Steuerung des Hauptplayers (mpv_proc) über IPC
@@ -621,54 +618,14 @@ class MyFSVideo:
             tools.info_box("Konnte den aktuellen Frame nicht erfassen.", "fehler")
             return
 
-        preview = self._get_print_preview()
-        preview.add_photo(filename)
+        # Druckwunsch an die zentrale Drucklogik in Dateimeister_support
+        # weiterleiten. Das Erzeugen / Verwalten des PrintPreview erfolgt
+        # ausschliesslich dort.
+        Globals.eventManager.generate(
+            "PrintRequestEvent",
+            PrintRequestEvent(filename, self)
+        )
 
-    def _get_print_preview(self):
-        if self.print_preview_ext is not None:
-            if self._is_preview_window_alive(self.print_preview_ext):
-                return self.print_preview_ext
-            # der Aufrufer (bzw. dessen Anwender) hat dieses Fenster
-            # geschlossen - ab jetzt verwalten wir unsere eigene Instanz,
-            # unabhaengig davon, wer urspruenglich verantwortlich war
-            self.print_preview_ext = None
-
-        if self.print_preview_own is None or not self._is_preview_window_alive(self.print_preview_own):
-            self.print_preview_own = PrintPreview(self._get_app_root())
-        return self.print_preview_own
-
-    def _get_app_root(self):
-        """Liefert das eigentliche, dauerhafte Tk-Root-Fenster der Anwendung
-        (nicht dieses Video-Fensters). Wichtig: eine hier selbst angelegte
-        PrintPreview muss an DIESEM Root haengen, nicht an self.root -
-        sonst wuerde sie beim Schliessen dieses Video-Fensters automatisch
-        mitzerstoert (Tkinter zerstoert beim destroy() eines Toplevels alle
-        an ihm haengenden Kind-Fenster, auch andere Toplevels)."""
-        try:
-            return self.root.nametowidget('.')
-        except Exception:
-            return self.root
-
-    def get_print_preview(self):
-        """Oeffentlicher Getter: gibt die aktuell fuer dieses Video zustaendige
-        PrintPreview zurueck (egal ob von aussen uebergeben oder selbst
-        angelegt), oder None, falls (noch) keine existiert bzw. sie bereits
-        geschlossen wurde. Wird beim Schliessen dieses Video-Fensters NICHT
-        zerstoert - der Aufrufer kann das Ergebnis an das naechste MyFSVideo
-        weiterreichen (Parameter print_preview=...), um Stills aus mehreren
-        Videos in derselben PrintPreview zu sammeln."""
-        if self.print_preview_ext is not None and self._is_preview_window_alive(self.print_preview_ext):
-            return self.print_preview_ext
-        if self.print_preview_own is not None and self._is_preview_window_alive(self.print_preview_own):
-            return self.print_preview_own
-        return None
-
-    @staticmethod
-    def _is_preview_window_alive(preview):
-        try:
-            return bool(preview.window.winfo_exists())
-        except tk.TclError:
-            return False
 
     def restart_video(self):
         if self.mpv_ipc:

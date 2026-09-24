@@ -46,7 +46,7 @@ import Dateimeister_Duplicates as DD
 import Tooltip as TT
 
 import tools
-from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent
 from tools import MyThumbnail
 
 from enum import Enum
@@ -57,7 +57,7 @@ EXCLUDE = 2
 class MyDuplicates:
 
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, caller: object = None, print_preview: object = None, debug: bool = False):
+    def __init__(self, caller: object = None, debug: bool = False):
         # Creates a toplevel widget.
         self.root = tk.Toplevel()
         self.physical_width  = self.root.winfo_screenwidth()
@@ -77,7 +77,6 @@ class MyDuplicates:
         self.player = None
         self.caller = caller
         self.debug = debug
-        self.print_preview = print_preview
         
         self.thumbnails_duplicates = {}
         self.dict_thumbnails_duplicates = {}
@@ -169,6 +168,7 @@ class MyDuplicates:
         self.context_menu.add_command(label="Exclude", command=self.canvas_image_exclude)    
         self.context_menu.add_command(label="Show"   , command=self.canvas_image_show)    
         self.context_menu.add_command(label="Restart", command=self.canvas_video_restart)    
+        self.context_menu.add_command(label="Print"  , command=self.print_handler) 
 
         self.f.bind("<Button-3>", self.show_context_menu)    
         self.f.bind('<Motion>', self.tooltip_imagefile)    
@@ -228,6 +228,27 @@ class MyDuplicates:
                 FileStateEvent(thumbnail.getFile(), new_state)
             )
 
+    def print_handler(self):
+        """Kontextmenue 'Print' in Duplicates: feuert einen PrintRequestEvent.
+        - STILL: Datei geht direkt an die zentrale Drucklogik.
+        - VIDEO: das MyFSVideo-Fenster wird geoeffnet; der Nutzer pausiert
+          dort auf dem gewuenschten Frame und drueckt dort den Print-Button.
+        Die eigentliche Drucklogik (PrintPreview-Verwaltung, Printer-Auswahl)
+        liegt ausschliesslich in Dateimeister_support."""
+        t = self.get_thumbnail(self.event)
+        if t is None:
+            return
+
+        if Globals.imagetype == 'VIDEO':
+            self.display_image(t)
+            return
+
+        Globals.eventManager.generate(
+            "PrintRequestEvent",
+            PrintRequestEvent(t.getFile(), self)
+        )
+
+
     def canvas_image_show(self):
         print("Context menu show")
         self.canvas_show(self.event)
@@ -267,8 +288,7 @@ class MyDuplicates:
                         num_thumbnails = Globals.num_video_thumbnails, 
                         mpv_path = Globals.mpv_path, 
                         ffprobe_path = Globals.ffprobe_path,
-                        debug = self.debug,
-                        print_preview = self.print_preview
+                        debug = self.debug
                     )
                     
                 else: # STILL    
@@ -285,6 +305,7 @@ class MyDuplicates:
                     )
 
                 self.dict_file_image[file] = fs_image
+
 
     def canvas_video_restart(self):
         print("Context menu restart")
@@ -355,8 +376,10 @@ class MyDuplicates:
                         duration_in_seconds = fc / frames_per_second
                         #print ("FPS is: ", fps, " Total Num of Frames is: ", fc, " Delay is: ", delay, " calc duration is: " + str(duration_in_seconds))
                         self.context_menu.entryconfig(2, state="normal")
+                        self.context_menu.entryconfig(3, label="Print from video detail")
                     else:
                         self.context_menu.entryconfig(2, state="disabled")
+                        self.context_menu.entryconfig(3, label="Print")
                         
     def delay_decr(self, event): # speed +
         self.f.focus_set()
@@ -632,6 +655,13 @@ class MyDuplicates:
             #if (1 == 0):
                 #return
             self.f.xview(*args)
+
+    def get_thumbnail(self, event):
+        """Liefert das Thumbnail an der Mausposition oder None."""
+        canvas_x = self.f.canvasx(event.x)
+        canvas_y = self.f.canvasy(event.y)
+        thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
+        return thumbnail
 
     def get_thumbnail_by_position(self, canvas_x, canvas_y):
         index = -1
