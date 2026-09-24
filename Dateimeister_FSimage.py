@@ -128,37 +128,28 @@ class MyFSImage:
         dict_widgets = {}
         dict_widgets["1"] = {
           "WIDGET":tk.Label,"VAR":"future_use","OFFSET":0.00,"RELH":.6,"RELW":relw_button,"ANCHOR":"START","TEXT":"future_use","FONT":self.text_font}
-        if thumbnail.get_imagetype() == "STILL": # still image
-            dict_widgets["2"] = {
-              "WIDGET":tk.Button,"VAR":"Button_fit","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.fit_handler,
-              "TEXT":"Fit Canvas","STATE":tk.ACTIVE,"TT":"Scale Image to fit","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Button,"VAR":"Button_fit","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.fit_handler,
+          "TEXT":"Fit Canvas","STATE":tk.ACTIVE,"TT":"Scale Image to fit","FONT":self.text_font}
         dict_widgets["3"] = {
           "WIDGET":tk.Button,"VAR":"Button_exclude","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.on_button_state,
           "TEXT":"Exclude","STATE":tk.ACTIVE,"TT":"include / exclude","FONT":self.text_font}
-        if thumbnail.get_imagetype() == "VIDEO": # video image
-            dict_widgets["4"] = {
-              "WIDGET":tk.Button,"VAR":"Button_pp","OFFSET":0.0,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.pp_handler,
-              "TEXT":"play / pause","STATE":tk.ACTIVE,"TT":"play / pause video player","FONT":self.text_font}
+        dict_widgets["4"] = {
+          "WIDGET":tk.Label,"VAR":"future_use","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","TEXT":"future_use","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_1_1, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         dict_widgets = {}
         dict_widgets["1"] = {
           "WIDGET":tk.Label,"VAR":"Label_fileinfo","OFFSET":0.00,"RELH":.6,"RELW":relw_button,"ANCHOR":"START","TEXT":"file info","FONT":self.text_font,
           "JUSTIFY":"left"}
-        if thumbnail.get_imagetype() == "STILL": # still image
-            dict_widgets["2"] = {
-              "WIDGET":tk.Button,"VAR":"Button_fscale","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.fscale_handler,
-              "TEXT":"Full scale","STATE":tk.ACTIVE,"TT":"show image in full resolution","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Button,"VAR":"Button_fscale","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.fscale_handler,
+          "TEXT":"Full scale","STATE":tk.ACTIVE,"TT":"show image in full resolution","FONT":self.text_font}
         dict_widgets["3"] = {
           "WIDGET":tk.Label,"VAR":"Label_status","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","TEXT":"In/Ex","FONT":self.text_font}
-        if thumbnail.get_imagetype() == "VIDEO": # video image
-            dict_widgets["4"] = {
-              "WIDGET":tk.Button,"VAR":"Button_restart","OFFSET":0.0,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.restart_handler,
-              "TEXT":"Restart Video","STATE":tk.ACTIVE,"TT":"restart video from begin","FONT":self.text_font}
-        if thumbnail.get_imagetype() == "STILL": # still image: Print-Button
-            dict_widgets["5"] = {
-              "WIDGET":tk.Button,"VAR":"Button_print","OFFSET":0.0,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.print_handler,
-              "TEXT":"Print","STATE":tk.ACTIVE,"TT":"send image to print preview","FONT":self.text_font}
+        dict_widgets["4"] = {
+          "WIDGET":tk.Button,"VAR":"Button_print","OFFSET":0.0,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.print_handler,
+          "TEXT":"Print","STATE":tk.ACTIVE,"TT":"send image to print preview","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_1_2, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         if thumbnail.get_imagetype() == "VIDEO": # still image          

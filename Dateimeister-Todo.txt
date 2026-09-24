@@ -51,9 +51,10 @@ FSVideo: Funktionalität (exclude,...) von FSImage übernehmen
 Duplicates: FSVideo für Videos aufrufen
 Dublettenerkennung von Dateinamen auf Hashsummen umstellen (Size -> Hashsum -> filename
 Diatisch Historisierung: prüfen, ob sich was geändert hat, machen wie ja später sowieso mit den Hashsummen
-Distisch: Strg -X, Strg-Video-Ton
+Distisch: Strg -X, Strg-V
 Diatisch: Größe ändern mit Mausrad
 Print-Dialog: Fenster mit zu druckenden Fotos, delete, print, select printer,...)
+Metadaten in FS(Image / Video) anzeigen
 
 
 
