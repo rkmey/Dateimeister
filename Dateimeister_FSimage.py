@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 #  -*- coding: utf-8 -*-
 
-# hier speichern wir die full-size-Bilder
+# In this module we store the full-size images.
 
 import sys
 import os
@@ -40,6 +40,17 @@ import Tooltip as TT
 
 from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent
 
+
+# ----------------------------------------------------------------------
+# Metadata treeview: heading labels
+# ----------------------------------------------------------------------
+HEAD_CATEGORY    = "Category"
+HEAD_KEY         = "Key"
+HEAD_VALUE       = "Value"
+
+NO_METADATA_TEXT = "(no metadata)"
+
+
 class MyFSImage:
 
     # The class "constructor" - It's actually an initializer 
@@ -47,7 +58,7 @@ class MyFSImage:
         self, 
         file: str = None, 
         thumbnail: tools.MyThumbnail = None, 
-        caller: object = None, # can be several class instances, we dont enumerate all the candidates
+        caller: object = None, # can be several class instances, we don't enumerate all the candidates
         str_title_prefix: str = None, 
         str_include: str = None,
         str_exclude: str = None,
@@ -58,39 +69,36 @@ class MyFSImage:
         
         self.caller = caller
         self.thumbnail = thumbnail
-        self.player = None
         self.str_include = str_include
         self.str_exclude = str_exclude
         self.str_included = str_included
         self.str_excluded = str_excluded
         self.debug = debug
-        if thumbnail.get_imagetype() == "STILL": # still image
-            self.image  = Image.open(file)
+        self.image  = Image.open(file)
         self.file = file
         # Create secondary (or popup) window.
         self.root = tk.Toplevel()
-        # Fenstergröße
+        # Window size
         self.physical_width  = self.root.winfo_screenwidth()
         self.physical_height = self.root.winfo_screenheight()
         self.screen_width  = int(self.root.winfo_screenwidth() * .75) # adjust as needed
         self.screen_height = int(self.root.winfo_screenheight() * .75) # adjust as needed
-        print("Bildschirm ist " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(self.physical_width) + " x " + str(self.physical_height))
+        print("Screen is " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(self.physical_width) + " x " + str(self.physical_height))
         v_dim=str(self.screen_width)+'x'+str(self.screen_height)
         self.root.geometry(v_dim)
-        self.root.minsize(int(self.physical_width / 4), int(self.physical_height / 4))  # (minimum ) width , ( minimum) height
+        self.root.minsize(int(self.physical_width / 4), int(self.physical_height / 4))  # (minimum) width, (minimum) height
         self.root.resizable(True, True)
 
-        # we create the frames. on the left side we have the vanvas width width relw_frame_canvas, and the height relh_frame_canvas.
-        # on the right we have two frames for 2 columns of buttons resp. button / label
-        # beneath is the frame for the Scale (playback speed), followed by a frame for the treeview displaying the metadata. 
+        # We create the frames. On the left side we have the canvas with width relw_frame_canvas
+        # and height relh_frame_canvas. On the right we have two frames for two columns of
+        # buttons resp. button / label. Beneath is the frame for the treeview displaying the metadata.
         gap = .005 # frame around frame
         relw_frame_canvas = .75 # rel width of frame for canvas
         relh_frame_canvas = 1-gap # rel height of frame for canvas
         relw_frame_1      = (1 - relw_frame_canvas) / 2 - 2* gap # rel width for each of the 2 frames on top right
         relw_frame_2      = (1 - relw_frame_canvas) - gap # rel width for the frame bottom right (treeview for metadata)
-        relh_1            =.3 - gap # the height the top frames
-        relh_2            = .1 # relh for speed scale
-        relh_3            = 1-relh_1 -relh_2 -2*gap # relh for metadata frame
+        relh_1            =.3 - gap # the height of the top frames
+        relh_2            = 1-relh_1 -4*gap # relh for metadata frame
 
         # frame_canvas
         self.frame_canvas = tk.Frame(self.root)
@@ -113,7 +121,7 @@ class MyFSImage:
         self.frame_1_2.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.frame_1_2.update()
 
-        # frame_2 for speed scale
+        # frame_2 for metadata treeview
         self.frame_2 = tk.Frame(self.root)
         self.frame_2.place(relx=relw_frame_canvas+2*gap, rely=relh_1 + 3*gap, relheight=relh_2, relwidth=relw_frame_2 - 2* gap)
         self.frame_2.configure(relief='flat', background = tools._bgcolor)
@@ -152,25 +160,6 @@ class MyFSImage:
           "TEXT":"Print","STATE":tk.ACTIVE,"TT":"send image to print preview","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_1_2, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
-        if thumbnail.get_imagetype() == "VIDEO": # still image          
-            self.scale_progress =  tk.Scale(self.frame_2, from_=0, to=8.0, resolution=0.1, orient = tk.HORIZONTAL)
-            rel_dist_from_frame_x = self.frame_2.winfo_width() / self.root.winfo_width() / 20
-            rel_dist_from_frame_y = rel_dist_from_frame_x * (self.frame_2.winfo_width() / self.frame_2.winfo_height())
-            self.scale_progress.place(relx=rel_dist_from_frame_x, rely=rel_dist_from_frame_y, relheight=1 - 2* rel_dist_from_frame_y, relwidth=1 - 2* rel_dist_from_frame_x)
-            self.scale_progress.configure(activebackground="beige")
-            self.scale_progress.configure(background="#d9d9d9")
-            self.scale_progress.configure(font="-family {Segoe UI} -size 9")
-            self.scale_progress.configure(foreground="black")
-            self.scale_progress.configure(highlightbackground="#d9d9d9")
-            self.scale_progress.configure(highlightcolor="black")
-            self.scale_progress.configure(label="playback speed")
-            self.scale_progress.configure(length="196")
-            self.scale_progress.configure(troughcolor="#d9d9d9")
-            self.scale_progress_tooltip = TT.ToolTip(self.scale_progress, '''set the playback speed''')
-            self.scale_progress.config(command = self.on_position)
-            self.scale_progress.bind("<ButtonPress-1>", self.on_press)
-            self.scale_progress.bind("<ButtonRelease-1>", self.on_release)
-            
         # create the canvas
         self.f = tk.Canvas(self.frame_canvas)
         #self.f.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=1.0)
@@ -206,53 +195,52 @@ class MyFSImage:
         else: # toggle to not exclude
             self.Button_exclude.config(text = self.str_include)
             self.Label_status.config(text = self.str_excluded)
-        # zur Behandlung von Events brauchen wir den Imagefile-Namen. Darüber kommen wir an das Window und
-        # das Image selbst. Das ist erforderlich, weil wir ja mehrere Fenster haben können
-        # kurz gesagt: mit dieser Methode kann man Parameter an den Handler übergeben
+        # To handle events we need the image file name. That way we can access
+        # the window and the image itself. This is necessary because we can have
+        # several windows. In short: with this method we can pass parameters to
+        # the handler.
         self.f.bind("<MouseWheel>", self.mousewheel_handler)
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
         self.root.title(str_title_prefix + file)
         
-        # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handlers
+        # 20260915 for better maintenance we convert the whole mechanism from
+        # callbacks to events; register event handlers.
         Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed) # include<=>exclude
         Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
 
-        if thumbnail.get_imagetype() == "STILL":
-            self.image.close
+        self.image.close
         self.zoomfaktor = 1.0 # we always start with full resolution
         self.f.focus_set()
-        if thumbnail.get_imagetype() == "STILL": # still image
-            self.image_zoom(self.zoomfaktor)
-            self.player = None
-        else: #video, we need a new one the existing is for playing in thumbnal
-            self.H_I.pack_forget()
-            self.V_I.pack_forget()
-            self.f.update()
-            self.player   = DV.VideoPlayer(self.root, self.file, self.f, self.f.winfo_width(), self.f.winfo_height())
-            self.image_width, self.image_height, self.pimg = self.player.get_photo()  
-            print(file, " height / width: ",  self.image_width, self.image_height)
-            self.id = self.f.create_image(0, 0, anchor='nw',image = self.pimg, tags = 'images')
-            self.f.tag_raise("text")
-            self.f.tag_raise("line")
-            self.player.setId(self.id)
-            self.player.resize()
-            self.player.pstart()
-            fps = self.player.getFPS()
-            self.player.setDelay(int(1000 / fps))
-            self.playerstatus = 'play'
-            self.Button_pp.config(text = 'pause')
-            self.image = self.pimg
-            # we update the progress scale
-            # register our function which will becalled during playback
-            self.player.register_callback(self.display_progress)
-            self.scale_progress.set(0)
-            self.scale_progress.config(to = int(self.player.get_duration()))
+        self.image_zoom(self.zoomfaktor)
             
         # set fileinfo
         mytext = "{:s}\ncreated {:s} size {:.3f}".format(thumbnail.getFile(), thumbnail.get_filectime(), thumbnail.get_filesize())
         self.Label_fileinfo.configure(text=mytext)
-        
+
+        # ------------------------------------------------------------------
+        # Metadata treeview (simple pattern, like MyCameraTreeview)
+        # Only the font is adjusted on resize; column widths are fixed.
+        # If the font grows too much for the fixed widths, the horizontal
+        # scrollbar of ScrolledTreeView appears automatically.
+        # ------------------------------------------------------------------
+        style = ttk.Style(self.root)
+        style.configure("Metadata.Treeview", font=self.text_font)
+        style.configure("Metadata.Treeview.Heading", font=self.text_font)
+
+        self.tree_metadata = tools.ScrolledTreeView(self.frame_2, style="Metadata.Treeview")
+        self.tree_metadata.place(relx=0.0, rely=0.0, relheight=1.0, relwidth=1.0)
+        self.tree_metadata.configure(columns="Col1, Col2, Col3")
+        self.tree_metadata.heading("#0", text=HEAD_CATEGORY, anchor="w")
+        self.tree_metadata.heading("#1", text=HEAD_KEY,      anchor="w")
+        self.tree_metadata.heading("#2", text=HEAD_VALUE,    anchor="w")
+        self.tree_metadata.column("#0", width=120, minwidth=120, stretch=False, anchor="w")
+        self.tree_metadata.column("#1", width=180, minwidth=180, stretch=False, anchor="w")
+        self.tree_metadata.column("#2", width=240, minwidth=240, stretch=False, anchor="w")
+        self.tree_metadata.config(selectmode=tk.BROWSE)
+
+        self._populate_metadata_tree()
+
         self.width  = 0
         self.height = 0
         self.adjust_zoom = 0
@@ -268,7 +256,7 @@ class MyFSImage:
         self.preview_engine.show_preview(event, self.scale_progress.winfo_width())
 
     def activate(self):
-        self.root.deiconify()      # falls minimiert
+        self.root.deiconify()      # in case it is minimized
         self.root.lift()
         self.root.focus_force()
 
@@ -277,14 +265,12 @@ class MyFSImage:
         self.adjust_zoom = 1.0
         if x == self.root:
             if (self.width != event.width or self.height != event.height):
-                if self.player: # Video we have to pause the player
-                    self.player.pstop()
                 self.timer.start()
 
     def resize(self):
         try:
             if not self.root.winfo_exists():
-                # Fenster wurde bereits zerstört -> Timer deaktivieren
+                # Window has already been destroyed -> disable the timer
                 if hasattr(self, 'timer') and self.timer:
                     try:
                         self.timer.cancel()
@@ -293,14 +279,14 @@ class MyFSImage:
                     self.timer = None
                 return
         except:
-            # Bei jedem Fehler einfach zurückkehren
+            # On any error just return
             return
         
         # display debug info for resize, this is very difficult to debug
         self.debug_info_resize("TIMER") if self.debug else True
         old_width  = self.width
         old_height = self.height
-        # we use the new dimension of the frame for calculating fontsize needed
+        # we use the new dimension of the frame for calculating the fontsize needed
         self.root.update()
         new_width  = self.root.winfo_width()
         new_height = self.root.winfo_height()
@@ -314,18 +300,28 @@ class MyFSImage:
             else:    
                 self.adjust_zoom = 1.0
             self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug)) 
-            # as tkinter tends to make the label text too large, we reduce the length a little bit_length
+            # as tkinter tends to make the label text too large, we reduce the length a little bit
             self.Label_fileinfo.update()
             self.Label_fileinfo.configure(wraplength=int(self.Label_fileinfo.winfo_width() * 0.95))
+
+            # Metadata treeview: font + rowheight to match the new font size
+            try:
+                fm = Font(font=self.text_font)
+                rowheight = fm.metrics("linespace") + 2
+                style = ttk.Style(self.root)
+                style.configure("Metadata.Treeview",
+                                font=self.text_font,
+                                rowheight=rowheight)
+                style.configure("Metadata.Treeview.Heading",
+                                font=self.text_font)
+            except Exception:
+                pass
         self.zoomfaktor = self.zoomfaktor * self.adjust_zoom
         self.image_zoom(self.zoomfaktor)
 
     def debug_info_resize(self, text):
         print("{:s} elapsed start resize".format(text))
 
-    def getPlayer(self):
-        return self.player
-    
     def scrollx(self, amount, unit):
         #print("scroll command: " + str(amount) + ' ' + unit)
         self.f.xview_scroll(amount, unit)
@@ -338,63 +334,23 @@ class MyFSImage:
     def fit_handler(self):
         self.button_fit()
 
-    def pp_handler(self):
-        if self.playerstatus == 'play': 
-            self.player.pstop()
-            self.playerstatus = 'pause'
-            self.Button_pp.config(text = 'play')
-        else:
-            self.player.pstart()
-            self.playerstatus = 'play'
-            self.Button_pp.config(text = 'pause')
-
     def print_handler(self):
-        """Print-Button in MyFSImage: feuert einen PrintRequestEvent.
-        Die eigentliche Drucklogik (PrintPreview-Verwaltung, Registry,
-        Printer-Auswahl) liegt ausschliesslich in Dateimeister_support."""
+        """Print button in MyFSImage: fires a PrintRequestEvent.
+        The actual print logic (print preview management, registry,
+        printer selection) lives exclusively in Dateimeister_support."""
         Globals.eventManager.generate(
             "PrintRequestEvent",
             PrintRequestEvent(self.file, self)
         )
         
-    def setPlaystatus(self, newstatus):
-        if newstatus == 'play': 
-            self.playerstatus = 'play'
-            self.Button_pp.config(text = 'pause')
-        else:
-            self.playerstatus = 'pause'
-            self.Button_pp.config(text = 'play')
-
-    def restart_handler(self):
-        self.player.restart()
-        self.setPlaystatus('play')
-
     def fscale_handler(self):
-        self.image_zoom(1) # damit bringt image_zoom das Foto in höchster Auflösung zur Anzeige
+        self.image_zoom(1) # this makes image_zoom show the photo at highest resolution
         
-    def on_position(self, value): # called during movement of slider
-        f_value = float(value)
-        #print ("Slider position is: " + str(f_value)) if self.debug else True
 
-    def on_press(self, value):  # called on press of slider
-        value = self.scale_progress.get()
-        f_value = float(value)
-        #print ("Slider press position is: " + str(f_value)) if self.debug else True
-        self.player.user_scrubbing = True
-
-    def on_release(self, value):  # calles on release of slider
-        value = self.scale_progress.get()
-        f_value = float(value)
-        print ("Slider release position is: " + str(f_value)) if self.debug else True
-        if not self.player.getRun():
-            self.player.pstart()
-        
-        self.player.jump_to((f_value))
-        self.player.user_scrubbing = False
-
-    # 20260915 for better maintenace we convert the whole mechanism from callbacks to events
-    def on_button_state(self): # react to own Button, thumbnail can be from main or duplicates
-        # we just determine the new state, setting of new state in event handler, so we avoid finding out if already done
+    # 20260915 for better maintenance we convert the whole mechanism from callbacks to events
+    def on_button_state(self): # react to own button; thumbnail can come from main or duplicates
+        # We just determine the new state; setting of the new state happens in the
+        # event handler, so we avoid finding out whether it has already been done.
         # Button -> this method -> fire event
         if self.thumbnail.getState() == INCLUDE: 
             new_state = EXCLUDE
@@ -405,7 +361,7 @@ class MyFSImage:
             FileStateEvent(self.file, new_state)
         )
         
-    def on_closing(self, event): # if parent closes close own window 
+    def on_closing(self, event): # if parent closes, close own window
         print(f"Duplicate closing: {event.obj} {self.caller}") if self.debug else True
         if event.obj is self.caller:
             self.close_handler()
@@ -418,7 +374,7 @@ class MyFSImage:
             if event.state == INCLUDE:
                 self.Button_exclude.config(text = self.str_exclude)
                 self.Label_status.config(text = self.str_included)
-            else: # toggle to not exclude, delete Item
+            else: # toggle to not exclude, delete item
                 self.Button_exclude.config(text = self.str_include)
                 self.Label_status.config(text = self.str_excluded)
             self.thumbnail.setState(event.state)
@@ -426,8 +382,8 @@ class MyFSImage:
     # 20260915
 
     
-    def close_handler(self): #called when window is closing: unbind event handlers send closing event and destroy window
-        # 20260915 important to avoid call after object is destroyed!
+    def close_handler(self): # called when window is closing: unbind event handlers, send closing event and destroy window
+        # 20260915 important to avoid calls after the object is destroyed!
         Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
         Globals.eventManager.unbind("Closing", self.on_closing)
         Globals.eventManager.generate(
@@ -437,36 +393,31 @@ class MyFSImage:
         self.root.destroy()
         
     def mousewheel_handler(self, event):
-        if self.player is None: # exception when used for video
-            zoomincrement = (event.delta / 120) / 100 # Windows-spezifisch, macOS: keine Division durch 120
-            if (zoomincrement > 0):
-                if self.zoomfaktor + zoomincrement <= 1:
-                    newzoomfaktor = self.zoomfaktor + zoomincrement
-                else:
-                    newzoomfaktor = 1.0
-            else: # lt 0
-                if self.zoomfaktor + zoomincrement >= .1:
-                    newzoomfaktor = self.zoomfaktor + zoomincrement
-                else:
-                    newzoomfaktor = 0.1
-            #print ("Mousewheel Delta is " + str(event.delta) + " Zoomfaktor old / new is: " + str(self.zoomfaktor) + ' / ' + str(newzoomfaktor))
-            self.zoomfaktor = newzoomfaktor
-            self.image_zoom(self.zoomfaktor)
+        zoomincrement = (event.delta / 120) / 100 # Windows-specific; macOS: no division by 120
+        if (zoomincrement > 0):
+            if self.zoomfaktor + zoomincrement <= 1:
+                newzoomfaktor = self.zoomfaktor + zoomincrement
+            else:
+                newzoomfaktor = 1.0
+        else: # lt 0
+            if self.zoomfaktor + zoomincrement >= .1:
+                newzoomfaktor = self.zoomfaktor + zoomincrement
+            else:
+                newzoomfaktor = .1
+        #print ("Mousewheel Delta is " + str(event.delta) + " Zoomfaktor old / new is: " + str(self.zoomfaktor) + ' / ' + str(newzoomfaktor))
+        self.zoomfaktor = newzoomfaktor
+        self.image_zoom(self.zoomfaktor)
 
     def button_fit(self):
-        self.image_zoom(0) # damit bringt image_zoom das Foto vollständig und canvas-füllend zur Anzeige
+        self.image_zoom(0) # this makes image_zoom show the photo completely, filling the canvas
 
     def image_zoom(self, zoomfaktor):
-        # zoomfaktor 0 heißt: selbst errechnen, so dass Bild formatfüllend ist.
-        if self.thumbnail.get_imagetype() == "STILL": # still image
-            image_width_orig, image_height_orig = self.image.size
-        else:
-            image_width_orig  =self.image_width
-            image_height_orig =self.image_height
+        # zoomfaktor 0 means: compute it ourselves so that the image fills the canvas.
+        image_width_orig, image_height_orig = self.image.size
         self.f.update()
         canvas_width  = self.f.winfo_width()
         canvas_height = self.f.winfo_height()
-        if  zoomfaktor == 0: # wir brauchen die Scrollbars nicht und errechnen den formatfüllenden Zoomfaktor
+        if  zoomfaktor == 0: # we don't need the scrollbars; compute the fill factor
             #self.V_I.pack_forget()
             #self.H_I.pack_forget()
             faktor = min(canvas_height / image_height_orig, canvas_width / image_width_orig)
@@ -480,20 +431,14 @@ class MyFSImage:
             
         newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
         #print("*** faktor is: " + str(faktor) + " canvas_height: " + str(canvas_height) + " origsize: " + str(self.image.size) + " newsize: " +str(newsize))
-        if self.thumbnail.get_imagetype() == "VIDEO": # Video we have to resize the player
-            # video size is calculated automatically as the display process uses the actual canvas size, but we have to redraw the progress bar
-            # start the player again which has been stopped in on configure
-            self.player.resize()
-            self.player.pstart()
-        else:
-            r_img = self.image.resize(newsize, Image.Resampling.NEAREST)
-            self.pimg = ImageTk.PhotoImage(r_img)
-            self.f.delete('images')
-            #f.itemconfig(canvas_id, image = pimg)
-            self.id = self.f.create_image(0, 0, anchor='nw',image = self.pimg, tags = 'images')
-            self.f.tag_raise("rect")
-            self.f.tag_raise("text")
-            self.f.update()
+        r_img = self.image.resize(newsize, Image.Resampling.NEAREST)
+        self.pimg = ImageTk.PhotoImage(r_img)
+        self.f.delete('images')
+        #f.itemconfig(canvas_id, image = pimg)
+        self.id = self.f.create_image(0, 0, anchor='nw',image = self.pimg, tags = 'images')
+        self.f.tag_raise("rect")
+        self.f.tag_raise("text")
+        self.f.update()
         
         if newsize[0] <= canvas_width:
             self.H_I.pack_forget()
@@ -506,6 +451,38 @@ class MyFSImage:
             
         self.f.config(scrollregion = self.f.bbox("all")) 
 
+    # ------------------------------------------------------------------
+    # Metadata treeview content
+    # ------------------------------------------------------------------
+    def _populate_metadata_tree(self):
+        """
+        Fill the treeview with the metadata of the thumbnail
+        (three columns: Category, Key, Value).
+        Category is only written when it differs from the previous row,
+        so the categories group visually.
+        """
+        tree = self.tree_metadata
+        for item in tree.get_children(""):
+            tree.delete(item)
+
+        metadata = self.thumbnail.metadata
+        if not metadata:
+            tree.insert("", "end", text="", values=("", NO_METADATA_TEXT))
+            return
+
+        prev_cat = None
+        for category, entries in metadata.items():
+            if not entries:
+                continue
+            cat_text = "" if category == prev_cat else str(category)
+            prev_cat = category
+            first_in_cat = True
+            for key, value in entries.items():
+                tree.insert("", "end",
+                            text=cat_text if first_in_cat else "",
+                            values=(str(key), str(value)))
+                first_in_cat = False
+
     def __del__(self):
         self.a = 1
-        #print("*** Deleting FSImage-Objekt. File is " + str(self.file))
+        #print("*** Deleting FSImage object. File is " + str(self.file))

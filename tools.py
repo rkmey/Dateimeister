@@ -932,9 +932,11 @@ def _create_container(func):
         container = ttk.Frame(master)
         container.bind('<Enter>', lambda e: _bound_to_mousewheel(e, container))
         container.bind('<Leave>', lambda e: _unbound_to_mousewheel(e, container))
+        # NEU: Container muss den Master füllen, sonst bleibt er 1x1
+        container.pack(fill='both', expand=True)
         return func(cls, container, **kw)
     return wrapped
-
+    
 class ScrolledTreeView(AutoScroll, ttk.Treeview):
     '''A standard ttk Treeview widget with scrollbars that will
     automatically show/hide as needed.'''
@@ -945,25 +947,33 @@ class ScrolledTreeView(AutoScroll, ttk.Treeview):
 
 import platform
 def _bound_to_mousewheel(event, widget):
+    """
+    Bind mousewheel only to the widget (not bind_all), so that other widgets
+    (e.g. the canvas in MyFSImage) keep their own mousewheel behaviour.
+    """
     child = widget.winfo_children()[0]
     if platform.system() == 'Windows' or platform.system() == 'Darwin':
-        child.bind_all('<MouseWheel>', lambda e: _on_mousewheel(e, child))
-        child.bind_all('<Shift-MouseWheel>', lambda e: _on_shiftmouse(e, child))
+        child.bind('<MouseWheel>',       lambda e: _on_mousewheel(e, child))
+        child.bind('<Shift-MouseWheel>', lambda e: _on_shiftmouse(e, child))
     else:
-        child.bind_all('<Button-4>', lambda e: _on_mousewheel(e, child))
-        child.bind_all('<Button-5>', lambda e: _on_mousewheel(e, child))
-        child.bind_all('<Shift-Button-4>', lambda e: _on_shiftmouse(e, child))
-        child.bind_all('<Shift-Button-5>', lambda e: _on_shiftmouse(e, child))
+        child.bind('<Button-4>',         lambda e: _on_mousewheel(e, child))
+        child.bind('<Button-5>',         lambda e: _on_mousewheel(e, child))
+        child.bind('<Shift-Button-4>',   lambda e: _on_shiftmouse(e, child))
+        child.bind('<Shift-Button-5>',   lambda e: _on_shiftmouse(e, child))
 
 def _unbound_to_mousewheel(event, widget):
+    """
+    Unbind mousewheel from the widget only (not unbind_all).
+    """
+    child = widget.winfo_children()[0]
     if platform.system() == 'Windows' or platform.system() == 'Darwin':
-        widget.unbind_all('<MouseWheel>')
-        widget.unbind_all('<Shift-MouseWheel>')
+        child.unbind('<MouseWheel>')
+        child.unbind('<Shift-MouseWheel>')
     else:
-        widget.unbind_all('<Button-4>')
-        widget.unbind_all('<Button-5>')
-        widget.unbind_all('<Shift-Button-4>')
-        widget.unbind_all('<Shift-Button-5>')
+        child.unbind('<Button-4>')
+        child.unbind('<Button-5>')
+        child.unbind('<Shift-Button-4>')
+        child.unbind('<Shift-Button-5>')
 
 def _on_mousewheel(event, widget):
     if platform.system() == 'Windows':
@@ -1047,5 +1057,3 @@ def new_image(file = None, height = 100, pic = None):
     if file:
         img.close()
     return pimg, image_width, image_height
-
-    
