@@ -143,7 +143,8 @@ class MyFSImage:
           "WIDGET":tk.Button,"VAR":"Button_exclude","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.on_button_state,
           "TEXT":"Exclude","STATE":tk.ACTIVE,"TT":"include / exclude","FONT":self.text_font}
         dict_widgets["4"] = {
-          "WIDGET":tk.Label,"VAR":"future_use","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","TEXT":"future_use","FONT":self.text_font}
+          "WIDGET":tk.Button,"VAR":"Button_all_meta","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.on_button_all_meta,
+          "TEXT":"view all meta","STATE":tk.ACTIVE,"TT":"view all metadata","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_1_1, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         dict_widgets = {}
@@ -203,13 +204,13 @@ class MyFSImage:
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
 
         self.root.title(str_title_prefix + file)
+        self.show_all_meta = False   # Zustand des Buttons
         
         # 20260915 for better maintenance we convert the whole mechanism from
         # callbacks to events; register event handlers.
         Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed) # include<=>exclude
         Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
 
-        self.image.close
         self.zoomfaktor = 1.0 # we always start with full resolution
         self.f.focus_set()
         self.image_zoom(self.zoomfaktor)
@@ -361,8 +362,22 @@ class MyFSImage:
             FileStateEvent(self.file, new_state)
         )
         
+    def on_button_all_meta(self):
+        """Wechselt zwischen 'nur Auswahl' und 'alle Metadaten'."""
+        if not self.show_all_meta:
+            all_meta = self._read_all_metadata()
+            self._populate_metadata_tree(all_meta)
+            self.Button_all_meta.config(text="view selected meta")
+            self.show_all_meta = True
+        else:
+            self._populate_metadata_tree()   # default = thumbnail.metadata
+            self.Button_all_meta.config(text="view all meta")
+            self.show_all_meta = False
+
+        
     def on_closing(self, event): # if parent closes, close own window
         print(f"Duplicate closing: {event.obj} {self.caller}") if self.debug else True
+        self.image.close()
         if event.obj is self.caller:
             self.close_handler()
             
@@ -452,20 +467,120 @@ class MyFSImage:
         self.f.config(scrollregion = self.f.bbox("all")) 
 
     # ------------------------------------------------------------------
+    # Metadata read all
+    # ------------------------------------------------------------------
+    def _read_all_metadata(self):
+        """
+        Liest ALLE verfügbaren Metadaten direkt aus der Bilddatei:
+          - img.info   (JPEG/PNG/GIF/TIFF/WebP-spezifisch)
+          - EXIF       (getexif, inkl. IFD-Unterkategorien)
+          - PNG text   (img.text)
+        Liefert dieselbe Struktur wie thumbnail.metadata:
+            { category: { key: value, ... }, ... }
+        """
+        from PIL import ExifTags
+        TAGS = ExifTags.TAGS
+        GPSTAGS = ExifTags.GPSTAGS
+
+        result = {}
+
+        def _stringify(v):
+            from PIL.TiffImagePlugin import IFDRational
+
+            if isinstance(v, bytes):
+                # 1) ASCII, wenn druckbar
+                try:
+                    s = v.decode("ascii")
+                    if s.isprintable():
+                        return s
+                except Exception:
+                    pass
+                # 2) sonst kurz als Hex oder als "(binary, N bytes)"
+                if len(v) <= 16:
+                    return v.hex(" ")
+                return f"(binary, {len(v)} bytes)"
+
+            if isinstance(v, (tuple, list)):
+                return ", ".join(_stringify(x) for x in v)
+            if isinstance(v, dict):
+                return "{" + ", ".join(f"{k}={_stringify(x)}" for k, x in v.items()) + "}"
+            if isinstance(v, IFDRational):
+                try:
+                    if v.denominator == 1:
+                        return str(v.numerator)
+                    return f"{v.numerator}/{v.denominator}"
+                except Exception:
+                    return str(v)
+
+            return str(v)   # <-- der wichtigste Teil
+        
+        try:
+            with Image.open(self.file) as img:
+                # --- 1) img.info (formatübergreifend) ---
+                info = {}
+                for k, v in (img.info or {}).items():
+                    if k == "exif":
+                        continue  # EXIF behandeln wir unten sauber
+                    info[k] = _stringify(v)
+                if info:
+                    result["Info"] = info
+
+                # --- 2) PNG text-Chunks ---
+                png_text = getattr(img, "text", None)  # nur bei PNG vorhanden
+                if png_text:
+                    result["Text"] = {k: _stringify(v) for k, v in png_text.items()}
+
+                # --- 3) EXIF ---
+                exif = img.getexif()
+                if exif:
+                    main = {}
+                    for tag_id, value in exif.items():
+                        tag_name = TAGS.get(tag_id, str(tag_id))
+
+                        # IFD-Unterkategorien rekursiv auflösen
+                        if tag_name in ("ExifOffset", "GPSInfo", "InteropOffset"):
+                            try:
+                                sub = exif.get_ifd(tag_id)
+                            except Exception:
+                                sub = {}
+                            if tag_name == "GPSInfo":
+                                result["GPS"] = {
+                                    GPSTAGS.get(k, str(k)): _stringify(v)
+                                    for k, v in sub.items()
+                                }
+                            else:
+                                # "ExifOffset" -> Kategorie "Exif", "InteropOffset" -> "Interop"
+                                cat = "Exif" if tag_name == "ExifOffset" else "Interop"
+                                result[cat] = {
+                                    TAGS.get(k, str(k)): _stringify(v)
+                                    for k, v in sub.items()
+                                }
+                        else:
+                            main[tag_name] = _stringify(value)
+                    if main:
+                        result["EXIF"] = main
+
+        except Exception as e:
+            print(f"Error reading metadata: {e}") if self.debug else True
+
+        return result
+
+    # ------------------------------------------------------------------
     # Metadata treeview content
     # ------------------------------------------------------------------
-    def _populate_metadata_tree(self):
+    def _populate_metadata_tree(self, metadata=None):
         """
-        Fill the treeview with the metadata of the thumbnail
-        (three columns: Category, Key, Value).
-        Category is only written when it differs from the previous row,
-        so the categories group visually.
+        Füllt den Treeview mit Metadaten.
+        metadata=None -> thumbnail.metadata (Auswahl).
+        metadata=dict -> diese Struktur verwenden (z.B. alle EXIF-Daten).
         """
         tree = self.tree_metadata
         for item in tree.get_children(""):
             tree.delete(item)
 
-        metadata = self.thumbnail.metadata
+        if metadata is None:
+            metadata = self.thumbnail.metadata
+
         if not metadata:
             tree.insert("", "end", text="", values=("", NO_METADATA_TEXT))
             return
@@ -482,6 +597,7 @@ class MyFSImage:
                             text=cat_text if first_in_cat else "",
                             values=(str(key), str(value)))
                 first_in_cat = False
+
 
     def __del__(self):
         self.a = 1
