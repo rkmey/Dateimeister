@@ -3511,7 +3511,7 @@ class Dateimeister_support:
         if Globals.imagetype is not None and Globals.imagetype != "":
             for imagetype in self.dict_subdirs:
                 if imagetype in Globals.thumbnails:
-                    for t in Globals.thumbnails[Globals.imagetype]: # stop all running players
+                    for t in Globals.thumbnails[imagetype]: # stop all running players
                         thisplayer = t.getPlayer()
                         if thisplayer is not None:
                             if thisplayer.getRun(): # running

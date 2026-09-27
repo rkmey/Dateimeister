@@ -150,7 +150,11 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font, bgcolor)
     nextpos = 0 # we always fill the whole parent area
     for i in dict_widgets:
         # construct the widget in parent
-        b = dict_widgets[i]["WIDGET"](parent, background = bgcolor)
+        widget_cls = dict_widgets[i]["WIDGET"]
+        if getattr(widget_cls, "__module__", "").startswith("tkinter.ttk"):
+            b = widget_cls(parent)          # ttk-Widgets kennen "background" nicht, Farbe läuft über Styles
+        else:
+            b = widget_cls(parent, background = bgcolor)        
         # we have to find out if this widget is a radiobutton. if yes we need two special parameters: the variable associated with the group and the resp. value
         if dict_widgets[i]["WIDGET"] is tk.Radiobutton:
             if "RB_VAR" not in dict_widgets[i] or dict_widgets[i]["RB_VAR"] == "":
@@ -182,6 +186,9 @@ def create_widgets_from_dict(dict_widgets, parent, p_orientation, font, bgcolor)
             v.set(dict_widgets[i]["RB_VALUE"])
             setattr(caller, dict_widgets[i]["RB_VAR"], v)
             b.config(variable=v)
+        # neu, z.B. direkt nach dem Radiobutton/Checkbutton-Block:
+        if "VALUES" in dict_widgets[i] and dict_widgets[i]["VALUES"] is not None:
+            b.config(values = dict_widgets[i]["VALUES"])
 
         t_text    = ""
         t_relsize = 0
