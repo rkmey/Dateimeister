@@ -235,9 +235,9 @@ class MyFSImage:
         self.tree_metadata.heading("#0", text=HEAD_CATEGORY, anchor="w")
         self.tree_metadata.heading("#1", text=HEAD_KEY,      anchor="w")
         self.tree_metadata.heading("#2", text=HEAD_VALUE,    anchor="w")
-        self.tree_metadata.column("#0", width=120, minwidth=120, stretch=False, anchor="w")
-        self.tree_metadata.column("#1", width=180, minwidth=180, stretch=False, anchor="w")
-        self.tree_metadata.column("#2", width=240, minwidth=240, stretch=False, anchor="w")
+        self.tree_metadata.column("#0", width=120, minwidth=120, stretch=True, anchor="w")
+        self.tree_metadata.column("#1", width=180, minwidth=180, stretch=True, anchor="w")
+        self.tree_metadata.column("#2", width=240, minwidth=240, stretch=True, anchor="w")
         self.tree_metadata.config(selectmode=tk.BROWSE)
 
         self._populate_metadata_tree()

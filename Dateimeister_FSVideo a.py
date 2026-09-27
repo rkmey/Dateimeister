@@ -9,7 +9,6 @@ import json
 
 import tkinter as tk
 from tkinter import ttk
-from tkinter.font import Font
 import gc
 #gc.disable() # disable garbage collection
 
@@ -25,22 +24,9 @@ import tools
 import Tooltip as TT
 from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent
 
-
-# ----------------------------------------------------------------------
-# Metadata treeview: heading labels and button texts
-# ----------------------------------------------------------------------
-HEAD_CATEGORY    = "Category"
-HEAD_KEY         = "Key"
-HEAD_VALUE       = "Value"
-
-NO_METADATA_TEXT = "(no metadata)"
-
-BTN_ALL_META     = "view all meta"
-BTN_SEL_META     = "view selected meta"
-
-
+    
 def format_time(seconds):
-    """Formats seconds as mm:ss, or h:mm:ss if >= 1 hour."""
+    """Formatiert Sekunden als mm:ss, bzw. h:mm:ss falls >= 1 Stunde."""
     if seconds is None or seconds < 0:
         seconds = 0
     seconds = int(round(seconds))
@@ -81,9 +67,9 @@ class PreviewTooltip(tk.Toplevel):
 
 
 class MpvIPC:
-    """Small helper class to control an mpv instance via its
-    --input-ipc-server named pipe (Windows). Thread-safe for simple
-    calls (a lock protects write+read of one request/response)."""
+    """Kleine Hilfsklasse zum Steuern einer mpv-Instanz über ihre
+    --input-ipc-server Named Pipe (Windows). Threadsicher für einfache
+    Aufrufe (ein Lock schützt Schreiben+Lesen einer Anfrage/Antwort)."""
 
     def __init__(self, pipe_name, timeout_connect=8.0):
         self.pipe_name = pipe_name
@@ -103,20 +89,20 @@ class MpvIPC:
             except OSError as e:
                 last_err = e
                 time.sleep(0.1)
-        raise RuntimeError(f"mpv IPC pipe {self.pipe_name} not reachable: {last_err}")
+        raise RuntimeError(f"mpv IPC pipe {self.pipe_name} nicht erreichbar: {last_err}")
 
     def _read_line(self):
         while b"\n" not in self._read_buf:
             chunk = self.pipe.read(4096)
             if not chunk:
-                raise RuntimeError("mpv pipe was closed unexpectedly")
+                raise RuntimeError("mpv pipe wurde unerwartet geschlossen")
             self._read_buf += chunk
         line, self._read_buf = self._read_buf.split(b"\n", 1)
         return line
 
     def command(self, cmd_list, timeout=3.0):
-        """Sends a command synchronously and waits for the response with
-        the matching request_id (unsolicited event lines are ignored)."""
+        """Sendet ein Kommando synchron und wartet auf die Antwort mit
+        passender request_id (unaufgeforderte Event-Zeilen werden ignoriert)."""
         with self._lock:
             if self.pipe is None:
                 return None
@@ -142,7 +128,7 @@ class MpvIPC:
                     continue
                 if msg.get("request_id") == rid:
                     return msg
-                # otherwise: unsolicited event, ignore and keep reading
+                # sonst: unaufgefordertes Event, ignorieren und weiterlesen
             return None
 
     def set_property(self, name, value):
@@ -198,26 +184,24 @@ class MyFSVideo:
         self.temp_dir = temp_dir
         self.thumbnail = thumbnail
         self.caller = caller
-        self.text_font = Font(family="Helvetica", size=6)
+        self.is_paused = False                  # mpv startet standardmässig abspielend
+        self._auto_paused_by_focus = False      # True, wenn WIR wegen Fokusverlust pausiert haben
 
-        self.is_paused = False                  # mpv starts playing by default
-        self._auto_paused_by_focus = False      # True if WE auto-paused on focus loss
-
-        # for "hold" on frame-step buttons
+        # fuer "gedrueckt halten" bei den Frame-Step-Buttons
         self._frame_hold_after_id = None
         self._frame_hold_step_func = None
         self._frame_hold_press_time = None
-        self._frame_key_down = False       # prevents Tkinter key auto-repeat
+        self._frame_key_down = False       # verhindert Tkinter-Key-Auto-Repeat
         self.root = tk.Toplevel()
-        # window size
+        # Fenstergröße
         self.physical_width  = self.root.winfo_screenwidth()
         self.physical_height = self.root.winfo_screenheight()
         self.screen_width  = int(self.root.winfo_screenwidth() * .75) # adjust as needed
         self.screen_height = int(self.root.winfo_screenheight() * .75) # adjust as needed
-        print("Screen is " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(self.physical_width) + " x " + str(self.physical_height))
+        print("Bildschirm ist " + str(self.screen_width) + " x " + str(self.screen_height) + " physical: " + str(self.physical_width) + " x " + str(self.physical_height))
         v_dim=str(self.screen_width)+'x'+str(self.screen_height)
         self.root.geometry(v_dim)
-        self.root.minsize(int(self.physical_width / 4), int(self.physical_height / 4))  # (minimum) width, (minimum) height
+        self.root.minsize(int(self.physical_width / 4), int(self.physical_height / 4))  # (minimum ) width , ( minimum) height
         self.root.resizable(True, True)
 
         self.root.update()
@@ -228,19 +212,19 @@ class MyFSVideo:
         self._mouse_watch_id = None
         
         # Frames and canvas
-        # PanedWindow replaces the 3 root grid rows
+        # PanedWindow ersetzt die 3 root-Grid-Zeilen
         self.paned = ttk.PanedWindow(self.root, orient="vertical")
         self.paned.grid(row=0, column=0, sticky="nsew")
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
 
-        # container for the upper area (video + controls, 9:1 fixed)
+        # Container für den oberen Bereich (video + controls, 9:1 fix)
         self.top_container = tk.Frame(self.paned)
         self.top_container.grid_rowconfigure(0, weight=9)
         self.top_container.grid_rowconfigure(1, weight=0)
         self.top_container.grid_columnconfigure(0, weight=1)
 
-        # Frames
+        # Deine Frames -- ab hier unverändert nutzbar
         self.frame_video    = tk.Frame(self.top_container, bg="black")
         self.frame_controls = tk.Frame(self.top_container, bg="gray20")
         self.frame_info     = tk.Frame(self.paned, bg="gray")
@@ -248,19 +232,19 @@ class MyFSVideo:
         self.frame_video.grid(row=0, column=0, sticky="nsew")
         self.frame_controls.grid(row=1, column=0, sticky="ew")
 
-        # add panes
+        # Panes hinzufügen
         self.paned.add(self.top_container, weight=9)
         self.paned.add(self.frame_info, weight=1)
         
         
         self.canvas_gallery = tk.Canvas(self.frame_video, bg="black")
 
-        # IMPORTANT: canvas must not demand its own height
+        # WICHTIG: Canvas darf keine eigene Höhe verlangen
         self.canvas_gallery.configure(height=1)
 
         self.canvas_gallery.pack(fill="both", expand=True)
         self.root.update_idletasks()
-        print("AFTER LAYOUT:")
+        print("NACH LAYOUT:")
         print("root       :", self.root.winfo_width(), self.root.winfo_height())
         print("frame video:", self.frame_video.winfo_width(), self.frame_video.winfo_height())
         print("frame prev :", self.frame_info.winfo_width(), self.frame_info.winfo_height())
@@ -269,7 +253,7 @@ class MyFSVideo:
         self.pipe_name_thumb = rf"\\.\pipe\mpvthumb_{uuid.uuid4().hex}" # we need a unique name
         self.num_t = num_thumbnails
         
-        # create the small window for previewing frames on the position scale
+        # create the small window for previewing frames on the psition scale
         self.tooltip = PreviewTooltip(self.root)
 
         self.preview_photos = []
@@ -291,101 +275,36 @@ class MyFSVideo:
         self.mpv_ipc = None
         self._seeking = False
         self._stop_polling = False
-
-        # Flag for the metadata button
-        self.show_all_meta = False
-
         self.build_controls()
-
-        # initial population of the metadata treeview (thumbnail.metadata)
-        self._populate_metadata_tree()
 
         threading.Thread(target=self._connect_main_ipc, daemon=True).start()
 
-        # Space pauses/resumes, independent of which child widget has focus
-        # (see takefocus=0 on the control buttons below, otherwise a previously
-        # clicked button would swallow the space key itself)
+        # Leertaste pausiert/setzt fort, unabhängig davon, welches Kind-Widget
+        # gerade den Fokus hat (siehe takefocus=0 an den Control-Buttons weiter
+        # unten, sonst würde ein zuvor angeklickter Button die Leertaste selbst
+        # abfangen statt sie hierher durchzureichen)
         self.root.bind("<space>", self._on_space_key)
         
-        # get / lose focus: trigger play / pause
+        # get / loose focus: trigger play / pause
         self.root.bind("<FocusIn>", self.on_focus_in)
         self.root.bind("<FocusOut>", self.on_focus_out)
         self.root.focus_set()
 
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
-        # 20260915 for better maintenance we convert the whole mechanism from callbacks to events; register event handlers
+        # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handlers
         Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed) # include<=>exclude
         Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
 
 
-        self.width  = 0
-        self.height = 0
-        self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
-        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
-        self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
-
-    def on_configure(self, event):
-        x = event.widget
-        if x == self.root:
-            if (self.width != event.width or self.height != event.height):
-                self.timer.start()
-
-    def resize(self):
-        try:
-            if not self.root.winfo_exists():
-                # Window has already been destroyed -> disable the timer
-                if hasattr(self, 'timer') and self.timer:
-                    try:
-                        self.timer.cancel()
-                    except:
-                        pass
-                    self.timer = None
-                return
-        except:
-            # On any error just return
-            return
-        
-        # display debug info for resize, this is very difficult to debug
-        self.debug_info_resize("TIMER") if self.debug else True
-        old_width  = self.width
-        old_height = self.height
-        # we use the new dimension of the frame for calculating the fontsize needed
-        self.root.update()
-        new_width  = self.root.winfo_width()
-        new_height = self.root.winfo_height()
-        if (old_width != new_width or old_height != new_height):
-            # store new values
-            self.width  = new_width
-            self.height = new_height
-            # we calculate the correction factor for zoom
-            self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug)) 
-
-            # Metadata treeview: font + rowheight to match the new font size
-            try:
-                fm = Font(font=self.text_font)
-                rowheight = fm.metrics("linespace") + 2
-                style = ttk.Style(self.root)
-                style.configure("Metadata.Treeview",
-                                font=self.text_font,
-                                rowheight=rowheight)
-                style.configure("Metadata.Treeview.Heading",
-                                font=self.text_font)
-            except Exception:
-                pass
-
-    def debug_info_resize(self, text):
-        print("{:s} elapsed start resize".format(text))
-
-
     # ------------------------------------------------------------------
-    # Control of the main player (mpv_proc) via IPC
+    # Steuerung des Hauptplayers (mpv_proc) über IPC
     # ------------------------------------------------------------------
 
     def _connect_main_ipc(self):
         try:
             self.mpv_ipc = MpvIPC(self.pipe_name_main)
         except RuntimeError as e:
-            print(f"Could not connect to main mpv: {e}")
+            print(f"Konnte nicht mit Haupt-mpv verbinden: {e}")
             return
         threading.Thread(target=self._poll_position, daemon=True).start()
 
@@ -399,7 +318,7 @@ class MyFSVideo:
                     try:
                         self.root.after(0, lambda p=pct, t=pos, pa=paused: self._update_position_ui(p, t, pa))
                     except RuntimeError:
-                        break  # window already destroyed
+                        break  # Fenster bereits zerstört
             time.sleep(0.5)
 
     def _update_position_ui(self, pct, current_seconds, paused=None):
@@ -470,7 +389,7 @@ class MyFSVideo:
         f.grid_columnconfigure(8, weight=1)
 
         self.var_mute = tk.BooleanVar(value=False)
-        chk_mute = tk.Checkbutton(f, text="Mute", variable=self.var_mute,
+        chk_mute = tk.Checkbutton(f, text="Stumm", variable=self.var_mute,
                                    command=self.on_mute_toggle, bg="gray20", fg="white",
                                    selectcolor="gray30", takefocus=0)
         chk_mute.grid(row=0, column=9, padx=4, pady=2)
@@ -482,51 +401,41 @@ class MyFSVideo:
             variable=self.var_volume, length=140, command=self.on_volume_change,
         )
         scale_volume.grid(row=0, column=11, padx=(0, 8), pady=2)
-
-        # ------------------------------------------------------------------
-        # Metadata treeview and controls in frame_info
-        # ScrolledTreeView uses pack internally, so we use pack here too
-        # (grid + pack in the same parent is not allowed in Tkinter).
-        # ------------------------------------------------------------------
+        
+        # scrolled treeview, button include/exclude and label in frame info
         f = self.frame_info
 
-        f.pack_propagate(False)   # important: prevents the frame from sizing
-                                  # itself to its children, keeps PanedWindow size
+        # Layout: der Treeview soll den Hauptteil einnehmen, rechts daneben
+        # Button und Label. Da ScrolledTreeView intern mit pack arbeitet,
+        # muessen wir hier auch pack verwenden (grid + pack im selben
+        # Parent ist in Tkinter nicht erlaubt).
+        f.pack_propagate(False)   # wichtig: verhindert, dass der Frame sich
+                                  # an den Kindern orientiert und stattdessen
+                                  # die PanedWindow-Groesse beibehaelt
 
-        style = ttk.Style(self.root)
-        style.configure("Metadata.Treeview", font=self.text_font)
-        style.configure("Metadata.Treeview.Heading", font=self.text_font)
-
-        self.tv = tools.ScrolledTreeView(f, style="Metadata.Treeview")
+        self.tv = tools.ScrolledTreeView(f)
         self.tv.configure(columns="Col1, Col2, Col3")
-        self.tv.heading("#0", text=HEAD_CATEGORY, anchor="w")
-        self.tv.heading("#1", text=HEAD_KEY,      anchor="w")
-        self.tv.heading("#2", text=HEAD_VALUE,    anchor="w")
-        self.tv.column("#0", width=120, minwidth=120, stretch=True, anchor="w")
-        self.tv.column("#1", width=180, minwidth=180, stretch=True, anchor="w")
-        self.tv.column("#2", width=240, minwidth=240, stretch=True, anchor="w")
 
-        # Pack button and label to the right first, so treeview fills the rest
+        # Button und Label zuerst rechts platzieren (pack side="right"),
+        # damit der Treeview den Rest links fuellt
         self.lbl_inex = tk.Label(f, text="inex", bg="gray20", fg="white")
-        self.lbl_inex.pack(side="right", padx=2, pady=2, anchor="n")
+        self.lbl_inex.pack(side="right", padx=2, pady=2)
 
         self.btn_inex = tk.Button(f, text="inex", width=15, command=self.on_button_state)
         TT.ToolTip(self.btn_inex, 'include / exclude video')
-        self.btn_inex.pack(side="right", padx=2, pady=2, anchor="n")
+        self.btn_inex.pack(side="right", padx=2, pady=2)
 
-        self.btn_all_meta = tk.Button(f, text=BTN_ALL_META, width=15, command=self.on_button_all_meta)
-        TT.ToolTip(self.btn_all_meta, 'toggle between selected and all metadata')
-        self.btn_all_meta.pack(side="right", padx=2, pady=2, anchor="n")
-
-        # Treeview last, on the left
+        # Treeview zuletzt links
         self.tv.pack(side="left", fill="both", expand=True)
 
 
     def on_focus_in(self, event):
         if not self.mpv_ipc:
             return
-        # only resume if WE paused on focus loss - a manual pause (space key,
-        # frame-step) or a print preparation must not be undone by a focus change
+        # nur fortsetzen, wenn WIR es waren, die wegen Fokusverlust pausiert
+        # haben - ein manuelles Pausieren (Leertaste, Frame-Step) oder ein
+        # Print-Vorbereiten darf durch einen Fokuswechsel nicht aufgehoben
+        # werden
         if self._auto_paused_by_focus and self.is_paused:
             print("got focus back - resuming (was auto-paused on focus loss)") if self.debug else True
             self.toggle_playpause()
@@ -540,16 +449,17 @@ class MyFSVideo:
             self.toggle_playpause()
             self._auto_paused_by_focus = True
         else:
-            # was already paused (manual or via frame-step) - that was not
-            # our auto-pause, so do NOT resume automatically on focus in
+            # war schon pausiert (manuell oder per Frame-Step) - das war
+            # nicht unser Auto-Pause, also beim Fokus-Zurueckerhalten NICHT
+            # automatisch fortsetzen
             self._auto_paused_by_focus = False
 
     def activate(self):
-        self.root.deiconify()      # in case it is minimized
+        self.root.deiconify()      # falls minimiert
         self.root.lift()
         self.root.focus_force()
 
-    # all the functions for fullscreen and back to window, including small control panel in fullscreen mode
+    # all the functions for fullscreen and back to window including small controll panel in full screen modus
     def toggle_fullscreen(self):
         if self.is_fullscreen:
             self.exit_fullscreen()
@@ -574,7 +484,7 @@ class MyFSVideo:
             return
         self.is_fullscreen = False
 
-        # stop timer/polling
+        # Timer/Polling stoppen
         if self._hide_timer_id:
             self.root.after_cancel(self._hide_timer_id)
             self._hide_timer_id = None
@@ -614,7 +524,7 @@ class MyFSVideo:
 
         if self.is_fullscreen:
             self._mouse_watch_id = self.root.after(150, self._start_mouse_watch)
-    # End: fullscreen handling
+    # End: all the functions for fullscreen and back to window including small controll panel in full screen modus
 
 
     def toggle_playpause(self):
@@ -626,24 +536,25 @@ class MyFSVideo:
         self.toggle_playpause()
         return "break"
 
-    FRAME_HOLD_THRESHOLD_MS = 1000   # hold this long before repeat starts
-    FRAME_HOLD_REPEAT_MS = 250       # 4 frames per second while holding
-    FRAME_HOLD_FAST_AFTER_S = 4.0    # faster after this many total seconds held
-    FRAME_HOLD_REPEAT_FAST_MS = 125  # 8 frames per second from then on
+    FRAME_HOLD_THRESHOLD_MS = 1000   # so lange halten, bevor die Wiederholung einsetzt
+    FRAME_HOLD_REPEAT_MS = 250       # 4 Frames pro Sekunde waehrend des Haltens
+    FRAME_HOLD_FAST_AFTER_S = 4.0    # ab so vielen Sekunden Gesamt-Haltedauer schneller
+    FRAME_HOLD_REPEAT_FAST_MS = 125  # 8 Frames pro Sekunde ab dann
 
     def frame_step_forward(self):
         if self.mpv_ipc:
-            self.mpv_ipc.command(["frame-step"])  # pauses automatically if still playing
+            self.mpv_ipc.command(["frame-step"])  # pausiert automatisch, falls noch am Abspielen
             self._sync_paused_state_now()
 
     def frame_step_backward(self):
         if self.mpv_ipc:
-            self.mpv_ipc.command(["frame-back-step"])  # pauses automatically if still playing
+            self.mpv_ipc.command(["frame-back-step"])  # pausiert automatisch, falls noch am Abspielen
             self._sync_paused_state_now()
 
     def _on_frame_key_press(self, step_func):
-        # Windows/Tkinter fires additional KeyPress events while a key is held.
-        # Those must not restart our hold mechanism every time.
+        # Windows/Tkinter erzeugt bei gehaltener Taste automatisch weitere
+        # KeyPress-Events. Diese duerfen unseren Hold-Mechanismus nicht
+        # jedes Mal neu starten.
         if self._frame_key_down:
             return "break"
 
@@ -663,14 +574,14 @@ class MyFSVideo:
         self._cancel_frame_hold_timer()
         self._frame_hold_step_func = step_func
         self._frame_hold_press_time = time.time()
-        step_func()  # the normal single step, as with a short click
+        step_func()  # der normale Einzelschritt, wie bisher bei einem kurzen Klick
         self._frame_hold_after_id = self.root.after(
             self.FRAME_HOLD_THRESHOLD_MS, self._start_frame_hold_repeat
         )
 
     def _start_frame_hold_repeat(self):
         if self._frame_hold_step_func is None:
-            return  # released in the meantime
+            return  # zwischenzeitlich losgelassen
         self._frame_hold_step_func()
         elapsed = time.time() - self._frame_hold_press_time
         interval = (
@@ -690,9 +601,9 @@ class MyFSVideo:
             self._frame_hold_after_id = None
 
     def _sync_paused_state_now(self):
-        """Ask for pause state immediately instead of waiting for the next
-        poll cycle (up to 0.5s) - for direct feedback after a user action
-        (play/pause, frame-step)."""
+        """Fragt den Pause-Status sofort synchron ab, statt auf den naechsten
+        Poll-Zyklus (bis zu 0.5s) zu warten - fuer direktes Feedback nach
+        einer Nutzeraktion (Play/Pause-Taste, Frame-Step)."""
         if not self.mpv_ipc:
             return
         paused = self.mpv_ipc.get_property("pause")
@@ -705,7 +616,7 @@ class MyFSVideo:
 
     def print_frame(self):
         if not self.mpv_ipc or not self.is_paused:
-            return  # button should be disabled anyway, double check
+            return  # Button sollte ohnehin disabled sein, doppelt haelt besser
 
         filename = os.path.join(self.temp_dir, f"print_frame_{uuid.uuid4().hex}.png")
         self.mpv_ipc.command(["screenshot-to-file", filename, "video"])
@@ -716,12 +627,12 @@ class MyFSVideo:
             time.sleep(0.01)
 
         if not os.path.exists(filename):
-            tools.info_box("Could not capture the current frame.", "fehler")
+            tools.info_box("Konnte den aktuellen Frame nicht erfassen.", "fehler")
             return
 
-        # Forward the print request to the central print logic in
-        # Dateimeister_support. Creating / managing the PrintPreview happens
-        # exclusively there.
+        # Druckwunsch an die zentrale Drucklogik in Dateimeister_support
+        # weiterleiten. Das Erzeugen / Verwalten des PrintPreview erfolgt
+        # ausschliesslich dort.
         Globals.eventManager.generate(
             "PrintRequestEvent",
             PrintRequestEvent(filename, self)
@@ -744,7 +655,7 @@ class MyFSVideo:
         self._seeking = True
 
     def _on_seek_release(self, event):
-        # convert click position on scale to seconds and jump there
+        # Klick-Position auf der Scale in Sekunden umrechnen und anspringen
         try:
             width = self.scale_position.winfo_width()
             pct = max(0.0, min(100.0, (event.x / max(width, 1)) * 100.0))
@@ -827,14 +738,14 @@ class MyFSVideo:
 
 
     def get_video_duration(self, video_path):
-        """Determines the video duration via ffprobe, independent of mpv."""
+        """Ermittelt die Videodauer über ffprobe, unabhängig von mpv."""
         try:
             result = subprocess.run(
                 [
                     self.ffprobe_path,
                     "-v", "error",
                     "-show_entries", "format=duration",
-                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    "-of", "default=noprint_wrappers=1:nokey=1",  # <<< "wrappers", nicht "wrapper"
                     video_path,
                 ],
                 capture_output=True,
@@ -843,7 +754,7 @@ class MyFSVideo:
             )
             return float(result.stdout.strip())
         except (subprocess.TimeoutExpired, ValueError, OSError) as e:
-            print("ffprobe exception:", repr(e))
+            print("ffprobe Exception:", repr(e))
             return None
 
     def generate_thumbnails(self, n, thumb_height):
@@ -852,12 +763,12 @@ class MyFSVideo:
         duration = self.get_video_duration(video_path)
         if duration is None:
             duration = 60.0
-            print("Warning: could not determine duration, using fallback 60s")
+            print("Warnung: Konnte Dauer nicht ermitteln, verwende Fallback 60s")
         else:
-            print(f"Video duration: {duration:.1f}s")
+            print(f"Video-Dauer: {duration:.1f}s")
         self.duration = duration
 
-        print(f"PIPE name = {self.pipe_name_thumb}")
+        print(f"PIPE Name = {self.pipe_name_thumb}")
         mpv_thumb_proc = subprocess.Popen([
             self.mpv_path,
             "--idle=yes",
@@ -893,8 +804,8 @@ class MyFSVideo:
             return line
 
         def mpv_cmd_sync(cmd, timeout=3.0):
-            """Sends a command and waits SYNCHRONOUSLY for the matching response.
-            Ignores unsolicited event lines (e.g. property-change)."""
+            """Sendet ein Kommando und wartet SYNCHRON auf die passende Antwort.
+            Ignoriert dabei unaufgeforderte Event-Zeilen (z.B. property-change)."""
             rid = next_request_id[0]
             next_request_id[0] += 1
             cmd = dict(cmd)
@@ -912,7 +823,7 @@ class MyFSVideo:
                     continue
                 if msg.get("request_id") == rid:
                     return msg
-                # otherwise: unsolicited event, ignore and keep reading
+                # sonst: unaufgefordertes Event, ignorieren und weiterlesen
             return None
 
         time.sleep(0.3)
@@ -922,7 +833,7 @@ class MyFSVideo:
         for i in range(n):
             t = i * step
             if i == 0:
-                t = min(0.1, duration * 0.01)  # small offset to force a real seek
+                t = min(0.1, duration * 0.01)  # kleiner Offset, erzwingt echten Seek
             filenum = i+1
             filename = os.path.join(self.temp_dir, f"thumb_{filenum:02d}.png")
 
@@ -947,110 +858,16 @@ class MyFSVideo:
                         time.sleep(0.01)
                 os.remove(filename)
             else:
-                print(f"Warning: {filename} was not created.")
+                print(f"Warnung: {filename} wurde nicht erzeugt.")
 
         mpv_thumb_proc.terminate()
         pipe.close()
         return photos
 
-    # ------------------------------------------------------------------
-    # Metadata treeview content (same logic as MyFSImage)
-    # ------------------------------------------------------------------
-    def _populate_metadata_tree(self, metadata=None):
-        """
-        Fills the treeview with metadata.
-        metadata=None -> thumbnail.metadata (selection).
-        metadata=dict -> use this structure (e.g. all EXIF data).
-        Category is only written when it differs from the previous row.
-        """
-        tree = self.tv
-        for item in tree.get_children(""):
-            tree.delete(item)
-
-        if metadata is None:
-            metadata = self.thumbnail.metadata
-
-        if not metadata:
-            tree.insert("", "end", text="", values=("", NO_METADATA_TEXT))
-            return
-
-        prev_cat = None
-        for category, entries in metadata.items():
-            if not entries:
-                continue
-            cat_text = "" if category == prev_cat else str(category)
-            prev_cat = category
-            first_in_cat = True
-            for key, value in entries.items():
-                tree.insert("", "end",
-                            text=cat_text if first_in_cat else "",
-                            values=(str(key), str(value)))
-                first_in_cat = False
-
-    def on_button_all_meta(self):
-        """Toggles between 'selection only' and 'all metadata'."""
-        if not self.show_all_meta:
-            all_meta = self._read_all_metadata()
-            self._populate_metadata_tree(all_meta)
-            self.btn_all_meta.config(text=BTN_SEL_META)
-            self.show_all_meta = True
-        else:
-            self._populate_metadata_tree()   # default = thumbnail.metadata
-            self.btn_all_meta.config(text=BTN_ALL_META)
-            self.show_all_meta = False
-
-    def _read_all_metadata(self):
-        """
-        Reads ALL metadata for the video file via ffprobe and returns it
-        in the same shape as thumbnail.metadata (dict of category -> {key: value}).
-        """
-        result = {}
-
-        try:
-            proc = subprocess.run(
-                [
-                    self.ffprobe_path,
-                    "-v", "error",
-                    "-show_format",
-                    "-show_streams",
-                    "-print_format", "json",
-                    self.file,
-                ],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            data = json.loads(proc.stdout or "{}")
-        except Exception as e:
-            print(f"ffprobe error while reading all metadata: {e}") if self.debug else True
-            return result
-
-        def _fmt(v):
-            if isinstance(v, dict):
-                # ffprobe nests some values, e.g. tags as a sub-dict
-                return ", ".join(f"{k}={v[k]}" for k in v)
-            if isinstance(v, (list, tuple)):
-                return ", ".join(str(x) for x in v)
-            return str(v)
-
-        # ---- Format section ----
-        fmt = data.get("format", {}) or {}
-        if fmt:
-            result["Format"] = {k: _fmt(v) for k, v in fmt.items()}
-
-        # ---- One category per stream ----
-        for idx, stream in enumerate(data.get("streams", []) or []):
-            codec_type = stream.get("codec_type", "stream")
-            category = f"{codec_type.capitalize()} {idx}"   # e.g. "Video 0", "Audio 0"
-            result[category] = {k: _fmt(v) for k, v in stream.items()}
-
-        return result
-
-    # the include / exclude and close logic
-    # 20260915 for better maintenance we convert the whole mechanism from callbacks to events
-    def on_button_state(self): # react to own button; thumbnail can be from main or duplicates
-        # We just determine the new state; setting of the new state happens in the
-        # event handler, so we avoid finding out whether it has already been done.
+    # the include / exlude and close logic
+    # 20260915 for better maintenace we convert the whole mechanism from callbacks to events
+    def on_button_state(self): # react to own Button, thumbnail can be from main or duplicates
+        # we just determine the new state, setting of new state in event handler, so we avoid finding out if already done
         # Button -> this method -> fire event
         if self.thumbnail.getState() == INCLUDE: 
             new_state = EXCLUDE
@@ -1061,7 +878,7 @@ class MyFSVideo:
             FileStateEvent(self.file, new_state)
         )
         
-    def on_closing(self, event): # if parent closes, close own window
+    def on_closing(self, event): # if parent closes close own window 
         print(f"Caller closing: {event.obj} {self.caller}") if self.debug else True
         if event.obj is self.caller:
             self.close_handler()
@@ -1074,9 +891,11 @@ class MyFSVideo:
             if event.state == INCLUDE:
                 self.btn_inex.config(text = self.str_exclude)
                 self.lbl_inex.config(text = self.str_included)
-            else: # toggle to not exclude, delete item
+            else: # toggle to not exclude, delete Item
                 self.btn_inex.config(text = self.str_include)
                 self.lbl_inex.config(text = self.str_excluded)
             self.thumbnail.setState(event.state)
             # historize is now done in Dateimeister_support because it listens to the same event
     # 20260915
+
+
