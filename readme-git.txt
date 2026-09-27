@@ -27,3 +27,8 @@ git restore Dateimeister_processlist.py
 
 lokale Sicherungen:
 20260826 video_player gesihert in E:\Arbeit\DATEIMEISTER_SAVE - Umbau auf pyvidplayer2
+
+20260927: wenn man eine überflüssige Datei anlegt und anschließend löscht, zeigt git beim status deleted an.
+um sie in git loszuwerden:
+git commit -am "Remove obsolete comparison copy Dateimeister_FSVideo a.py"
+git push.
