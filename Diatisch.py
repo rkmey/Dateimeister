@@ -45,11 +45,12 @@ CFG_SAVE_CONFIG_AS    = 4
 CFG_APPLY_CONFIG      = 5
 CFG_OPEN_RECENT       = 6
 
-NEW_OUTDIR            = 0
-FILE_OPEN             = 1
-FILE_CLOSE            = 2
-FILE_EXIT             = 3
-FILE_OPEN_RECENT      = 4
+NEW_INDIR             = 0
+NEW_OUTDIR            = 1
+FILE_OPEN             = 2
+FILE_CLOSE            = 3
+FILE_EXIT             = 4
+FILE_OPEN_RECENT      = 5
 
 class pt(Enum):
     DROP_FROM_SOURCE  = 1
@@ -323,21 +324,21 @@ class Diatisch:
         # frames for listboxes
         # indir
         self.Frame_indir = tk.LabelFrame(self.root)
-        self.Frame_indir.place(relx=.01, rely=0.87, relheight=0.12, relwidth=0.4)
+        self.Frame_indir.place(relx=.01, rely=0.87, relheight=0.12, relwidth=0.3)
         self.Frame_indir.configure(relief='groove')
         self.Frame_indir.configure(borderwidth="2")
         self.Frame_indir.configure(text = "indirs")
         self.Frame_indir.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         # cfg
         self.Frame_cfg = tk.LabelFrame(self.root)
-        self.Frame_cfg.place(relx=.41, rely=0.87, relheight=0.12, relwidth=0.4)
+        self.Frame_cfg.place(relx=.31, rely=0.87, relheight=0.12, relwidth=0.3)
         self.Frame_cfg.configure(relief='groove')
         self.Frame_cfg.configure(borderwidth="2")
         self.Frame_cfg.configure(text = "cfg files")
         self.Frame_cfg.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
         # outdir
         self.Frame_outdir = tk.LabelFrame(self.root)
-        self.Frame_outdir.place(relx=.81, rely=0.87, relheight=0.12, relwidth=0.18)
+        self.Frame_outdir.place(relx=.61, rely=0.87, relheight=0.12, relwidth=0.38)
         self.Frame_outdir.configure(relief='groove')
         self.Frame_outdir.configure(borderwidth="2")
         self.Frame_outdir.configure(text = "outdirs")
@@ -641,6 +642,7 @@ class Diatisch:
 
         # The file menu
         self.filemenu = tk.Menu(self.menubar, tearoff=0)
+        self.filemenu.add_command(label="New Indir", command=self.new_indir)
         self.filemenu.add_command(label="New Outdir", command=self.new_outdir)
         self.filemenu.add_command(label="Open", command=self.load_images)
         self.filemenu.add_command(label="Close", command=self.close_indir)
