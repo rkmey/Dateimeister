@@ -1215,7 +1215,6 @@ class Dateimeister_support:
         self.diatisch_camera_name = "DIATISCH" # name used for insert / retrieve index in listbox
         
         self.init()
-        self.root.mainloop()
 
     def init(self):
         windll = ctypes.windll.kernel32
@@ -4003,6 +4002,8 @@ if __name__ == '__main__':
         debug = args.debug.upper()
     root = tk.Tk()
     app = Dateimeister_support(root, debug)
+    root.mainloop()
+
 
  
 
