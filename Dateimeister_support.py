@@ -722,7 +722,10 @@ class MyCameraTreeview:
         suf_key  = (text_suffix  or self.suffix  or "").upper()
 
         subdir = self.dict_subdirs.get(cam_key, {}).get(type_key, "")
-        self.new_text(self.entry_subdir, subdir if subdir and subdir != "!" else "")
+        if subdir and subdir != "!":
+            self.new_text(self.entry_subdir, subdir)
+        else:
+            self.new_text(self.entry_subdir, text_subdir or "")
 
         rendertype = self.dict_rendertypes.get(cam_key, {}).get(type_key, "")
         if rendertype and rendertype != "!":
