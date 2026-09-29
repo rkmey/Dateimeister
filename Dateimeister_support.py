@@ -102,9 +102,7 @@ MENUITEM_FILE_RECENT            = 8
 class MyCameraTreeview:
 
     # The class "constructor" - It's actually an initializer
-
-    # The class "constructor" - It's actually an initializer
-    def __init__(self, pmain, debug, cameraname=None):
+    def __init__(self, pmain: object = None, proctypes:str = None, debug:bool = False, cameraname=None):
         self.main = pmain
         self.cameraname = cameraname
         self.root = tk.Toplevel()
@@ -185,6 +183,9 @@ class MyCameraTreeview:
         # process_image and rendertype are ttk.Comboboxes with a fixed set
         # of values, so they get a "VALUES" entry in the dict.
         dict_widgets = {}
+        
+        l_proctypes = [x.strip().upper() for x in proctypes.split(",")]
+ 
         dict_widgets["1"] = {
           "WIDGET":tk.Button,"VAR":"button_camera_new","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
           "CALLBACK":self.camera_new,"TEXT":"New camera","STATE":None,"TT":"create a new camera","FONT":self.text_font}
@@ -203,7 +204,7 @@ class MyCameraTreeview:
         dict_widgets["5a"] = {
           "WIDGET":ttk.Combobox,"VAR":"entry_process_image","OFFSET":offset_entry,"RELH":relh_entry,"RELW":relw_entry,"ANCHOR":"END",
           "CALLBACK":None,"TEXT":None,"STATE":"disabled","TT":"Select process_image","FONT":self.text_font,
-          "TITLE":"'Process Image', .3, END", "VALUES":("JPEG", "VIDEO", "USE_JPEG", "RAW")}
+          "TITLE":"'Process Image', .3, END", "VALUES":l_proctypes}
         dict_widgets["5b"] = {
           "WIDGET":ttk.Combobox,"VAR":"entry_rendertype","OFFSET":offset_entry,"RELH":relh_entry,"RELW":relw_entry,"ANCHOR":"END",
           "CALLBACK":None,"TEXT":None,"STATE":"disabled","TT":"Select rendertype (STILL or VIDEO)","FONT":self.text_font,
@@ -1231,12 +1232,9 @@ class Dateimeister_support:
         # we create the attributes in 'self' except those which have a "target" (Globals) in the line. the attributes are also generated in cfg
         cfg, has_errors, has_warnings, problems = load_and_validate_ini(inifile, spec = dict_ini_spec, target = self, target_registry={"Globals": tools.Globals})
         print("Ini-Datei ist vollständig und gültig.")
-        print("Beispiel: cfg.max_configfiles =", cfg.max_configfiles, type(cfg.max_configfiles), cfg.templatefile_diatisch, cfg.dict_proctypes, tools.Globals.config_files_xml)
-        
+        print("Beispiel: cfg.max_configfiles =", cfg.max_configfiles, type(cfg.max_configfiles), cfg.templatefile_diatisch, cfg.proctypes, tools.Globals.config_files_xml)
         print(f"num thumbnails preview is {Globals.num_video_thumbnails}") if self.debug else True
-        
-        for t in self.dict_proctypes:
-            print("Proctype: " + self.dict_proctypes[t]) 
+        print("Proctype: " + self.proctypes) 
        
         # some operations on selected properties
         Globals.temp_files_path    = os.path.join(Globals.datadir, Globals.temp_files_subdir)
@@ -3666,7 +3664,7 @@ class Dateimeister_support:
         self.win_duplicates = DD.MyDuplicates(self, debug = self.debug) 
        
     def menu_cameras_edit(self):
-        self.win_camera = MyCameraTreeview(self, self.debug) 
+        self.win_camera = MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug) 
 
     def menu_diatisch(self):
         # if jpeg build list of not excluded imagefiles and call diatisch

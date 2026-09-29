@@ -25,7 +25,7 @@ dict_ini_spec = {
     ("dirs", "mpv_path"):                  {"var": "mpv_path",                  "type": "str", "checkdir": "no",  "checkfile": "yes", "target": "Globals", "action": "error"},
     ("dirs", "ffprobe_path"):              {"var": "ffprobe_path",              "type": "str", "checkdir": "no",  "checkfile": "yes", "target": "Globals", "action": "error"},
 
-    ("misc", "proc_types"):                {"var": "dict_proctypes",            "type": "dict", "action": "error"},
+    ("misc", "proc_types"):                {"var": "proctypes",                 "type": "str", "action": "error"},
     ("misc", "uncomment"):                 {"var": "uncomment",                 "type": "str", "target": "Globals", "action": "error"},
     ("misc", "platform"):                  {"var": "platform",                  "type": "str", "action": "error"},
     ("misc", "config_files_xml"):          {"var": "config_files_xml",          "type": "str", "target": "Globals", "action": "error"},
