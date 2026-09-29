@@ -344,31 +344,37 @@ class Diatisch:
         self.Frame_outdir.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
  
         # listbox for Indirs
+        w = .6
         self.listbox_indir_var = tk.StringVar()
         self.listbox_indir = tk.Listbox(self.Frame_indir)
-        self.listbox_indir.place(relx=.0, rely=0, relheight=.8, relwidth=0.75)
+        self.listbox_indir.place(relx=.0, rely=0, relheight=.8, relwidth=w)
         self.listbox_indir.configure(font=self.text_font)
         self.listbox_indir.configure(selectmode='single')
         self.listbox_indir.configure(listvariable=self.listbox_indir_var)
         self.listbox_indir.bind('<Motion>', self.tooltip_lb_indir)    
         # Scrollbars
         VI_INDIR = tk.Scrollbar(self.Frame_indir, orient= VERTICAL)
-        VI_INDIR.place(relx = 0.75, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
+        VI_INDIR.place(relx = w, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
         VI_INDIR.config(command = self.listbox_indir.yview)
         self.listbox_indir.config(yscrollcommand = VI_INDIR.set)
         HI_INDIR = tk.Scrollbar(self.Frame_indir, orient= HORIZONTAL)
-        HI_INDIR.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .75, anchor = tk.NW)
+        HI_INDIR.place(relx = 0, rely = .8, relheight = 0.2, relwidth = w, anchor = tk.NW)
         HI_INDIR.config(command = self.listbox_indir.xview)
         self.listbox_indir.config(xscrollcommand = HI_INDIR.set)
         self.listbox_indir.bind('<Double-1>', self.listbox_indir_double)
         self.listbox_indir.bind("<<ListboxSelect>>", lambda event: self.listbox_indir_check_exist(event))
         # Button
         self.button_apply_indir = tk.Button(self.Frame_indir, text="Apply selected", command=self.listbox_indir_double)
-        self.button_apply_indir.place(relx=.79, rely=0.0, relheight=0.3, relwidth=0.21)
+        self.button_apply_indir.place(relx=w + 0.11, rely=0.0, relheight=0.3, relwidth=0.1)
         self.button_apply_indir.configure(font=self.text_font)
+        self.button_new_indir = tk.Button(self.Frame_indir, text="New...", command=self.new_indir)
+        self.button_new_indir.place(relx=w+.21, rely=0.0, relheight=0.3, relwidth=0.1)
+        self.button_new_indir.configure(font=self.text_font)
+
+
         self.cb_recursive_var = tk.IntVar()
         self.cb_recursive = tk.Checkbutton(self.Frame_indir)
-        self.cb_recursive.place(relx=.79, rely=0.4, relheight=0.2, relwidth=0.21)
+        self.cb_recursive.place(relx=.82, rely=0.4, relheight=0.2, relwidth=0.18)
         self.cb_recursive.configure(variable=self.cb_recursive_var)
         self.cb_recursive.configure(font=self.text_font)
         self.cb_recursive.configure(text='''recursive''')
@@ -2405,6 +2411,21 @@ class Diatisch:
         # update listbox
         self.update_listbox_cfg()
 
+    def new_indir(self):
+        # get dir from dir dialog, insert in xml, update listbox-indirs
+        directory = fd.askdirectory()
+        if not directory: # something went wrong
+            messagebox.showerror("Open", "unable to open: " + directory, parent = self.root)
+            return False
+
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        this_i = re.sub(r'\\', '/', directory).lower()
+        # delete indir-entries from xml if number gt than max from ini, oldest and not existing first. we have to supply the necessary xml-information
+        self.new_item_in_xml(self.max_indirs, this_i, ts, "indirs", "indir", "name")
+        # now create new indir
+        DX.new_dir_diatisch(self.config_files_xml, "indirs", "indir", "name", this_i, ts)
+        self.update_listbox_indir()    
+        
     def new_outdir(self):
         # get dir from dir dialog, insert in xml, update listbox-outdirs
         directory = fd.askdirectory()

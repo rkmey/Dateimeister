@@ -1,6 +1,6 @@
 
 # ---------------------------------------------------------------------------
-# Spezifikation für Dateimeister.ini
+# Spezifikation für Diatisch.ini
 # Key:   (section, name)   -- Tupel, damit gleichnamige Keys in
 #                              unterschiedlichen Sections kein Problem sind
 # Value: dict mit
