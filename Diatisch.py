@@ -268,7 +268,7 @@ class Diatisch:
         self.Frame_labels = tk.Frame(self.root)
         self.Frame_labels.place(relx=.01, rely=0.00, relheight=self.frame_labels_height, relwidth=0.98)
         self.Frame_labels.configure(relief='flat')
-        self.Frame_labels.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_labels.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.Label_source_ctr = tk.Label(self.Frame_labels)
         self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.1)
@@ -304,129 +304,173 @@ class Diatisch:
         self.Frame_source = tk.Frame(self.root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.75, relwidth=0.48)
         self.Frame_source.configure(relief='flat')
-        self.Frame_source.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_source.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.Frame_target = tk.Frame(self.root)
         self.Frame_target.place(relx=.51, rely=0.05, relheight=0.75, relwidth=0.48)
         self.Frame_target.configure(relief='flat')
-        self.Frame_target.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_target.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.Frame_source_ctl = tk.Frame(self.root)
         self.Frame_source_ctl.place(relx=.01, rely=0.82, relheight=0.05, relwidth=0.48)
         self.Frame_source_ctl.configure(relief='flat')
-        self.Frame_source_ctl.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_source_ctl.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.Frame_target_ctl = tk.Frame(self.root)
         self.Frame_target_ctl.place(relx=.51, rely=0.82, relheight=0.05, relwidth=0.48)
         self.Frame_target_ctl.configure(relief='flat')
-        self.Frame_target_ctl.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_target_ctl.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         
         # frames for listboxes
         # indir
         self.Frame_indir = tk.LabelFrame(self.root)
-        self.Frame_indir.place(relx=.01, rely=0.87, relheight=0.12, relwidth=0.3)
+        self.Frame_indir.place(relx=.005, rely=0.87, relheight=0.12, relwidth=0.33)
         self.Frame_indir.configure(relief='groove')
         self.Frame_indir.configure(borderwidth="2")
         self.Frame_indir.configure(text = "indirs")
-        self.Frame_indir.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_indir.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_indir.update()
+        # subframes for listbox and buttons new / apply, checkbox recursive
+        divide = .8
+        self.Frame_indir_lb = tk.LabelFrame(self.Frame_indir)
+        self.Frame_indir_lb.place(relx=.0, rely=0.0, relheight=1, relwidth=divide)
+        self.Frame_indir_lb.configure(relief='groove')
+        self.Frame_indir_lb.configure(borderwidth="2")
+        self.Frame_indir_lb.configure(background=tools._bgcolor_dbg) if self.debug else True
+        self.Frame_indir_lb.update()
+        self.Frame_indir_misc = tk.LabelFrame(self.Frame_indir)
+        self.Frame_indir_misc.place(relx=divide, rely=0.0, relheight=1, relwidth=1-divide)
+        self.Frame_indir_misc.configure(relief='groove')
+        self.Frame_indir_misc.configure(borderwidth="2")
+        self.Frame_indir_misc.configure(background=tools._bgcolor_dbg) if self.debug else True
+        self.Frame_indir_misc.update()
         # cfg
         self.Frame_cfg = tk.LabelFrame(self.root)
-        self.Frame_cfg.place(relx=.31, rely=0.87, relheight=0.12, relwidth=0.3)
+        self.Frame_cfg.place(relx=.33, rely=0.87, relheight=0.12, relwidth=0.33)
         self.Frame_cfg.configure(relief='groove')
         self.Frame_cfg.configure(borderwidth="2")
         self.Frame_cfg.configure(text = "cfg files")
-        self.Frame_cfg.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_cfg.configure(background=tools._bgcolor_dbg) if self.debug else True
+        self.Frame_cfg.update()
+        # subframes for listbox and button
+        divide = .8
+        self.Frame_cfg_lb = tk.LabelFrame(self.Frame_cfg)
+        self.Frame_cfg_lb.place(relx=.0, rely=0.0, relheight=1, relwidth=divide)
+        self.Frame_cfg_lb.configure(relief='groove')
+        self.Frame_cfg_lb.configure(borderwidth="2")
+        self.Frame_cfg_lb.configure(background=tools._bgcolor_dbg) if self.debug else True
+        self.Frame_cfg_lb.update()
+        self.Frame_cfg_misc = tk.LabelFrame(self.Frame_cfg)
+        self.Frame_cfg_misc.place(relx=divide, rely=0.0, relheight=1, relwidth=1-divide)
+        self.Frame_cfg_misc.configure(relief='groove')
+        self.Frame_cfg_misc.configure(borderwidth="2")
+        self.Frame_cfg_misc.configure(background=tools._bgcolor_dbg) if self.debug else True
+        self.Frame_cfg_misc.update()
         # outdir
         self.Frame_outdir = tk.LabelFrame(self.root)
-        self.Frame_outdir.place(relx=.61, rely=0.87, relheight=0.12, relwidth=0.38)
+        self.Frame_outdir.place(relx=.66, rely=0.87, relheight=0.12, relwidth=0.33)
         self.Frame_outdir.configure(relief='groove')
         self.Frame_outdir.configure(borderwidth="2")
         self.Frame_outdir.configure(text = "outdirs")
-        self.Frame_outdir.configure(background="#d9d9d9") if self.debug else True # uncomment for same colour as window (default) or depend on debug
+        self.Frame_outdir.configure(background=tools._bgcolor_dbg) if self.debug else True
+        self.Frame_outdir.update()
+        # subframes for listbox and button
+        divide = .8
+        self.Frame_outdir_lb = tk.LabelFrame(self.Frame_outdir)
+        self.Frame_outdir_lb.place(relx=.0, rely=0.0, relheight=1, relwidth=divide)
+        self.Frame_outdir_lb.configure(relief='groove')
+        self.Frame_outdir_lb.configure(borderwidth="2")
+        self.Frame_outdir_lb.configure(background=tools._bgcolor_dbg) if self.debug else True
+        self.Frame_outdir_lb.update()
+        self.Frame_outdir_misc = tk.LabelFrame(self.Frame_outdir)
+        self.Frame_outdir_misc.place(relx=divide, rely=0.0, relheight=1, relwidth=1-divide)
+        self.Frame_outdir_misc.configure(relief='groove')
+        self.Frame_outdir_misc.configure(borderwidth="2")
+        self.Frame_outdir_misc.configure(background=tools._bgcolor_dbg) if self.debug else True
+        self.Frame_outdir_misc.update()
  
         # listbox for Indirs
-        w = .6
+        w = .75
         self.listbox_indir_var = tk.StringVar()
-        self.listbox_indir = tk.Listbox(self.Frame_indir)
-        self.listbox_indir.place(relx=.0, rely=0, relheight=.8, relwidth=w)
+        self.listbox_indir = tk.Listbox(self.Frame_indir_lb)
         self.listbox_indir.configure(font=self.text_font)
         self.listbox_indir.configure(selectmode='single')
         self.listbox_indir.configure(listvariable=self.listbox_indir_var)
         self.listbox_indir.bind('<Motion>', self.tooltip_lb_indir)    
         # Scrollbars
-        VI_INDIR = tk.Scrollbar(self.Frame_indir, orient= VERTICAL)
-        VI_INDIR.place(relx = w, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
+        VI_INDIR = tk.Scrollbar(self.Frame_indir_lb, orient= VERTICAL)
         VI_INDIR.config(command = self.listbox_indir.yview)
         self.listbox_indir.config(yscrollcommand = VI_INDIR.set)
-        HI_INDIR = tk.Scrollbar(self.Frame_indir, orient= HORIZONTAL)
-        HI_INDIR.place(relx = 0, rely = .8, relheight = 0.2, relwidth = w, anchor = tk.NW)
+        HI_INDIR = tk.Scrollbar(self.Frame_indir_lb, orient= HORIZONTAL)
         HI_INDIR.config(command = self.listbox_indir.xview)
+        tools.place_box_with_scrollbars(self, self.Frame_indir_lb, self.listbox_indir, HI_INDIR, VI_INDIR, .04, .0, .0, .0, .0)
         self.listbox_indir.config(xscrollcommand = HI_INDIR.set)
         self.listbox_indir.bind('<Double-1>', self.listbox_indir_double)
         self.listbox_indir.bind("<<ListboxSelect>>", lambda event: self.listbox_indir_check_exist(event))
-        # Button
-        self.button_apply_indir = tk.Button(self.Frame_indir, text="Apply selected", command=self.listbox_indir_double)
-        self.button_apply_indir.place(relx=w + 0.11, rely=0.0, relheight=0.3, relwidth=0.1)
-        self.button_apply_indir.configure(font=self.text_font)
-        self.button_new_indir = tk.Button(self.Frame_indir, text="New...", command=self.new_indir)
-        self.button_new_indir.place(relx=w+.21, rely=0.0, relheight=0.3, relwidth=0.1)
-        self.button_new_indir.configure(font=self.text_font)
+        # Buttons and checkbox
+        #set some defaults
+        relw_button = 0.95
+        relh_button = 0.95
+        relw_entry = 0.8
+        relh_entry = 0.8
+        relw_label = 0.8
+        relh_label = 0.8
+        offset_entry = .01
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Button,"VAR":"button_apply_indir","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.listbox_indir_double,"TEXT":"Apply selected","STATE":tk.NORMAL,"TT":"Apply Indir selected","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Button,"VAR":"button_new_indir","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
+          "CALLBACK":self.new_indir,"TEXT":"New...","STATE":tk.NORMAL,"TT":"SELECT NEW Indir from Fileopen Dialog","FONT":self.text_font}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Checkbutton,"VAR":"cb_recursive","OFFSET":0.1,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START",
+          "RB_VAR":"cb_recursive_var","RB_TYPE":tk.IntVar,"RB_VALUE":"1","TEXT":"recursive","STATE":tk.NORMAL,"TT":"include all subdirs(recursive)","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.Frame_indir_misc, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
-
-        self.cb_recursive_var = tk.IntVar()
-        self.cb_recursive = tk.Checkbutton(self.Frame_indir)
-        self.cb_recursive.place(relx=.82, rely=0.4, relheight=0.2, relwidth=0.18)
-        self.cb_recursive.configure(variable=self.cb_recursive_var)
-        self.cb_recursive.configure(font=self.text_font)
-        self.cb_recursive.configure(text='''recursive''')
-        self.cb_recursive = TT.ToolTip(self.cb_recursive, '''process  subdirectories''')
         self.cb_recursive_var.set(1)
 
         # listbox for config files
         self.listbox_cfg_var = tk.StringVar()
-        self.listbox_cfg = tk.Listbox(self.Frame_cfg)
-        self.listbox_cfg.place(relx=.0, rely=0, relheight=.8, relwidth=0.75)
+        self.listbox_cfg = tk.Listbox(self.Frame_cfg_lb)
         self.listbox_cfg.configure(font=self.text_font)
         self.listbox_cfg.configure(selectmode='single')
         self.listbox_cfg.configure(listvariable=self.listbox_cfg_var)
         self.listbox_cfg.bind('<Motion>', self.tooltip_lb_cfg)    
         # Scrollbars
-        VI_CFG = tk.Scrollbar(self.Frame_cfg, orient= VERTICAL)
-        VI_CFG.place(relx = 0.75, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
+        VI_CFG = tk.Scrollbar(self.Frame_cfg_lb, orient= VERTICAL)
         VI_CFG.config(command = self.listbox_cfg.yview)
         self.listbox_cfg.config(yscrollcommand = VI_CFG.set)
-        HI_CFG = tk.Scrollbar(self.Frame_cfg, orient= HORIZONTAL)
-        HI_CFG.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .75, anchor = tk.NW)
+        HI_CFG = tk.Scrollbar(self.Frame_cfg_lb, orient= HORIZONTAL)
         HI_CFG.config(command = self.listbox_cfg.xview)
+        tools.place_box_with_scrollbars(self, self.Frame_cfg_lb, self.listbox_cfg, HI_CFG, VI_CFG, .04, .0, .0, .0, .0)
         self.listbox_cfg.config(xscrollcommand = HI_CFG.set)
         self.listbox_cfg.bind('<Double-1>', self.listbox_cfg_double)
         self.listbox_cfg.bind("<<ListboxSelect>>", lambda event: self.listbox_cfg_check_exist(event))
         # Button
-        self.button_apply_cfg = tk.Button(self.Frame_cfg, text="Apply selected", command=self.listbox_cfg_double)
-        self.button_apply_cfg.place(relx=.79, rely=0.0, relheight=0.3, relwidth=0.21)
+        self.button_apply_cfg = tk.Button(self.Frame_cfg_misc, text="Apply selected", command=self.listbox_cfg_double)
+        self.button_apply_cfg.place(relx=.0, rely=0.0, relheight=0.3, relwidth=1)
         self.button_apply_cfg.configure(font=self.text_font)
 
         # listbox for outdirs
         self.listbox_outdir_var = tk.StringVar()
-        self.listbox_outdir = tk.Listbox(self.Frame_outdir)
-        self.listbox_outdir.place(relx=.0, rely=0, relheight=.8, relwidth=0.8)
+        self.listbox_outdir = tk.Listbox(self.Frame_outdir_lb)
         self.listbox_outdir.configure(font=self.text_font)
         self.listbox_outdir.configure(selectmode='single')
         self.listbox_outdir.configure(listvariable=self.listbox_outdir_var)
         self.listbox_outdir.bind('<Motion>', self.tooltip_lb_outdir)    
         # Scrollbars
-        VI_OUTDIR = tk.Scrollbar(self.Frame_outdir, orient= VERTICAL)
-        VI_OUTDIR.place(relx = 0.8, rely = 0, relheight = .8, relwidth = .03, anchor = tk.NW)
+        VI_OUTDIR = tk.Scrollbar(self.Frame_outdir_lb, orient= VERTICAL)
         VI_OUTDIR.config(command = self.listbox_outdir.yview)
         self.listbox_outdir.config(yscrollcommand = VI_OUTDIR.set)
-        HI_OUTDIR = tk.Scrollbar(self.Frame_outdir, orient= HORIZONTAL)
-        HI_OUTDIR.place(relx = 0, rely = .8, relheight = 0.2, relwidth = .8, anchor = tk.NW)
+        HI_OUTDIR = tk.Scrollbar(self.Frame_outdir_lb, orient= HORIZONTAL)
         HI_OUTDIR.config(command = self.listbox_outdir.xview)
+        tools.place_box_with_scrollbars(self, self.Frame_outdir_lb, self.listbox_outdir, HI_OUTDIR, VI_OUTDIR, .04, .0, .0, .0, .0)
         self.listbox_outdir.config(xscrollcommand = HI_OUTDIR.set)
         self.listbox_outdir.bind("<<ListboxSelect>>", lambda event: self.listbox_outdir_check_exist(event))
         # Button
-        self.button_apply_outdir = tk.Button(self.Frame_outdir, text="New...", command=self.new_outdir)
-        self.button_apply_outdir.place(relx=.85, rely=0.0, relheight=0.3, relwidth=0.14)
+        self.button_apply_outdir = tk.Button(self.Frame_outdir_misc, text="New...", command=self.new_outdir)
+        self.button_apply_outdir.place(relx=0, rely=0.0, relheight=.3, relwidth=1)
         self.button_apply_outdir.configure(font=self.text_font)
 
 
@@ -945,7 +989,7 @@ class Diatisch:
             # store new values
             self.width  = new_width
             self.height = new_height
-            self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug)) 
+            self.text_font.configure(size=int(.8 * tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug)))
 
     def debug_info_resize(self, text):
         print("{:s} elapsed start resize".format(text))
