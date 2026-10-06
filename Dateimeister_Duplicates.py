@@ -229,23 +229,51 @@ class MyDuplicates:
             )
 
     def print_handler(self):
-        """Kontextmenue 'Print' in Duplicates: feuert einen PrintRequestEvent.
-        - STILL: Datei geht direkt an die zentrale Drucklogik.
+        """Kontext-Menue 'Print' in Duplicates: feuert einen PrintRequestEvent.
+
         - VIDEO: das MyFSVideo-Fenster wird geoeffnet; der Nutzer pausiert
           dort auf dem gewuenschten Frame und drueckt dort den Print-Button.
+        - RAW: eine temporaere PNG-Datei aus dem eingebetteten JPEG der
+          RAW-Datei erzeugen und diese an den PrintPreview uebergeben.
+          Wenn kein eingebettetes JPEG vorhanden ist, wird postprocess()
+          benutzt (langsam, aber liefert volle Sensor-Auflaesung).
+        - STILL: Originaldatei geht direkt an den PrintPreview.
+
         Die eigentliche Drucklogik (PrintPreview-Verwaltung, Printer-Auswahl)
-        liegt ausschliesslich in Dateimeister_support."""
+        liegt ausschliesslich in Dateimeister_support.
+        """
         t = self.get_thumbnail(self.event)
         if t is None:
             return
 
-        if Globals.imagetype == 'VIDEO':
+        imagetype = t.get_imagetype()
+
+        if imagetype == 'VIDEO':
             self.display_image(t)
             return
 
+        if imagetype == 'RAW':
+            import uuid
+            import rawpy_loader
+            pimg_pil = rawpy_loader.load_raw_embedded(t.getFile())
+            if pimg_pil is None:
+                tools.info_box(
+                    f"RAW konnte nicht geladen werden: {t.getFile()}",
+                    "fehler"
+                )
+                return
+            filename = os.path.join(
+                Globals.temp_files_path,
+                f"print_{uuid.uuid4().hex}.png"
+            )
+            pimg_pil.save(filename, format="PNG")
+        else:
+            # STILL: Originaldatei geht direkt an den PrintPreview.
+            filename = t.getFile()
+
         Globals.eventManager.generate(
             "PrintRequestEvent",
-            PrintRequestEvent(t.getFile(), self)
+            PrintRequestEvent(filename, self)
         )
 
 
@@ -263,49 +291,151 @@ class MyDuplicates:
             item_id = thumbnail.getId()
             self.display_image(thumbnail)
 
-    def display_image(self, thumbnail):
-        file = thumbnail.getShowfile()
-        # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
-        if file in self.dict_file_image:
-            print ("FSImage exists for file: " + file) if self.debug else True
-            fs_image = self.dict_file_image[file]
-            fs_image.activate()
-        else: # ein neues Objekt anlegen und in dict_file_image eintragen
-            if file != 'none':
-                print ("FSImage does not exist for file: " + file) if self.debug else True
-                if Globals.imagetype == 'VIDEO':
-                    self.stop_all_players() # we dont want noise from players in Main Window
-                    fs_image = FV.MyFSVideo(
-                        file = file, 
-                        thumbnail = thumbnail, 
-                        caller = self,
-                        str_title_prefix = "",
-                        str_include = "Include",
-                        str_exclude = "Exclude",
-                        str_included = "Included",
-                        str_excluded = "Excluded",
-                        temp_dir = Globals.temp_files_path,
-                        num_thumbnails = Globals.num_video_thumbnails, 
-                        mpv_path = Globals.mpv_path, 
-                        ffprobe_path = Globals.ffprobe_path,
-                        debug = self.debug
-                    )
-                    
-                else: # STILL    
-                    fs_image = FS.MyFSImage(
-                        file = file, 
-                        thumbnail = thumbnail, 
-                        caller = self,
-                        str_title_prefix = "Dateimeister: ", 
-                        str_include = "Include",
-                        str_exclude = "Exclude",
-                        str_included = "Included",
-                        str_excluded = "Excluded",
-                        debug = self.debug
-                    )
+    def display_duplicate(self, target_file):
+        self.caller.stop_all_players() # should not continue running
+        self.f.delete('all')
+        self.thumbnails_duplicates[Globals.imagetype] = []
+        self.dict_thumbnails_duplicates[Globals.imagetype] = {}
+        list_duplicate_sourcefiles = Globals.dict_duplicates[Globals.imagetype][target_file]
+        self.lastposition = 0
+        self.num_images = 0
+        # distance from border for text-boxes
+        dist_text  = 10
+        # distance from border for image-frame
+        dist_frame = 20
+        height_scrollbar = self.H_I.winfo_height()
 
-                self.dict_file_image[file] = fs_image
+        for source_file in list_duplicate_sourcefiles:
+            thumbnail = Globals.dict_thumbnails[Globals.imagetype][source_file]
+            showfile = thumbnail.getShowfile()
+            state = thumbnail.getState() # we want to use the current state and copy it to the duplicate-thumbnail
+            if showfile != 'none':
+                canvas_height = self.f.winfo_height() - self.H_I.winfo_height()
+                canvas_width  = self.f.winfo_width()
+                self.canvas_width_visible = self.f.winfo_width() # Fensterbreite
+                player = None
+                imagetype = thumbnail.get_imagetype()
 
+                if imagetype == "VIDEO":
+                    # Video: Player besorgen (neu oder vorhanden)
+                    if (thumbnail not in self.dict_thumbnail_player): #we need a new one
+                        print("try to create new videoplayer...")
+                        player = DV.VideoPlayer(self.root, showfile, self.f, canvas_width, canvas_height)
+                        self.dict_thumbnail_player[thumbnail] = player
+                    else:
+                        player = self.dict_thumbnail_player[thumbnail]
+                    image_width, image_height, pimg = player.get_photo()
+                elif imagetype == "RAW":
+                    # RAW: eingebettetes JPEG laden, auf Canvas-Hoehe skalieren.
+                    # Kein Image.open, weil das bei NEF/RAF/etc. fehlschlaegt.
+                    import rawpy_loader
+                    img = rawpy_loader.load_raw_embedded(showfile)
+                    if img is None:
+                        print("RAW not displayable in duplicates: " + showfile) if self.debug else True
+                        image_height = canvas_height
+                        image_width  = int(canvas_height * 4 / 3)
+                        pimg = None
+                    else:
+                        image_width_orig, image_height_orig = img.size
+                        faktor = canvas_height / image_height_orig
+                        newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
+                        img = img.resize(newsize, Image.Resampling.LANCZOS)
+                        image_width, image_height = img.size
+                        pimg = ImageTk.PhotoImage(img)
+                else:
+                    # STILL (JPEG/PNG): Originaldatei laden
+                    img  = Image.open(showfile)
+                    image_width_orig, image_height_orig = img.size
+                    faktor = canvas_height / image_height_orig
+                    newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
+                    img = img.resize(newsize, Image.Resampling.LANCZOS)
+                    image_width, image_height = img.size
+                    pimg = ImageTk.PhotoImage(img)
+
+                # --- DEBUG ---
+                print(f"DEBUG display_duplicate: imagetype={imagetype}, showfile={showfile}")
+                if imagetype != "VIDEO":
+                    print(f"DEBUG:   orig={image_width_orig}x{image_height_orig}, "
+                          f"canvas_height={canvas_height}, faktor={faktor:.4f}, "
+                          f"newsize={newsize}")
+                print(f"DEBUG:   image_width={image_width}, image_height={image_height}, "
+                      f"pimg={'None' if pimg is None else 'ok'}")
+                # --- ENDE DEBUG ---
+
+                if pimg is not None:
+                    id = self.f.create_image(self.lastposition, 0, anchor='nw', image=pimg, tags='images')
+                else:
+                    # Fallback: blaues Rechteck, wenn das Bild nicht geladen werden konnte
+                    id = self.f.create_rectangle(self.lastposition, 0, self.lastposition + image_width, canvas_height, fill="blue", tags='images')
+
+                text_id = self.f.create_text(self.lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor=tk.NW, tag="text")
+                rect_id = self.f.create_rectangle(self.f.bbox(text_id), outline="blue", fill="white", tag='rect')
+                # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
+                north_west = (self.lastposition + dist_frame, dist_frame)
+                north_east = (self.lastposition + image_width - dist_frame, dist_frame)
+                south_west = (self.lastposition + dist_frame, image_height - dist_frame)
+                south_east = (self.lastposition + image_width - dist_frame, image_height - dist_frame)
+                line_north = self.f.create_line(north_west, north_east, dash=(1, 1), fill="red", tags="imageframe")
+                line_east  = self.f.create_line(north_east, south_east, dash=(1, 1), fill="red", tags="imageframe")
+                line_south = self.f.create_line(south_west, south_east, dash=(1, 1), fill="red", tags="imageframe")
+                line_west  = self.f.create_line(north_west, south_west, dash=(1, 1), fill="red", tags="imageframe")
+                frameids = (line_north, line_east, line_south, line_west)
+
+                self.f.tag_raise("rect")
+                self.f.tag_raise("text")
+                self.f.tag_raise("line")
+                if player is not None:
+                    player.setId(id)
+                    player.resize()
+
+                # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
+                mts = os.stat(showfile).st_mtime
+                myimage = MyThumbnail(pimg, self.caller, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
+                    text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
+                myimage.set_imagetype(imagetype) # from "parent"
+                self.thumbnails_duplicates[Globals.imagetype].append(myimage)
+                myimage.setState(state)
+                self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage
+                self.lastposition += image_width + Globals.gap
+            else: # wir haben kein Bild, ein Rechteck einfügen
+                image_height = canvas_height
+                image_width  = int(canvas_height * 4 / 3)
+                id = self.f.create_rectangle(self.lastposition, 0, self.lastposition + image_width, canvas_height, fill="blue", tags='images')
+                text_id = self.f.create_text(self.lastposition, 0, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor=tk.NW, tag="text")
+                rect_id = self.f.create_rectangle(self.f.bbox(text_id), outline="blue", fill="white")
+                north_west = (self.lastposition + dist_frame, dist_frame)
+                north_east = (self.lastposition + image_width - dist_frame, dist_frame)
+                south_west = (self.lastposition + dist_frame, image_height - dist_frame)
+                south_east = (self.lastposition + image_width - dist_frame, image_height - dist_frame)
+                line_north = self.f.create_line(north_west, north_east, dash=(1, 1), fill="red", tags="imageframe")
+                line_east  = self.f.create_line(north_east, south_east, dash=(1, 1), fill="red", tags="imageframe")
+                line_south = self.f.create_line(south_west, south_east, dash=(1, 1), fill="red", tags="imageframe")
+                line_west  = self.f.create_line(north_west, south_west, dash=(1, 1), fill="red", tags="imageframe")
+                frameids = (line_north, line_east, line_south, line_west)
+                self.f.tag_raise("text")
+                mts = os.stat(showfile).st_mtime
+                myimage = MyThumbnail(0, self.caller, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
+                    text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
+                myimage.set_imagetype(thumbnail.get_imagetype())
+                self.thumbnails_duplicates[Globals.imagetype].append(myimage)
+                self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage
+                self.lastposition += image_width + Globals.gap
+            self.num_images += 1
+            self.dict_child_parent[myimage] = thumbnail # child -> parent
+
+        self.lastposition -= Globals.gap
+        if len(self.thumbnails_duplicates[Globals.imagetype]) > 0:
+            thumbnail = self.thumbnails_duplicates[Globals.imagetype][-1]
+            rect_len = self.canvas_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + Globals.gap)
+            self.f.create_rectangle(self.lastposition, 0, self.lastposition + rect_len, canvas_height, fill="yellow")
+            self.f.config(scrollregion=self.f.bbox('all'))
+            self.canvas_width_images = self.f.bbox('images')[2]
+            self.canvas_width_all    = self.f.bbox('all')[2]
+
+        for child in self.dict_child_parent:
+            parent = self.dict_child_parent[child]
+            print("Child file / parent file is: " + child.getFile() + ' / ' + parent.getFile())
+        self.f.focus_set()
 
     def canvas_video_restart(self):
         print("Context menu restart")
@@ -486,127 +616,6 @@ class MyDuplicates:
 
     def debug_info_resize(self, text):
         print("{:s} elapsed start resize".format(text))
-
-    def display_duplicate(self, target_file):
-        self.caller.stop_all_players() # should not continue running 
-        self.f.delete('all')
-        self.thumbnails_duplicates[Globals.imagetype] = []
-        self.dict_thumbnails_duplicates[Globals.imagetype] = {}
-        list_duplicate_sourcefiles = Globals.dict_duplicates[Globals.imagetype][target_file]
-        self.lastposition = 0
-        self.num_images = 0
-        # distance from border for text-boxes
-        dist_text  = 10
-        # distance from border for image-frame
-        dist_frame = 20
-        height_scrollbar = self.H_I.winfo_height()
-
-        for source_file in list_duplicate_sourcefiles:
-            thumbnail = Globals.dict_thumbnails[Globals.imagetype][source_file]
-            showfile = thumbnail.getShowfile()
-            state = thumbnail.getState() # we want to use the current state and copy it to the duplicate-thumbnail
-            if showfile != 'none':
-                canvas_height = self.f.winfo_height() - self.H_I.winfo_height()
-                canvas_width  = self.f.winfo_width()
-                self.canvas_width_visible = self.f.winfo_width() # Fensterbreite
-                player = None
-                if thumbnail.get_imagetype() == "VIDEO": # Video
-                    if (thumbnail not in self.dict_thumbnail_player): #we need a new one
-                        print("try to create new videoplayer...")
-                        # create new videoplayer
-                        player   = DV.VideoPlayer(self.root, showfile, self.f, canvas_width, canvas_height)
-                        self.dict_thumbnail_player[thumbnail] = player # we never need a new player so we store this one
-                    else: # reuse the existing
-                        player = self.dict_thumbnail_player[thumbnail]
-                    image_width, image_height, pimg = player.get_photo()
-                else: # still image
-                    img  = Image.open(showfile)
-                    image_width_orig, image_height_orig = img.size
-                    faktor = canvas_height / image_height_orig
-                    newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
-                    r_img = img
-                    r_img.thumbnail(newsize)
-                    image_width, image_height = r_img.size
-                    print("try to print " + showfile + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
-                       + " factor is " + str(faktor))
-                    pimg = ImageTk.PhotoImage(r_img)
-                id = self.f.create_image(self.lastposition, 0, anchor='nw',image = pimg, tags = 'images')
-                text_id = self.f.create_text(self.lastposition + dist_text, dist_text, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
-                rect_id = self.f.create_rectangle(self.f.bbox(text_id), outline="blue", fill = "white", tag = 'rect')
-                # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
-                north_west = (self.lastposition + dist_frame, dist_frame)
-                north_east = (self.lastposition + image_width - dist_frame, dist_frame)
-                south_west = (self.lastposition + dist_frame, image_height - dist_frame)
-                south_east = (self.lastposition + image_width - dist_frame, image_height - dist_frame)
-                line_north = self.f.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_east  = self.f.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_south = self.f.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_west  = self.f.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
-                frameids = (line_north, line_east, line_south, line_west)
-
-                self.f.tag_raise("rect")
-                self.f.tag_raise("text")
-                self.f.tag_raise("line")
-                #self.f.tag_raise("imageframe")
-                if player is not None:
-                    player.setId(id)
-                    player.resize()
-                # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
-                mts = os.stat(showfile).st_mtime
-                myimage = MyThumbnail(pimg, self.caller, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
-                    text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
-                myimage.set_imagetype(thumbnail.get_imagetype()) # from "parent"
-                self.thumbnails_duplicates[Globals.imagetype].append(myimage)
-                myimage.setState(state)
-                self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
-                self.lastposition += image_width + Globals.gap 
-            else: # wir haben kein Bild, ein Rechteck einfügen
-                image_height = canvas_height
-                image_width  = int(canvas_height * 4 / 3)
-                id = self.f.create_rectangle(self.lastposition, 0, self.lastposition + image_width, canvas_height, fill="blue", tags = 'images')
-                text_id = self.f.create_text(self.lastposition, 0, text="EXCLUDE", fill="red", font=('Helvetica 10 bold'), anchor =  tk.NW, tag = "text")
-                rect_id = self.f.create_rectangle(self.f.bbox(text_id), outline="blue", fill = "white")
-                # the frame for selected image, consisting of 4 lines because there is no opaque rectangle in tkinter
-                north_west = (self.lastposition + dist_frame, dist_frame)
-                north_east = (self.lastposition + image_width - dist_frame, dist_frame)
-                south_west = (self.lastposition + dist_frame, image_height - dist_frame)
-                south_east = (self.lastposition + image_width - dist_frame, image_height - dist_frame)
-                line_north = self.f.create_line(north_west, north_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_east  = self.f.create_line(north_east, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_south = self.f.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
-                line_west  = self.f.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
-                frameids = (line_north, line_east, line_south, line_west)
-                self.f.tag_raise("text")
-                #self.f.tag_raise("imageframe")
-                mts = os.stat(showfile).st_mtime
-                myimage = MyThumbnail(0, self.caller, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
-                    text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
-                myimage.set_imagetype(thumbnail.get_imagetype()) # from "parent"
-                self.thumbnails_duplicates[Globals.imagetype].append(myimage)
-                self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage
-                self.lastposition += image_width + Globals.gap 
-            self.num_images += 1
-            # register at parent-thumbnail, so it can call us for reacting to state
-            # we need a dict with child-parent-thumbnails in order to unregister on close
-            self.dict_child_parent[myimage] = thumbnail # child -> parent
-        # Globals.gap haben wir einmal zuviel (fürs letzte) gezählt
-        self.lastposition -= Globals.gap
-        # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
-        if len(self.thumbnails_duplicates[Globals.imagetype]) > 0: 
-            thumbnail = self.thumbnails_duplicates[Globals.imagetype][-1]
-            rect_len = self.canvas_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + Globals.gap)
-            self.f.create_rectangle(self.lastposition, 0, self.lastposition + rect_len, canvas_height, fill="yellow")
-            self.f.config(scrollregion = self.f.bbox('all')) 
-            self.canvas_width_images = self.f.bbox('images')[2]
-            self.canvas_width_all    = self.f.bbox('all')[2]
-            #print ("Canvas totale Breite(Images): " + str(self.canvas_width_images) + " totale Breite(All): " + str(self.canvas_width_all) \
-            #    + " visible: " + str(self.canvas_width_visible) + " lastposition: " + str(self.lastposition))
-        
-        for child in self.dict_child_parent:
-            parent = self.dict_child_parent[child]
-            print("Child file / parent file is: " + child.getFile() + ' / ' + parent.getFile())
-        #print("self.thumbnails_duplicates is: " + str(self.thumbnails_duplicates))
-        self.f.focus_set()
 
     def xview(self, *args):
         print (*args)

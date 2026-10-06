@@ -96,6 +96,8 @@ MENUITEM_FILE_APPLY_CONFIG      = 5
 MENUITEM_FILE_CHOOSE_PRINTER    = 6
 MENUITEM_FILE_PRINT             = 7
 MENUITEM_FILE_RECENT            = 8
+
+_RAW_PROCESS_TYPE = "RAW"
    
 #print("Tk-Version:", tk.TkVersion)
 
@@ -2610,19 +2612,21 @@ class Dateimeister_support:
         self.write_cmdfiles()
     
     # display images of given type
+
+    # display images of given type
     def display_images(self, imagetype:str = "", close_childs:bool = False):
         t_start = time.time()
         memory_before = 0 # to get the amount of memory needed especially for video players
         if self.debug:
             process = psutil.Process(os.getpid())
             gc.collect()
-            memory_before = process.memory_info().rss        
-        busy = tools.BusyDialog(self.root, text="Fotos werden geladen…")        
+            memory_before = process.memory_info().rss
+        busy = tools.BusyDialog(self.root, text="Fotos werden geladen…")
         filename = self.dict_gen_files[imagetype]
         subdir = self.dict_subdirs[imagetype]
         Globals.outdir = self.dict_outdirs[imagetype] # for setting title of duplicate-window
-        self.stop_all_players() # should not continue running 
-        
+        self.stop_all_players() # should not continue running
+
         self.clear_dict_2nd(Globals.thumbnails, imagetype)
         # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
         Globals.thumbnails[imagetype] = []
@@ -2630,7 +2634,7 @@ class Dateimeister_support:
         if close_childs:
             self.close_child_windows()
         self.rbvalue.set(self.dict_sort_method[imagetype])
-        
+
         self.l_label1.config(text = "Output from Dateimeister : " + filename)
         dict_image_lineno = {}
         self.canvas_gallery.delete("all")
@@ -2655,7 +2659,7 @@ class Dateimeister_support:
             self.insert_text(self.t_text1, thisline)
             dict_image_lineno[this_sourcefile] = lineno
             files_total += 1
-        
+
         # wir suchen in der cmd-Datei die Endung für jedes Imagefile. Damit suchen wir in dict_process_image nach einem Eintrag
         # wenn JPEG, dann verarbeiten wir die Zeile und verwenden das mutmaßliche JPEG_Bild in der Gallerie. Wenn use_jpeg gefunden wird
         # suchen wir nach einem passenden JPEG. Falls die Endung im dict nicht gefunden wird, verwenden wir ebenfalls use_jpeg. Später
@@ -2683,12 +2687,13 @@ class Dateimeister_support:
                 firstname  = match.group(1)
                 lastname   = match.group(2).upper()
                 #print("firstname / lastname = " + firstname + " / " + lastname)
-            else: 
+            else:
                 print("unable to find firstname, lastname for: " + file)
             # wir brauchen die Methode aus der ini-Datei, mit der wir das Bild verarbeiten sollen
             process_type = self.dict_process_image[lastname].upper()
-            #print("Process Type is: " + process_type)
- 
+            # --- RAW --- original process_type merken, bevor Fallback ihn umschreibt
+            original_process_type = process_type
+
             # check if thumbnail already exists (dict has not been cleared because we only want to sort new)
             if file in Globals.dict_thumbnails[imagetype]: # the only reason why we reuse
                 new_thumbnail_required = False
@@ -2722,7 +2727,17 @@ class Dateimeister_support:
                         Globals.dict_thumbnails[imagetype][file].setPlayer(player)
                     player = Globals.dict_thumbnails[imagetype][file].getPlayer()
                 showfile = file
-            else: # hier später mal ein Aufruf, um RAW oder was auch immer nach JPEG zu konvrtieren, aber jetzt erstmal Default nciht gefunden anzeigen
+            elif process_type == _RAW_PROCESS_TYPE:
+                # --- RAW ---
+                # Canvas-Thumbnail aus dem eingebetteten JPEG der RAW-Datei.
+                # Wenn extract_thumb scheitert, Fallback auf ein gleichnamiges
+                # JPEG (wenn der Nutzer einen JPEG-Type angelegt hat, ist
+                # dict_firstname_fullname gefuellt). Sonst blaues Rechteck.
+                # postprocess() wird hier NICHT benutzt, weil das 1-2 Sekunden
+                # pro Datei dauern wuerde. Die volle Qualitaet gibt es in der
+                # Detailansicht (MyFSImage).
+                showfile = file
+            else: # unbekannter process_type: blaues Rechteck
                 showfile = "none"
             if file in self.dict_duplicates_sourcefiles[imagetype]: # for storing in Thumbnail
                 duplicate = 'j'
@@ -2738,7 +2753,37 @@ class Dateimeister_support:
             else: # use existing thumbnail
                 state = Globals.dict_thumbnails[imagetype][file].getState()
             if  process_type != "none":
-                if process_type != 'VIDEO': # we have to convert image to photoimage
+                if process_type == _RAW_PROCESS_TYPE:
+                    # --- RAW ---
+                    if new_image_required or new_thumbnail_required:
+                        import rawpy_loader
+                        pimg_pil, image_width, image_height = rawpy_loader.load_raw_thumbnail(
+                            file, height=canvas_height
+                        )
+                        if pimg_pil is None:
+                            # extract_thumb gescheitert. Fallback: gleichnamiges
+                            # JPEG (aus dict_firstname_fullname) oder blaues
+                            # Rechteck. process_type wird auf "none" gesetzt,
+                            # damit der else-Zweig weiter unten greift.
+                            if firstname.upper() in self.dict_firstname_fullname:
+                                showfile = self.dict_firstname_fullname[firstname.upper()][-1]
+                                process_type = "JPEG"  # nur fuer Anzeige; fuer
+                                                       # set_imagetype unten
+                                                       # bleibt es RAW
+                                pimg, image_width, image_height = tools.new_image(
+                                    file=showfile, height=canvas_height
+                                )
+                            else:
+                                print("RAW not displayable: " + file) if self.debug else True
+                                showfile = "none"
+                                process_type = "none"
+                        else:
+                            # PIL.Image in ImageTk.PhotoImage umwandeln
+                            pimg = ImageTk.PhotoImage(pimg_pil)
+                    else:
+                        pimg = Globals.dict_thumbnails[imagetype][file].getImage()
+                        image_width, image_height = pimg.width(), pimg.height()                
+                elif process_type != 'VIDEO': # we have to convert image to photoimage
                     if new_image_required or new_thumbnail_required: # we need a new image
                         pimg, image_width, image_height = tools.new_image(file = showfile, height = canvas_height)
                     else: # we can use the existing
@@ -2765,7 +2810,7 @@ class Dateimeister_support:
                 line_south = self.canvas_gallery.create_line(south_west, south_east, dash=(1, 1), fill = "red", tags="imageframe")
                 line_west  = self.canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
                 frameids = (line_north, line_east, line_south, line_west)
-                
+
                 mts = os.stat(file).st_mtime
                 # if new thumbnail or new image required
                 if new_thumbnail_required:
@@ -2786,9 +2831,15 @@ class Dateimeister_support:
                         player.get_photo() # necessary for initializing some instance variables...
                         player.resize()
                         myimage.setImage(player.photo)   # remains even if player is deleted
+                elif original_process_type == _RAW_PROCESS_TYPE:
+                    # --- RAW ---
+                    # Auch wenn im Canvas gerade ein JPEG-Fallback angezeigt
+                    # wird, ist die Datei eine RAW-Datei. Die Detailansicht
+                    # soll sie als RAW oeffnen.
+                    myimage.set_imagetype("RAW")
                 else:
                     myimage.set_imagetype("STILL")
-                    
+
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE)
                     myimage.set_tooold(True)
@@ -2797,7 +2848,7 @@ class Dateimeister_support:
                 self.dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
                 # save position before change
                 lastpos = self.lastposition
-                self.lastposition += image_width + Globals.gap 
+                self.lastposition += image_width + Globals.gap
                 if myimage.getDuplicate() == 'j':
                     if imagetype.upper() == "JPEG":
                         print ("Duplicate: " + file) if self.debug else True
@@ -2827,6 +2878,9 @@ class Dateimeister_support:
                     text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
                 if process_type == 'VIDEO':
                     myimage.set_imagetype("VIDEO")
+                elif original_process_type == _RAW_PROCESS_TYPE:
+                    # --- RAW ---
+                    myimage.set_imagetype("RAW")
                 else:
                     myimage.set_imagetype("STILL")
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
@@ -2838,7 +2892,7 @@ class Dateimeister_support:
                 self.dict_thumbnails_lineno[imagetype][str(this_lineno)] = myimage # damit können wir auf thumbnails mit der lineno in text widget zugreifen
                 # save position before change
                 lastpos = self.lastposition
-                self.lastposition += image_width + Globals.gap 
+                self.lastposition += image_width + Globals.gap
                 if myimage.getDuplicate() == 'j':
                     text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup =self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
@@ -2865,7 +2919,7 @@ class Dateimeister_support:
             if visible:
                 myimage.set_metadata()
                 print (str(myimage.metadata)) if self.debug else True
-            
+
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")
         self.canvas_gallery.tag_raise("rect")
@@ -2879,11 +2933,11 @@ class Dateimeister_support:
         self.lastposition -= Globals.gap
         #print ("Canvas_gallery sichtbare Breite : " + str(self.canvas_gallery_width_visible))
         # damit wir am Ende auch bis zum letzten einzelnen Bild scrollen können, fügen wir ein Rechteck ein
-        if len(Globals.thumbnails[imagetype]) > 0: 
+        if len(Globals.thumbnails[imagetype]) > 0:
             thumbnail = Globals.thumbnails[imagetype][-1]
             rect_len = self.canvas_gallery_width_visible - (thumbnail.getEnd() - thumbnail.getStart() + Globals.gap)
             self.canvas_gallery.create_rectangle(self.lastposition, 0, self.lastposition + rect_len, canvas_height, fill="yellow")
-            self.canvas_gallery.config(scrollregion = self.canvas_gallery.bbox('all')) 
+            self.canvas_gallery.config(scrollregion = self.canvas_gallery.bbox('all'))
             self.canvas_gallery_width_images = self.canvas_gallery.bbox('images')[2]
             self.canvas_gallery_width_all    = self.canvas_gallery.bbox('all')[2]
             #print ("Canvas_gallery totale Breite(Images): " + str(self.canvas_gallery_width_images) + " totale Breite(All): " + str(self.canvas_gallery_width_all) \
@@ -2898,40 +2952,40 @@ class Dateimeister_support:
             self.filemenu.entryconfig(MENUITEM_FILE_OPEN_CONFIG, state=NORMAL)
             self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=NORMAL)
             self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG, state=NORMAL)
-        
+
         else: # if no images available we dont need config files
             self.filemenu.entryconfig(MENUITEM_FILE_OPEN_CONFIG, state=DISABLED)
             self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=DISABLED)
             self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG, state=DISABLED)
             self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=DISABLED)
         self.duplicates = False
-        
+
         for mytarget in Globals.dict_duplicates[imagetype]:
-            #print("Duplcate Key: " + mytarget) 
+            #print("Duplcate Key: " + mytarget)
             mylist = Globals.dict_duplicates[imagetype][mytarget]
             if len(mylist) > 1: # es gibt 1...n Duplicates
                 self.duplicates = True
                 break
-        
+
         if self.num_images > 0: # config makes no sense for zero images
             self.filemenu.entryconfig(MENUITEM_FILE_APPLY_CONFIG, state=NORMAL)
             # get the config-files for indir / type:
             indir = self.label_indir.cget('text')
-                
+
             # finally update recent menu
             self.update_recent_menu(indir, imagetype)
-        
+
         if self.duplicates:
             self.button_duplicates.config(state = NORMAL)
         else:
             self.button_duplicates.config(state = DISABLED)
-        
+
         self.button_exec.config(state = NORMAL)
         self.write_cmdfile(imagetype)
         if self.win_messages is not None: # stop MyMessagesWindow-Objekt
             self.win_messages.close_handler()
             self.win_messages = None
-            
+
         busy.close()
         elapsed = time.time() - t_start
         hours = int(elapsed // 3600)
@@ -2943,9 +2997,9 @@ class Dateimeister_support:
         if self.debug:
             process = psutil.Process(os.getpid())
             gc.collect()
-            memory_after = process.memory_info().rss        
+            memory_after = process.memory_info().rss
             print("Memory used total:", (memory_after - memory_before) / 1024 / 1024, "MB")
-            print("Memory used per Player:", ((memory_after - memory_before) / self.num_images) / 1024 / 1024, "MB")        
+            print("Memory used per Player:", ((memory_after - memory_before) / self.num_images) / 1024 / 1024, "MB")
         if Globals.resized and self.leftmost_thumbnail:
             self.scrollToImage(self.leftmost_thumbnail)
         else:
@@ -3531,27 +3585,57 @@ class Dateimeister_support:
 
     def canvas_image_print(self):
         """Context-Menue 'Print' im Hauptfenster.
+
         - VIDEO: niemals direkt drucken, sondern das MyFSVideo-Fenster
-          oeffnen. Der Nutzer pausiert dort auf dem gewuenschten Frame und
-          drueckt dort den Print-Button; MyFSVideo.print_frame erzeugt dann
-          den PNG-Screenshot und feuert selbst einen PrintRequestEvent.
-        - STILL: direkt drucken ueber PrintRequestEvent."""
+          oeffnen. Der Nutzer pausiert dort auf dem gewuenschten Frame
+          und drueckt dort den Print-Button; MyFSVideo.print_frame
+          erzeugt dann den PNG-Screenshot und feuert selbst einen
+          PrintRequestEvent.
+        - RAW: eine temporaere PNG-Datei aus dem eingebetteten JPEG der
+          RAW-Datei erzeugen und diese an den PrintPreview uebergeben.
+          Wenn kein eingebettetes JPEG vorhanden ist, wird postprocess()
+          benutzt (langsam, aber liefert volle Sensor-Auflaesung).
+        - STILL: Originaldatei geht direkt an den PrintPreview.
+        """
         print("Context menu print") if self.debug else True
         t = self.get_thumbnail(self.event)
         if t is None:
             return
 
-        if Globals.imagetype == 'VIDEO':
+        imagetype = t.get_imagetype()
+
+        if imagetype == 'VIDEO':
             # Video: nur das Detail-Fenster oeffnen - der Nutzer entscheidet
             # dort, welcher Frame gedruckt wird.
             self.display_image(t)
             return
 
+        if imagetype == _RAW_PROCESS_TYPE:
+            # RAW: das eingebettete JPEG in Originalgroesse holen und als
+            # temporaere PNG-Datei speichern. Fallback auf postprocess(),
+            # falls kein eingebettetes JPEG vorhanden ist.
+            import uuid
+            import rawpy_loader
+            pimg_pil = rawpy_loader.load_raw_embedded(t.getFile())
+            if pimg_pil is None:
+                tools.info_box(
+                    f"RAW konnte nicht geladen werden: {t.getFile()}",
+                    "fehler"
+                )
+                return
+            filename = os.path.join(
+                Globals.temp_files_path,
+                f"print_{uuid.uuid4().hex}.png"
+            )
+            pimg_pil.save(filename, format="PNG")
+        else:
+            # STILL: Originaldatei geht direkt an den PrintPreview.
+            filename = t.getFile()
+
         Globals.eventManager.generate(
             "PrintRequestEvent",
-            PrintRequestEvent(t.getFile(), self)
+            PrintRequestEvent(filename, self)
         )
-
 
     def canvas_video_restart(self):
         print("Context menu restart") if self.debug else True

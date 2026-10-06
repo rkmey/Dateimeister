@@ -576,7 +576,6 @@ class MyThumbnail:
         self.metadata_read = False
         
 
-
     def set_metadata(self) -> None:
         # Bereits geladen?
         if self.metadata_read:
@@ -604,7 +603,16 @@ class MyThumbnail:
                 self.metadata["Video"][k] = v
 
         # -----------------------------
-        # Datei-Infos (für beide)
+        # RAW: Metadaten ueber rawpy
+        # -----------------------------
+        elif self.imagetype == "RAW":
+            import rawpy_loader
+            raw_meta = rawpy_loader.load_raw_metadata(path)
+            for cat, entries in raw_meta.items():
+                self.metadata.setdefault(cat, {}).update(entries)
+
+        # -----------------------------
+        # Datei-Infos (fuer alle)
         # -----------------------------
         try:
             stat = os.stat(path)
