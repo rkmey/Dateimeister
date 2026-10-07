@@ -130,3 +130,7 @@ Wenn Sie möchten, dass der Dateimeister für Ihre RAW-Dateien auch gleichnamige
 
 Philosophie Canvas /Single View:
 Canvas vs. Detailansicht: Der Canvas zeigt Thumbnails so schnell wie möglich. Wenn ein RAW nicht schnell dargestellt werden kann (kein eingebettetes JPEG und kein gleichnamiges JPEG als Fallback), wird es als blaues Rechteck gezeigt. Der Doppelklick öffnet die Detailansicht, die postprocess verwendet und damit auch dieses RAW darstellen kann. Der Nutzer sieht jedes Bild – im Canvas als Übersicht, in der Detailansicht in voller Qualität.
+
+
+FSImage RAW toggle embedded (klein) / full scale:
+RAW-Button in der Detailansicht: Nach dem Öffnen wird das eingebettete JPEG angezeigt. Der Button wechselt zur vollen Sensor-Entwicklung (per postprocess mit use_camera_wb=True). Nach dem Wechsel wird das Bild automatisch auf die Canvas-Größe angepasst, damit die Unterschiede in Kontrast, Weißabgleich und Farbwiedergabe zwischen Kamera-Entwicklung und LibRaw-Entwicklung direkt sichtbar sind.
