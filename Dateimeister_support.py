@@ -3342,7 +3342,9 @@ class Dateimeister_support:
                 t = Globals.thumbnails[Globals.imagetype][index]
                 id = t.getId()
                 if tools.is_visible(self.canvas_gallery, id): # visible
-                    self.canvas_gallery.itemconfig(id, image=t.getImage())
+                    f = t.getImage()
+                    if f:
+                        self.canvas_gallery.itemconfig(id, image=t.getImage())
                     self.list_visible_thumbnails.append(t)
                 else:
                     visible = False # stop while
