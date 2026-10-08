@@ -2570,21 +2570,30 @@ class Dateimeister_support:
                         self.dict_duplicates_sourcefiles[dateityp][mysource] = mytarget
                 else:
                     # unterschiedlicher Inhalt trotz gleichem Zieldateinamen: kein Fall fuer die manuelle
-                    # Dubletten-Pruefung, sondern automatisch aufloesen, damit sich die Zieldateien beim
-                    # Kopieren nicht gegenseitig ueberschreiben. Jede betroffene Datei bekommt einen
-                    # fortlaufenden Suffix vor der Endung.
+                    # Dubletten-Pruefung als Ganzes, sondern pro Hash-Gruppe getrennt behandeln. Jede
+                    # Hash-Gruppe (= Dateien mit identischem Inhalt) bekommt EINEN neuen, eindeutigen
+                    # Zieldateinamen, den sich alle Mitglieder dieser Gruppe teilen. Eine Gruppe mit nur
+                    # einem Mitglied ist keine Dublette und wird nicht im Dict gefuehrt; eine Gruppe mit
+                    # mehreren Mitgliedern bleibt eine echte Dublette, nur eben unter ihrem neuen Namen.
                     del Globals.dict_duplicates[dateityp][mytarget]
+                    original_target = self.dict_source_target[dateityp][mylist[0]] # vor der Umbenennung, mit Original-Schreibweise
+                    root, ext = os.path.splitext(original_target)
                     counter = 0
-                    for h in hashes:
-                        for mysource in hashes[h]:
-                            counter += 1
-                            old_target = self.dict_source_target[dateityp][mysource]
-                            root, ext = os.path.splitext(old_target)
-                            new_target = "{:s}_{:03d}{:s}".format(root, counter, ext)
+                    for h in sorted(hashes): # stabile, reproduzierbare Reihenfolge ueber mehrere Laeufe hinweg (gleich lange Hex-Hashes -> lexikographisch = numerisch)
+                        group = hashes[h]
+                        counter += 1
+                        new_target = "{:s}_{:03d}{:s}".format(root, counter, ext)
+                        for mysource in group:
                             self.dict_source_target[dateityp][mysource] = new_target
                             print("WARNUNG: '{:s}' haette denselben Zieldateinamen wie andere Datei(en) "
                                   "erhalten ('{:s}'), Inhalt ist aber unterschiedlich. "
-                                  "Neuer Zieldateiname: '{:s}'".format(mysource, old_target, new_target))
+                                  "Neuer Zieldateiname: '{:s}'".format(mysource, original_target, new_target))
+                        if len(group) > 1:
+                            # diese Hash-Gruppe ist selbst eine echte Dublette - unter ihrem neuen
+                            # Zieldateinamen ins Dict eintragen, damit das Duplicates-Fenster sie findet
+                            Globals.dict_duplicates[dateityp][new_target.upper()] = group
+                            for mysource in group:
+                                self.dict_duplicates_sourcefiles[dateityp][mysource] = new_target
             #print("dict_duplicates: " + str(Globals.dict_duplicates[dateityp])) 
             busy.close()
 

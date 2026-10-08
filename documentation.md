@@ -141,3 +141,17 @@ Duplcates sind Dateien, die in verschiedenen Verzeichnissen mit demselben Nehmen
 Falls Dateien gleichen Namens auch denselben Inhalt besitzen (Hashsum), werden sie gesammelt und nach der Generierung können sie mit Hilfe des Buttons „show duplicates“ angezeigt werden. Dort können Dateien included / excluded werden. Macht der User nichts, werden alle kopiert und die letzte gewinnt. Das ist normalerweise kein Problem, weil wegen des identischen Inhalts das Foto / Video erhalten bleibt. Werden jedoch unterschiedliche Inhalte erkannt, werden die Dateinamen in der Ausgabe mit einem Suffix (laufende Nummer) versehen, so dass sie sich nicht gegenseitig im Ausgabeverzeichnis überschreiben. Der Anwender wird davon in der Konsole informiert, Beispiel:
 WARNUNG: 'c:/arbeit/python/dateimeister-testdaten/fotos\PIC_Z7_DSC_2430.NEF' haette denselben Zieldateinamen wie andere Datei(en) erhalten ('c:/arbeit/python/dateimeister-testdaten/fotos/fotos_target/raw/OTHER_PIC_Z7_DSC_2430.NEF'), Inhalt ist aber unterschiedlich. Neuer Zieldateiname: 'c:/arbeit/python/dateimeister-testdaten/fotos/fotos_target/raw/OTHER_PIC_Z7_DSC_2430_001.NEF'
 
+Es wird eine Gruppe pro Hashwert (Dateigröße) gebildet. Für jede Gruppe wird ein neuer Suffix (001, 002,…) erzeugt, aufsteigend nach Hashwert, wodurch die Zuordnung unabhängig davon ist, in welcher Reihenfolge die Dateien eingelesen werden. Alle Dateien der Gruppe erhalten denselben Namen. Eine Gruppe mit mehr als einem Element erscheint in der Duplikate-Liste und im Duplikate-Fenster. Beispiel mit 6 Dateien mit identischem Namen:
+1 hat Inhalt A
+2 und 3 haben Inhalt B
+4, 5, 6 haben Inhalt C:
+Ergebnis: (Dateien 1 ist die kleinste, dann 2 und 3, dann 4, 5, 6)
+1 erhalten Suffix 001 , keine Dublette (Gruppe hat nur ein Mitglied)
+2, 3 erhalten Suffix 002, sie werden als Dubletten gekennzeichnet
+4,5,6 erhalten Suffix 003 ,sie werden als Dubletten gekennzeichnet.
+
+Sind die Größen anders verteilt, ändert sich wie oben beschrieben der Suffix, sollten also 4, 5 und 6 die kleinsten Dateien sein, erhielten sie den Suffix 001.
+
+Der Suffix wird an den Dateinamen ohne Endung angehngt, also:
+Bild.JPEG wird zu Bild_001.JPEG.
+

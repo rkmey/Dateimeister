@@ -176,7 +176,6 @@ class MyDuplicates:
         self.f.bind('-', lambda event: self.delay_incr(event))
         self.f.bind('0', lambda event: self.delay_deflt(event))
         
-        self.dict_child_parent = {}
         self.timestamp = datetime.now()
         self.tooltiptext = ""
         self.tt = TT.ToolTip(self.f, "no images available", delay=0, follow = True)
@@ -467,7 +466,6 @@ class MyDuplicates:
                 self.dict_thumbnails_duplicates[Globals.imagetype][thumbnail.getFile()] = myimage
                 self.lastposition += image_width + Globals.gap
             self.num_images += 1
-            self.dict_child_parent[myimage] = thumbnail # child -> parent
 
         self.lastposition -= Globals.gap
         if len(self.thumbnails_duplicates[Globals.imagetype]) > 0:
@@ -478,9 +476,7 @@ class MyDuplicates:
             self.canvas_width_images = self.f.bbox('images')[2]
             self.canvas_width_all    = self.f.bbox('all')[2]
 
-        for child in self.dict_child_parent:
-            parent = self.dict_child_parent[child]
-            print("Child file / parent file is: " + child.getFile() + ' / ' + parent.getFile())
+        self.f.xview('moveto', 0)
         self.f.focus_set()
 
     def canvas_video_restart(self):
