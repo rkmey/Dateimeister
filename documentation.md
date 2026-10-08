@@ -134,3 +134,10 @@ Canvas vs. Detailansicht: Der Canvas zeigt Thumbnails so schnell wie möglich. W
 
 FSImage RAW toggle embedded (klein) / full scale:
 RAW-Button in der Detailansicht: Nach dem Öffnen wird das eingebettete JPEG angezeigt. Der Button wechselt zur vollen Sensor-Entwicklung (per postprocess mit use_camera_wb=True). Nach dem Wechsel wird das Bild automatisch auf die Canvas-Größe angepasst, damit die Unterschiede in Kontrast, Weißabgleich und Farbwiedergabe zwischen Kamera-Entwicklung und LibRaw-Entwicklung direkt sichtbar sind.
+
+
+Duplicates
+Duplcates sind Dateien, die in verschiedenen Verzeichnissen mit demselben Nehmen existieren. Wenn „add relative path“ nicht eingeschaltet ist, landen alle kopierten Daten im Ausgabeverzeichnis, wo die letzte „gewinnt“. Solche Situationen werden erkannt und wie folgt behandelt:
+Falls Dateien gleichen Namens auch denselben Inhalt besitzen (Hashsum), werden sie gesammelt und nach der Generierung können sie mit Hilfe des Buttons „show duplicates“ angezeigt werden. Dort können Dateien included / excluded werden. Macht der User nichts, werden alle kopiert und die letzte gewinnt. Das ist normalerweise kein Problem, weil wegen des identischen Inhalts das Foto / Video erhalten bleibt. Werden jedoch unterschiedliche Inhalte erkannt, werden die Dateinamen in der Ausgabe mit einem Suffix (laufende Nummer) versehen, so dass sie sich nicht gegenseitig im Ausgabeverzeichnis überschreiben. Der Anwender wird davon in der Konsole informiert, Beispiel:
+WARNUNG: 'c:/arbeit/python/dateimeister-testdaten/fotos\PIC_Z7_DSC_2430.NEF' haette denselben Zieldateinamen wie andere Datei(en) erhalten ('c:/arbeit/python/dateimeister-testdaten/fotos/fotos_target/raw/OTHER_PIC_Z7_DSC_2430.NEF'), Inhalt ist aber unterschiedlich. Neuer Zieldateiname: 'c:/arbeit/python/dateimeister-testdaten/fotos/fotos_target/raw/OTHER_PIC_Z7_DSC_2430_001.NEF'
+
