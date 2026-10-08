@@ -2535,8 +2535,6 @@ class Dateimeister_support:
             lineno = 0
             for this_sourcefile in self.dict_source_target[dateityp]:
                 lineno += 1
-                h = tools.file_hash(this_sourcefile)
-                print("### hashsum for {:s} = {:s}".format(this_sourcefile, h)) if self.debug else True
                 dupl_target_file = self.dict_source_target[dateityp][this_sourcefile].upper() #for duplicate target  check ignore case
                 if dupl_target_file not in Globals.dict_duplicates[dateityp]:
                     #self.clear_dict_2nd(Globals.dict_duplicates, dateityp)
@@ -2555,9 +2553,38 @@ class Dateimeister_support:
                 if len(mylist) == 1: # only 1 file
                     del Globals.dict_duplicates[dateityp][mytarget]
                     #print("nodupl: ", str(mylist))
-                else:
+                    continue
+                # mehrere Quelldateien wuerden auf denselben Zieldateinamen kopiert - das ist der einzige
+                # Fall, in dem der teure Hash-Vergleich (volles Lesen der Datei, siehe tools.file_hash)
+                # ueberhaupt noetig ist, und auch dann nur innerhalb dieser kleinen Gruppe.
+                hashes = {}
+                for mysource in mylist:
+                    h = tools.file_hash(mysource)
+                    hashes.setdefault(h, []).append(mysource)
+                if len(hashes) == 1:
+                    # Inhalt identisch -> echte Dublette, unveraendertes bisheriges Verhalten: User sieht
+                    # sie im Duplicates-Fenster und kann einzelne Dateien ausschliessen. Tut er das nicht,
+                    # gewinnt beim Kopieren (ohne addrelpath) die zuletzt kopierte - unkritisch, da der
+                    # Inhalt ohnehin identisch ist.
                     for mysource in mylist:
                         self.dict_duplicates_sourcefiles[dateityp][mysource] = mytarget
+                else:
+                    # unterschiedlicher Inhalt trotz gleichem Zieldateinamen: kein Fall fuer die manuelle
+                    # Dubletten-Pruefung, sondern automatisch aufloesen, damit sich die Zieldateien beim
+                    # Kopieren nicht gegenseitig ueberschreiben. Jede betroffene Datei bekommt einen
+                    # fortlaufenden Suffix vor der Endung.
+                    del Globals.dict_duplicates[dateityp][mytarget]
+                    counter = 0
+                    for h in hashes:
+                        for mysource in hashes[h]:
+                            counter += 1
+                            old_target = self.dict_source_target[dateityp][mysource]
+                            root, ext = os.path.splitext(old_target)
+                            new_target = "{:s}_{:03d}{:s}".format(root, counter, ext)
+                            self.dict_source_target[dateityp][mysource] = new_target
+                            print("WARNUNG: '{:s}' haette denselben Zieldateinamen wie andere Datei(en) "
+                                  "erhalten ('{:s}'), Inhalt ist aber unterschiedlich. "
+                                  "Neuer Zieldateiname: '{:s}'".format(mysource, old_target, new_target))
             #print("dict_duplicates: " + str(Globals.dict_duplicates[dateityp])) 
             busy.close()
 

@@ -191,6 +191,7 @@ class MyDuplicates:
         # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handler
         Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed)
         Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
+        self.canvas_width_visible = 0
 
     # 20260915: event handler for closing event
     def on_closing(self, event): #if a FS exists in dict_file_image delete entry
@@ -291,6 +292,49 @@ class MyDuplicates:
             item_id = thumbnail.getId()
             self.display_image(thumbnail)
 
+    def display_image(self, thumbnail):
+        file = thumbnail.getShowfile()
+        # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
+        if file in self.dict_file_image:
+            print ("FSImage exists for file: " + file) if self.debug else True
+            fs_image = self.dict_file_image[file]
+            fs_image.activate()
+        else: # ein neues Objekt anlegen und in dict_file_image eintragen
+            if file != 'none':
+                print ("FSImage does not exist for file: " + file) if self.debug else True
+                if Globals.imagetype == 'VIDEO':
+                    self.stop_all_players() # we dont want noise from players in Main Window
+                    fs_image = FV.MyFSVideo(
+                        file = file, 
+                        thumbnail = thumbnail, 
+                        caller = self,
+                        str_title_prefix = "",
+                        str_include = "Include",
+                        str_exclude = "Exclude",
+                        str_included = "Included",
+                        str_excluded = "Excluded",
+                        temp_dir = Globals.temp_files_path,
+                        num_thumbnails = Globals.num_video_thumbnails, 
+                        mpv_path = Globals.mpv_path, 
+                        ffprobe_path = Globals.ffprobe_path,
+                        debug = self.debug
+                    )
+                    
+                else: # STILL    
+                    fs_image = FS.MyFSImage(
+                        file = file, 
+                        thumbnail = thumbnail, 
+                        caller = self,
+                        str_title_prefix = "Dateimeister: ", 
+                        str_include = "Include",
+                        str_exclude = "Exclude",
+                        str_included = "Included",
+                        str_excluded = "Excluded",
+                        debug = self.debug
+                    )
+
+                self.dict_file_image[file] = fs_image
+
     def display_duplicate(self, target_file):
         self.caller.stop_all_players() # should not continue running
         self.f.delete('all')
@@ -309,10 +353,10 @@ class MyDuplicates:
             thumbnail = Globals.dict_thumbnails[Globals.imagetype][source_file]
             showfile = thumbnail.getShowfile()
             state = thumbnail.getState() # we want to use the current state and copy it to the duplicate-thumbnail
+            self.canvas_width_visible = self.f.winfo_width() # Fensterbreite
             if showfile != 'none':
                 canvas_height = self.f.winfo_height() - self.H_I.winfo_height()
                 canvas_width  = self.f.winfo_width()
-                self.canvas_width_visible = self.f.winfo_width() # Fensterbreite
                 player = None
                 imagetype = thumbnail.get_imagetype()
 
@@ -320,7 +364,7 @@ class MyDuplicates:
                     # Video: Player besorgen (neu oder vorhanden)
                     if (thumbnail not in self.dict_thumbnail_player): #we need a new one
                         print("try to create new videoplayer...")
-                        player = DV.VideoPlayer(self.root, showfile, self.f, canvas_width, canvas_height)
+                        player = DV.VideoPlayer(self.root, thumbnail.getFile(), self.f, canvas_width, canvas_height)
                         self.dict_thumbnail_player[thumbnail] = player
                     else:
                         player = self.dict_thumbnail_player[thumbnail]
@@ -329,9 +373,9 @@ class MyDuplicates:
                     # RAW: eingebettetes JPEG laden, auf Canvas-Hoehe skalieren.
                     # Kein Image.open, weil das bei NEF/RAF/etc. fehlschlaegt.
                     import rawpy_loader
-                    img = rawpy_loader.load_raw_embedded(showfile)
+                    img = rawpy_loader.load_raw_embedded(thumbnail.getFile())
                     if img is None:
-                        print("RAW not displayable in duplicates: " + showfile) if self.debug else True
+                        print("RAW not displayable in duplicates: " + thumbnail.getFile()) if self.debug else True
                         image_height = canvas_height
                         image_width  = int(canvas_height * 4 / 3)
                         pimg = None
@@ -389,15 +433,17 @@ class MyDuplicates:
                     player.resize()
 
                 # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
-                mts = os.stat(showfile).st_mtime
+                mts = os.stat(thumbnail.getFile()).st_mtime
                 myimage = MyThumbnail(pimg, self.caller, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
                     text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
                 myimage.set_imagetype(imagetype) # from "parent"
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 myimage.setState(state)
-                self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage
+                self.dict_thumbnails_duplicates[Globals.imagetype][thumbnail.getFile()] = myimage
                 self.lastposition += image_width + Globals.gap
             else: # wir haben kein Bild, ein Rechteck einfügen
+                canvas_height = self.f.winfo_height() - self.H_I.winfo_height()
+                canvas_width  = self.f.winfo_width()
                 image_height = canvas_height
                 image_width  = int(canvas_height * 4 / 3)
                 id = self.f.create_rectangle(self.lastposition, 0, self.lastposition + image_width, canvas_height, fill="blue", tags='images')
@@ -413,12 +459,12 @@ class MyDuplicates:
                 line_west  = self.f.create_line(north_west, south_west, dash=(1, 1), fill="red", tags="imageframe")
                 frameids = (line_north, line_east, line_south, line_west)
                 self.f.tag_raise("text")
-                mts = os.stat(showfile).st_mtime
-                myimage = MyThumbnail(0, self.caller, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
-                    text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
+                mts = os.stat(thumbnail.getFile()).st_mtime
+                myimage = MyThumbnail(0, self.caller, self.lastposition, self.lastposition + image_width, thumbnail.getFile(), mts, showfile, id, \
+                    text_id, rect_id, frameids, 0, None, 'j', self.f, None, None, thumbnail)
                 myimage.set_imagetype(thumbnail.get_imagetype())
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
-                self.dict_thumbnails_duplicates[Globals.imagetype][showfile] = myimage
+                self.dict_thumbnails_duplicates[Globals.imagetype][thumbnail.getFile()] = myimage
                 self.lastposition += image_width + Globals.gap
             self.num_images += 1
             self.dict_child_parent[myimage] = thumbnail # child -> parent
