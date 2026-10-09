@@ -293,7 +293,12 @@ class MyDuplicates:
 
     def display_image(self, thumbnail):
         file = thumbnail.getShowfile()
-        # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
+        if file == "none":
+            # No preview available (e.g. RAW without an accompanying JPEG).
+            # On double click the detail view should open with the
+            # original file.
+            file = thumbnail.getFile()
+        # Reuse an existing detail window if one is already open for this file.        # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
         if file in self.dict_file_image:
             print ("FSImage exists for file: " + file) if self.debug else True
             fs_image = self.dict_file_image[file]
@@ -396,13 +401,13 @@ class MyDuplicates:
                     pimg = ImageTk.PhotoImage(img)
 
                 # --- DEBUG ---
-                print(f"DEBUG display_duplicate: imagetype={imagetype}, showfile={showfile}")
+                print(f"DEBUG display_duplicate: imagetype={imagetype}, showfile={showfile}") if self.debug else True
                 if imagetype != "VIDEO":
                     print(f"DEBUG:   orig={image_width_orig}x{image_height_orig}, "
                           f"canvas_height={canvas_height}, faktor={faktor:.4f}, "
-                          f"newsize={newsize}")
+                          f"newsize={newsize}") if self.debug else True
                 print(f"DEBUG:   image_width={image_width}, image_height={image_height}, "
-                      f"pimg={'None' if pimg is None else 'ok'}")
+                      f"pimg={'None' if pimg is None else 'ok'}") if self.debug else True
                 # --- ENDE DEBUG ---
 
                 if pimg is not None:
@@ -433,8 +438,28 @@ class MyDuplicates:
 
                 # we must also create a thumbnail_list for duplicate images, or the garbage collector will delete images
                 mts = os.stat(thumbnail.getFile()).st_mtime
-                myimage = MyThumbnail(pimg, self.caller, self.lastposition, self.lastposition + image_width, showfile, mts, showfile, id, \
-                    text_id, rect_id, frameids, 0, player, 'j', self.f, None, None, thumbnail)
+
+                myimage = MyThumbnail(
+                    image=pimg,
+                    pmain=self.caller,
+                    start=self.lastposition,
+                    end=self.lastposition + image_width,
+                    file=thumbnail.getFile(),
+                    mts=mts,
+                    showfile=showfile,
+                    id=id,
+                    text_id=text_id,
+                    rect_id=rect_id,
+                    frameids=frameids,
+                    lineno=0,
+                    player=player,
+                    duplicate='j',
+                    canvas=self.f,
+                    targetfile=None,
+                    process_type=thumbnail.get_process_type(),
+                    parent=thumbnail,
+                )
+
                 myimage.set_imagetype(imagetype) # from "parent"
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 myimage.setState(state)
@@ -459,8 +484,28 @@ class MyDuplicates:
                 frameids = (line_north, line_east, line_south, line_west)
                 self.f.tag_raise("text")
                 mts = os.stat(thumbnail.getFile()).st_mtime
-                myimage = MyThumbnail(0, self.caller, self.lastposition, self.lastposition + image_width, thumbnail.getFile(), mts, showfile, id, \
-                    text_id, rect_id, frameids, 0, None, 'j', self.f, None, None, thumbnail)
+
+                myimage = MyThumbnail(
+                    image=0,
+                    pmain=self.caller,
+                    start=self.lastposition,
+                    end=self.lastposition + image_width,
+                    file=thumbnail.getFile(),
+                    mts=mts,
+                    showfile=showfile,
+                    id=id,
+                    text_id=text_id,
+                    rect_id=rect_id,
+                    frameids=frameids,
+                    lineno=0,
+                    player=None,
+                    duplicate='j',
+                    canvas=self.f,
+                    targetfile=None,
+                    process_type=thumbnail.get_process_type(),
+                    parent=thumbnail,
+                )
+
                 myimage.set_imagetype(thumbnail.get_imagetype())
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 self.dict_thumbnails_duplicates[Globals.imagetype][thumbnail.getFile()] = myimage

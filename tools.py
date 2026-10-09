@@ -531,9 +531,30 @@ class RestartableTimer:
 class MyThumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
 
-    # The class "constructor" - It's actually an initializer 
-    def __init__(self, image, pmain, start, end, file, mts, showfile, id, text_id, rect_id, frameids, lineno, player, duplicate, canvas, targetfile, \
-      text = None, parent = None, tooold = False):
+    def __init__(
+        self,
+        image,
+        pmain,
+        start,
+        end,
+        file,
+        mts,
+        showfile,
+        id,
+        text_id,
+        rect_id,
+        frameids,
+        lineno,
+        player,
+        duplicate,
+        canvas,
+        targetfile,
+        process_type,
+        text=None,
+        parent=None,
+        tooold=False,
+    ):
+
         self.main = pmain
         self.image = image
         self.start = start
@@ -556,7 +577,15 @@ class MyThumbnail:
         self.parent = parent
         self.duplicate = duplicate
         self.tooold = tooold
-        self.imagetype = None # imagetype is VIDEO or STILL uppercase.
+        # imagetype is the display category (STILL, VIDEO, RAW). It groups
+        # process_image values into the three variants the UI needs to know.
+        # process_type is the raw configuration value from the xml
+        # (JPEG, USE_JPEG, VIDEO, RAW, ...). It is used only where the
+        # original intent matters, for example to decide whether an
+        # unreadable file should be tried as RAW.
+        self.imagetype = None
+        self.process_type = process_type.upper() if process_type else None
+        
         self.setState(self.state)
 
         statinfo = os.stat(file)
@@ -754,6 +783,13 @@ class MyThumbnail:
 
     def set_imagetype(self, t):
         self.imagetype = t.upper()    
+
+    def get_process_type(self):
+        return self.process_type    
+
+    def set_process_type(self, t):
+        self.process_type = t.upper() if t else None    
+
 
     def setPlayer(self, p):
         self.player = p

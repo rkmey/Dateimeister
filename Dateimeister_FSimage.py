@@ -98,9 +98,36 @@ class MyFSImage:
         self.image_full     = None
         self.raw_mode       = None
 
+        # process_type is the value from the camera configuration
+        # (JPEG, USE_JPEG, VIDEO, RAW, ...). It is only used here, to
+        # detect the case where the user asked for a companion JPEG but
+        # the canvas could not find one. In that case the file itself
+        # is probably a RAW file, even though the thumbnail does not
+        # say so.
+        process_type = thumbnail.get_process_type() if thumbnail is not None else None
+
         if self.imagetype == _RAW_IMAGETYPE:
             import rawpy_loader
             self.image_embedded = rawpy_loader.load_raw_embedded(file)
+            self.image = self.image_embedded
+            self.raw_mode = "embedded"
+        elif process_type == "USE_JPEG":
+            # The thumbnail was built from a USE_JPEG fallback (no
+            # companion JPEG was found). Try the RAW loader. If it
+            # works, treat the file as RAW and adjust the local
+            # imagetype so the RAW widgets are built below.
+            import rawpy_loader
+            self.image_embedded = rawpy_loader.load_raw_embedded(file)
+            if self.image_embedded is None:
+                tools.info_box(
+                    f"{file}\n\n"
+                    "Diese Datei kann nicht angezeigt werden. "
+                    "Sie ist weder ein lesbares Bild noch ein "
+                    "unterstuetzte RAW-Format.",
+                    "warnung"
+                )
+                raise RuntimeError(f"File not displayable: {file}")
+            self.imagetype = _RAW_IMAGETYPE
             self.image = self.image_embedded
             self.raw_mode = "embedded"
         else:
@@ -737,7 +764,7 @@ class MyFSImage:
         if zoomfaktor == 0:
             faktor = min(canvas_height / image_height_orig, canvas_width / image_width_orig)
             self.zoomfaktor = faktor
-            print("... calculate faktor for Image to fit in Canvas")
+            print("... calculate faktor for Image to fit in Canvas") if self.debug else True
         else:
             faktor = zoomfaktor
             self.zoomfaktor = faktor

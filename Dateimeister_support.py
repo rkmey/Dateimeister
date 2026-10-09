@@ -2850,9 +2850,28 @@ class Dateimeister_support:
                 mts = os.stat(file).st_mtime
                 # if new thumbnail or new image required
                 if new_thumbnail_required:
-                    myimage = MyThumbnail(pimg, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
-                        text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
-                    Globals.dict_thumbnails[imagetype][file] = myimage # damit können wir auf thumbnails mit den Sourcefilenamen zugreifen, z.B. für Duplicates
+                    myimage = MyThumbnail(
+                        image=pimg,
+                        pmain=self,
+                        start=self.lastposition,
+                        end=self.lastposition + image_width,
+                        file=file,
+                        mts=mts,
+                        showfile=showfile,
+                        id=id,
+                        text_id=text_id,
+                        rect_id=rect_id,
+                        frameids=frameids,
+                        lineno=this_lineno,
+                        player=player,
+                        duplicate=duplicate,
+                        canvas=self.canvas_gallery,
+                        targetfile=self.dict_source_target[imagetype][file],
+                        process_type=original_process_type,
+                        text=self.t_text1,
+                    )
+                    Globals.dict_thumbnails[imagetype][file] = myimage
+
                 else: # use existing
                     myimage = Globals.dict_thumbnails[imagetype][file]
                     print("Reuse existing thumbnail for file {:s}".format(file)) if self.debug else True
@@ -2910,8 +2929,28 @@ class Dateimeister_support:
                 line_west  = self.canvas_gallery.create_line(north_west, south_west, dash=(1, 1), fill = "red", tags="imageframe")
                 frameids = (line_north, line_east, line_south, line_west)
                 mts = os.stat(file).st_mtime
-                myimage = MyThumbnail(0, self, self.lastposition, self.lastposition + image_width, file, mts, showfile, id, \
-                    text_id, rect_id, frameids, this_lineno, player, duplicate, self.canvas_gallery, self.dict_source_target[imagetype][file], self.t_text1)
+
+                myimage = MyThumbnail(
+                    image=0,
+                    pmain=self,
+                    start=self.lastposition,
+                    end=self.lastposition + image_width,
+                    file=file,
+                    mts=mts,
+                    showfile=showfile,
+                    id=id,
+                    text_id=text_id,
+                    rect_id=rect_id,
+                    frameids=frameids,
+                    lineno=this_lineno,
+                    player=player,
+                    duplicate=duplicate,
+                    canvas=self.canvas_gallery,
+                    targetfile=self.dict_source_target[imagetype][file],
+                    process_type=original_process_type,
+                    text=self.t_text1,
+                )
+
                 if process_type == 'VIDEO':
                     myimage.set_imagetype("VIDEO")
                 elif original_process_type == _RAW_PROCESS_TYPE:
@@ -3491,7 +3530,12 @@ class Dateimeister_support:
 
     def display_image(self, thumbnail):
         file = thumbnail.getShowfile()
-        # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
+        if file == "none":
+            # No preview available (e.g. RAW without an accompanying JPEG,
+            # or USE_JPEG without a matching JPEG). On double click the
+            # detail view should still open, using the original file so
+            # the user can see the image.
+            file = thumbnail.getFile()        # wenn das Bild schon in einem Fenster angezeigt wird, dann verwenden wir dieses
         if file in self.dict_file_image:
             print ("FSImage exists for file: " + file) if self.debug else True
             fs_image = self.dict_file_image[file]
