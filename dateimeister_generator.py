@@ -8,6 +8,31 @@ from datetime import datetime, timezone
 import functools
 import Dateimeister as DM
 
+# Ordner, die beim rekursiven Scan nicht betreten werden (Namensvergleich ohne Gross/Kleinschreibung).
+# Dort liegen keine Fotos, die man verwalten will, aber viele defekte/gesperrte Dateien.
+#
+# SKIP_DIRS_TOP: Systemordner, nur DIREKT unter dem gewaehlten Eingabeverzeichnis (indir) ausgeschlossen.
+#                Scannt man C:\, sind C:\Windows usw. draussen; ein eigener Ordner 'Windows' oder
+#                'Recovery' irgendwo tiefer in den Fotos wird dagegen normal gescannt.
+# SKIP_DIRS_ANY: auf jeder Ebene ausgeschlossen. 'appdata' enthaelt viele Cache-Bilder; wer dort
+#                bewusst suchen will, entfernt den Eintrag (oder waehlt AppData direkt als indir).
+SKIP_DIRS_TOP = {
+    '$recycle.bin', 'system volume information', 'windows',
+    '$windows.~bt', '$windows.~ws', 'recovery', 'config.msi',
+    'program files', 'program files (x86)', 'programdata',
+}
+SKIP_DIRS_ANY = {'appdata'}
+
+def prune_dirs(root, dirs, indir):
+    """Entfernt In-place (nur das beeinflusst os.walk) auszuschliessende Ordner aus dirs.
+    root: aktuell besuchter Ordner, indir: Startverzeichnis des Scans.
+    Junctions (z.B. 'Documents and Settings') werden auf jeder Ebene uebersprungen -> keine Doppelscans."""
+    at_top = os.path.normcase(os.path.normpath(root)) == os.path.normcase(os.path.normpath(indir))
+    dirs[:] = [d for d in dirs
+               if d.lower() not in SKIP_DIRS_ANY
+               and not (at_top and d.lower() in SKIP_DIRS_TOP)
+               and not os.path.isjunction(os.path.join(root, d))]
+
 # sort functions
 def compare_name(a, b):
     if a.name < b.name:
@@ -105,6 +130,7 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
         print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
         fctr = 0
         for root, dirs, files in os.walk(indir, topdown=True):
+            prune_dirs(root, dirs, indir)
             print("Dateimeister_generator DIRS {:s}".format(str(dirs))) if debug else True
             for filename in files:
                 filename = re.sub(r"\\", "/", filename) # replace single backslash by slash

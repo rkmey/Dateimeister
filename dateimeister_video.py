@@ -80,8 +80,9 @@ class VideoPlayer:
         self.photo = PIL.ImageTk.PhotoImage(image=pil_img)
         return self.photo
 
-    def get_photo(self):
-        """Wird bei Initialisierung"""
+    def get_photo(self, silent=False):
+        """Wird bei Initialisierung. Liefert (breite, hoehe, photo) oder None, wenn kein Frame lesbar ist.
+        silent=True: bei Misserfolg keine info_box (fuer die Galerie, wo defekte Videos normal sind)."""
         # Falls wir schon ein Bild im Cache haben, nimm das (spart NAS/SSD Last)
         if self.last_frame_obj is None:
             frame, val = self.vplayer.get_frame()
@@ -98,7 +99,9 @@ class VideoPlayer:
             self.photo = self._render_frame_to_photo(self.last_frame_obj)
             return self.image_width, self.image_height, self.photo
         else:
-            tools.info_box("frame object not found", "fehler")
+            if not silent:
+                tools.info_box("frame object not found", "fehler")
+            return None
 
     def resize(self):
         #tools.info_box("searching frame object...", "info")

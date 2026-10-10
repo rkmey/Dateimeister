@@ -1866,6 +1866,7 @@ class Dateimeister_support:
         # create a timer for managing players and metadata
         self.timer_players_and_metadata = tools.RestartableTimer(root, 1500, self.manage_players_and_metadata)  # ms
         self.list_visible_thumbnails = []
+        self.broken_videos = set() # Videodateien, fuer die beim Scrollen kein Player erzeugt werden konnte
         self.printer = None
         self.preview = None
 
@@ -2412,7 +2413,7 @@ class Dateimeister_support:
             recursive = "n"
 
         if recursive == "j":
-            files_total = tools.count_files_recursive(indir)
+            files_total = tools.count_files_recursive(indir, prune = lambda root, dirs: DG.prune_dirs(root, dirs, indir)) # gleiche Ordner wie im Scan, sonst stimmt der Fortschrittsbalken nicht
         else:
             files_total = tools.count_files_top(indir)
         if self.cb_prefix_var.get():
@@ -2753,16 +2754,34 @@ class Dateimeister_support:
                     print ("*** No JPEG found for " + file + " using " + showfile) if self.debug else True
                     process_type = "none" # rectangle instead
             elif process_type == 'VIDEO':
-                if new_thumbnail_required: # we need a new player:
-                    print("try to create new videoplayer...") if self.debug else True
-                    # create new videoplayer
-                    player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height)
-                else:
-                    if not Globals.dict_thumbnails[imagetype][file].getPlayer(): # player may have been deleted by srolling
+                try:
+                    if new_thumbnail_required: # we need a new player:
+                        print("try to create new videoplayer...") if self.debug else True
+                        # create new videoplayer
                         player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height)
-                        Globals.dict_thumbnails[imagetype][file].setPlayer(player)
-                    player = Globals.dict_thumbnails[imagetype][file].getPlayer()
-                showfile = file
+                        # VideoPlayer wirft bei defekten Dateien nicht, sondern liefert leere Metadaten.
+                        # Erst das erste Frame zeigt, ob das Video brauchbar ist.
+                        if player.get_photo(silent=True) is None:
+                            raise IOError("kein Videoframe lesbar")
+                    else:
+                        if not Globals.dict_thumbnails[imagetype][file].getPlayer(): # player may have been deleted by srolling
+                            player   = DV.VideoPlayer(self.root, file, self.canvas_gallery, canvas_width, canvas_height)
+                            if player.get_photo(silent=True) is None:
+                                raise IOError("kein Videoframe lesbar")
+                            Globals.dict_thumbnails[imagetype][file].setPlayer(player)
+                        player = Globals.dict_thumbnails[imagetype][file].getPlayer()
+                    showfile = file
+                except Exception as e:
+                    # defektes / unvollstaendiges Video (z.B. "moov atom not found"): blaues Rechteck statt Abbruch
+                    print(f"Video nicht lesbar: {file} ({type(e).__name__}: {e})")
+                    if player is not None:
+                        try:
+                            player.destroy() # gibt MediaPlayer und Canvas-Tag frei
+                        except Exception:
+                            pass
+                    player = None
+                    showfile = "none"
+                    process_type = "none"
             elif process_type == _RAW_PROCESS_TYPE:
                 # --- RAW ---
                 # Canvas-Thumbnail aus dem eingebetteten JPEG der RAW-Datei.
@@ -3446,15 +3465,30 @@ class Dateimeister_support:
             self.dict_visible_id_thumbnail[Globals.imagetype] = {}
             for t in self.list_visible_thumbnails:
                 id = t.getId()
-                if not t.getPlayer(): # no player
-                    player = DV.VideoPlayer(self.root, t.getFile(), 
-                     self.canvas_gallery, self.canvas_gallery.winfo_width(), self.canvas_gallery.winfo_height())
-                    print("Scroll - created Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), player.my_tag)) if self.debug else True
-                    player.setId(id)
-                    player.get_photo() # necessary for initializing some instance variables...
-                    player.resize()
-                    t.setPlayer(player)
-                    t.setImage(player.photo)   # NEU – sonst zeigt der Fixup-Loop weiter unten ein veraltetes Bild
+                # Nur echte Video-Thumbnails bekommen einen Player. Defekte Videos werden in display_images als
+                # blaues Rechteck (Typ STILL) angelegt und haben bewusst keinen Player. Ausserdem merken wir uns
+                # Dateien, die beim Scrollen nicht geoeffnet werden konnten, damit nicht bei jedem Scroll neu versucht wird.
+                if (not t.getPlayer() and t.get_imagetype() == "VIDEO"
+                        and t.getFile() not in self.broken_videos): # no player
+                    player = None
+                    try:
+                        player = DV.VideoPlayer(self.root, t.getFile(), 
+                         self.canvas_gallery, self.canvas_gallery.winfo_width(), self.canvas_gallery.winfo_height())
+                        print("Scroll - created Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), player.my_tag)) if self.debug else True
+                        player.setId(id)
+                        if player.get_photo(silent=True) is None: # necessary for initializing some instance variables...
+                            raise IOError("kein Videoframe lesbar")
+                        player.resize()
+                        t.setPlayer(player)
+                        t.setImage(player.photo)   # NEU – sonst zeigt der Fixup-Loop weiter unten ein veraltetes Bild
+                    except Exception as e:
+                        print(f"Scroll - Video nicht lesbar: {t.getFile()} ({type(e).__name__}: {e})")
+                        self.broken_videos.add(t.getFile())
+                        if player is not None:
+                            try:
+                                player.destroy()
+                            except Exception:
+                                pass
                 self.dict_visible_id_thumbnail[Globals.imagetype][id] = t # insert in dict 
                 
             # we must call itemconfig because sometimes images "disappear"  after deleting video player      

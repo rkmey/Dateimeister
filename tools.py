@@ -73,9 +73,13 @@ def count_files_top(path):
     with os.scandir(path) as it:
         return sum(1 for entry in it if entry.is_file())
 
-def count_files_recursive(path):
+def count_files_recursive(path, prune=None):
+    """Zaehlt Dateien rekursiv. prune(root, dirs) darf dirs in-place kuerzen (wie im Scan),
+    damit die Gesamtzahl fuer den Fortschrittsbalken zu den tatsaechlich gescannten Ordnern passt."""
     total = 0
     for root, dirs, files in os.walk(path):
+        if prune:
+            prune(root, dirs)
         total += len(files)
     return total
 
@@ -1091,18 +1095,35 @@ def calc_fontsize(physical_width: int, physical_height: int, new_width: int, new
 """ creates a new image from <file> with the height <height> abd width according to image size
 returns the image, width and height. if img is supplied dont open file else open file
 """
-def new_image(file = None, height = 100, pic = None):    
-    if file:
-        img  = Image.open(file)
-    else:
-        img = pic
-    image_width_orig, image_height_orig = img.size
-    faktor = height / image_height_orig
-    newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
-    r_img = img
-    r_img.thumbnail(newsize)
-    #print("try to print " + file + " width is " + str(image_width) + "(" + str(image_width_orig) + ")" + " height is " + str(image_height) + "(" + str(image_height_orig) + ")" \
-    #   + " factor is " + str(faktor))
+_REPORTED_BAD_IMAGES = set()  # damit jede defekte Datei nur einmal gemeldet wird
+
+def new_image(file = None, height = 100, pic = None):
+    img = None
+    try:
+        if file:
+            img  = Image.open(file)
+        else:
+            img = pic
+        image_width_orig, image_height_orig = img.size
+        faktor = height / image_height_orig
+        newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
+        r_img = img
+        # kein img.load() vorher: thumbnail() nutzt bei JPEG draft() und dekodiert dadurch viel schneller
+        r_img.thumbnail(newsize)
+    except (OSError, ValueError, SyntaxError, ZeroDivisionError, Image.DecompressionBombError) as e:
+        # OSError umfasst PIL.UnidentifiedImageError und abgeschnittene Dateien.
+        # SyntaxError wirft PIL bei kaputten PNG-Chunks.
+        if file not in _REPORTED_BAD_IMAGES:
+            _REPORTED_BAD_IMAGES.add(file)
+            print(f"Bild nicht lesbar, Platzhalter wird angezeigt: {file} ({type(e).__name__}: {e})")
+        try:
+            if img is not None and file:
+                img.close()
+        except Exception:
+            pass
+        # blauer Platzhalter im Format 4:3, passend zum Rechteck fuer "kein Bild"
+        r_img = Image.new("RGB", (max(1, int(height * 4 / 3)), max(1, int(height))), "blue")
+        img = r_img
     pimg = ImageTk.PhotoImage(r_img)
     image_width, image_height = pimg.width(), pimg.height()
     if file:
