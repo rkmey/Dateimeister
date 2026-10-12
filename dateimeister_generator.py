@@ -14,14 +14,37 @@ import Dateimeister as DM
 # SKIP_DIRS_TOP: Systemordner, nur DIREKT unter dem gewaehlten Eingabeverzeichnis (indir) ausgeschlossen.
 #                Scannt man C:\, sind C:\Windows usw. draussen; ein eigener Ordner 'Windows' oder
 #                'Recovery' irgendwo tiefer in den Fotos wird dagegen normal gescannt.
-# SKIP_DIRS_ANY: auf jeder Ebene ausgeschlossen. 'appdata' enthaelt viele Cache-Bilder; wer dort
-#                bewusst suchen will, entfernt den Eintrag (oder waehlt AppData direkt als indir).
-SKIP_DIRS_TOP = {
+# SKIP_DIRS_ANY: auf jeder Ebene ausgeschlossen. 'appdata' enthaelt viele Cache-Bilder.
+#
+# Die Listen stehen in Dateimeister.ini, Section [scan] (skip_dirs_top / skip_dirs_any) und werden beim
+# Start mit configure_skip_dirs() gesetzt. Die Werte hier sind die Standardwerte, falls die ini sie nicht enthaelt.
+DEFAULT_SKIP_DIRS_TOP = (
     '$recycle.bin', 'system volume information', 'windows',
     '$windows.~bt', '$windows.~ws', 'recovery', 'config.msi',
     'program files', 'program files (x86)', 'programdata',
-}
-SKIP_DIRS_ANY = {'appdata'}
+)
+DEFAULT_SKIP_DIRS_ANY = ('appdata',)
+SKIP_DIRS_TOP = set(DEFAULT_SKIP_DIRS_TOP)
+SKIP_DIRS_ANY = set(DEFAULT_SKIP_DIRS_ANY)
+
+def parse_dir_list(text, default):
+    """Wandelt einen ini-Wert (Eintraege durch Komma und/oder Zeilenumbruch getrennt) in ein Set kleingeschriebener
+    Ordnernamen um. None oder leer -> default; 'none' -> leere Menge (nichts ausschliessen)."""
+    if text is None or not str(text).strip():
+        return set(default)
+    if str(text).strip().lower() == "none":
+        return set()
+    items = re.split(r"[,\r\n]+", str(text))
+    return {i.strip().strip('"').lower() for i in items if i.strip()}
+
+def configure_skip_dirs(top_text, any_text, verbose = True):
+    """Setzt SKIP_DIRS_TOP / SKIP_DIRS_ANY aus den ini-Werten (Strings oder None)."""
+    global SKIP_DIRS_TOP, SKIP_DIRS_ANY
+    SKIP_DIRS_TOP = parse_dir_list(top_text, DEFAULT_SKIP_DIRS_TOP)
+    SKIP_DIRS_ANY = parse_dir_list(any_text, DEFAULT_SKIP_DIRS_ANY)
+    if verbose:
+        print("Scan: ausgeschlossen direkt unter indir:", ", ".join(sorted(SKIP_DIRS_TOP)) or "-")
+        print("Scan: ausgeschlossen auf jeder Ebene:    ", ", ".join(sorted(SKIP_DIRS_ANY)) or "-")
 
 def prune_dirs(root, dirs, indir):
     """Entfernt In-place (nur das beeinflusst os.walk) auszuschliessende Ordner aus dirs.
@@ -32,6 +55,18 @@ def prune_dirs(root, dirs, indir):
                if d.lower() not in SKIP_DIRS_ANY
                and not (at_top and d.lower() in SKIP_DIRS_TOP)
                and not os.path.isjunction(os.path.join(root, d))]
+
+def walk_files(indir):
+    """os.walk mit den konfigurierten Ausschluessen (SKIP_DIRS_TOP / SKIP_DIRS_ANY, Junctions).
+    Einzige Stelle, an der rekursiv gescannt wird: dateimeister() und count_files() nutzen sie beide,
+    damit Zaehlung (Fortschrittsbalken) und Scan immer dieselben Ordner betreffen."""
+    for root, dirs, files in os.walk(indir, topdown=True):
+        prune_dirs(root, dirs, indir)
+        yield root, dirs, files
+
+def count_files(indir):
+    """Anzahl der Dateien, die ein rekursiver Scan von indir verarbeiten wuerde (z.B. fuer files_total)."""
+    return sum(len(files) for _root, _dirs, files in walk_files(indir))
 
 # sort functions
 def compare_name(a, b):
@@ -52,8 +87,37 @@ def compare_mts(a, b):
     else:
         return 1
 
+def _sort_results(sort_method, dict_result, dict_result_all, dict_result_tooold):
+    """Nur intern: sortiert die Ergebnis-Dicts fuer den Parameter sort_method von dateimeister(), den es
+    fuer bestehende Aufrufer weiter gibt. Wer spaeter neu sortieren will, macht das selbst (der Generator
+    scannt nur und liefert die Dicts).
+    1 Name aufsteigend, 2 Name absteigend, 3 Aenderungsdatum aufsteigend, 4 Aenderungsdatum absteigend,
+    sonst (z.B. 0) unveraendert, also in Scan-Reihenfolge.
+    Der Zeitstempel jeder Datei wird nur einmal gelesen. Ist er nicht lesbar (Datei verschwunden, Zugriff
+    verweigert), gilt 0.0, die Datei sortiert dann nach vorn, statt die ganze Sortierung abzubrechen."""
+    mtime_cache = {}
+    def mtime(path):
+        if path not in mtime_cache:
+            try:
+                mtime_cache[path] = os.stat(path).st_mtime
+            except OSError:
+                mtime_cache[path] = 0.0
+        return mtime_cache[path]
+
+    if sort_method in (1, 2):
+        key = lambda x: x[0]
+    elif sort_method in (3, 4):
+        key = lambda x: mtime(x[0])
+    else: # no sort
+        return dict_result, dict_result_all, dict_result_tooold
+    reverse = sort_method in (2, 4)
+    return (dict(sorted(dict_result.items(),       key = key, reverse = reverse)),
+            dict(sorted(dict_result_all.items(),   key = key, reverse = reverse)),
+            dict(sorted(dict_result_tooold.items(), key = key, reverse = reverse)))
+
 # we have 3 procesing types: 1) list of full filenames (path/file), 2) directory not recursive, 3) directory recursive
-def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, target_prefix, select_list, sort_method, busy_dialog, files_total, debug):
+def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, target_prefix, select_list, sort_method, busy_dialog, files_total, 
+    top_text = None, any_text = None, debug = 'n'):
     global dict_result, dict_result_all, dict_result_tooold, dict_relpath
     # List all files and directories in the specified path, returns list
     #print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
@@ -63,6 +127,8 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
     dict_result_tooold = {} # we want to keep the files which are not copied because a newer target exist
     dict_relpath = {}
     list_suffixes = endung.split(',')
+    configure_skip_dirs(top_text, any_text, verbose = True)
+    
     ii = 0
     while ii < len(list_suffixes):
         suffix = list_suffixes[ii].strip()
@@ -129,8 +195,7 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
         # für rekursive Aufrufe scheint os.walk besser geeignet, schneller und nimmt einem die Arbeit ab, selbst zu navigieren
         print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
         fctr = 0
-        for root, dirs, files in os.walk(indir, topdown=True):
-            prune_dirs(root, dirs, indir)
+        for root, dirs, files in walk_files(indir):
             print("Dateimeister_generator DIRS {:s}".format(str(dirs))) if debug else True
             for filename in files:
                 filename = re.sub(r"\\", "/", filename) # replace single backslash by slash
@@ -149,29 +214,7 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
                 if docopy == "o": # too old
                     dict_result_tooold[sourcefile] = targetfile
     # now sort results according to sort param
-    dict_1 = {}
-    dict_2 = {}
-    dict_3 = {}
-    if sort_method == 1:
-        dict_1 = dict(sorted(dict_result.items(), key = lambda x:x[0], reverse = False))
-        dict_2 = dict(sorted(dict_result_all.items(), key = lambda x:x[0], reverse = False))
-        dict_3 = dict(sorted(dict_result_tooold.items(), key = lambda x:x[0], reverse = False))
-    elif sort_method == 2:
-        dict_1 = dict(sorted(dict_result.items(), key = lambda x:x[0], reverse = True))
-        dict_2 = dict(sorted(dict_result_all.items(), key = lambda x:x[0], reverse = True))
-        dict_3 = dict(sorted(dict_result_tooold.items(), key = lambda x:x[0], reverse = True))
-    elif sort_method == 3:
-        dict_1 = dict(sorted(dict_result.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = False))
-        dict_2 = dict(sorted(dict_result_all.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = False))
-        dict_3 = dict(sorted(dict_result_tooold.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = False))
-    elif sort_method == 4:
-        dict_1 = dict(sorted(dict_result.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = True))
-        dict_2 = dict(sorted(dict_result_all.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = True))
-        dict_3 = dict(sorted(dict_result_tooold.items(), key = lambda x:os.stat(x[0]).st_mtime, reverse = True))
-    else: #no sort
-        dict_1 = dict_result
-        dict_2 = dict_result_all
-        dict_3 = dict_result_tooold
+    dict_1, dict_2, dict_3 = _sort_results(sort_method, dict_result, dict_result_all, dict_result_tooold)
     if debug:
         for i in dict_1:
             print("E: {:32s} - {:32s} - {:s}".format(i, dict_1[i], str(datetime.fromtimestamp(os.stat(i).st_mtime))))

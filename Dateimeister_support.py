@@ -1953,8 +1953,35 @@ class Dateimeister_support:
             if sort_method != self.dict_sort_method[Globals.imagetype]: # do something only if sort method is new
                 self.dict_sort_method[Globals.imagetype] = sort_method
                 self.leftmost_thumbnail = None
-                self.generate()
+                self.resort(Globals.imagetype, int(sort_method)) # nur Reihenfolge aendern, kein Neuscan von indir
                 self.display_images(Globals.imagetype, close_childs = False)
+
+    def resort(self, imagetype, sort_method):
+        """Sortiert die Ergebnis-Dicts dieses Typs (Quelle -> Ziel) nach sort_method. Der Generator liefert die Dicts
+        nur (in Scan-Reihenfolge); die Reihenfolge bestimmt allein diese Methode, sowohl direkt nach generate()
+        als auch beim Wechsel der Sortierung per Radiobutton. Dafuer ist kein neuer Scan noetig: Quellen, Ziele
+        (inkl. Umbenennung bei Dubletten), Dublettenerkennung und relpath-Liste sind von der Reihenfolge unabhaengig.
+        1 Name auf-, 2 Name absteigend, 3 Aenderungsdatum auf-, 4 absteigend, sonst unveraendert.
+        Ein nicht lesbarer Zeitstempel (Datei verschwunden, Zugriff verweigert) zaehlt als 0.0 und bricht nicht ab.
+        Die cmd-Dateien schreibt display_images am Ende selbst."""
+        mtime_cache = {}
+        def mtime(path):
+            if path not in mtime_cache:
+                try:
+                    mtime_cache[path] = os.stat(path).st_mtime
+                except OSError:
+                    mtime_cache[path] = 0.0
+            return mtime_cache[path]
+
+        if sort_method in (1, 2):
+            key = lambda x: x[0]
+        elif sort_method in (3, 4):
+            key = lambda x: mtime(x[0])
+        else:
+            return # keine Sortierung
+        reverse = sort_method in (2, 4)
+        for dicts in (self.dict_source_target, self.dict_source_target_jpeg, self.dict_source_target_tooold):
+            dicts[imagetype] = dict(sorted(dicts[imagetype].items(), key = key, reverse = reverse))
 
     def Button_be_pressed(self, *args):
         # reset all process-states
@@ -2413,7 +2440,7 @@ class Dateimeister_support:
             recursive = "n"
 
         if recursive == "j":
-            files_total = tools.count_files_recursive(indir, prune = lambda root, dirs: DG.prune_dirs(root, dirs, indir)) # gleiche Ordner wie im Scan, sonst stimmt der Fortschrittsbalken nicht
+            files_total = DG.count_files(indir) # gleiche Ordner wie der Scan, die Logik steckt im Generator
         else:
             files_total = tools.count_files_top(indir)
         if self.cb_prefix_var.get():
@@ -2496,7 +2523,12 @@ class Dateimeister_support:
             # show the busy dialog
             busy = tools.BusyDialog(self.root, text= dateityp + " files are analyzed…")        
             self.dict_source_target[dateityp], self.dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp], self.dict_relpath[dateityp] = \
-              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, int(sort_method), busy, files_total, self.debug)
+              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, 
+              0, busy, files_total, 
+              getattr(Globals, "skip_dirs_top", None), 
+              getattr(Globals, "skip_dirs_any", None),
+              self.debug) # 0: Generator sortiert nicht, das macht resort()
+            self.resort(dateityp, int(sort_method))
             self.dict_relpath[dateityp] = dict(reversed(list(self.dict_relpath[dateityp].items())))
             for ii in self.dict_relpath[dateityp]:
                 print(" > ", ii, " files: ", self.dict_relpath[dateityp][ii]) if self.debug else True
@@ -2743,6 +2775,7 @@ class Dateimeister_support:
                 new_image_required = True
 
             player = None # only for video
+            video_broken = False # True, wenn das Video nicht geoeffnet werden konnte (blaues Rechteck)
             if (process_type == "JPEG"):
                 showfile = file # Image-file to show in Canvas
             elif process_type == "USE_JPEG":
@@ -2774,6 +2807,7 @@ class Dateimeister_support:
                 except Exception as e:
                     # defektes / unvollstaendiges Video (z.B. "moov atom not found"): blaues Rechteck statt Abbruch
                     print(f"Video nicht lesbar: {file} ({type(e).__name__}: {e})")
+                    video_broken = True
                     if player is not None:
                         try:
                             player.destroy() # gibt MediaPlayer und Canvas-Tag frei
@@ -2898,6 +2932,8 @@ class Dateimeister_support:
                         myimage.setImage(pimg)
                         myimage.setPlayer(player)
 
+                if showfile != "none" and tools.is_bad_image(showfile): # Bild war nicht lesbar, Platzhalter wird angezeigt
+                    myimage.set_broken(True)
                 if process_type == 'VIDEO':
                     myimage.set_imagetype("VIDEO")
                     if player is not None:
@@ -2970,6 +3006,8 @@ class Dateimeister_support:
                     text=self.t_text1,
                 )
 
+                if video_broken:
+                    myimage.set_broken(True) # Detailansicht und Druck sperren
                 if process_type == 'VIDEO':
                     myimage.set_imagetype("VIDEO")
                 elif original_process_type == _RAW_PROCESS_TYPE:
@@ -3563,6 +3601,9 @@ class Dateimeister_support:
         self.canvas_gallery.xview('moveto', s2)
 
     def display_image(self, thumbnail):
+        if thumbnail.is_broken(): # defektes Bild/Video: Doppelklick, Return, Textzeile und Druck laufen alle hier durch
+            print("Datei nicht lesbar, keine Detailansicht: " + thumbnail.getFile())
+            return
         file = thumbnail.getShowfile()
         if file == "none":
             # No preview available (e.g. RAW without an accompanying JPEG,
@@ -3618,11 +3659,13 @@ class Dateimeister_support:
         canvas_y = self.canvas_gallery.canvasy(event.y)
         thumbnail, index = self.get_thumbnail_by_position(canvas_x, canvas_y)
         if thumbnail is not None:
-            if thumbnail.getImage() == 0:
+            if thumbnail.getImage() == 0 or thumbnail.is_broken():
                 print(" No Image availabl for " + thumbnail.getFile()) if self.debug else True
                 self.context_menu.entryconfig(1, state="disabled")
             else:
                 self.context_menu.entryconfig(1, state="normal")
+            # Print: bei defekten Dateien sinnlos (bei Videos wuerde das Detailfenster oeffnen)
+            self.context_menu.entryconfig(3, state="disabled" if thumbnail.is_broken() else "normal")
             if thumbnail.getState() == INCLUDE:
                 self.context_menu.entryconfig(0, label = "Exclude " + thumbnail.getFile())
             else:
@@ -3715,7 +3758,7 @@ class Dateimeister_support:
         """
         print("Context menu print") if self.debug else True
         t = self.get_thumbnail(self.event)
-        if t is None:
+        if t is None or t.is_broken():
             return
 
         imagetype = t.get_imagetype()

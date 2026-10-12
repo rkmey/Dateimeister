@@ -581,6 +581,7 @@ class MyThumbnail:
         self.parent = parent
         self.duplicate = duplicate
         self.tooold = tooold
+        self.broken = False  # Datei nicht lesbar (defektes Bild/Video): keine Detailansicht, kein Druck
         # imagetype is the display category (STILL, VIDEO, RAW). It groups
         # process_image values into the three variants the UI needs to know.
         # process_type is the raw configuration value from the xml
@@ -781,6 +782,12 @@ class MyThumbnail:
     def setImage(self, image):
         #print("*** retrieve Image ")
         self.image = image    
+
+    def is_broken(self):
+        return self.broken
+
+    def set_broken(self, b):
+        self.broken = bool(b)
 
     def get_imagetype(self):
         return self.imagetype    
@@ -1096,6 +1103,10 @@ def calc_fontsize(physical_width: int, physical_height: int, new_width: int, new
 returns the image, width and height. if img is supplied dont open file else open file
 """
 _REPORTED_BAD_IMAGES = set()  # damit jede defekte Datei nur einmal gemeldet wird
+
+def is_bad_image(path):
+    """True, wenn new_image() diese Datei nicht lesen konnte (es wurde ein Platzhalter angezeigt)."""
+    return path in _REPORTED_BAD_IMAGES
 
 def new_image(file = None, height = 100, pic = None):
     img = None

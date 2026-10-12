@@ -19,7 +19,17 @@ import time
 try:
     import dateimeister_generator as DG
     prune = DG.prune_dirs  # prune(root, dirs, indir)
-    print("Regeln aus dateimeister_generator.py (SKIP_DIRS_TOP / SKIP_DIRS_ANY) uebernommen.")
+    # gleiche Listen wie die Anwendung: Dateimeister.ini, Section [scan]; ohne ini gelten die Standardlisten
+    ini_top = ini_any = None
+    try:
+        import configparser
+        cp = configparser.ConfigParser(interpolation=None)  # '$' und '%' in Ordnernamen sind unkritisch
+        cp.read("Dateimeister.ini", encoding="utf-8")
+        ini_top = cp.get("scan", "skip_dirs_top", fallback=None)
+        ini_any = cp.get("scan", "skip_dirs_any", fallback=None)
+    except Exception as e:
+        print(f"Hinweis: Dateimeister.ini nicht lesbar ({type(e).__name__}: {e}), nutze Standardlisten.")
+    DG.configure_skip_dirs(ini_top, ini_any)
 except Exception as e:
     print(f"Hinweis: dateimeister_generator nicht importierbar ({type(e).__name__}: {e}), nutze lokale Kopie der Regeln.")
     SKIP_DIRS_TOP = {

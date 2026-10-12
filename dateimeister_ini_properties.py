@@ -38,6 +38,11 @@ dict_ini_spec = {
     ("misc", "max_configfiles_diatisch"):  {"var": "max_configfiles_diatisch",  "type": "int", "action": "error"},
     ("misc", "max_indirs_diatisch"):       {"var": "max_indirs_diatisch",       "type": "int", "action": "error"},
     ("misc", "max_outdirs_diatisch"):      {"var": "max_outdirs_diatisch",      "type": "int", "action": "error"},
-    ("misc", "num_video_thumbnails"):      {"var": "num_video_thumbnails",      "type": "int", "target": "Globals", "action": "error"}
+    ("misc", "num_video_thumbnails"):      {"var": "num_video_thumbnails",      "type": "int", "target": "Globals", "action": "error"},
+
+    # Ausgeschlossene Ordner beim Scan, mehrzeilig/kommagetrennt (siehe Kommentare in Dateimeister.ini).
+    # Fehlt ein Key, gelten die Standardlisten aus dateimeister_generator.py, daher nur "warn".
+    ("scan", "skip_dirs_top"):             {"var": "skip_dirs_top",             "type": "str", "target": "Globals", "action": "warn"},
+    ("scan", "skip_dirs_any"):             {"var": "skip_dirs_any",             "type": "str", "target": "Globals", "action": "warn"}
 }
 
