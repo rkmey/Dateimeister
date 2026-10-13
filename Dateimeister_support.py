@@ -101,6 +101,7 @@ _RAW_PROCESS_TYPE = "RAW"
    
 #print("Tk-Version:", tk.TkVersion)
 
+
 class MyCameraTreeview:
 
     # The class "constructor" - It's actually an initializer
@@ -134,17 +135,16 @@ class MyCameraTreeview:
 
         # ------------------------------------------------------------------
         # Treeview layout
-        # #0 is the tree column (camera / type / suffix names). Four named
+        # #0 is the tree column (camera / type / suffix names). Three named
         # data columns:
         #   col_modified    : last modification date
         #   col_subdir      : subdir, only on type rows
-        #   col_rendertype  : rendertype, only on type rows
         #   col_process     : process_image, only on suffix rows
         # ------------------------------------------------------------------
         self.tv = tools.ScrolledTreeView(self.Frame_treeview)
         self.tv.place(relx=0.015, rely=0.026, relheight=0.865, relwidth=0.975)
         self.tv.configure(
-            columns=("col_modified", "col_subdir", "col_rendertype", "col_process"),
+            columns=("col_modified", "col_subdir", "col_process"),
             show="tree headings",
             selectmode=tk.BROWSE,
         )
@@ -152,13 +152,11 @@ class MyCameraTreeview:
         self.tv.heading("#0",              text="Camera / Type / Suffix", anchor="w")
         self.tv.heading("col_modified",    text="Last modification",       anchor="w")
         self.tv.heading("col_subdir",      text="Type Subdir",             anchor="w")
-        self.tv.heading("col_rendertype",  text="Type Rendertype",         anchor="w")
         self.tv.heading("col_process",     text="Suffix Process",          anchor="w")
 
         self.tv.column("#0",             width=200, minwidth=100, stretch=True,  anchor="w")
         self.tv.column("col_modified",   width=140, minwidth=100, stretch=False, anchor="w")
         self.tv.column("col_subdir",     width=110, minwidth=80,  stretch=False, anchor="w")
-        self.tv.column("col_rendertype", width=130, minwidth=100,  stretch=False, anchor="w")
         self.tv.column("col_process",    width=110, minwidth=80,  stretch=True,  anchor="w")
 
         # bind select events
@@ -182,8 +180,8 @@ class MyCameraTreeview:
         offset_entry = .01
 
         # Widgets managed via create_widgets_from_dict.
-        # process_image and rendertype are ttk.Comboboxes with a fixed set
-        # of values, so they get a "VALUES" entry in the dict.
+        # process_image is a ttk.Combobox with a fixed set of values,
+        # so it gets a "VALUES" entry in the dict.
         dict_widgets = {}
         
         l_proctypes = [x.strip().upper() for x in proctypes.split(",")]
@@ -207,10 +205,6 @@ class MyCameraTreeview:
           "WIDGET":ttk.Combobox,"VAR":"entry_process_image","OFFSET":offset_entry,"RELH":relh_entry,"RELW":relw_entry,"ANCHOR":"END",
           "CALLBACK":None,"TEXT":None,"STATE":"disabled","TT":"Select process_image","FONT":self.text_font,
           "TITLE":"'Process Image', .3, END", "VALUES":l_proctypes}
-        dict_widgets["5b"] = {
-          "WIDGET":ttk.Combobox,"VAR":"entry_rendertype","OFFSET":offset_entry,"RELH":relh_entry,"RELW":relw_entry,"ANCHOR":"END",
-          "CALLBACK":None,"TEXT":None,"STATE":"disabled","TT":"Select rendertype (STILL or VIDEO)","FONT":self.text_font,
-          "TITLE":"'Rendertype', .3, END", "VALUES":("STILL", "VIDEO")}
         dict_widgets["6"] = {
           "WIDGET":tk.Button,"VAR":"button_apply","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER",
           "CALLBACK":self.apply_new,"TEXT":"Apply","STATE":tk.ACTIVE,"TT":"apply changes","FONT":self.text_font}
@@ -265,17 +259,14 @@ class MyCameraTreeview:
         self.ctype = ""
         self.suffix = ""
         self.subdir = ""
-        self.rendertype = ""
         self.process_image = ""
         self.dict_camera_iid = {}
         self.dict_subdirs = {}          # {camera: {type: subdir}}
-        self.dict_rendertypes = {}      # {camera: {type: rendertype}}
         self.dict_process_image = {}    # {camera: {type: {suffix: process}}}
         self.locked = False
 
         # initial disabled state
         self.entry_subdir.config(state=DISABLED)
-        self.entry_rendertype.config(state=DISABLED)
         self.entry_process_image.config(state=DISABLED)
 
         # Undo / Redo
@@ -323,9 +314,8 @@ class MyCameraTreeview:
         """
         Rebuild the whole camera tree from the given xml file.
 
-        Reads three per-camera dictionaries from the xml:
+        Reads two per-camera dictionaries from the xml:
             dict_subdirs       : {camera: {type: subdir}}
-            dict_rendertypes   : {camera: {type: rendertype}}
             dict_process_image : {camera: {type: {suffix: process}}}
 
         For each missing value in the tree a "forced dialog" is scheduled:
@@ -335,7 +325,6 @@ class MyCameraTreeview:
         'return' inside each loop below).
         """
         self.dict_subdirs = DX.get_subdirs_per_camera(xml)
-        self.dict_rendertypes = DX.get_rendertypes_per_camera(xml)
         self.dict_process_image = DX.get_process_image_per_camera(xml)
 
         self.treeview_clear()
@@ -344,10 +333,9 @@ class MyCameraTreeview:
         dict_cameras = DX.get_cameras_types_suffixes(xml)
 
         # buckets collecting missing entries, keyed by camera (and type/suffix)
-        dict_type_without_suffix     = {}
-        dict_type_without_rendertype = {}
-        dict_type_without_subdir     = {}
-        dict_suffix_without_process  = {}
+        dict_type_without_suffix    = {}
+        dict_type_without_subdir    = {}
+        dict_suffix_without_process = {}
 
         last_camera = None
         ctype_num = 0
@@ -357,10 +345,9 @@ class MyCameraTreeview:
             ctype_num = 0
             usedate = dict_cameras_usedate[camera]
             cid = self.tv.insert("", tk.END, text=camera,
-                                 values=(usedate, "", "", ""), tag=("camera",))
+                                 values=(usedate, "", ""), tag=("camera",))
             self.dict_camera_iid[camera] = cid
             dict_type_without_suffix[camera] = {}
-            dict_type_without_rendertype[camera] = {}
             dict_type_without_subdir[camera] = {}
             dict_suffix_without_process[camera] = {}
 
@@ -368,13 +355,10 @@ class MyCameraTreeview:
                 ctype_num += 1
                 ctype_key = ctype.upper()
                 subdir = self.dict_subdirs.get(cam_key, {}).get(ctype_key, "!")
-                rendertype = self.dict_rendertypes.get(cam_key, {}).get(ctype_key, "!")
 
                 tid = self.tv.insert(cid, tk.END, text=ctype,
-                                     values=("", subdir, rendertype, ""),
+                                     values=("", subdir, ""),
                                      tag=("type",))
-                if rendertype == "!":
-                    dict_type_without_rendertype[camera][ctype] = tid
                 if subdir == "!":
                     dict_type_without_subdir[camera][ctype] = tid
 
@@ -387,9 +371,8 @@ class MyCameraTreeview:
                                      .get(ctype_key, {})
                                      .get(csuffix_key, "!"))
                     sid = self.tv.insert(tid, tk.END, text=csuffix,
-                                         values=("", "", "", process_image),
+                                         values=("", "", process_image),
                                          tag=("suffix",))
-
 
                     if process_image == "!":
                         dict_suffix_without_process[camera].setdefault(ctype, {})[sid] = csuffix
@@ -411,13 +394,6 @@ class MyCameraTreeview:
                                     "no suffix defined. At least 1 is needed",
                                     self.type_new_suffix)
                 return
-        for camera in dict_type_without_rendertype:
-            for ctype in dict_type_without_rendertype[camera]:
-                self.prompt_missing(camera, ctype,
-                                    dict_type_without_rendertype[camera][ctype],
-                                    "no rendertype defined. Please select STILL or VIDEO",
-                                    self.type_rendertype)
-                return
         for camera in dict_type_without_subdir:
             for ctype in dict_type_without_subdir[camera]:
                 self.prompt_missing(camera, ctype,
@@ -435,9 +411,9 @@ class MyCameraTreeview:
 
     def prompt_missing(self, camera, ctype, tid, msg, action):
         """
-        Focus a type node that lacks a required property (suffix, rendertype
-        or subdir) and invoke the given action (e.g. self.type_subdir) so
-        the user can fill in the missing value.
+        Focus a type node that lacks a required property (suffix or subdir)
+        and invoke the given action (e.g. self.type_subdir) so the user
+        can fill in the missing value.
         """
         self.open_camera(camera)
         messagebox.showinfo("MyCameraTreeview",
@@ -519,7 +495,6 @@ class MyCameraTreeview:
                 self.context_menu.insert_command(1, label=self.text + " change...", command=self.type_change)
                 self.context_menu.insert_command(2, label=self.text + " delete", command=self.type_delete)
                 self.context_menu.insert_command(3, label=self.text + " subdir...", command=self.type_subdir)
-                self.context_menu.insert_command(4, label=self.text + " rendertype...", command=self.type_rendertype)
             elif self.tag.upper() == "SUFFIX":
                 self.context_menu.delete(0, 10)
                 self.context_menu.insert_command(0, label=self.text + " change...", command=self.suffix_change)
@@ -557,8 +532,8 @@ class MyCameraTreeview:
         """Toolbar button 'New camera': ask for a new camera + type + suffix."""
         print(self.text + " camera new selected by button")
         self.newitem = "CAMERA_NEW"
-        self.enable_processing(True, True, True, False, False, True, False,
-                               "", "", "", "", "", "JPEG")
+        self.enable_processing(True, True, True, False, True, False,
+                               "", "", "", "", "JPEG")
 
     def camera_change(self):
         """Context menu (on camera node): rename the selected camera."""
@@ -566,8 +541,8 @@ class MyCameraTreeview:
         camera, iid = self.get_camera(self.item)
         self.newitem = "CAMERA_RENAME"
         self.camera = camera
-        self.enable_processing(True, False, False, False, False, True, False,
-                               self.camera, "", "", "", "", "")
+        self.enable_processing(True, False, False, False, True, False,
+                               self.camera, "", "", "", "")
 
     def camera_delete(self):
         """Context menu (on camera node): delete the camera and its children."""
@@ -575,8 +550,8 @@ class MyCameraTreeview:
         camera, iid = self.get_camera(self.item)
         self.newitem = "CAMERA_DELETE"
         self.camera = camera
-        self.enable_processing(False, False, False, False, False, False, False,
-                               "", "", "", "", "", "")
+        self.enable_processing(False, False, False, False, False, False,
+                               "", "", "", "", "")
         self.apply_new()
 
     def camera_new_type(self):
@@ -585,8 +560,8 @@ class MyCameraTreeview:
         camera, iid = self.get_camera(self.item)
         self.newitem = "TYPE_NEW"
         self.camera = camera
-        self.enable_processing(False, True, True, False, False, True, False,
-                               self.camera, "", "", "", "", "JPEG")
+        self.enable_processing(False, True, True, False, True, False,
+                               self.camera, "", "", "", "JPEG")
 
     def type_change(self):
         """Context menu (on type node): rename the selected type."""
@@ -597,8 +572,8 @@ class MyCameraTreeview:
         self.newitem = "TYPE_RENAME"
         self.camera = camera
         self.ctype = ctype
-        self.enable_processing(False, True, False, False, False, True, False,
-                               self.camera, self.ctype, "", "", "", "")
+        self.enable_processing(False, True, False, False, True, False,
+                               self.camera, self.ctype, "", "", "")
 
     def type_delete(self):
         """Context menu (on type node): delete the selected type."""
@@ -607,8 +582,8 @@ class MyCameraTreeview:
         self.newitem = "TYPE_DELETE"
         self.camera = camera
         self.ctype = ctype
-        self.enable_processing(False, False, False, False, False, False, False,
-                               "", "", "", "", "", "")
+        self.enable_processing(False, False, False, False, False, False,
+                               "", "", "", "", "")
         self.apply_new()
 
     def type_new_suffix(self):
@@ -621,8 +596,8 @@ class MyCameraTreeview:
         self.camera = camera
         self.ctype = ctype
         self.suffix = self.text
-        self.enable_processing(False, False, True, False, False, True, False,
-                               self.camera, self.ctype, "", "", "", "")
+        self.enable_processing(False, False, True, False, True, False,
+                               self.camera, self.ctype, "", "", "")
 
     def type_subdir(self):
         """Context menu (on type node): set the subdir for this camera/type."""
@@ -633,20 +608,8 @@ class MyCameraTreeview:
         self.newitem = "TYPE_SUBDIR"
         self.camera = camera
         self.ctype = ctype
-        self.enable_processing(False, False, False, True, False, True, False,
-                               self.camera, self.ctype, "", "", "", "")
-
-    def type_rendertype(self):
-        """Context menu (on type node): set the rendertype for this camera/type."""
-        print(self.text + " type rendertype selected from context menu")
-        camera, ctype, iid = self.get_camera_type(self.item)
-        self.entry_camera.delete(0, 'end')
-        self.entry_camera.focus_set()
-        self.newitem = "TYPE_RENDERTYPE"
-        self.camera = camera
-        self.ctype = ctype
-        self.enable_processing(False, False, False, False, True, True, False,
-                               self.camera, self.ctype, "", "", "STILL", "")
+        self.enable_processing(False, False, False, True, True, False,
+                               self.camera, self.ctype, "", "", "")
 
     def suffix_change(self):
         """Context menu (on suffix node): rename the selected suffix."""
@@ -658,8 +621,8 @@ class MyCameraTreeview:
         self.camera = camera
         self.ctype = ctype
         self.suffix = self.text
-        self.enable_processing(False, False, True, False, False, True, False,
-                               self.camera, self.ctype, "", "", "", "")
+        self.enable_processing(False, False, True, False, True, False,
+                               self.camera, self.ctype, "", "", "")
 
     def suffix_delete(self):
         """Context menu (on suffix node): delete the selected suffix."""
@@ -669,8 +632,8 @@ class MyCameraTreeview:
         self.camera = camera
         self.ctype = ctype
         self.suffix = self.text
-        self.enable_processing(False, False, False, False, False, False, False,
-                               "", "", "", "", "", "")
+        self.enable_processing(False, False, False, False, False, False,
+                               "", "", "", "", "")
         self.apply_new()
 
     def suffix_process_image(self):
@@ -681,16 +644,16 @@ class MyCameraTreeview:
         self.camera = camera
         self.ctype = ctype
         self.suffix = suffix
-        self.enable_processing(False, False, False, False, False, True, True,
-                               self.camera, self.ctype, self.suffix, "", "", "JPEG")
+        self.enable_processing(False, False, False, False, True, True,
+                               self.camera, self.ctype, self.suffix, "", "JPEG")
 
     # ----------------------------------------------------------------------
     # Central enable / disable of the property widgets
     # ----------------------------------------------------------------------
-    def enable_processing(self, b_camera, b_type, b_suffix, b_subdir, b_rendertype,
+    def enable_processing(self, b_camera, b_type, b_suffix, b_subdir,
                           b_buttons, b_process_image,
                           text_camera, text_ctype, text_suffix,
-                          text_subdir, text_rendertype, text_process_image):
+                          text_subdir, text_process_image):
         """
         Prefill the property widgets from the given text arguments, then
         enable only those widgets whose b_* flag is True. All other widgets
@@ -701,18 +664,16 @@ class MyCameraTreeview:
             b_type          enable entry_type
             b_suffix        enable entry_suffix
             b_subdir        enable entry_subdir
-            b_rendertype    enable entry_rendertype (readonly Combobox)
             b_buttons       enable Apply / Cancel and bind Return
             b_process_image enable entry_process_image (readonly Combobox)
             text_camera / text_ctype / text_suffix
-            text_subdir / text_rendertype / text_process_image
+            text_subdir / text_process_image
         """
         # enable everything briefly so .set()/.insert() work
         self.entry_camera.config(state=NORMAL)
         self.entry_type.config(state=NORMAL)
         self.entry_suffix.config(state=NORMAL)
         self.entry_subdir.config(state=NORMAL)
-        self.entry_rendertype.config(state=NORMAL)
         self.entry_process_image.config(state=NORMAL)
 
         self.new_text(self.entry_camera, text_camera)
@@ -728,12 +689,6 @@ class MyCameraTreeview:
             self.new_text(self.entry_subdir, subdir)
         else:
             self.new_text(self.entry_subdir, text_subdir or "")
-
-        rendertype = self.dict_rendertypes.get(cam_key, {}).get(type_key, "")
-        if rendertype and rendertype != "!":
-            self.new_text(self.entry_rendertype, rendertype)
-        else:
-            self.new_text(self.entry_rendertype, text_rendertype or "STILL")
 
         process_image = ""
         if suf_key:
@@ -754,7 +709,6 @@ class MyCameraTreeview:
         self.entry_type.config(state=DISABLED)
         self.entry_suffix.config(state=DISABLED)
         self.entry_subdir.config(state=DISABLED)
-        self.entry_rendertype.config(state=DISABLED)
         self.entry_process_image.config(state=DISABLED)
 
         focus = False
@@ -776,11 +730,6 @@ class MyCameraTreeview:
             self.entry_subdir.config(state=NORMAL, background='yellow')
             if not focus:
                 self.entry_subdir.focus_set()
-                focus = True
-        if b_rendertype:
-            self.entry_rendertype.config(state="readonly", background='yellow')
-            if not focus:
-                self.entry_rendertype.focus_set()
                 focus = True
         if b_process_image:
             self.entry_process_image.config(state="readonly", background='yellow')
@@ -849,7 +798,7 @@ class MyCameraTreeview:
             CAMERA_NEW, CAMERA_RENAME, CAMERA_DELETE
             TYPE_NEW, TYPE_RENAME, TYPE_DELETE
             SUFFIX_NEW, SUFFIX_RENAME, SUFFIX_DELETE
-            TYPE_SUBDIR, TYPE_RENDERTYPE
+            TYPE_SUBDIR
             PROCESS_IMAGE
         """
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
@@ -894,9 +843,6 @@ class MyCameraTreeview:
                 else:
                     rc = DX.new_camera_type_suffix(Globals.config_files_xml,
                                                    self.camera, ctype, suffix, ts)
-                    rendertype = self.entry_rendertype.get().upper()
-                    rc_rt = DX.new_rendertype_camera(Globals.config_files_xml,
-                                                     self.camera, ctype, rendertype)
             else:
                 messagebox.showinfo("MyCameraTreeview",
                                     "Camera " + self.camera +
@@ -925,17 +871,6 @@ class MyCameraTreeview:
                 print("subdir updated for camera " + self.camera + " type " + self.ctype)
             else:
                 print("subdir: camera/type not found: " + self.camera + "/" + self.ctype)
-
-        elif self.newitem == "TYPE_RENDERTYPE":
-            rendertype = self.entry_rendertype.get().upper()
-            rc = DX.new_rendertype_camera(Globals.config_files_xml,
-                                          self.camera, self.ctype, rendertype)
-            if rc == 0:
-                print("rendertype created for camera " + self.camera + " type " + self.ctype)
-            elif rc == 1:
-                print("rendertype updated for camera " + self.camera + " type " + self.ctype)
-            else:
-                print("rendertype: camera/type not found: " + self.camera + "/" + self.ctype)
 
         elif self.newitem == "PROCESS_IMAGE":
             process_image = self.entry_process_image.get().upper()
@@ -979,9 +914,6 @@ class MyCameraTreeview:
                     else:
                         rc = DX.new_camera_type_suffix(Globals.config_files_xml,
                                                        camera, ctype, suffix, ts)
-                        rendertype = self.entry_rendertype.get().upper()
-                        rc_rt = DX.new_rendertype_camera(Globals.config_files_xml,
-                                                         camera, ctype, rendertype)
             else:
                 messagebox.showinfo("MyCameraTreeview",
                                     "Camera " + self.camera +
@@ -1002,8 +934,8 @@ class MyCameraTreeview:
 
         # reset the dialog and unlock BEFORE refreshing the treeview, so that
         # treeview_from_xml can trigger the next forced dialog cleanly.
-        self.enable_processing(False, False, False, False, False, False, False,
-                               "", "", "", "", "", "")
+        self.enable_processing(False, False, False, False, False, False,
+                               "", "", "", "", "")
         self.lock_treeview(False)
         self.treeview_from_xml(Globals.config_files_xml)
         if self.camera is not None and self.camera != "":
@@ -1015,8 +947,8 @@ class MyCameraTreeview:
         """React to Cancel: restore the default (disabled) dialog state."""
         if self.camera is not None and self.camera != "":
             self.open_camera(self.camera)
-        self.enable_processing(False, False, False, False, False, False, False,
-                               "", "", "", "", "", "")
+        self.enable_processing(False, False, False, False, False, False,
+                               "", "", "", "", "")
         self.lock_treeview(False)
 
     # ----------------------------------------------------------------------
@@ -1044,8 +976,8 @@ class MyCameraTreeview:
                 camera = self.main.o_camera.get()
             except Exception:
                 camera = ""
-        self.main.dict_cameras, self.main.dict_subdirs, self.main.dict_process_image, \
-            self.main.dict_rendertypes = self.main.get_camera_xml(camera=camera)
+        self.main.dict_cameras, self.main.dict_subdirs, self.main.dict_process_image = \
+            self.main.get_camera_xml(camera=camera)
 
     # ----------------------------------------------------------------------
     # Undo / Redo functions
@@ -1178,7 +1110,6 @@ class Dateimeister_support:
         root.configure(menu = self.menubar)
 
         self.dict_process_image = {}
-        self.dict_rendertypes = {} # 20260927 new (VIDEO / STILL)
         self.win_duplicates = None
         self.dict_status_image = {}
         self.codepage = ""
@@ -1560,9 +1491,8 @@ class Dateimeister_support:
         tools.create_widgets_from_dict(dict_widgets, self.frame_checkboxes, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         # get all camera information and fill camera-listbox
-        self.dict_cameras, self.dict_subdirs, self.dict_process_image, self.dict_rendertypes = self.get_camera_xml()
+        self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
         #print(f"dict_process_image is: {self.dict_process_image}") if self.debug else True
-        #print(f"dict_rendertypes is: {self.dict_rendertypes}") if self.debug else True
 
         # Frame for the canvas and the horizontal scrollbar
         # y starts with this value
@@ -2387,8 +2317,7 @@ class Dateimeister_support:
         # rebuild the flat per-camera dicts for the newly selected camera.
         # get_camera_xml() must NOT touch o_camera when called with an
         # explicit camera; it only rebuilds the listbox.
-        self.dict_cameras, self.dict_subdirs, self.dict_process_image, \
-            self.dict_rendertypes = self.get_camera_xml(camera=thiscamera)
+        self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml(camera=thiscamera)
 
         self.button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
         self.button_generate.config(state = NORMAL)
@@ -4071,10 +4000,6 @@ class Dateimeister_support:
         for imagetype in dict_s:
             print("Subdir {:s}, {:s}".format(imagetype, dict_s[imagetype])) if self.debug else True
 
-        dict_rt = dict(DX.get_rendertypes_per_camera(Globals.config_files_xml).get(cam_key, {}))
-        for imagetype in dict_rt:
-            print("Rendertype {:s}, {:s}".format(imagetype, dict_rt[imagetype])) if self.debug else True
-
         dict_pi = {}
         pi_per_cam = DX.get_process_image_per_camera(Globals.config_files_xml).get(cam_key, {})
         for type_name, suffix_dict in pi_per_cam.items():
@@ -4099,7 +4024,7 @@ class Dateimeister_support:
             self.insert_text(self.o_camera, cameraname_high)
         self.button_generate.config(state=NORMAL)
 
-        return dict_t, dict_s, dict_pi, dict_rt
+        return dict_t, dict_s, dict_pi
 
 
     def stop_all_players(self):

@@ -77,6 +77,7 @@ class MyDuplicates:
         self.player = None
         self.caller = caller
         self.debug = debug
+        self.tt_file = None # file from tooltip, the easiest way to get fir for image which we want to exclude / includ
         
         self.thumbnails_duplicates = {}
         self.dict_thumbnails_duplicates = {}
@@ -200,12 +201,17 @@ class MyDuplicates:
 
     # the event handler for our file_state_changed event
     def on_file_state_changed(self, event):
-        #we need the thumbnail
-        t = Globals.dict_thumbnails[Globals.imagetype][event.filename]
-        print(f"Dateimeister_support received state changed event, file: {t.getFile()} event-file: {event.filename} state: {t.getState()} new state: {event.state}") if self.debug else True
-        t.setState(event.state)
-        # no historization here because this will be done bei Dateimeister_support
-        
+        """Reagiere auf FileStateChanged nur, wenn das betroffene File
+        gerade als Duplikat in diesem Fenster angezeigt wird."""
+        duplicates = self.dict_thumbnails_duplicates.get(Globals.imagetype, {})
+        if event.filename in duplicates:
+            t = duplicates[event.filename]
+            print(
+                f"MyDuplicates received state changed event, file: {t.getFile()} "
+                f"event-file: {event.filename} state: {t.getState()} new state: {event.state}"
+            ) if self.debug else True
+            t.setState(event.state)        
+ 
     def canvas_image_exclude(self): # calls canvas_exclude with self.event
         print("Context menu exlude")
         self.canvas_exclude(self.event)
@@ -582,6 +588,7 @@ class MyDuplicates:
                 self.stop_all_players()
                 # if file is video, play video
                 if thumbnail is not None:
+                    self.tt_file = thumbnail.getFile()
                     player = thumbnail.getPlayer()
                     if player is not None: # this is a video
                         player.pstart()

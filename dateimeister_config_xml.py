@@ -13,21 +13,19 @@ import re
 #              <suffix name="...">
 #                <process_image process="..."/>
 #              </suffix>
-#              <rendertype rendertype="..."/>
 #              <subdir subdir="..."/>
 #            </type>
 #          </camera>
-#      This is the "modern" model used by MyCameraTreeview. subdir, rendertype
-#      and process_image all belong to a specific camera's type (and for
+#      This is the "modern" model used by MyCameraTreeview. subdir and
+#      process_image belong to a specific camera's type (and for
 #      process_image: to a specific suffix of that type).
 #
 #   2) The legacy flat nodes:
 #          <process_image suffix_name="..." process="..."/>
 #          <subdir type_name="..." subdir="..."/>
-#          <rendertype type_name="..." rendertype="..."/>
 #      These are kept for backward compatibility with Dateimeister_support,
-#      which still reads them via get_subdirs(), get_rendertypes() and
-#      get_process_image(). They are not written by MyCameraTreeview.
+#      which still reads them via get_subdirs() and get_process_image().
+#      They are not written by MyCameraTreeview.
 #
 # Both parts live side by side in the same xml file.
 # =============================================================================
@@ -281,7 +279,6 @@ def delete_outdir(xmlfile, filename):
 #
 # These read/write the flat top-level nodes:
 #     <subdir type_name="..." subdir="..."/>
-#     <rendertype type_name="..." rendertype="..."/>
 #     <process_image suffix_name="..." process="..."/>
 # The type_name / suffix_name is treated as a global concept here: the same
 # value applies no matter which camera a type / suffix belongs to.
@@ -298,19 +295,6 @@ def get_subdirs(xmlfile):
     for i in result:
         dirs[i.attrib['type_name'].upper()] = i.attrib['subdir']
     return dirs
-
-
-def get_rendertypes(xmlfile):
-    """
-    Return {type_name: rendertype} by scanning the flat top-level <rendertype>
-    nodes. Kept for backward compatibility with Dateimeister_support.
-    """
-    ret = {}
-    mytree = ET.parse(xmlfile)
-    result = mytree.findall("rendertype")
-    for i in result:
-        ret[i.attrib['type_name'].upper()] = i.attrib['rendertype']
-    return ret
 
 
 def get_process_image(xmlfile):
@@ -345,30 +329,6 @@ def new_subdir(xmlfile, type_name, subdir):
     else:
         for i in result:
             i.set("subdir", subdir)
-        rc = 1
-    indent(myroot)
-    mytree.write(xmlfile)
-    return rc
-
-
-def new_rendertype(xmlfile, type_name, rendertype):
-    """
-    Legacy: create or update a flat <rendertype type_name=...> node.
-    Kept for backward compatibility. MyCameraTreeview uses
-    new_rendertype_camera() instead.
-    """
-    mytree = ET.parse(xmlfile)
-    myroot = mytree.getroot()
-    rc = 0
-    fstr = ('rendertype[@type_name="%s"]' % type_name)
-    result = mytree.findall(fstr)
-    if not result:
-        i = ET.SubElement(myroot, 'rendertype')
-        i.set("type_name", type_name)
-        i.set("rendertype", rendertype)
-    else:
-        for i in result:
-            i.set("rendertype", rendertype)
         rc = 1
     indent(myroot)
     mytree.write(xmlfile)
@@ -645,11 +605,11 @@ def update_camera(xmlfile, cameraname, newname):
 
 
 # -----------------------------------------------------------------------------
-# Per-camera accessors: subdir / rendertype / process_image
+# Per-camera accessors: subdir / process_image
 #
 # These read from the modern camera/type (/suffix) structure and treat
-# subdir / rendertype / process_image as belonging to a SPECIFIC camera's
-# type (or suffix). They do NOT touch the flat legacy nodes above.
+# subdir / process_image as belonging to a SPECIFIC camera's type
+# (or suffix). They do NOT touch the flat legacy nodes above.
 # -----------------------------------------------------------------------------
 
 def get_subdirs_per_camera(xmlfile):
@@ -667,26 +627,6 @@ def get_subdirs_per_camera(xmlfile):
             sub = t.find('subdir')
             if sub is not None and 'subdir' in sub.attrib:
                 cam_dict[type_name] = sub.attrib['subdir']
-        if cam_dict:
-            result[cam_name] = cam_dict
-    return result
-
-
-def get_rendertypes_per_camera(xmlfile):
-    """
-    Return {camera: {type_name: rendertype}} reading camera/type/rendertype
-    nodes. The flat top-level <rendertype> nodes are ignored.
-    """
-    result = {}
-    mytree = ET.parse(xmlfile)
-    for cam in mytree.findall("camera"):
-        cam_name = cam.attrib['name'].upper()
-        cam_dict = {}
-        for t in cam.findall("type"):
-            type_name = t.attrib['name'].upper()
-            rt = t.find('rendertype')
-            if rt is not None and 'rendertype' in rt.attrib:
-                cam_dict[type_name] = rt.attrib['rendertype']
         if cam_dict:
             result[cam_name] = cam_dict
     return result
@@ -747,39 +687,6 @@ def new_subdir_camera(xmlfile, camera, type_name, subdir):
         rc = 0
     else:
         sub.set("subdir", subdir)
-        rc = 1
-    indent(mytree.getroot())
-    mytree.write(xmlfile)
-    return rc
-
-
-def new_rendertype_camera(xmlfile, camera, type_name, rendertype):
-    """
-    Create or update the <rendertype> child under camera/type[@name=type_name].
-    Only this one camera/type is touched.
-    Returns:
-        0 if newly created,
-        1 if updated,
-        2 if the camera/type does not exist.
-    """
-    mytree = ET.parse(xmlfile)
-    fstr_camera = ('camera[@name="%s"]' % camera)
-    fstr_type = ('type[@name="%s"]' % type_name)
-    cam = mytree.find(fstr_camera)
-    if cam is None:
-        print("new_rendertype_camera - camera not found: " + camera)
-        return 2
-    t = cam.find(fstr_type)
-    if t is None:
-        print("new_rendertype_camera - camera " + camera + " has no type: " + type_name)
-        return 2
-    rt = t.find('rendertype')
-    if rt is None:
-        i = ET.SubElement(t, 'rendertype')
-        i.set("rendertype", rendertype)
-        rc = 0
-    else:
-        rt.set("rendertype", rendertype)
         rc = 1
     indent(mytree.getroot())
     mytree.write(xmlfile)
@@ -988,3 +895,4 @@ def indent(elem, level=0):
     else:
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
+            
