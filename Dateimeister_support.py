@@ -2565,29 +2565,30 @@ class Dateimeister_support:
         target_file = ""
         source_file = ""
         #print("JPEGs: " + str(self.dict_source_target_jpeg["JPEG"]))
-        for this_sourcefile in self.dict_source_target_jpeg["JPEG"]:
-            lineno += 1
-            b_match = False
-            match = re.search(regpattern, this_sourcefile)
-            if match:
-                firstname = match.group(1)
-                lastname  = match.group(2).upper()
-                #print("GENERATE: firstname / lastname = " + firstname + " / " + lastname)
-                b_match = True
-            else: 
-                print("GENERATE unable to find firstname, lastname in: " + this_sourcefile) if self.debug else True
-                a = 1
-            if (b_match == True):
-                # Show error if no process_type available
-                if lastname.upper() not in self.dict_process_image:
-                    messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for: " + firstname + ' ' + lastname + ' ' + this_sourcefile)
-                    print("dict_process_image is: " + str(self.dict_process_image)) if self.debug else True
-                    exit()
-                process_type = self.dict_process_image[lastname].upper()
-                if (process_type == "JPEG"):
-                    if firstname.upper() not in self.dict_firstname_fullname:
-                        self.dict_firstname_fullname[firstname.upper()] = []
-                    self.dict_firstname_fullname[firstname.upper()].append(this_sourcefile) # es kann ja in den ganzen Verzeichnissen mehrere jpegs mit demselben Vornamen geben  
+        if "JPEG" in self.dict_source_target_jpeg:
+            for this_sourcefile in self.dict_source_target_jpeg["JPEG"]:
+                lineno += 1
+                b_match = False
+                match = re.search(regpattern, this_sourcefile)
+                if match:
+                    firstname = match.group(1)
+                    lastname  = match.group(2).upper()
+                    #print("GENERATE: firstname / lastname = " + firstname + " / " + lastname)
+                    b_match = True
+                else: 
+                    print("GENERATE unable to find firstname, lastname in: " + this_sourcefile) if self.debug else True
+                    a = 1
+                if (b_match == True):
+                    # Show error if no process_type available
+                    if lastname.upper() not in self.dict_process_image:
+                        messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for: " + firstname + ' ' + lastname + ' ' + this_sourcefile)
+                        print("dict_process_image is: " + str(self.dict_process_image)) if self.debug else True
+                        exit()
+                    process_type = self.dict_process_image[lastname].upper()
+                    if (process_type == "JPEG"):
+                        if firstname.upper() not in self.dict_firstname_fullname:
+                            self.dict_firstname_fullname[firstname.upper()] = []
+                        self.dict_firstname_fullname[firstname.upper()].append(this_sourcefile) # es kann ja in den ganzen Verzeichnissen mehrere jpegs mit demselben Vornamen geben  
 
         self.l_label1.config(text = "Output from Dateimeister")
                 
@@ -2785,8 +2786,8 @@ class Dateimeister_support:
                             # damit der else-Zweig weiter unten greift.
                             if firstname.upper() in self.dict_firstname_fullname:
                                 showfile = self.dict_firstname_fullname[firstname.upper()][-1]
-                                process_type = "JPEG"  # nur fuer Anzeige; fuer
-                                                       # set_imagetype unten
+                                process_type = "JPEG"  # nur fuer Anzeige; im Thumbnail
+                                                       # (process_type=original_process_type)
                                                        # bleibt es RAW
                                 pimg, image_width, image_height = tools.new_image(
                                     file=showfile, height=canvas_height
@@ -2864,20 +2865,11 @@ class Dateimeister_support:
                 if showfile != "none" and tools.is_bad_image(showfile): # Bild war nicht lesbar, Platzhalter wird angezeigt
                     myimage.set_broken(True)
                 if process_type == 'VIDEO':
-                    myimage.set_imagetype("VIDEO")
                     if player is not None:
                         player.setId(id)
                         player.get_photo() # necessary for initializing some instance variables...
                         player.resize()
                         myimage.setImage(player.photo)   # remains even if player is deleted
-                elif original_process_type == _RAW_PROCESS_TYPE:
-                    # --- RAW ---
-                    # Auch wenn im Canvas gerade ein JPEG-Fallback angezeigt
-                    # wird, ist die Datei eine RAW-Datei. Die Detailansicht
-                    # soll sie als RAW oeffnen.
-                    myimage.set_imagetype("RAW")
-                else:
-                    myimage.set_imagetype("STILL")
 
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE)
@@ -2936,14 +2928,7 @@ class Dateimeister_support:
                 )
 
                 if video_broken:
-                    myimage.set_broken(True) # Detailansicht und Druck sperren
-                if process_type == 'VIDEO':
-                    myimage.set_imagetype("VIDEO")
-                elif original_process_type == _RAW_PROCESS_TYPE:
-                    # --- RAW ---
-                    myimage.set_imagetype("RAW")
-                else:
-                    myimage.set_imagetype("STILL")
+                    myimage.set_broken(True) # Detailansicht und Druck sperren, is_video() ist dann False
                 if file in self.dict_source_target_tooold[imagetype]: #start with EXCLUDE
                     myimage.setState(EXCLUDE)
                     myimage.set_tooold(True)
@@ -3433,9 +3418,9 @@ class Dateimeister_support:
             for t in self.list_visible_thumbnails:
                 id = t.getId()
                 # Nur echte Video-Thumbnails bekommen einen Player. Defekte Videos werden in display_images als
-                # blaues Rechteck (Typ STILL) angelegt und haben bewusst keinen Player. Ausserdem merken wir uns
+                # blaues Rechteck angelegt (is_video() ist dort False) und haben bewusst keinen Player. Ausserdem merken wir uns
                 # Dateien, die beim Scrollen nicht geoeffnet werden konnten, damit nicht bei jedem Scroll neu versucht wird.
-                if (not t.getPlayer() and t.get_imagetype() == "VIDEO"
+                if (not t.getPlayer() and t.is_video()
                         and t.getFile() not in self.broken_videos): # no player
                     player = None
                     try:
@@ -3462,7 +3447,7 @@ class Dateimeister_support:
             for i in Globals.dict_thumbnails[Globals.imagetype]:
                 t = Globals.dict_thumbnails[Globals.imagetype][i]
                 id = t.getId()
-                if t.imagetype == 'VIDEO' and tools.is_visible(self.canvas_gallery, id):
+                if t.is_video() and tools.is_visible(self.canvas_gallery, id):
                     self.canvas_gallery.itemconfig(t.getId(), image=t.getImage())
 
     def text1_single(self, event): # synchronize text / gallery
@@ -3547,7 +3532,7 @@ class Dateimeister_support:
         else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file) if self.debug else True
-                if Globals.imagetype == 'VIDEO':
+                if thumbnail.is_video():
                     self.stop_all_players() # we dont want noise from players in Main Window
                     fs_image = FV.MyFSVideo(
                         file = file, 
@@ -3690,15 +3675,13 @@ class Dateimeister_support:
         if t is None or t.is_broken():
             return
 
-        imagetype = t.get_imagetype()
-
-        if imagetype == 'VIDEO':
+        if t.is_video():
             # Video: nur das Detail-Fenster oeffnen - der Nutzer entscheidet
             # dort, welcher Frame gedruckt wird.
             self.display_image(t)
             return
 
-        if imagetype == _RAW_PROCESS_TYPE:
+        if t.is_raw():
             # RAW: das eingebettete JPEG in Originalgroesse holen und als
             # temporaere PNG-Datei speichern. Fallback auf postprocess(),
             # falls kein eingebettetes JPEG vorhanden ist.

@@ -445,7 +445,6 @@ class PrintRequestEvent:
     Die zentrale Drucklogik (Dateimeister_support) verarbeitet ihn.
 
     filename:  vollständiger Pfad der zu druckenden Datei
-    imagetype: 'STILL' oder 'VIDEO'
     source:    das Objekt, das den Request ausgelöst hat (FSImage, FSVideo,
                MyDuplicates, Dateimeister_support, ...) - dient nur zur
                Unterscheidung / zum Debuggen
@@ -582,13 +581,9 @@ class MyThumbnail:
         self.duplicate = duplicate
         self.tooold = tooold
         self.broken = False  # Datei nicht lesbar (defektes Bild/Video): keine Detailansicht, kein Druck
-        # imagetype is the display category (STILL, VIDEO, RAW). It groups
-        # process_image values into the three variants the UI needs to know.
-        # process_type is the raw configuration value from the xml
-        # (JPEG, USE_JPEG, VIDEO, RAW, ...). It is used only where the
-        # original intent matters, for example to decide whether an
-        # unreadable file should be tried as RAW.
-        self.imagetype = None
+        # process_type is the configured processing type from the xml (JPEG, USE_JPEG, VIDEO, RAW)
+        # and the only type information of a thumbnail. Everything else derives from it:
+        # is_video() / is_raw(), and STILL is simply everything that is neither of them.
         self.process_type = process_type.upper() if process_type else None
         
         self.setState(self.state)
@@ -623,7 +618,7 @@ class MyThumbnail:
         # -----------------------------
         # FOTO: sinnvolle EXIF-Daten
         # -----------------------------
-        if self.imagetype == "STILL":
+        if not (self.is_video() or self.is_raw()): # STILL: alles, was weder Video noch RAW ist
             ex = self.extract_useful_exif(path)
             for k, v in ex.items():
                 self.metadata["EXIF"][k] = v
@@ -631,7 +626,7 @@ class MyThumbnail:
         # -----------------------------
         # VIDEO: sinnvolle Video-Daten
         # -----------------------------
-        elif self.imagetype == "VIDEO":
+        elif self.is_video():
             vmeta = self.extract_useful_video_metadata(path)
             for k, v in vmeta.items():
                 self.metadata["Video"][k] = v
@@ -639,7 +634,7 @@ class MyThumbnail:
         # -----------------------------
         # RAW: Metadaten ueber rawpy
         # -----------------------------
-        elif self.imagetype == "RAW":
+        elif self.is_raw():
             import rawpy_loader
             raw_meta = rawpy_loader.load_raw_metadata(path)
             for cat, entries in raw_meta.items():
@@ -789,11 +784,15 @@ class MyThumbnail:
     def set_broken(self, b):
         self.broken = bool(b)
 
-    def get_imagetype(self):
-        return self.imagetype    
+    def is_video(self):
+        """Abspielbares Video: als VIDEO konfiguriert und lesbar. Ein defektes Video (is_broken) wird nur als
+        blauer Platzhalter angezeigt und zaehlt deshalb nicht als Video (kein Player, keine Detailansicht)."""
+        return self.process_type == "VIDEO" and not self.broken
 
-    def set_imagetype(self, t):
-        self.imagetype = t.upper()    
+    def is_raw(self):
+        """RAW-Datei. Gilt auch dann, wenn im Canvas nur ein JPEG-Fallback angezeigt wird: die Datei selbst
+        ist RAW und die Detailansicht soll sie als RAW oeffnen."""
+        return self.process_type == "RAW"
 
     def get_process_type(self):
         return self.process_type    

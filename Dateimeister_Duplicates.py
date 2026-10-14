@@ -249,16 +249,14 @@ class MyDuplicates:
         liegt ausschliesslich in Dateimeister_support.
         """
         t = self.get_thumbnail(self.event)
-        if t is None:
+        if t is None or t.is_broken():
             return
 
-        imagetype = t.get_imagetype()
-
-        if imagetype == 'VIDEO':
+        if t.is_video():
             self.display_image(t)
             return
 
-        if imagetype == 'RAW':
+        if t.is_raw():
             import uuid
             import rawpy_loader
             pimg_pil = rawpy_loader.load_raw_embedded(t.getFile())
@@ -312,7 +310,7 @@ class MyDuplicates:
         else: # ein neues Objekt anlegen und in dict_file_image eintragen
             if file != 'none':
                 print ("FSImage does not exist for file: " + file) if self.debug else True
-                if Globals.imagetype == 'VIDEO':
+                if thumbnail.is_video():
                     self.stop_all_players() # we dont want noise from players in Main Window
                     fs_image = FV.MyFSVideo(
                         file = file, 
@@ -368,9 +366,8 @@ class MyDuplicates:
                 canvas_height = self.f.winfo_height() - self.H_I.winfo_height()
                 canvas_width  = self.f.winfo_width()
                 player = None
-                imagetype = thumbnail.get_imagetype()
 
-                if imagetype == "VIDEO":
+                if thumbnail.is_video():
                     # Video: Player besorgen (neu oder vorhanden)
                     if (thumbnail not in self.dict_thumbnail_player): #we need a new one
                         print("try to create new videoplayer...")
@@ -379,7 +376,7 @@ class MyDuplicates:
                     else:
                         player = self.dict_thumbnail_player[thumbnail]
                     image_width, image_height, pimg = player.get_photo()
-                elif imagetype == "RAW":
+                elif thumbnail.is_raw():
                     # RAW: eingebettetes JPEG laden, auf Canvas-Hoehe skalieren.
                     # Kein Image.open, weil das bei NEF/RAF/etc. fehlschlaegt.
                     import rawpy_loader
@@ -407,8 +404,8 @@ class MyDuplicates:
                     pimg = ImageTk.PhotoImage(img)
 
                 # --- DEBUG ---
-                print(f"DEBUG display_duplicate: imagetype={imagetype}, showfile={showfile}") if self.debug else True
-                if imagetype != "VIDEO":
+                print(f"DEBUG display_duplicate: process_type={thumbnail.get_process_type()}, showfile={showfile}") if self.debug else True
+                if not thumbnail.is_video():
                     print(f"DEBUG:   orig={image_width_orig}x{image_height_orig}, "
                           f"canvas_height={canvas_height}, faktor={faktor:.4f}, "
                           f"newsize={newsize}") if self.debug else True
@@ -466,7 +463,7 @@ class MyDuplicates:
                     parent=thumbnail,
                 )
 
-                myimage.set_imagetype(imagetype) # from "parent"
+                myimage.set_broken(thumbnail.is_broken()) # from "parent"
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 myimage.setState(state)
                 self.dict_thumbnails_duplicates[Globals.imagetype][thumbnail.getFile()] = myimage
@@ -512,7 +509,7 @@ class MyDuplicates:
                     parent=thumbnail,
                 )
 
-                myimage.set_imagetype(thumbnail.get_imagetype())
+                myimage.set_broken(thumbnail.is_broken()) # from "parent"
                 self.thumbnails_duplicates[Globals.imagetype].append(myimage)
                 self.dict_thumbnails_duplicates[Globals.imagetype][thumbnail.getFile()] = myimage
                 self.lastposition += image_width + Globals.gap

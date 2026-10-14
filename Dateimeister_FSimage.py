@@ -51,7 +51,6 @@ HEAD_VALUE       = "Value"
 NO_METADATA_TEXT = "(no metadata)"
 
 # Imagetype value for which the RAW special path applies.
-_RAW_IMAGETYPE = "RAW"
 
 
 class MyFSImage:
@@ -80,15 +79,12 @@ class MyFSImage:
         self.file = file
 
         # ------------------------------------------------------------------
-        # Imagetype comes from the thumbnail (no fallback to Globals.imagetype).
+        # Display mode (RAW or normal image) comes from the thumbnail's
+        # process_type. It may be switched to RAW below (USE_JPEG fallback).
         # ------------------------------------------------------------------
-        self.imagetype = thumbnail.get_imagetype() if thumbnail is not None else None
-        if self.imagetype is None:
-            raise RuntimeError(
-                "MyFSImage: thumbnail.get_imagetype() returned None. "
-                "The thumbnail must be initialized with set_imagetype() "
-                "before opening MyFSImage."
-            )
+        if thumbnail is None:
+            raise RuntimeError("MyFSImage: a thumbnail is required to open the image.")
+        self.is_raw = thumbnail.is_raw()
 
         # ------------------------------------------------------------------
         # Load image. For RAW two variants: embedded JPEG (fast) and full
@@ -106,7 +102,7 @@ class MyFSImage:
         # say so.
         process_type = thumbnail.get_process_type() if thumbnail is not None else None
 
-        if self.imagetype == _RAW_IMAGETYPE:
+        if self.is_raw:
             import rawpy_loader
             self.image_embedded = rawpy_loader.load_raw_embedded(file)
             self.image = self.image_embedded
@@ -114,8 +110,8 @@ class MyFSImage:
         elif process_type == "USE_JPEG":
             # The thumbnail was built from a USE_JPEG fallback (no
             # companion JPEG was found). Try the RAW loader. If it
-            # works, treat the file as RAW and adjust the local
-            # imagetype so the RAW widgets are built below.
+            # works, treat the file as RAW and switch to
+            # RAW mode so the RAW widgets are built below.
             import rawpy_loader
             self.image_embedded = rawpy_loader.load_raw_embedded(file)
             if self.image_embedded is None:
@@ -127,7 +123,7 @@ class MyFSImage:
                     "warnung"
                 )
                 raise RuntimeError(f"File not displayable: {file}")
-            self.imagetype = _RAW_IMAGETYPE
+            self.is_raw = True
             self.image = self.image_embedded
             self.raw_mode = "embedded"
         else:
@@ -191,7 +187,7 @@ class MyFSImage:
         self.text_font = Font(family="Helvetica", size=6)
         relw_button = 0.975
         # For RAW we need space for one extra button and one extra label.
-        if self.imagetype == _RAW_IMAGETYPE:
+        if self.is_raw:
             relh_button = .16
         else:
             relh_button = .2
@@ -208,7 +204,7 @@ class MyFSImage:
           "WIDGET": tk.Button, "VAR": "Button_fit", "OFFSET": 0.00, "RELH": relh_button, "RELW": relw_button,
           "ANCHOR": "START", "CALLBACK": self.fit_handler,
           "TEXT": "Fit Canvas", "STATE": tk.ACTIVE, "TT": "Scale Image to fit", "FONT": self.text_font}
-        if self.imagetype == _RAW_IMAGETYPE:
+        if self.is_raw:
             # Toggle between embedded JPEG and full sensor resolution.
             dict_widgets["3"] = {
               "WIDGET": tk.Button, "VAR": "Button_raw", "OFFSET": 0.00, "RELH": relh_button, "RELW": relw_button,
@@ -239,7 +235,7 @@ class MyFSImage:
           "WIDGET": tk.Button, "VAR": "Button_fscale", "OFFSET": 0.00, "RELH": relh_button, "RELW": relw_button,
           "ANCHOR": "START", "CALLBACK": self.fscale_handler,
           "TEXT": "Full scale", "STATE": tk.ACTIVE, "TT": "show image in full resolution", "FONT": self.text_font}
-        if self.imagetype == _RAW_IMAGETYPE:
+        if self.is_raw:
             # Status label for the RAW mode.
             dict_widgets["3"] = {
               "WIDGET": tk.Label, "VAR": "Label_rawinfo", "OFFSET": 0.00, "RELH": relh_button, "RELW": relw_button,
@@ -564,7 +560,7 @@ class MyFSImage:
 
     def print_handler(self):
         """Print button: fires a PrintRequestEvent. ..."""
-        if self.imagetype != _RAW_IMAGETYPE:
+        if not self.is_raw:
             filename = self.file
         else:
             if self.image is None:
@@ -594,7 +590,7 @@ class MyFSImage:
         If loading the full image fails, an info box is shown and the
         state stays unchanged (embedded), so the user can try again.
         """
-        if self.imagetype != _RAW_IMAGETYPE:
+        if not self.is_raw:
             return
 
         if self.raw_mode == "embedded":
@@ -801,7 +797,7 @@ class MyFSImage:
         Returns: {category: {key: value, ...}, ...}
         """
         # --- RAW ---
-        if self.imagetype == _RAW_IMAGETYPE:
+        if self.is_raw:
             import rawpy_loader
             result = rawpy_loader.load_raw_metadata(self.file)
             extra = rawpy_loader.load_raw_all_exif(self.file)
