@@ -1181,7 +1181,7 @@ class Dateimeister_support:
         
         self.dict_templates = {}
         self.dict_file_image = {}
-        self.dict_visible_id_thumbnail = {} # holds all visible images, initially and after scrolling, key: canvas_id, value: thumbnail
+        self.dict_visible_id_thumbnail_video = {} # holds all visible videos, initially and after scrolling, key: canvas_id, value: thumbnail
         # initialize the event handler which we use for communication between windows (include / exclude)
         Globals.eventManager = tools.EventManager()
         # zentrale Drucklogik: nimmt PrintRequestEvent von überall entgegen
@@ -2669,7 +2669,7 @@ class Dateimeister_support:
         self.lastposition = 0
         self.dict_thumbnails_lineno[imagetype] = {}
         self.num_images = 0
-        self.dict_visible_id_thumbnail[imagetype] = {}
+        self.dict_visible_id_thumbnail_video.clear()
         #if resized keep scroll-position else scroll to first position (0)
         if not Globals.resized: # this is necessary because the bbox of the canvas would mean the possibly already scrolled canvas, which leads to is_visible not functioning
            self.canvas_gallery.xview('moveto', 0)
@@ -2958,8 +2958,8 @@ class Dateimeister_support:
             if player:
                 if not visible:
                     myimage.delete_player() # deletes player and sets player attribute to none
-                else: # keep this thumbnail in our dict of visible thumbnails
-                    self.dict_visible_id_thumbnail[imagetype][id] = myimage
+                elif myimage.is_video(): # keep only real VIDEO thumbnails in our dict
+                    self.dict_visible_id_thumbnail_video[id] = myimage
                 print("Image {:s} visible: {:d}".format(file, visible)) if self.debug else True
             # if visible, we collect metadata
             if visible:
@@ -3399,56 +3399,57 @@ class Dateimeister_support:
             index += 1
 
         
-    def manage_players_and_metadata(self): 
-        # for each visible thumbnail we call the get_metadata method (does nothing if already collected)
+    def manage_players_and_metadata(self):
+        # collect metadata for all visible thumbnails (does nothing if already collected)
         for t in self.list_visible_thumbnails:
             t.set_metadata()
-        
-        # 20260610 we delete video players for not visible video images and create new ones for now visible
-        if Globals.imagetype == 'VIDEO':
-            for i in self.dict_visible_id_thumbnail[Globals.imagetype]:
-                t = self.dict_visible_id_thumbnail[Globals.imagetype][i]
-                if not tools.is_visible(self.canvas_gallery, i):
-                    if t.getPlayer():
-                        my_tag = t.getPlayer().my_tag
-                        t.delete_player()
-                        print("Scroll - deleted Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), my_tag)) if self.debug else True
-            #   now we create new video players for visible thumbnails and rebuild the dict of visibles
-            self.dict_visible_id_thumbnail[Globals.imagetype] = {}
-            for t in self.list_visible_thumbnails:
+
+        # delete players of VIDEO thumbnails that scrolled out of view
+        for i in list(self.dict_visible_id_thumbnail_video):
+            t = self.dict_visible_id_thumbnail_video[i]
+            if not tools.is_visible(self.canvas_gallery, i):
+                if t.getPlayer():
+                    my_tag = t.getPlayer().my_tag
+                    t.delete_player()
+                    print("Scroll - deleted Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), my_tag)) if self.debug else True
+                del self.dict_visible_id_thumbnail_video[i]
+
+        # create players for visible VIDEO thumbnails that don't have one yet
+        for t in self.list_visible_thumbnails:
+            if not t.is_video():
+                continue
+            id = t.getId()
+            if t.getPlayer() is None and t.getFile() not in self.broken_videos:
+                player = None
+                try:
+                    player = DV.VideoPlayer(self.root, t.getFile(),
+                     self.canvas_gallery, self.canvas_gallery.winfo_width(), self.canvas_gallery.winfo_height())
+                    print("Scroll - created Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), player.my_tag)) if self.debug else True
+                    player.setId(id)
+                    if player.get_photo(silent=True) is None:
+                        raise IOError("kein Videoframe lesbar")
+                    player.resize()
+                    t.setPlayer(player)
+                    t.setImage(player.photo)
+                except Exception as e:
+                    print(f"Scroll - Video nicht lesbar: {t.getFile()} ({type(e).__name__}: {e})")
+                    self.broken_videos.add(t.getFile())
+                    if player is not None:
+                        try:
+                            player.destroy()
+                        except Exception:
+                            pass
+            if t.getPlayer() is not None:
+                self.dict_visible_id_thumbnail_video[id] = t
+
+        # re-render visible VIDEO thumbnails: a player that was just created
+        # or deleted can leave a stale image on the canvas
+        for t in self.list_visible_thumbnails:
+            if t.is_video():
                 id = t.getId()
-                # Nur echte Video-Thumbnails bekommen einen Player. Defekte Videos werden in display_images als
-                # blaues Rechteck angelegt (is_video() ist dort False) und haben bewusst keinen Player. Ausserdem merken wir uns
-                # Dateien, die beim Scrollen nicht geoeffnet werden konnten, damit nicht bei jedem Scroll neu versucht wird.
-                if (not t.getPlayer() and t.is_video()
-                        and t.getFile() not in self.broken_videos): # no player
-                    player = None
-                    try:
-                        player = DV.VideoPlayer(self.root, t.getFile(), 
-                         self.canvas_gallery, self.canvas_gallery.winfo_width(), self.canvas_gallery.winfo_height())
-                        print("Scroll - created Player for thumbnail file = {:s} Tag = {:s}".format(t.getFile(), player.my_tag)) if self.debug else True
-                        player.setId(id)
-                        if player.get_photo(silent=True) is None: # necessary for initializing some instance variables...
-                            raise IOError("kein Videoframe lesbar")
-                        player.resize()
-                        t.setPlayer(player)
-                        t.setImage(player.photo)   # NEU – sonst zeigt der Fixup-Loop weiter unten ein veraltetes Bild
-                    except Exception as e:
-                        print(f"Scroll - Video nicht lesbar: {t.getFile()} ({type(e).__name__}: {e})")
-                        self.broken_videos.add(t.getFile())
-                        if player is not None:
-                            try:
-                                player.destroy()
-                            except Exception:
-                                pass
-                self.dict_visible_id_thumbnail[Globals.imagetype][id] = t # insert in dict 
-                
-            # we must call itemconfig because sometimes images "disappear"  after deleting video player      
-            for i in Globals.dict_thumbnails[Globals.imagetype]:
-                t = Globals.dict_thumbnails[Globals.imagetype][i]
-                id = t.getId()
-                if t.is_video() and tools.is_visible(self.canvas_gallery, id):
-                    self.canvas_gallery.itemconfig(t.getId(), image=t.getImage())
+                if tools.is_visible(self.canvas_gallery, id) and t.getImage():
+                    self.canvas_gallery.itemconfig(id, image=t.getImage())
+
 
     def text1_single(self, event): # synchronize text / gallery
         (row, col) = self.t_text1.index(tk.CURRENT).split(".")
@@ -4131,6 +4132,7 @@ class Dateimeister_support:
         Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
         Globals.eventManager.unbind("Closing", self.on_closing)
         Globals.eventManager.unbind("PrintRequestEvent", self.handle_print_request)
+        self.dict_visible_id_thumbnail_video.clear()
         self.close_child_windows()
         self.root.destroy()
 
