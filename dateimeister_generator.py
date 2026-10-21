@@ -64,8 +64,10 @@ def walk_files(indir):
         prune_dirs(root, dirs, indir)
         yield root, dirs, files
 
-def count_files(indir):
-    """Anzahl der Dateien, die ein rekursiver Scan von indir verarbeiten wuerde (z.B. fuer files_total)."""
+def count_files(indir, top_text = None, any_text = None):
+    """Anzahl der Dateien, die ein rekursiver Scan von indir verarbeiten wuerde (z.B. fuer files_total).
+    top_text / any_text wie bei dateimeister(): dieselben Ausschluesse, sonst stimmt der Fortschrittsbalken nicht."""
+    configure_skip_dirs(top_text, any_text, verbose = False)
     return sum(len(files) for _root, _dirs, files in walk_files(indir))
 
 # sort functions
@@ -123,7 +125,8 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
     #print("Files and Directories in '{:_<10}' typ '{:}' endung '{:}':". format(dateityp, endung, indir))
     print("Dateimeister addrelpath is: ", addrelpath)
     dict_result = {}
-    dict_result_all = {} # we need all JPEG-Files for process_type "use_jpeg". Ignore timestamp modified
+    dict_result_all = {} # all matching files of this type, ignoring timestamp / copy-status. The caller picks the JPEGs
+                         # it needs for process_type "use_jpeg" by process_type, not by the name of the type.
     dict_result_tooold = {} # we want to keep the files which are not copied because a newer target exist
     dict_relpath = {}
     list_suffixes = endung.split(',')
@@ -158,8 +161,7 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
                 targetfile = re.sub(r"\\", "/", targetfile) # replace single backslash by slash
                 
                 if process == "j":
-                    if dateityp.upper() == "JPEG":
-                        dict_result_all[sourcefile] = targetfile # we need all jpeg-files regardless of copy-status
+                    dict_result_all[sourcefile] = targetfile # all matching files regardless of copy-status
                 if docopy == "j" or docopy == "o":
                     dict_result[sourcefile] = targetfile
                 if docopy == "o": # too old
@@ -185,8 +187,7 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
                 fctr += 1
                 busy_dialog.update_progress(fctr, files_total)
                 if process == "j":
-                    if dateityp.upper() == "JPEG":
-                        dict_result_all[sourcefile] = targetfile # we need all jpeg-files regardless of copy-status
+                    dict_result_all[sourcefile] = targetfile # all matching files regardless of copy-status
                 if docopy == "j" or docopy == "o":
                     dict_result[sourcefile] = targetfile
                 if docopy == "o": # too old
@@ -207,8 +208,7 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
                 fctr += 1
                 busy_dialog.update_progress(fctr, files_total)
                 if process == "j":
-                    if dateityp.upper() == "JPEG":
-                        dict_result_all[sourcefile] = targetfile # we need all jpeg-files regardless of copy-status
+                    dict_result_all[sourcefile] = targetfile # all matching files regardless of copy-status
                 if docopy == "j" or docopy == "o":
                     dict_result[sourcefile] = targetfile
                 if docopy == "o": # too old
@@ -269,8 +269,7 @@ def process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixe
             sourcefile = re.sub(r"/", r"\\", sourcefile) # replace single backslash by slash
         targetfile = os.path.join(target_dir, target_prefix + filename)
         targetfile = re.sub(r"\\", "/", targetfile) # replace single backslash by slash
-        if dateityp.upper() == "JPEG":
-            dict_result_all[sourcefile] = targetfile # we need all jpeg-files regardless of copy-status
+        dict_result_all[sourcefile] = targetfile # all matching files regardless of copy-status
     if docopy == "j" or docopy == "o":
         dict_result[sourcefile] = targetfile
         # we have to store relpath in dict_relpath for the delete script which deletes those relpaths if they are empty

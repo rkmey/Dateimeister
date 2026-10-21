@@ -296,6 +296,9 @@ class MyDuplicates:
             self.display_image(thumbnail)
 
     def display_image(self, thumbnail):
+        if thumbnail.is_broken(): # defekte Datei: keine Detailansicht
+            print("Datei nicht lesbar, keine Detailansicht: " + thumbnail.getFile())
+            return
         file = thumbnail.getShowfile()
         if file == "none":
             # No preview available (e.g. RAW without an accompanying JPEG).

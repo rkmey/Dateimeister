@@ -1088,6 +1088,15 @@ class MyCameraTreeview:
         #print("*** Deleting Camera-Treeview-Objekt.")
 
 
+def companion_key(sourcefile, firstname):
+    """Schluessel fuer die Zuordnung eines USE_JPEG-/RAW-Eintrags zu seinem Begleit-JPEG: Quellordner + Vorname.
+    Ein JPEG gilt nur dann als Begleitdatei, wenn es im selben Ordner liegt (Gross-/Kleinschreibung und
+    Schreibweise der Trennzeichen egal). Sonst wuerde z.B. IMG_0001.NEF das IMG_0001.jpg eines ganz anderen
+    Ordners bekommen, weil viele Kameras bei 0001 neu anfangen."""
+    folder = os.path.normcase(os.path.normpath(os.path.dirname(sourcefile)))
+    return (folder, firstname.upper())
+
+
 class Dateimeister_support:
     def __init__(self, root, debug):
         if root is None:
@@ -2369,7 +2378,7 @@ class Dateimeister_support:
             recursive = "n"
 
         if recursive == "j":
-            files_total = DG.count_files(indir) # gleiche Ordner wie der Scan, die Logik steckt im Generator
+            files_total = DG.count_files(indir, getattr(Globals, "skip_dirs_top", None), getattr(Globals, "skip_dirs_any", None)) # gleiche Ausschluesse wie der Scan
         else:
             files_total = tools.count_files_top(indir)
         if self.cb_prefix_var.get():
@@ -2406,7 +2415,7 @@ class Dateimeister_support:
             self.dict_source_target_tooold = {}
             self.dict_relpath = {}
             self.dict_gen_files_delrelpath = {}
-            self.dict_firstname_fullname = {}
+            self.dict_firstname_fullname = {} # {(Ordner, VORNAME): [Pfade der JPEGs]}, siehe companion_key()
             self.dict_outdirs = {}
             self.dict_sort_method = {}
 
@@ -2425,7 +2434,7 @@ class Dateimeister_support:
         sort_method = ""
         for dateityp in self.dict_cameras[thiscamera]:
             subdir = self.dict_subdirs[dateityp]
-            thisoutdir = outdir + "/" + subdir
+            thisoutdir = (outdir + "/" + subdir) if subdir else outdir # leerer subdir: kein "//" im Zielpfad
             self.dict_outdirs[dateityp] = thisoutdir
             endung= self.dict_cameras[thiscamera][dateityp]
             # if already generated (only new sort required) process only the selected imagetype
@@ -2559,36 +2568,7 @@ class Dateimeister_support:
             #print("dict_duplicates: " + str(Globals.dict_duplicates[dateityp])) 
             busy.close()
 
-            # alle Dateien aus der gerade verarbeiteten cmd-Datei tragen wir in dict_firstname_fullname ein, wenn type = JPEG
-        regpattern = r'^.*?[\/\\]([^\/\\]+)\.([^\/\\\.]+)$' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
-        regpattern_source = r'"([^"]+)"' # Sourcefile
-        target_file = ""
-        source_file = ""
-        #print("JPEGs: " + str(self.dict_source_target_jpeg["JPEG"]))
-        if "JPEG" in self.dict_source_target_jpeg:
-            for this_sourcefile in self.dict_source_target_jpeg["JPEG"]:
-                lineno += 1
-                b_match = False
-                match = re.search(regpattern, this_sourcefile)
-                if match:
-                    firstname = match.group(1)
-                    lastname  = match.group(2).upper()
-                    #print("GENERATE: firstname / lastname = " + firstname + " / " + lastname)
-                    b_match = True
-                else: 
-                    print("GENERATE unable to find firstname, lastname in: " + this_sourcefile) if self.debug else True
-                    a = 1
-                if (b_match == True):
-                    # Show error if no process_type available
-                    if lastname.upper() not in self.dict_process_image:
-                        messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for: " + firstname + ' ' + lastname + ' ' + this_sourcefile)
-                        print("dict_process_image is: " + str(self.dict_process_image)) if self.debug else True
-                        exit()
-                    process_type = self.dict_process_image[lastname].upper()
-                    if (process_type == "JPEG"):
-                        if firstname.upper() not in self.dict_firstname_fullname:
-                            self.dict_firstname_fullname[firstname.upper()] = []
-                        self.dict_firstname_fullname[firstname.upper()].append(this_sourcefile) # es kann ja in den ganzen Verzeichnissen mehrere jpegs mit demselben Vornamen geben  
+        self.collect_jpeg_companions()
 
         self.l_label1.config(text = "Output from Dateimeister")
                 
@@ -2610,6 +2590,31 @@ class Dateimeister_support:
         os.chdir(owndir)
         self.write_cmdfiles()
     
+    def collect_jpeg_companions(self):
+        """Sammelt alle Dateien mit process_type JPEG in dict_firstname_fullname, Schluessel (Ordner, Vorname), damit
+        USE_JPEG-Dateien ihr Begleit-JPEG im selben Ordner finden. Gesucht wird in ALLEN Typen: wie der Typ heisst, ist beliebig, massgeblich ist
+        allein der process_type des Suffix. Die Generator-Liste dict_source_target_jpeg enthaelt je Typ alle
+        passenden Dateien, unabhaengig von Zeitstempel / Copy-Status."""
+        regpattern = r'^.*?[\/\\]([^\/\\]+)\.([^\/\\\.]+)$' # zwischen dem letzten / bzw. \\ und dem letzten Punkt steht der Vorname, Nachname danach
+        for dateityp in self.dict_source_target_jpeg:
+            for this_sourcefile in self.dict_source_target_jpeg[dateityp]:
+                match = re.search(regpattern, this_sourcefile)
+                if not match:
+                    print("GENERATE unable to find firstname, lastname in: " + this_sourcefile) if self.debug else True
+                    continue
+                firstname = match.group(1)
+                lastname  = match.group(2).upper()
+                # Show error if no process_type available
+                if lastname not in self.dict_process_image:
+                    messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for: " + firstname + ' ' + lastname + ' ' + this_sourcefile)
+                    print("dict_process_image is: " + str(self.dict_process_image)) if self.debug else True
+                    exit()
+                if self.dict_process_image[lastname].upper() == "JPEG":
+                    key = companion_key(this_sourcefile, firstname)
+                    if key not in self.dict_firstname_fullname:
+                        self.dict_firstname_fullname[key] = []
+                    self.dict_firstname_fullname[key].append(this_sourcefile) # mehrere JPEGs mit demselben Namen im selben Ordner (z.B. .jpg und .jpeg): das letzte gilt
+
     # display images of given type
 
     # display images of given type
@@ -2709,8 +2714,9 @@ class Dateimeister_support:
             if (process_type == "JPEG"):
                 showfile = file # Image-file to show in Canvas
             elif process_type == "USE_JPEG":
-                if firstname.upper() in self.dict_firstname_fullname:
-                    showfile = self.dict_firstname_fullname[firstname.upper()][-1]
+                companions = self.dict_firstname_fullname.get(companion_key(file, firstname)) # JPEGs gleichen Namens im selben Ordner
+                if companions:
+                    showfile = companions[-1]
                     #print ("*** JPEG found for " + file + " using " + showfile)
                 else:
                     showfile = "none"
@@ -2750,8 +2756,8 @@ class Dateimeister_support:
                 # --- RAW ---
                 # Canvas-Thumbnail aus dem eingebetteten JPEG der RAW-Datei.
                 # Wenn extract_thumb scheitert, Fallback auf ein gleichnamiges
-                # JPEG (wenn der Nutzer einen JPEG-Type angelegt hat, ist
-                # dict_firstname_fullname gefuellt). Sonst blaues Rechteck.
+                # JPEG im selben Ordner (dict_firstname_fullname, Schluessel
+                # Ordner + Vorname). Sonst blaues Rechteck.
                 # postprocess() wird hier NICHT benutzt, weil das 1-2 Sekunden
                 # pro Datei dauern wuerde. Die volle Qualitaet gibt es in der
                 # Detailansicht (MyFSImage).
@@ -2781,11 +2787,12 @@ class Dateimeister_support:
                         )
                         if pimg_pil is None:
                             # extract_thumb gescheitert. Fallback: gleichnamiges
-                            # JPEG (aus dict_firstname_fullname) oder blaues
+                            # JPEG im selben Ordner (aus dict_firstname_fullname) oder blaues
                             # Rechteck. process_type wird auf "none" gesetzt,
                             # damit der else-Zweig weiter unten greift.
-                            if firstname.upper() in self.dict_firstname_fullname:
-                                showfile = self.dict_firstname_fullname[firstname.upper()][-1]
+                            companions = self.dict_firstname_fullname.get(companion_key(file, firstname)) # JPEGs gleichen Namens im selben Ordner
+                            if companions:
+                                showfile = companions[-1]
                                 process_type = "JPEG"  # nur fuer Anzeige; im Thumbnail
                                                        # (process_type=original_process_type)
                                                        # bleibt es RAW
@@ -2881,8 +2888,7 @@ class Dateimeister_support:
                 lastpos = self.lastposition
                 self.lastposition += image_width + Globals.gap
                 if myimage.getDuplicate() == 'j':
-                    if imagetype.upper() == "JPEG":
-                        print ("Duplicate: " + file) if self.debug else True
+                    print ("Duplicate: " + file) if self.debug else True
                     text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(dict_image_lineno[file]))
@@ -3827,17 +3833,21 @@ class Dateimeister_support:
     def menu_diatisch(self):
         # if jpeg build list of not excluded imagefiles and call diatisch
         if not self.win_diatisch: # run only once
-            if Globals.imagetype == "JPEG":
-                list_diatisch = []
-                for i in Globals.dict_thumbnails[Globals.imagetype]:
-                    t = Globals.dict_thumbnails[Globals.imagetype][i]
-                    if t.getState() == INCLUDE:
-                        list_diatisch.append(i)
-                if list_diatisch:
-                    Globals.list_result_diatisch = []
-                    self.win_diatisch = DIAT.Diatisch(self.debug, None, list_diatisch, Globals.list_result_diatisch, self.diatisch_callback) # Y is for debug yes
-                else:
-                    messagebox.showinfo("Diatisch", "no images available for Diatisch")
+            # Diatisch kennt nur JPEG: massgeblich ist der process_type der Dateien, nicht der Name des Typs
+            list_diatisch = []
+            has_jpeg = False
+            for i in Globals.dict_thumbnails[Globals.imagetype]:
+                t = Globals.dict_thumbnails[Globals.imagetype][i]
+                if t.get_process_type() != "JPEG":
+                    continue
+                has_jpeg = True
+                if t.getState() == INCLUDE:
+                    list_diatisch.append(i)
+            if list_diatisch:
+                Globals.list_result_diatisch = []
+                self.win_diatisch = DIAT.Diatisch(self.debug, None, list_diatisch, Globals.list_result_diatisch, self.diatisch_callback) # Y is for debug yes
+            elif has_jpeg:
+                messagebox.showinfo("Diatisch", "no images available for Diatisch")
             else:
                 messagebox.showinfo("Diatisch", "only jpeg supported by Diatisch")
 
