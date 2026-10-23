@@ -1466,12 +1466,15 @@ class Dateimeister_support:
           "WIDGET":tk.Button,"VAR":"button_select_camera","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.B_camera_press,
           "TEXT":"Select Camera","STATE":tk.NORMAL,"TT":"Select Camera from Listbox","FONT":self.text_font}
         dict_widgets["2"] = {
-          "WIDGET":tk.Button,"VAR":"button_generate","OFFSET":0.80,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.Button_generate_pressed,
+          "WIDGET":tk.Button,"VAR":"button_generate","OFFSET":0.8,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.Button_generate_pressed,
           "TEXT":"Generate","STATE":tk.DISABLED,"TT":"Call Dateimeister for generating commands","FONT":self.text_font}
         dict_widgets["3"] = {
+          "WIDGET":tk.Button,"VAR":"button_select_all","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.button_select_all,
+          "TEXT":"select all","STATE":tk.DISABLED,"TT":"select all types from listbox","FONT":self.text_font}
+        dict_widgets["4"] = {
           "WIDGET":tk.Button,"VAR":"button_be","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.Button_be_pressed,
           "TEXT":"Browse / Edit Output","STATE":tk.DISABLED,"TT":"Browse / Edit Output from Dateimeister","FONT":self.text_font}
-        dict_widgets["4"] = {
+        dict_widgets["5"] = {
           "WIDGET":tk.Button,"VAR":"button_duplicates","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.button_duplicates,
           "TEXT":"Show duplicates","STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_camera_buttons, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
@@ -2355,6 +2358,9 @@ class Dateimeister_support:
             Globals.list_result_diatisch.clear()
             Globals.list_result_diatisch = None
 
+    def button_select_all(self):
+        print (f"button all pressed") if self.debug else True
+
     def generate(self, *args):
         # get indir, outdir, camera
         indir  = self.label_indir.cget('text')
@@ -2585,6 +2591,7 @@ class Dateimeister_support:
         self.button_include.config(state = DISABLED)
         self.button_exec.config(state = DISABLED)
         self.button_duplicates.config(state = DISABLED)
+        self.button_select_all.config(state = NORMAL)
         self.label_num.config(text = "0")
         Globals.generated = True
         os.chdir(owndir)
