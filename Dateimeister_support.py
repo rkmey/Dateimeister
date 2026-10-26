@@ -1554,9 +1554,9 @@ class Dateimeister_support:
         self.Frame_mixed.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_mixed.update()
         # 20260504 new Frame_sortbuttons 
-        relx1 = self.Frame_mixed.winfo_width() / parent_width + .1 # we want a gap between th 2 frames
+        relx1 = self.Frame_mixed.winfo_width() / parent_width + .01 # we want a gap between th 2 frames
         self.Frame_sortbuttons = tk.Frame(self.root)
-        self.Frame_sortbuttons.place(relx = relx1, rely = rely1 + .005, relheight = relh, relwidth = relw * 0.3)
+        self.Frame_sortbuttons.place(relx = relx1, rely = rely1 + .005, relheight = relh, relwidth = .99 - self.Frame_mixed.winfo_width() / parent_width)
         self.Frame_sortbuttons.configure(relief='flat', background = tools._bgcolor)
         self.Frame_sortbuttons.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
         self.Frame_sortbuttons.update()
@@ -1595,23 +1595,32 @@ class Dateimeister_support:
         # the sort radio buttons
         self.rbvalue = tk.StringVar()
         self.dict_sort_method = {} # here we keep type(JPEG...) -> sort method(1...4)
+        self.rbg = tk.StringVar()
+
         dict_widgets = {}
         dict_widgets["1"] = {
-          "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas1","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
-          "RB_VAR":self.rbvalue,"RB_VALUE":"1","TEXT":"sort name asc","STATE":tk.NORMAL,"TT":"sort images by name(ascending)","FONT":self.text_font}
+          "WIDGET":tk.Radiobutton,"VAR":"rb_g1","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_g,
+          "RB_VAR":self.rbg,"RB_VALUE":"1","TEXT":"sort within type","STATE":tk.NORMAL,"TT":"sort images within type first","FONT":self.text_font}
         dict_widgets["2"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_g2","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_g,
+          "RB_VAR":self.rbg,"RB_VALUE":"2","TEXT":"sort all","STATE":tk.NORMAL,"TT":"sort images globally over all types","FONT":self.text_font}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas1","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
+          "RB_VAR":self.rbvalue,"RB_VALUE":"1","TEXT":"sort name asc","STATE":tk.NORMAL,"TT":"sort images by name(ascending)","FONT":self.text_font}
+        dict_widgets["4"] = {
           "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas2","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
           "RB_VAR":self.rbvalue,"RB_VALUE":"2","TEXT":"sort name desc","STATE":tk.NORMAL,"TT":"sort images by name(descending)","FONT":self.text_font}
-        dict_widgets["3"] = {
+        dict_widgets["5"] = {
           "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas3","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
           "RB_VAR":self.rbvalue,"RB_VALUE":"3","TEXT":"sort mod. asc","STATE":tk.NORMAL,"TT":"sort images by modification date(ascending)","FONT":self.text_font}
-        dict_widgets["4"] = {
+        dict_widgets["6"] = {
           "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas4","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
           "RB_VAR":self.rbvalue,"RB_VALUE":"4","TEXT":"sort mod. desc","STATE":tk.NORMAL,"TT":"sort images by modification date(descending)","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.Frame_sortbuttons, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
 
+        self.rbg.set("1")
         self.rbvalue.set("1")
-
+        
         self.canvas_gallery = tk.Canvas(self.frame_canvas)
         self.canvas_gallery.place(relx=0.0, rely=0.0, relheight=0.9, relwidth=1.0)
         # Scrollbars
@@ -1888,6 +1897,16 @@ class Dateimeister_support:
         else:
             return None
 
+    """
+    for the sort buttons sort within type / sort globally ignoring type
+    """
+    def rb_g(self, event = None):
+        sort_method = self.rbg.get()
+        print("Radiobutton pressed, value = {:s}".format(sort_method)) if self.debug else True
+
+    """
+    for the sort buttons ( name, mod,...
+    """
     def rb_sort(self, event = None):
         sort_method = self.rbvalue.get()
         print("Radiobutton pressed, value = {:s}".format(sort_method)) if self.debug else True
