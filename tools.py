@@ -336,6 +336,7 @@ def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, 
 # some attributes will be added from inifile-processing
 class Globals:
     imagetype = ""
+    imagetypes_selected = []    # NEU: semantische Typen in Auswahl-Reihenfolge (Klick-Reihenfolge)
     generated = False # set to true if generated, set to false after selection of camera
     screen_width = 0
     screen_height = 0

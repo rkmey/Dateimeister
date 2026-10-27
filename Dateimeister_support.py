@@ -98,7 +98,7 @@ MENUITEM_FILE_PRINT             = 7
 MENUITEM_FILE_RECENT            = 8
 
 _RAW_PROCESS_TYPE = "RAW"
-   
+
 #print("Tk-Version:", tk.TkVersion)
 
 
@@ -755,7 +755,7 @@ class MyCameraTreeview:
         nodes, so the case matches the xml exactly.
         Returns (camera, ctype, suffix, iid_of_camera).
         """
-        iid = self.item
+        iid = self.item        
         suffix = self.tv.item(iid, option="text")
         iid = self.tv.parent(iid)
         ctype = self.tv.item(iid, option="text")
@@ -1095,8 +1095,7 @@ def companion_key(sourcefile, firstname):
     Ordners bekommen, weil viele Kameras bei 0001 neu anfangen."""
     folder = os.path.normcase(os.path.normpath(os.path.dirname(sourcefile)))
     return (folder, firstname.upper())
-
-
+    
 class Dateimeister_support:
     def __init__(self, root, debug):
         if root is None:
@@ -1158,7 +1157,26 @@ class Dateimeister_support:
         self.win_diatisch = None
         self.dict_lb_camera_index = {}
         self.diatisch_camera_name = "DIATISCH" # name used for insert / retrieve index in listbox
-        
+
+        # ------------------------------------------------------------------
+        # NEW: Multi-selection support.
+        # Globals.imagetype is a display key built from the selection in
+        # lb_gen. Single type -> unchanged "JPEG". Multiple -> sorted
+        # selection joined by "-" ("JPEG-RAW"). The sorted form makes the
+        # key stable against click order changes.
+        # Globals.imagetypes_selected keeps the click order at the time of
+        # the last successful generate; used to lay out the canvas.
+        # ------------------------------------------------------------------
+        self.imagetypes_click_order            = []  # listbox indices in click order
+        self.dict_gen_files_keys               = []  # pure type names, parallel to listbox
+        self.dict_outdirs_by_type              = {}
+        self.dict_relpath_by_type              = {}
+        self.dict_gen_files_by_type            = {}
+        self.dict_gen_files_delete_by_type     = {}
+        self.dict_gen_files_delrelpath_by_type = {}
+        self.dict_sourcefile_to_type           = {}
+        self.locked_lb_gen                     = False  # recursion guard for label updates
+
         self.init()
 
     def init(self):
@@ -1277,7 +1295,8 @@ class Dateimeister_support:
         self.lb_gen.configure(highlightcolor="black")
         self.lb_gen.configure(selectbackground="#d9d9d9")
         self.lb_gen.configure(selectforeground="black")
-        self.lb_gen.configure(selectmode='single')
+        # NEW: multiple selection for lb_gen
+        self.lb_gen.configure(selectmode='extended')
         self.lb_gen.configure(exportselection=False)
         self.lb_gen_tooltip = TT.ToolTip(self.lb_gen, 'generated imagetypes')
         self.lb_gen.update()
@@ -1472,9 +1491,6 @@ class Dateimeister_support:
           "WIDGET":tk.Button,"VAR":"button_select_all","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.button_select_all,
           "TEXT":"select all","STATE":tk.DISABLED,"TT":"select all types from listbox","FONT":self.text_font}
         dict_widgets["4"] = {
-          "WIDGET":tk.Button,"VAR":"button_be","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.Button_be_pressed,
-          "TEXT":"Browse / Edit Output","STATE":tk.DISABLED,"TT":"Browse / Edit Output from Dateimeister","FONT":self.text_font}
-        dict_widgets["5"] = {
           "WIDGET":tk.Button,"VAR":"button_duplicates","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.button_duplicates,
           "TEXT":"Show duplicates","STATE":tk.DISABLED,"TT":"Show duplivate Images from different paths","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_camera_buttons, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
@@ -1505,6 +1521,11 @@ class Dateimeister_support:
         # get all camera information and fill camera-listbox
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml()
         #print(f"dict_process_image is: {self.dict_process_image}") if self.debug else True
+        
+        # NEW: also fill lb_gen with the types of the currently selected
+        # (last used) camera, and select all of them.
+        self._fill_lb_gen_for_camera(self.o_camera.get())
+
 
         # Frame for the canvas and the horizontal scrollbar
         # y starts with this value
@@ -1543,7 +1564,7 @@ class Dateimeister_support:
         print("x, y of upper left corner of frame above canvas is {:d}, {:d}, lower right corner is {:d}, {:d}".format(x1, y1, x2, y2)) if self.debug else True      
         # the frame
         relx1 = x1 / parent_width
-        rely1 = y1 / parent_height
+        rely1 = y1 / parent_height        
         relh = (y2 - y1) / parent_height
         relw  = (x2 - x1) / parent_width
         print("Frame relx, rely, relw, relh is {:f}, {:f} {:f}, {:f}".format(relx1, rely1, relw, relh)) if self.debug else True 
@@ -1659,8 +1680,10 @@ class Dateimeister_support:
         self.canvas_gallery.bind('-', lambda event: self.delay_incr(event))
         self.canvas_gallery.bind('0', lambda event: self.delay_deflt(event))
         self.canvas_gallery.bind('<FocusOut>', self.focus_out)
-        self.lb_gen.bind('<Double-1>', self.Button_be_pressed)
         self.lb_camera.bind('<Double-1>', self.lb_camera_double)
+
+        # NEW: track click order for multi-selection in lb_gen
+        self.lb_gen.bind('<<ListboxSelect>>', self._on_lb_gen_click)
 
         self.t_text1.bind('<Double-1>', self.text1_double)  # show FSImage for selected line
         self.t_text1.bind('<Button-1>', self.text1_single)  # synchronize zext / gallery
@@ -1821,17 +1844,97 @@ class Dateimeister_support:
         self.printer = None
         self.preview = None
 
+    # ----------------------------------------------------------------------
+    # NEW: multi-selection handling in the lb_gen listbox
+    # ----------------------------------------------------------------------
+    def _on_lb_gen_click(self, event=None):
+        """Track the click order in lb_gen and update the (1), (2), ...
+        labels. Nothing else happens here: the selection is only a
+        "proposal" until the user presses Generate."""
+        if self.locked_lb_gen:  # prevent recursion while labels are written
+            return
+        current = list(self.lb_gen.curselection())
+        old = [i for i in self.imagetypes_click_order if i in current]
+        new = [i for i in current if i not in old]
+        self.imagetypes_click_order = old + new
+        self._update_lb_gen_labels()
+
+    def _update_lb_gen_labels(self):
+        """Write the type names with position numbers into the listbox:
+        'JPEG (1)', 'RAW (2)', ... Unselected entries without a number."""
+        if not self.dict_gen_files_keys:
+            return
+        self.locked_lb_gen = True  # prevent recursion (see _on_lb_gen_click)
+        try:
+            for idx in range(self.lb_gen.size()):
+                if idx >= len(self.dict_gen_files_keys):
+                    break
+                base = self.dict_gen_files_keys[idx]
+                if idx in self.imagetypes_click_order:
+                    pos = self.imagetypes_click_order.index(idx) + 1
+                    label = f"{base} ({pos})"
+                else:
+                    label = base
+                try:
+                    current_text = self.lb_gen.get(idx)
+                except tk.TclError:
+                    current_text = None
+                if current_text != label:
+                    was_selected = (idx in self.lb_gen.curselection())
+                    self.lb_gen.delete(idx)
+                    self.lb_gen.insert(idx, label)
+                    if was_selected:
+                        self.lb_gen.selection_set(idx)
+        finally:
+            self.locked_lb_gen = False
+
+    def _get_selected_types(self):
+        """Return the semantic types currently selected in lb_gen.
+        Order follows the click order (imagetypes_click_order), but only
+        for indices that are actually selected right now. Falls back to
+        listbox order if click order is inconsistent with the selection."""
+        current = list(self.lb_gen.curselection())
+        if not current:
+            return []
+        ordered = [i for i in self.imagetypes_click_order if i in current]
+        for i in current:
+            if i not in ordered:
+                ordered.append(i)
+        return [self.dict_gen_files_keys[i] for i in ordered
+                if i < len(self.dict_gen_files_keys)]
+
+    @staticmethod
+    def _combined_key(types):
+        """Build the display key from a list of semantic types.
+        One type: unchanged 'JPEG' (so all existing calls keep working).
+        Multiple: sorted, joined by '-' ('JPEG-RAW-VIDEO').
+        The key is INDEPENDENT of the click order so that the same set
+        of types always maps to the same data structures."""
+        if not types:
+            return ""
+        if len(types) == 1:
+            return types[0]
+        return "-".join(sorted(types))
+
+    def button_select_all(self):
+        """Mark all entries of lb_gen as selected in listbox order."""
+        print("button all pressed") if self.debug else True
+        if self.lb_gen.size() == 0:
+            return
+        self.imagetypes_click_order = list(range(self.lb_gen.size()))
+        self._update_lb_gen_labels()
+        self.lb_gen.selection_clear(0, END)
+        for idx in self.imagetypes_click_order:
+            self.lb_gen.selection_set(idx)
+
+    # ----------------------------------------------------------------------
     # 20260915: event handler for closing event
-    # 20260915: event handler for closing event
+    # ----------------------------------------------------------------------
     def on_closing(self, event): #if a FS exists in dict_file_image delete entry
         if event.filename in self.dict_file_image:
             thisobj = self.dict_file_image[event.filename]
             if thisobj is event.obj: # has been created by us, not by someone else
                 del self.dict_file_image[event.filename]
-        # Kein "Retten" des PrintPreview mehr noetig: die Registry wird
-        # ausschliesslich hier gefuehrt (siehe handle_print_request), die
-        # PrintPreview-Instanz gehoert uns und wird beim Schliessen eines
-        # FS-Fensters nicht mitzerstoert.
 
     #printing
     def choose_printer(self):
@@ -1857,10 +1960,7 @@ class Dateimeister_support:
         self.preview.add_photo(filename)
         self.preview.bring_to_front()
 
-        # File-Menue: "Print selected" ist sinnvoll, sobald ein PrintPreview
-        # existiert.
         self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=NORMAL)
-
 
     @staticmethod
     def _is_preview_window_alive(preview):
@@ -1870,17 +1970,14 @@ class Dateimeister_support:
             return False
 
     def preview_closed(self):
-        """Callback, den PrintPreview beim Schliessen aufruft. Setzt die
-        Referenz auf None, damit beim naechsten Print ein neuer PrintPreview
-        erzeugt wird, und deaktiviert das File-Menue-Item."""
+        """Callback, den PrintPreview beim Schliessen aufruft."""
         print("PRINT Preview closed") if self.debug else True
         self.preview = None
         self.filemenu.entryconfig(MENUITEM_FILE_PRINT, state=DISABLED)
 
     def print_selected(self):
         """File-Menue 'Print selected': leitet an den aktuell sichtbaren
-        PrintPreview weiter. Der PrintPreview kennt seine Auswahl und seinen
-        Drucker selbst - hier wird nichts mehr gesammelt."""
+        PrintPreview weiter."""
         if self.preview is None or not self._is_preview_window_alive(self.preview):
             return
         self.preview.print_selected()
@@ -1897,12 +1994,23 @@ class Dateimeister_support:
         else:
             return None
 
-    """
-    for the sort buttons sort within type / sort globally ignoring type
-    """
+    # ----------------------------------------------------------------------
+    # NEW: rb_g (rbg == "1" = sort within type, rbg == "2" = sort all)
+    # ----------------------------------------------------------------------
     def rb_g(self, event = None):
+        """Radiobutton 'sort within type' (rbg == '1') vs 'sort all'
+        (rbg == '2'). With '1' the entries are sorted so that one block
+        per semantic type is created; inside each block by self.rbvalue.
+        With '2' the combined key is sorted directly."""
         sort_method = self.rbg.get()
         print("Radiobutton pressed, value = {:s}".format(sort_method)) if self.debug else True
+        if Globals.imagetype == "":
+            return
+        if sort_method == "1":
+            self._sort_within_types(Globals.imagetype, int(self.rbvalue.get()))
+        else:
+            self.resort(Globals.imagetype, int(self.rbvalue.get()))
+        self.display_images(Globals.imagetype, close_childs=False)
 
     """
     for the sort buttons ( name, mod,...
@@ -1914,17 +2022,18 @@ class Dateimeister_support:
             if sort_method != self.dict_sort_method[Globals.imagetype]: # do something only if sort method is new
                 self.dict_sort_method[Globals.imagetype] = sort_method
                 self.leftmost_thumbnail = None
-                self.resort(Globals.imagetype, int(sort_method)) # nur Reihenfolge aendern, kein Neuscan von indir
+                if self.rbg.get() == "1":
+                    # "sort within type": group by type (click order from
+                    # Globals.imagetypes_selected), sort inside each group
+                    self._sort_within_types(Globals.imagetype, int(sort_method))
+                else:
+                    # "sort all": ignore type grouping, sort across all types
+                    self.resort(Globals.imagetype, int(sort_method))
                 self.display_images(Globals.imagetype, close_childs = False)
 
+
     def resort(self, imagetype, sort_method):
-        """Sortiert die Ergebnis-Dicts dieses Typs (Quelle -> Ziel) nach sort_method. Der Generator liefert die Dicts
-        nur (in Scan-Reihenfolge); die Reihenfolge bestimmt allein diese Methode, sowohl direkt nach generate()
-        als auch beim Wechsel der Sortierung per Radiobutton. Dafuer ist kein neuer Scan noetig: Quellen, Ziele
-        (inkl. Umbenennung bei Dubletten), Dublettenerkennung und relpath-Liste sind von der Reihenfolge unabhaengig.
-        1 Name auf-, 2 Name absteigend, 3 Aenderungsdatum auf-, 4 absteigend, sonst unveraendert.
-        Ein nicht lesbarer Zeitstempel (Datei verschwunden, Zugriff verweigert) zaehlt als 0.0 und bricht nicht ab.
-        Die cmd-Dateien schreibt display_images am Ende selbst."""
+        """Sortiert die Ergebnis-Dicts dieses Typs (Quelle -> Ziel) nach sort_method."""
         mtime_cache = {}
         def mtime(path):
             if path not in mtime_cache:
@@ -1943,36 +2052,36 @@ class Dateimeister_support:
         reverse = sort_method in (2, 4)
         for dicts in (self.dict_source_target, self.dict_source_target_jpeg, self.dict_source_target_tooold):
             dicts[imagetype] = dict(sorted(dicts[imagetype].items(), key = key, reverse = reverse))
-
-    def Button_be_pressed(self, *args):
-        # reset all process-states
-        self.UR.reset()
-        self.button_undo.config(state = DISABLED)    
-        self.button_redo.config(state = DISABLED)
-        self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
-        self.root.title(self.title)
-        
-        self.clear_text(self.t_text1)
-        self.canvas_gallery.delete("all")
-        self.canvas_gallery.update_idletasks()
-        
-        # get imagetype to display from listbox
-        if not self.lb_gen.curselection() == ():
-            selected_indices = self.lb_gen.curselection()
-        else:
-            messagebox.showerror("showerror", "no Imagetype selected")
-            self.lb_gen.focus_set()
+            
+    def Button_generate_pressed(self, *args):
+        types = self._get_selected_types()
+        if not types:
+            messagebox.showinfo("Generate", "No type selected. Please select at least one type in the listbox.")
             return None
-        Globals.imagetype = ",".join([self.lb_gen.get(i) for i in selected_indices]) # weil wir single für die Listbox gewählt haben
-        self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
-        Globals.dict_thumbnails[Globals.imagetype] = {} # necessary to initialize first level
-        self.display_images(Globals.imagetype, close_childs = True)
+        combined = self._combined_key(types)
+        print("Button_generate_pressed: types={:s} combined={:s}".format(
+            str(types), combined)) if self.debug else True
+        Globals.imagetypes_selected = list(types)
+        Globals.imagetype = combined
 
-    def Button_generate_pressed(self, *args): # event handler for button Generate
-        # set globals generated to false and call generate
+        # reset sort radio buttons to default on every Generate click
+        self.rbg.set("1")        # sort within type
+        self.rbvalue.set("1")    # sort name asc
+
+        if combined in self.dict_source_target:
+            # already generated with this exact set: re-sort with default and display
+            self.dict_sort_method[combined] = "1"
+            if self.rbg.get() == "1":
+                self._sort_within_types(combined, int(self.rbvalue.get()))
+            else:
+                self.resort(combined, int(self.rbvalue.get()))
+            print("Generate: key '{:s}' already generated, re-sorting and displaying".format(combined)) if self.debug else True
+            self.display_images_prepare()
+            return None
+
         Globals.generated = False
         self.generate()
-    
+
     def donothing(self):
         print("Menuitem not yet implemented")
     
@@ -2072,7 +2181,6 @@ class Dateimeister_support:
         
     def open_config(self):
         # get config_files for indir / type
-        
         endung = 'xml'
         self.config_file = fd.askopenfilename(initialdir = os.path.join(Globals.datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
         if self.config_file:
@@ -2082,7 +2190,6 @@ class Dateimeister_support:
 
     def open_apply_config(self):
         # get config_files for indir / type
-        
         endung = 'xml'
         self.config_file = fd.askopenfilename(initialdir = os.path.join(Globals.datadir, Globals.config_files_subdir), filetypes=[("config files", endung)])
         if self.config_file:
@@ -2350,7 +2457,6 @@ class Dateimeister_support:
         # explicit camera; it only rebuilds the listbox.
         self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml(camera=thiscamera)
 
-        self.button_be.config(state = DISABLED) # browse / edit will throw error if not preceded by generate after chosing camera
         self.button_generate.config(state = NORMAL)
         if thiscamera != self.oldcamera:
             self.button_undo.config(state = DISABLED)    
@@ -2377,8 +2483,29 @@ class Dateimeister_support:
             Globals.list_result_diatisch.clear()
             Globals.list_result_diatisch = None
 
-    def button_select_all(self):
-        print (f"button all pressed") if self.debug else True
+        # NEW: fill lb_gen with all types of the camera, select all of them,
+        # and update the (1), (2), ... labels. Do NOT trigger generate here;
+        # the user picks the selection and presses Generate.
+        self._fill_lb_gen_for_camera(thiscamera)
+
+
+    def _fill_lb_gen_for_camera(self, thiscamera):
+        """Fill lb_gen with all types of the given camera, select all of
+        them, and update the (1), (2), ... labels. Used by init() and
+        B_camera_press()."""
+        self.lb_gen.delete(0, END)
+        self.dict_gen_files_keys = []
+        for dateityp in self.dict_cameras.get(thiscamera, {}):
+            self.dict_gen_files_keys.append(dateityp)
+            self.lb_gen.insert(END, dateityp)
+        self.imagetypes_click_order = list(range(len(self.dict_gen_files_keys)))
+        for idx in self.imagetypes_click_order:
+            self.lb_gen.selection_set(idx)
+        self._update_lb_gen_labels()
+        if len(self.dict_gen_files_keys) > 0:
+            self.button_select_all.config(state = NORMAL)
+        else:
+            self.button_select_all.config(state = DISABLED)
 
     def generate(self, *args):
         # get indir, outdir, camera
@@ -2397,6 +2524,24 @@ class Dateimeister_support:
             messagebox.showerror("showerror", "keine Kamera ausgewählt")
             self.button_select_camera.focus_set()
             return None
+
+        # NEW: read selection from lb_gen
+        selected_types = self._get_selected_types()
+        print("generate: selected_types=" + str(selected_types) +
+              " curselection=" + str(self.lb_gen.curselection()) +
+              " click_order=" + str(self.imagetypes_click_order) +
+              " keys=" + str(self.dict_gen_files_keys)) if self.debug else True
+        if not selected_types:
+            messagebox.showinfo(
+                "Generate",
+                "No type selected. Please select at least one type in the listbox."
+            )
+            return None
+
+        Globals.imagetypes_selected = list(selected_types)
+        combined = self._combined_key(selected_types)
+        Globals.imagetype = combined
+
         if self.cb_recursive_var.get():
             recursive = "j"
         else:
@@ -2445,6 +2590,15 @@ class Dateimeister_support:
             self.dict_sort_method = {}
 
             self.dict_source_target_jpeg = {}
+
+            # NEW: per semantic type helper dicts
+            self.dict_outdirs_by_type              = {}
+            self.dict_relpath_by_type              = {}
+            self.dict_gen_files_by_type            = {}
+            self.dict_gen_files_delete_by_type     = {}
+            self.dict_gen_files_delrelpath_by_type = {}
+            self.dict_sourcefile_to_type           = {}
+
             # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
             ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
 
@@ -2456,154 +2610,133 @@ class Dateimeister_support:
             # delete outdir-entries from xml if number gt than max from ini, oldest first
             self.new_dir_in_xml('outdir', self.max_outdirs, this_o, ts)
 
+            # initialize the display dicts for the combined key
+            self.dict_source_target[combined]          = {}
+            self.dict_source_target_jpeg[combined]     = {}
+            self.dict_source_target_tooold[combined]   = {}
+            self.dict_relpath[combined]                = {}
+            Globals.dict_duplicates[combined]          = {}
+            self.dict_duplicates_sourcefiles[combined] = {}
+            self.dict_sourcefile_to_type[combined]     = {}
+
+        # --- Scan per semantic type and merge into the combined key ---
         sort_method = ""
-        for dateityp in self.dict_cameras[thiscamera]:
-            subdir = self.dict_subdirs[dateityp]
-            thisoutdir = (outdir + "/" + subdir) if subdir else outdir # leerer subdir: kein "//" im Zielpfad
-            self.dict_outdirs[dateityp] = thisoutdir
-            endung= self.dict_cameras[thiscamera][dateityp]
-            # if already generated (only new sort required) process only the selected imagetype
-            if Globals.generated and dateityp != Globals.imagetype:
+        for dateityp in selected_types:
+            if dateityp not in self.dict_cameras[thiscamera]:
+                print("generate: type {:s} not in camera, skip".format(dateityp)) if self.debug else True
                 continue
-            self.clear_dict_2nd(Globals.thumbnails, dateityp)
-            # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
-            Globals.thumbnails[dateityp] = []
+            subdir = self.dict_subdirs.get(dateityp, "")
+            thisoutdir = (outdir + "/" + subdir) if subdir else outdir # leerer subdir: kein "//" im Zielpfad
+            endung = self.dict_cameras[thiscamera][dateityp]
+
+            # determine sort_method for this type (from dict_sort_method,
+            # otherwise from the radio button)
+            if self.dict_sort_method.get(combined):
+                sort_method = self.dict_sort_method.get(combined)
+                print("generate sort method for {:s} is {:s}".format(dateityp, sort_method)) if self.debug else True
+            else:
+                sort_method = self.rbvalue.get()
+                print("generate sort method is {:s}".format(sort_method)) if self.debug else True
+                self.dict_sort_method[combined] = sort_method
 
             if self.use_camera_prefix:
                 target_prefix = thiscamera + '_'
             else:
                 target_prefix = ''
-            self.dict_source_target[dateityp] = {}
-            self.dict_relpath[dateityp] = {}
-            # get sort method. if value exists in dict_sort_method use it. it has been set when images are displayed. Otherwise use value of the radio button
-            if self.dict_sort_method.get(dateityp):
-                sort_method = self.dict_sort_method.get(dateityp)
-                print("generate sort method for {:s} is {:s}".format(dateityp, sort_method)) if self.debug else True
-            else:
-                sort_method = self.rbvalue.get()
-                print("generate sort method is {:s}".format(sort_method)) if self.debug else True
-                self.dict_sort_method[dateityp] = sort_method
+
             # show the busy dialog
             busy = tools.BusyDialog(self.root, text= dateityp + " files are analyzed…")        
-            self.dict_source_target[dateityp], self.dict_source_target_jpeg[dateityp], self.dict_source_target_tooold[dateityp], self.dict_relpath[dateityp] = \
-              DG.dateimeister(dateityp, endung, indir, thisoutdir, addrelpath, recursive, self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch, 
-              0, busy, files_total, 
-              getattr(Globals, "skip_dirs_top", None), 
-              getattr(Globals, "skip_dirs_any", None),
-              self.debug) # 0: Generator sortiert nicht, das macht resort()
-            self.resort(dateityp, int(sort_method))
-            self.dict_relpath[dateityp] = dict(reversed(list(self.dict_relpath[dateityp].items())))
-            for ii in self.dict_relpath[dateityp]:
-                print(" > ", ii, " files: ", self.dict_relpath[dateityp][ii]) if self.debug else True
+            st, st_jpeg, st_tooold, relpath = DG.dateimeister(
+                dateityp, endung, indir, thisoutdir, addrelpath, recursive,
+                self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch,
+                0, busy, files_total,
+                getattr(Globals, "skip_dirs_top", None),
+                getattr(Globals, "skip_dirs_any", None),
+                self.debug) # 0: Generator sortiert nicht, das macht resort()
+            busy.close()
+
+            # type-specific helper dicts
+            self.dict_outdirs_by_type[dateityp] = thisoutdir
+            self.dict_relpath_by_type[dateityp] = dict(reversed(list(relpath.items())))
+            for ii in self.dict_relpath_by_type[dateityp]:
+                print(" > ", ii, " files: ", self.dict_relpath_by_type[dateityp][ii]) if self.debug else True
+            # cmd files PER TYPE (used by write_cmdfile to build the combined file)
+            self.dict_gen_files_by_type[dateityp] = os.path.join(
+                Globals.datadir, Globals.cmd_files_subdir, "_copy_" + dateityp + '.cmd')
+            self.dict_gen_files_delete_by_type[dateityp] = os.path.join(
+                Globals.datadir, Globals.cmd_files_subdir, "_delete_" + dateityp + '.cmd')
+            self.dict_gen_files_delrelpath_by_type[dateityp] = os.path.join(
+                Globals.datadir, Globals.cmd_files_subdir, "_delrelpath_" + dateityp + '.cmd')
+
             num_files = 0
-            for thisfile in self.dict_source_target[dateityp]:
-                #print("IN: " + thisfile + " OUT: " + self.dict_source_target[dateityp][thisfile])
+            for thisfile in st:
                 num_files += 1
             print(dateityp + " F NUM: " + str(num_files)) if self.debug else True
-            # save name for cmdfile
-            cmd_file_name = "_copy_" + dateityp + '.cmd'
-            cmd_file_full = os.path.join(Globals.datadir, Globals.cmd_files_subdir, cmd_file_name)
-            # generierte Dateien in dict festhalten
-            self.dict_gen_files[dateityp] = cmd_file_full
-            #print("self.dict_gen_files[dateityp]: ", str(self.dict_gen_files[dateityp]), " datadir is: ", Globals.datadir)
 
-            # save name for delete files
-            # important: subdir MUST NOT start with a slash!
-            cmd_file_name_delete = "_delete_" + dateityp + '.cmd'
-            cmd_file_full_delete = os.path.join(Globals.datadir, Globals.cmd_files_subdir, cmd_file_name_delete)
-            # generierte Dateien in dict festhalten
-            self.dict_gen_files_delete[dateityp] = cmd_file_full_delete
-            #print("dict_gen_files_delete[dateityp]: ", str(self.dict_gen_files_delete[dateityp]))
+            # merge into the combined display key
+            for src, tgt in st.items():
+                self.dict_source_target[combined][src] = tgt
+                self.dict_sourcefile_to_type[combined][src] = dateityp
+            for src, tgt in st_jpeg.items():
+                self.dict_source_target_jpeg[combined][src] = tgt
+            for src, tgt in st_tooold.items():
+                self.dict_source_target_tooold[combined][src] = tgt
+            for rp in relpath:
+                # dict_relpath[combined] is only for backward compatibility;
+                # the type-specific relpaths are in dict_relpath_by_type
+                self.dict_relpath[combined][rp] = relpath[rp]
 
-            # save name for delrelpath files
-            cmd_file_name_delrelpath = "_delrelpath_" + dateityp + '.cmd'
-            cmd_file_full_delrelpath = os.path.join(Globals.datadir, Globals.cmd_files_subdir, cmd_file_name_delrelpath)
-            # generierte Dateien in dict festhalten
-            self.dict_gen_files_delrelpath[dateityp] = cmd_file_full_delrelpath
-            #print("self.dict_gen_files_delrelpath[dateityp]: ", str(self.dict_gen_files_delrelpath[dateityp]))
+            # collect duplicates per type and store them under the combined key
+            for src, tgt in st.items():
+                dup_key = tgt.upper()
+                if dup_key not in Globals.dict_duplicates[combined]:
+                    Globals.dict_duplicates[combined][dup_key] = []
+                Globals.dict_duplicates[combined][dup_key].append(src)
 
-            Globals.dict_duplicates[dateityp] = {}
-            print ("OUTDIR is " + thisoutdir + " ENDUNG is " + endung) if self.debug else True
-            #print ("OUTFILE is " + os.environ["OUTFILE"])
-            # wenn die Endung wegen mehrerer Möglichkeiten (jpeg, jpg) mehr al 1 Eintrag hat, nehmen wir den letzten
-            #print("'(.*?)\.({:s})' 'PIC_{:s}_$1.$2'".format(dateityp, thiscamera))
-            # wir tragen die Dubletten ein       
-            lineno = 0
-            for this_sourcefile in self.dict_source_target[dateityp]:
-                lineno += 1
-                dupl_target_file = self.dict_source_target[dateityp][this_sourcefile].upper() #for duplicate target  check ignore case
-                if dupl_target_file not in Globals.dict_duplicates[dateityp]:
-                    #self.clear_dict_2nd(Globals.dict_duplicates, dateityp)
-                    Globals.dict_duplicates[dateityp][dupl_target_file] = []
-                Globals.dict_duplicates[dateityp][dupl_target_file].append(this_sourcefile) # Duplicates  
-            # remove singles from  dict_duplicates, we use a copy because we must not delete entries during iteration
-            # create dict_duplicates_sourcefiles , key = imagetype, value = dict:sourcefile->targetfile
-            self.clear_dict_2nd(self.dict_duplicates_sourcefiles, dateityp)
-            self.dict_duplicates_sourcefiles[dateityp] = {}
-            dict_h = {}
-            dict_h = copy.deepcopy(Globals.dict_duplicates[dateityp])
-            #print("dict_duplicates: " + str(Globals.dict_duplicates[dateityp])) 
-            for mytarget in dict_h:
-                #print("Duplcate Key: " + mytarget) 
-                mylist = dict_h[mytarget]
-                if len(mylist) == 1: # only 1 file
-                    del Globals.dict_duplicates[dateityp][mytarget]
-                    #print("nodupl: ", str(mylist))
-                    continue
-                # mehrere Quelldateien wuerden auf denselben Zieldateinamen kopiert - das ist der einzige
-                # Fall, in dem der teure Hash-Vergleich (volles Lesen der Datei, siehe tools.file_hash)
-                # ueberhaupt noetig ist, und auch dann nur innerhalb dieser kleinen Gruppe.
-                hashes = {}
-                for mysource in mylist:
-                    h = tools.file_hash(mysource)
-                    hashes.setdefault(h, []).append(mysource)
-                if len(hashes) == 1:
-                    # Inhalt identisch -> echte Dublette, unveraendertes bisheriges Verhalten: User sieht
-                    # sie im Duplicates-Fenster und kann einzelne Dateien ausschliessen. Tut er das nicht,
-                    # gewinnt beim Kopieren (ohne addrelpath) die zuletzt kopierte - unkritisch, da der
-                    # Inhalt ohnehin identisch ist.
-                    for mysource in mylist:
-                        self.dict_duplicates_sourcefiles[dateityp][mysource] = mytarget
-                else:
-                    # unterschiedlicher Inhalt trotz gleichem Zieldateinamen: kein Fall fuer die manuelle
-                    # Dubletten-Pruefung als Ganzes, sondern pro Hash-Gruppe getrennt behandeln. Jede
-                    # Hash-Gruppe (= Dateien mit identischem Inhalt) bekommt EINEN neuen, eindeutigen
-                    # Zieldateinamen, den sich alle Mitglieder dieser Gruppe teilen. Eine Gruppe mit nur
-                    # einem Mitglied ist keine Dublette und wird nicht im Dict gefuehrt; eine Gruppe mit
-                    # mehreren Mitgliedern bleibt eine echte Dublette, nur eben unter ihrem neuen Namen.
-                    del Globals.dict_duplicates[dateityp][mytarget]
-                    original_target = self.dict_source_target[dateityp][mylist[0]] # vor der Umbenennung, mit Original-Schreibweise
-                    root, ext = os.path.splitext(original_target)
-                    counter = 0
-                    for h in sorted(hashes): # stabile, reproduzierbare Reihenfolge ueber mehrere Laeufe hinweg (gleich lange Hex-Hashes -> lexikographisch = numerisch)
-                        group = hashes[h]
-                        counter += 1
-                        new_target = "{:s}_{:03d}{:s}".format(root, counter, ext)
-                        for mysource in group:
-                            self.dict_source_target[dateityp][mysource] = new_target
-                            print("WARNUNG: '{:s}' haette denselben Zieldateinamen wie andere Datei(en) "
-                                  "erhalten ('{:s}'), Inhalt ist aber unterschiedlich. "
-                                  "Neuer Zieldateiname: '{:s}'".format(mysource, original_target, new_target))
-                        if len(group) > 1:
-                            # diese Hash-Gruppe ist selbst eine echte Dublette - unter ihrem neuen
-                            # Zieldateinamen ins Dict eintragen, damit das Duplicates-Fenster sie findet
-                            Globals.dict_duplicates[dateityp][new_target.upper()] = group
-                            for mysource in group:
-                                self.dict_duplicates_sourcefiles[dateityp][mysource] = new_target
-            #print("dict_duplicates: " + str(Globals.dict_duplicates[dateityp])) 
-            busy.close()
+        # apply sort to the combined key. Honor the "sort within type" vs
+        # "sort all" radio button:
+        #  - "sort within type" (default): keep the type order from
+        #    Globals.imagetypes_selected (VIDEO first if clicked first);
+        #    inside each type, sort by sort_method.
+        #  - "sort all": ignore type grouping, sort across all types.
+        if self.rbg.get() == "1":
+            self._sort_within_types(combined, int(sort_method))
+        else:
+            self.resort(combined, int(sort_method))
+
+        # finalize duplicate detection: remove singles from dict_duplicates,
+        # build hashes, rename as before
+        self._finalize_duplicates(combined)
 
         self.collect_jpeg_companions()
 
         self.l_label1.config(text = "Output from Dateimeister")
-                
-        # die generierten Dateien in die Listbox eintragen, nur wenn neu generiert wurde
+
+        # cmd file names for the combined key (one file for all types)
+        self.dict_gen_files[combined] = os.path.join(
+            Globals.datadir, Globals.cmd_files_subdir, "_copy_" + combined + '.cmd')
+        self.dict_gen_files_delete[combined] = os.path.join(
+            Globals.datadir, Globals.cmd_files_subdir, "_delete_" + combined + '.cmd')
+        self.dict_gen_files_delrelpath[combined] = os.path.join(
+            Globals.datadir, Globals.cmd_files_subdir, "_delrelpath_" + combined + '.cmd')
+
+        # fill the listbox if newly generated
         if not Globals.generated:
-            for key in self.dict_gen_files:
-                self.lb_gen.insert(END, key)
-            self.lb_gen.select_set(0)
+            # build dict_gen_files_keys parallel to the listbox (pure type names)
+            self.dict_gen_files_keys = []
+            for t in selected_types:
+                if t not in self.dict_gen_files_keys:
+                    self.dict_gen_files_keys.append(t)
+            for t in self.dict_gen_files_keys:
+                self.lb_gen.insert(END, t)
+            # restore the selection in click order
+            self.lb_gen.selection_clear(0, END)
+            for idx, t in enumerate(self.dict_gen_files_keys):
+                if t in selected_types:
+                    self.lb_gen.selection_set(idx)
+            self._on_lb_gen_click()
             if self.lb_gen.size() > 0:
-                self.button_be.config(state = NORMAL)
+                self.button_select_all.config(state = NORMAL)
         self.filemenu.entryconfig(MENUITEM_FILE_OPEN_CONFIG, state=DISABLED)
         self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=DISABLED)
         self.button_exclude.config(state = DISABLED)
@@ -2615,7 +2748,58 @@ class Dateimeister_support:
         Globals.generated = True
         os.chdir(owndir)
         self.write_cmdfiles()
-    
+
+        # NEW: after generate, show the result immediately
+        self.display_images_prepare()
+
+    def _finalize_duplicates(self, combined):
+        """Duplicate detection for the combined display key.
+
+        Extracted from the original generate():
+            - remove singles from Globals.dict_duplicates[combined]
+            - if multiple sources map to one target: compare hashes
+            - identical content -> true duplicate (stays in the dict)
+            - different content -> new target names _001, _002, ...
+            - fill dict_duplicates_sourcefiles[combined]
+        """
+        # remove singles from dict_duplicates
+        dict_h = copy.deepcopy(Globals.dict_duplicates[combined])
+        for mytarget in dict_h:
+            mylist = dict_h[mytarget]
+            if len(mylist) == 1:
+                del Globals.dict_duplicates[combined][mytarget]
+                continue
+
+            # multiple sources -> compare hashes
+            hashes = {}
+            for mysource in mylist:
+                h = tools.file_hash(mysource)
+                hashes.setdefault(h, []).append(mysource)
+
+            if len(hashes) == 1:
+                # identical content -> true duplicate
+                for mysource in mylist:
+                    self.dict_duplicates_sourcefiles[combined][mysource] = mytarget
+            else:
+                # different content -> new target name per hash group
+                del Globals.dict_duplicates[combined][mytarget]
+                original_target = self.dict_source_target[combined][mylist[0]]
+                root, ext = os.path.splitext(original_target)
+                counter = 0
+                for h in sorted(hashes):
+                    group = hashes[h]
+                    counter += 1
+                    new_target = "{:s}_{:03d}{:s}".format(root, counter, ext)
+                    for mysource in group:
+                        self.dict_source_target[combined][mysource] = new_target
+                        print("WARNUNG: '{:s}' haette denselben Zieldateinamen wie andere Datei(en) "
+                              "erhalten ('{:s}'), Inhalt ist aber unterschiedlich. "
+                              "Neuer Zieldateiname: '{:s}'".format(mysource, original_target, new_target))
+                    if len(group) > 1:
+                        Globals.dict_duplicates[combined][new_target.upper()] = group
+                        for mysource in group:
+                            self.dict_duplicates_sourcefiles[combined][mysource] = new_target
+
     def collect_jpeg_companions(self):
         """Sammelt alle Dateien mit process_type JPEG in dict_firstname_fullname, Schluessel (Ordner, Vorname), damit
         USE_JPEG-Dateien ihr Begleit-JPEG im selben Ordner finden. Gesucht wird in ALLEN Typen: wie der Typ heisst, ist beliebig, massgeblich ist
@@ -2641,10 +2825,61 @@ class Dateimeister_support:
                         self.dict_firstname_fullname[key] = []
                     self.dict_firstname_fullname[key].append(this_sourcefile) # mehrere JPEGs mit demselben Namen im selben Ordner (z.B. .jpg und .jpeg): das letzte gilt
 
-    # display images of given type
+    def display_images_prepare(self, *args):
+        """Entry point for a new display (Generate result).
+
+        Resets the editing context before display_images() builds the actual
+        view:
+          - clear the undo/redo history (UR.reset) and disable the buttons
+          - forget the last used config file (config_file = "")
+          - reset the window title to the base title
+          - safety net: verify that dict_source_target actually contains
+            data for Globals.imagetype
+          - reinitialize Globals.dict_thumbnails for the imagetype
+
+        Not suitable for calls from resize / rb_g / rb_sort: there
+        display_images is called directly so that the user's undo/redo
+        history is preserved. The state (which thumbnails, which sort
+        order) stays the same; only the view is rebuilt.
+        """
+        # reset all process-states
+        self.UR.reset()
+        self.button_undo.config(state = DISABLED)    
+        self.button_redo.config(state = DISABLED)
+        self.config_file = ""   # after change of imagetype (possibly) has to be selected new by user
+        self.root.title(self.title)
+        
+        self.clear_text(self.t_text1)
+        self.canvas_gallery.delete("all")
+        self.canvas_gallery.update_idletasks()
+
+        # NEW: safety net. If generate() has not yet run for the current
+        # display key, tell the user to press Generate first.
+        if Globals.imagetype == "" or Globals.imagetype not in self.dict_source_target:
+            messagebox.showinfo(
+                "Browse / Edit",
+                "No data for the current selection. Please press 'Generate' first."
+            )
+            return None
+        print("display_images_prepare: imagetype={:s}".format(Globals.imagetype)) if self.debug else True
+        
+        self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
+        Globals.dict_thumbnails[Globals.imagetype] = {} # necessary to initialize first level
+        self.display_images(Globals.imagetype, close_childs = True)
 
     # display images of given type
     def display_images(self, imagetype:str = "", close_childs:bool = False):
+        """Build the display for the given imagetype.
+
+        Called from:
+          - display_images_prepare (Generate context, after undo/redo,
+            title and dict_thumbnails have been reset)
+          - resize / rb_g / rb_sort (only rebuild the view; state and
+            undo/redo history stay intact)
+
+        This method does NOT reset any editing state - that is the
+        responsibility of the caller.
+        """
         t_start = time.time()
         memory_before = 0 # to get the amount of memory needed especially for video players
         if self.debug:
@@ -2652,10 +2887,17 @@ class Dateimeister_support:
             gc.collect()
             memory_before = process.memory_info().rss
         busy = tools.BusyDialog(self.root, text="Fotos werden geladen…")
+
         filename = self.dict_gen_files[imagetype]
-        subdir = self.dict_subdirs[imagetype]
-        Globals.outdir = self.dict_outdirs[imagetype] # for setting title of duplicate-window
+        # For a single type these are identical to dict_subdirs / dict_outdirs.
+        # For a combined display key (e.g. "JPEG-RAW-VIDEO") there is no
+        # entry in dict_subdirs / dict_outdirs; use the first selected type
+        # as the reference for the label and the duplicate-window title.
+        first_type = Globals.imagetypes_selected[0] if Globals.imagetypes_selected else imagetype
+        subdir = self.dict_subdirs[first_type]
+        Globals.outdir = self.dict_outdirs_by_type[first_type]
         self.stop_all_players() # should not continue running
+
 
         self.clear_dict_2nd(Globals.thumbnails, imagetype)
         # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
@@ -3036,6 +3278,7 @@ class Dateimeister_support:
             self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=DISABLED)
             self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG, state=DISABLED)
             self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=DISABLED)
+
         self.duplicates = False
 
         for mytarget in Globals.dict_duplicates[imagetype]:
@@ -3084,7 +3327,6 @@ class Dateimeister_support:
             self.canvas_gallery.xview('moveto', 0)
 
     def state_gen_required(self):
-        self.button_be.config(state = DISABLED) # browse / edit will throw error if not generate after chosing camera
         self.button_undo.config(state = DISABLED)    
         self.button_redo.config(state = DISABLED)
         self.clear_text(self.t_text1)
@@ -3210,7 +3452,7 @@ class Dateimeister_support:
     def write_cmdfiles(self):
         for imagetype in self.dict_source_target:
             self.write_cmdfile(imagetype)
-
+            
     def canvas_gallery_show(self, event):
         #print('bbox', self.canvas_gallery.bbox('images'))
         self.canvas_gallery.focus_set()
@@ -3800,8 +4042,8 @@ class Dateimeister_support:
     def apply_process_id(self, process_id, processid_predecessor):
         # set thumbnail-states according actual processid
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
-            image = thumbnail.getImage()
-            thumbnail.setState(self.dict_status_image[process_id][image])
+            file = thumbnail.getFile()
+            thumbnail.setState(self.dict_status_image[process_id][file])
         self.update_button_state()
         
     def historize_process(self):
@@ -3811,8 +4053,8 @@ class Dateimeister_support:
         self.clear_dict_2nd(self.dict_status_image, processid_akt)
         self.dict_status_image[processid_akt] = {}
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
-            image = thumbnail.getImage()
-            self.dict_status_image[processid_akt][image] = thumbnail.getState()
+            file = thumbnail.getFile()
+            self.dict_status_image[processid_akt][file] = thumbnail.getState()
         self.update_button_state() # refer to function comment
         
         # UNDO / REDO disabeln, wenn Aktion nicht möglich, weil es keine frühere / spätere Bearbeitung gibt
@@ -4061,15 +4303,67 @@ class Dateimeister_support:
                                 list_players.append(thisplayer)
                                 #print ("Stop player for: " + t.getFile() + " playertype: " + imagetype)
         return list_players
-     
+
+    def _sort_within_types(self, combined, sort_method):
+        """Sort self.dict_source_target[combined] so that all entries of
+        one semantic type are consecutive and inside each type by
+        sort_method. Uses self.dict_sourcefile_to_type[combined]."""
+        typemap = self.dict_sourcefile_to_type.get(combined, {})
+        if not typemap:
+            # no mapping -> fallback: normal sort
+            self.resort(combined, sort_method)
+            return
+
+        # groups in the order of Globals.imagetypes_selected
+        type_order = {t: i for i, t in enumerate(Globals.imagetypes_selected)}
+
+        def group_key(src):
+            t = typemap.get(src)
+            return (type_order.get(t, 999), t or "")
+
+        # mtime cache for sorting by modification date
+        mtime_cache = {}
+        def mtime(path):
+            if path not in mtime_cache:
+                try:
+                    mtime_cache[path] = os.stat(path).st_mtime
+                except OSError:
+                    mtime_cache[path] = 0.0
+            return mtime_cache[path]
+
+        if sort_method in (1, 2):
+            inner_key = lambda x: x[0]
+        elif sort_method in (3, 4):
+            inner_key = lambda x: mtime(x[0])
+        else:
+            inner_key = None
+        inner_reverse = sort_method in (2, 4)
+
+        for d in (self.dict_source_target, self.dict_source_target_jpeg, self.dict_source_target_tooold):
+            items = list(d[combined].items())
+            if inner_key is not None:
+                items.sort(key=inner_key, reverse=inner_reverse)
+            items.sort(key=lambda kv: group_key(kv[0]))
+            d[combined] = dict(items)
+
     def write_cmdfile(self, imagetype):
+        """Writes ONE copy, ONE delete and ONE delrelpath file for the
+        display key `imagetype` (may be 'JPEG-RAW-VIDEO').
+
+        Copy and delete contain the lines of all types in the order of
+        self.dict_source_target[imagetype].
+
+        Delrelpath sets '@set OUTDIR=' to the type-specific outdir before
+        each type group and then walks the relpaths of that type
+        (from dict_relpath_by_type)."""
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         template_copy       = self.dict_templates["COPY"]
         template_delete     = self.dict_templates["DELETE"]
         template_delrelpath = self.dict_templates["DELRELPATH"]
         template_empty      = self.dict_templates["EMPTY"]
         header = Globals.uncomment + ' generated by dateimeister ' + ts + '\n'
-        # copy files
+
+        # --- Copy ---
         cmd_file_full = self.dict_gen_files[imagetype] # filename was already built by generate-method
         thiscmdfile = open(cmd_file_full, 'w')
         thiscmdfile.write(header) 
@@ -4100,7 +4394,7 @@ class Dateimeister_support:
             thiscmdfile.write(comment + str_ret + '\n')
         thiscmdfile.close()
 
-        # delete files
+        # --- Delete ---
         cmd_file_full = self.dict_gen_files_delete[imagetype] # filename was already built by generate-method
         thiscmdfile = open(cmd_file_full, 'w')
         thiscmdfile.write(header) 
@@ -4131,36 +4425,40 @@ class Dateimeister_support:
             thiscmdfile.write(comment + str_ret + '\n')
         thiscmdfile.close()
         
-        # delrelpath files : remove addrelpath-generated files, but only if empty
+        # --- Delrelpath ---
+        # One file for all types; '@set OUTDIR' before each type group.
         cmd_file_full = self.dict_gen_files_delrelpath[imagetype] # filename was already built by generate-method
         thiscmdfile = open(cmd_file_full, 'w')
         thiscmdfile.write(header)
-        outdir = self.dict_outdirs[imagetype]
-        # for cmd we need backslash, for Unix slash
-        if self.platform == "WINDOWS":
-            outdir = re.sub(r'/', '\\\\', outdir) # replace / by \
-        elif self.platform == "UNIX":
-            outdir = re.sub(r'\\', '/', outdir) # replace \ by /
-        stroutfile = "@set OUTDIR=" + outdir + '\n'
-        thiscmdfile.write(stroutfile) 
-        for relpath in self.dict_relpath[imagetype]:
-            comment = ""
-            str_ret = template_delrelpath
+        for dateityp in Globals.imagetypes_selected:
+            outdir_t = self.dict_outdirs_by_type.get(dateityp, "")
+            if not outdir_t:
+                continue
             if self.platform == "WINDOWS":
-                str_ret = str_ret.replace('<trenner>', '\\')
-                relpath = re.sub(r'/', '\\\\', relpath) # replace / by \
+                outdir_cmd = re.sub(r'/', '\\\\', outdir_t) # replace / by \
             elif self.platform == "UNIX":
-                str_ret = str_ret.replace('<trenner>', '/')
-                relpath = re.sub(r'\\', '/', relpath) # replace \ by /
-            str_ret = str_ret.replace('<relpath>', relpath)
-            str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
-            thiscmdfile.write(comment + str_ret + '\n')
+                outdir_cmd = re.sub(r'\\', '/', outdir_t) # replace \ by /
+            else:
+                outdir_cmd = outdir_t
+            thiscmdfile.write("@set OUTDIR=" + outdir_cmd + '\n')
+            for relpath in self.dict_relpath_by_type.get(dateityp, {}):
+                str_ret = template_delrelpath
+                if self.platform == "WINDOWS":
+                    str_ret = str_ret.replace('<trenner>', '\\')
+                    relpath_cmd = re.sub(r'/', '\\\\', relpath) # replace / by \
+                elif self.platform == "UNIX":
+                    str_ret = str_ret.replace('<trenner>', '/')
+                    relpath_cmd = re.sub(r'\\', '/', relpath) # replace \ by /
+                else:
+                    relpath_cmd = relpath
+                str_ret = str_ret.replace('<relpath>', relpath_cmd)
+                str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
+                thiscmdfile.write(str_ret + '\n')
         # add the script
         str_ret = template_empty
         str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
-        l = str_ret.split('\n')
-        for ii in l:
-           thiscmdfile.write(ii + '\n') 
+        for ii in str_ret.split('\n'):
+            thiscmdfile.write(ii + '\n')
         thiscmdfile.close()
 
     def close_handler(self): #called when window is closing: unbind event handlers send closing event and destroy window
@@ -4195,11 +4493,5 @@ if __name__ == '__main__':
     root = tk.Tk()
     app = Dateimeister_support(root, debug)
     root.mainloop()
-
-
- 
-
-
-
-
-
+    
+    
