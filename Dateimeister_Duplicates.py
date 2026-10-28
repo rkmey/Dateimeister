@@ -192,6 +192,7 @@ class MyDuplicates:
         Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed)
         Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
         self.canvas_width_visible = 0
+        self.active_video_player = None
 
     # 20260915: event handler for closing event
     def on_closing(self, event): #if a FS exists in dict_file_image delete entry
@@ -348,6 +349,7 @@ class MyDuplicates:
 
     def display_duplicate(self, target_file):
         self.caller.stop_all_players() # should not continue running
+        self.release_players()
         self.f.delete('all')
         self.thumbnails_duplicates[Globals.imagetype] = []
         self.dict_thumbnails_duplicates[Globals.imagetype] = {}
@@ -662,6 +664,7 @@ class MyDuplicates:
 
     def close_handler(self): #calles when window is closing
         self.stop_all_players() # unregister to avoid calls after duplicate has been destroyed
+        self.release_players()
         Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
         Globals.eventManager.unbind("Closing", self.on_closing)
         Globals.eventManager.generate(
@@ -683,6 +686,20 @@ class MyDuplicates:
                         thisplayer.pstop()
                         #print ("Stop player for: " + t.getFile())
     
+    def release_players(self, keys=None):
+        """pstop + destroy all Players in keys (None = all)."""
+        for key in (list(Globals.thumbnails.keys()) if keys is None else keys):
+            for t in Globals.thumbnails.get(key, []):
+                p = t.getPlayer()
+                if p is not None:
+                    try:
+                        p.pstop()
+                        p.destroy()
+                    except Exception:
+                        pass
+                    t.setPlayer(None)
+        self.active_video_player = None
+
     def on_configure(self, event):
         x = event.widget
         if x == self.root:

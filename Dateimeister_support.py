@@ -1076,12 +1076,8 @@ class Dateimeister_support:
         if not types:
             messagebox.showinfo("Generate", "No type selected. Please select at least one type in the listbox.")
             return None
-        combined = self._combined_key(types)
-        print("Button_generate_pressed: types={:s} combined={:s}".format(
-            str(types), combined)) if self.debug else True
-        Globals.imagetypes_selected = list(types)
-        Globals.imagetype = combined
 
+        combined = self._combined_key(types)
         # reset sort radio buttons to default on every Generate click
         self.rbg.set("1")        # sort within type
         self.rbvalue.set("1")    # sort name asc
@@ -1551,6 +1547,7 @@ class Dateimeister_support:
             self.clear_textbox(self.lb_gen)
             self.oldcamera = thiscamera
             self.clear_dict_2nd(Globals.thumbnails, Globals.imagetype)
+            self.release_players()
             self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
             Globals.generated = False
             Globals.imagetype = ""
@@ -1964,8 +1961,18 @@ class Dateimeister_support:
                     Globals.dict_thumbnails[key].clear()
 
         self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
+        self.release_players()
         Globals.dict_thumbnails[Globals.imagetype] = {} # necessary to initialize first level
         self.display_images(Globals.imagetype, close_childs = True)
+
+        types = self._get_selected_types()
+        if not types:
+            messagebox.showinfo("Generate", "No type selected. Please select at least one type in the listbox.")
+            return None
+
+        combined = self._combined_key(types)
+        Globals.imagetypes_selected = list(types)
+        Globals.imagetype = combined
 
 
     # display images of given type
@@ -2001,6 +2008,7 @@ class Dateimeister_support:
 
 
         self.clear_dict_2nd(Globals.thumbnails, imagetype)
+        self.release_players()
         # in Python kann man offenbar nicht automatisch einen Eintrag anlegen, indem man ein Element an die Liste hängt
         Globals.thumbnails[imagetype] = []
         # cleanup if requested, not for sort, resize
@@ -2420,8 +2428,10 @@ class Dateimeister_support:
             process = psutil.Process(os.getpid())
             gc.collect()
             memory_after = process.memory_info().rss
+            n = sum(isinstance(o, DV.VideoPlayer) for o in gc.get_objects())
             print("Memory used total:", (memory_after - memory_before) / 1024 / 1024, "MB")
             print("Memory used per Player:", ((memory_after - memory_before) / self.num_images) / 1024 / 1024, "MB")
+            print(f"Num players: {n}")
         if Globals.resized and self.leftmost_thumbnail:
             self.scrollToImage(self.leftmost_thumbnail)
         else:
@@ -2442,6 +2452,7 @@ class Dateimeister_support:
         self.label_num.config(text = "0")
         self.clear_textbox(self.lb_gen)
         self.clear_dict_2nd(Globals.thumbnails, Globals.imagetype)
+        self.release_players()
         self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
 
     def new_dir_in_xml(self, dirtype, max_dirs, dir_chosen, ts):
@@ -3415,6 +3426,20 @@ class Dateimeister_support:
                 pass
             self.active_video_player = None
         return list_players
+
+    def release_players(self, keys=None):
+        """pstop + destroy all Players in keys (None = all)."""
+        for key in (list(Globals.thumbnails.keys()) if keys is None else keys):
+            for t in Globals.thumbnails.get(key, []):
+                p = t.getPlayer()
+                if p is not None:
+                    try:
+                        p.pstop()
+                        p.destroy()
+                    except Exception:
+                        pass
+                    t.setPlayer(None)
+        self.active_video_player = None
 
     def _sort_within_types(self, combined, sort_method):
         """Sort self.dict_source_target[combined] so that all entries of
