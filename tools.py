@@ -8,6 +8,8 @@ import ctypes
 import time
 import operator
 import threading
+import queue
+import socket
 import copy
 import subprocess, json
 import shutil
@@ -331,6 +333,198 @@ def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, 
     element.place(relx = d_w, rely = d_n, relheight = element_height, relwidth = element_width, anchor = tk.NW)     
     sb_h.place(relx = d_w, rely = d_n + element_height, relheight = rel_size_sb_y, relwidth = element_width, anchor = tk.NW)
     sb_v.place(relx = d_w + element_width, rely = d_n, relheight = element_height, relwidth = rel_size_sb_x, anchor = tk.NW)
+
+
+# ------------------------------------------------------------------------------
+# Verzeichnispruefung (auch fuer Netzlaufwerke): schnell und ohne die GUI zu blockieren
+# ------------------------------------------------------------------------------
+def true_case_path(path):
+    """Liefert den Pfad in der Schreibweise, wie sie im Dateisystem steht (nur Windows noetig:
+    dort ist der Key-Pfad aus der Listbox kleingeschrieben, die cmd-Files brauchen aber die echte
+    Schreibweise). Existiert der Pfad nicht oder geht etwas schief: unveraendert zurueck."""
+    if sys.platform != "win32" or not path:
+        return path
+    try:
+        buf = ctypes.create_unicode_buffer(32768)
+        n = ctypes.windll.kernel32.GetLongPathNameW(os.path.normpath(path), buf, len(buf))
+        if 0 < n < len(buf):
+            p = buf.value
+            if len(p) > 1 and p[1] == ':':
+                p = p[0].upper() + p[1:]          # Laufwerksbuchstabe gross
+            return p.replace('\\', '/')           # wie bisher mit / weiterarbeiten
+    except Exception:
+        pass
+    return path
+    
+def _unc_host(path):
+    """Rechnername, wenn path auf einer Netzwerkfreigabe liegt (UNC-Pfad oder gemapptes Laufwerk), sonst None."""
+    if sys.platform != "win32" or not path:
+        return None
+    p = path.replace('/', '\\')
+    host = None
+    if p.startswith('\\\\'):
+        host = p[2:].split('\\')[0]
+    elif len(p) >= 2 and p[1] == ':':
+        try:
+            buf = ctypes.create_unicode_buffer(1024)
+            size = ctypes.c_ulong(len(buf))
+            if ctypes.windll.mpr.WNetGetConnectionW(p[:2], buf, ctypes.byref(size)) == 0:
+                remote = buf.value
+                if remote.startswith('\\\\'):
+                    host = remote[2:].split('\\')[0]
+        except Exception:
+            return None
+    # Sonderformen (\\?\, WebDAV mit @SSL, IPv6-Literal) nicht vorab testen
+    if not host or host in ('?', '.') or '@' in host or host.lower().endswith('.ipv6-literal.net'):
+        return None
+    return host
+
+def host_reachable(host, timeout = 2.0):
+    """Schneller Erreichbarkeitstest des Fileservers (SMB-Port 445, ersatzweise 139)."""
+    for port in (445, 139):
+        try:
+            with socket.create_connection((host, port), timeout = timeout):
+                return True
+        except OSError:
+            continue
+    return False
+
+def isdir_fast(path):
+    """Wie os.path.isdir, aber bei Netzwerkfreigaben mit vorgeschaltetem Kurztest: ist der Server nicht
+    erreichbar, kommt das Ergebnis nach ca. 2-4 s statt nach dem langen Windows-Timeout."""
+    host = _unc_host(path)
+    if host is not None and not host_reachable(host):
+        return False
+    return os.path.isdir(path)
+
+class DirChecker:
+    """Existenzpruefung von Verzeichnissen im Hintergrund, damit nicht erreichbare Netzlaufwerke
+    (langer Windows-Timeout) die Tk-Oberflaeche nicht blockieren.
+    Pro Anwendung eine Instanz: DirChecker(root). Alle Callbacks laufen im Tk-Hauptthread.
+      cache   : Verzeichnis (= Listbox-Text) -> existiert? (Ergebnisse bisheriger Pruefungen)
+      pending : Verzeichnis -> Callbacks einer gerade laufenden Pruefung"""
+    def __init__(self, root, debug = False):
+        self.root = root
+        self.debug = debug
+        self.cache = {}
+        self.pending = {}
+
+    def check_bg(self, d, callback):
+        """Existenzpruefung in einem Hintergrund-Thread; callback(ok) laeuft im Tk-Hauptthread.
+        Laeuft fuer d schon eine Pruefung (z.B. vom Start), wird callback nur angehaengt: die Wartezeit
+        beginnt dann nicht von vorn. Netzwerkpfade: siehe isdir_fast."""
+        if d in self.pending:
+            self.pending[d].append(callback)
+            return
+        self.pending[d] = [callback]
+        q = queue.Queue()
+
+        def worker():
+            try:
+                ok = isdir_fast(d)
+            except Exception:
+                ok = False
+            q.put(ok)
+
+        def poll():
+            try:
+                if not self.root.winfo_exists():
+                    return
+                try:
+                    ok = q.get_nowait()
+                except queue.Empty:
+                    self.root.after(50, poll)
+                    return
+                for cb in self.pending.pop(d, []):
+                    cb(ok)
+            except tk.TclError:                 # Fenster wurde inzwischen geschlossen
+                return
+
+        threading.Thread(target = worker, daemon = True).start()
+        self.root.after(20, poll)
+
+    def mark(self, lb, d, ok):
+        """Ergebnis einer Pruefung merken und den Listbox-Eintrag entsprechend einfaerben."""
+        self.cache[d] = ok
+        for i in range(lb.size()):
+            if lb.get(i) == d:
+                lb.itemconfig(i, fg = "black" if ok else "gray")
+
+    def check_on_select(self, lb, name):
+        """Wird beim Anklicken eines Listbox-Eintrags aufgerufen. Bekannt nicht vorhandene Eintraege
+        werden sofort abgelehnt (kein Warten auf den Netz-Timeout); ansonsten laeuft die Pruefung im
+        Hintergrund, und der Eintrag wird ggf. nachtraeglich wieder abgewaehlt."""
+        sel = lb.curselection()
+        if not sel:
+            return
+        index = sel[0]
+        d = lb.get(index) # because listbox has single selection
+        print("current selection is: " + d + " INDEX: " + str(index)) if self.debug else True
+
+        def show_error():
+            messagebox.showerror("showerror", name + ": " + d + " does not exist, choose another one")
+
+        if self.cache.get(d) is False:
+            lb.selection_clear(index) # dont select, MessageBox
+            show_error()
+            # im Hintergrund neu pruefen: ist das Laufwerk wieder da, wird der Eintrag wieder schwarz
+            self.check_bg(d, lambda ok: self.mark(lb, d, ok))
+            return
+
+        def done(ok):
+            self.mark(lb, d, ok)
+            if not ok:
+                for i in range(lb.size()):
+                    if lb.get(i) == d and i in lb.curselection():
+                        lb.selection_clear(i)
+                show_error()
+        self.check_bg(d, done)
+
+    def check_list(self, lb, label, dirs):
+        """Prueft die Existenz der Verzeichnisse parallel im Hintergrund (siehe check_bg).
+        Nicht existierende Eintraege werden in der Listbox ausgegraut. Das Label bekommt den ersten
+        existierenden Eintrag (= zuletzt benutzt), sobald alle davor stehenden Eintraege geprueft sind -
+        aber nur, wenn der Benutzer das Label inzwischen nicht selbst geaendert hat."""
+        initial_text = label.cget('text')
+        order = list(dirs)
+        results = {}
+        state = {"label_done": False}
+
+        def choose_label():
+            if state["label_done"]:
+                return
+            for d in order:
+                if d not in results:
+                    return                      # ein weiter oben stehender Eintrag ist noch offen
+                if results[d]:
+                    state["label_done"] = True
+                    if label.cget('text') == initial_text:   # Benutzer hat nichts anderes gewaehlt
+                        label.config(text = d)
+                    return
+            state["label_done"] = True          # keiner existiert
+
+        def on_result(d, ok):
+            results[d] = ok
+            self.mark(lb, d, ok)        # Cache + Einfaerben
+            choose_label()
+
+        for d in order:
+            self.check_bg(d, lambda ok, d = d: on_result(d, ok))
+
+    def select_in_listbox(self, lb, directory):
+        """Zeigt directory in der Listbox (neu ganz oben, falls noch nicht vorhanden) und selektiert es."""
+        norm = re.sub(r'\\', '/', directory).lower()
+        items = [re.sub(r'\\', '/', lb.get(i)).lower() for i in range(lb.size())]
+        if norm in items:
+            idx = items.index(norm)
+        else:
+            lb.insert(0, norm)   # Liste ist nach usedate absteigend sortiert: neu = oben
+            idx = 0
+        self.cache[lb.get(idx)] = True   # kam aus dem Dateidialog, existiert also
+        lb.itemconfig(idx, fg="black")   # evtl. vorher ausgegraut, weil das Verzeichnis fehlte
+        lb.selection_clear(0, END)
+        lb.selection_set(idx)
+        lb.see(idx)
 
 
 # some attributes will be added from inifile-processing
