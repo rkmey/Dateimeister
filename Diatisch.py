@@ -226,6 +226,7 @@ class Diatisch:
             self.root = root
         self.title = "Diatisch"
         self.root.title(self.title)
+        self.dirchk = tools.DirChecker(self.root, debug)   # Hintergrundpruefung der Verzeichnisse/Dateien (siehe tools.py)
         #print("List Imagefiles is: " + str(list_imagefiles))
         # Fenstergröße
         self.physical_width  = self.root.winfo_screenwidth()
@@ -807,13 +808,22 @@ class Diatisch:
         
         
     def listbox_cfg_check_exist(self, event):
-        if self.listbox_cfg.curselection():
-            index = self.listbox_cfg.curselection()[0]
-            sel   = self.listbox_cfg.get(index) # because listbox has single selection
-            #print("current selection is: " + sel + " INDEX: " + str(index)) if self.debug else True
-            if not os.path.isfile(sel):
-                self.listbox_cfg.selection_clear(index) # dont select, MessageBox
-                messagebox.showerror("error", "Configfile: " + sel + " does not exist, choose another one")
+        self.dirchk.check_on_select(self.listbox_cfg, "Configfile", title = "error", isfile = True)
+
+    def _set_recent_state(self, menu, item, ok):
+        """Recent-Menueeintrag fuer item (Label beginnt mit item + ' (usedate:') ent-/aktivieren."""
+        try:
+            last = menu.index("end")
+            if last is None:
+                return
+            for i in range(last + 1):
+                try:
+                    if menu.entrycget(i, "label").startswith(item + ' (usedate:'):
+                        menu.entryconfig(i, state = NORMAL if ok else DISABLED)
+                except tk.TclError:             # Separator o.ae. ohne Label
+                    pass
+        except tk.TclError:                     # Menue wurde inzwischen neu aufgebaut/zerstoert
+            pass
 
     def update_listbox_cfg(self):
         # fill cfg listbox and recentmenu cfg
@@ -837,16 +847,13 @@ class Diatisch:
         indexes = []
         for item in sorted_d:
             self.listbox_cfg.insert(END, item)
-            if not os.path.isfile(item):
-                #print("INDIR: " + item + " INDEX: " + str(ii)) if self.debug else True
-                indexes.append(ii) # list of indizes to grey out because dir does not exist
             usedate = dict_filename_usedate[item]
             labeltext = item + ' (usedate: ' + usedate + ')'
             self.recentmenu_cfg.add_command(label=labeltext, command = lambda item=item: self.recent_config_cfg(item))
+            # Menueeintrag deaktivieren, sobald die Hintergrundpruefung "nicht vorhanden" meldet
+            self.dirchk.check_bg(item, lambda ok, item = item: self._set_recent_state(self.recentmenu_cfg, item, ok), True)
             ii += 1
-        for jj in indexes:
-            self.listbox_cfg.itemconfigure(jj, fg="gray")
-            self.recentmenu_cfg.entryconfig(jj, state = DISABLED)
+        self.dirchk.check_list(self.listbox_cfg, None, list(sorted_d), True)
         self.listbox_cfg.selection_clear(0, "end")
         if ii > 0:
             self.listbox_cfg.selection_set(0)
@@ -880,13 +887,10 @@ class Diatisch:
             usedate = dict_filename_usedate[item]
             labeltext = item + ' (usedate: ' + usedate + ')'
             self.recentmenu_file.add_command(label=labeltext, command = lambda item=item: self.recent_config_indir(item))
-            if not os.path.isdir(item):
-                #print("INDIR: " + item + " INDEX: " + str(ii)) if self.debug else True
-                indexes.append(ii) # list of indizes to grey out because dir does not exist
+            # Menueeintrag deaktivieren, sobald die Hintergrundpruefung "nicht vorhanden" meldet
+            self.dirchk.check_bg(item, lambda ok, item = item: self._set_recent_state(self.recentmenu_file, item, ok))
             ii += 1
-        for jj in indexes:
-            self.listbox_indir.itemconfig(jj, fg="gray")
-            self.recentmenu_file.entryconfig(jj, state = DISABLED)
+        self.dirchk.check_list(self.listbox_indir, None, list(sorted_d))
         self.listbox_indir.selection_clear(0, "end")
         if ii > 0:
             self.listbox_indir.select_set(0)
@@ -918,12 +922,8 @@ class Diatisch:
             self.listbox_outdir.insert(END, item)
             usedate = dict_filename_usedate[item]
             labeltext = item + ' (usedate: ' + usedate + ')'
-            if not os.path.isdir(item):
-                #print("INDIR: " + item + " INDEX: " + str(ii)) if self.debug else True
-                indexes.append(ii) # list of indizes to grey out because dir does not exist
             ii += 1
-        for jj in indexes:
-            self.listbox_outdir.itemconfig(jj, fg="gray")
+        self.dirchk.check_list(self.listbox_outdir, None, list(sorted_d))
         self.listbox_outdir.selection_clear(0, "end")
         if ii > 0:
             self.listbox_outdir.select_set(0)
@@ -952,22 +952,10 @@ class Diatisch:
             self.load_images(self.indir)
         
     def listbox_indir_check_exist(self, event):
-        if self.listbox_indir.curselection():
-            index = self.listbox_indir.curselection()[0]
-            sel   = self.listbox_indir.get(index) # because listbox has single selection
-            #print("current selection is: " + sel + " INDEX: " + str(index)) if self.debug else True
-            if not os.path.isdir(sel):
-                self.listbox_indir.selection_clear(index) # dont select, MessageBox
-                messagebox.showerror("error", "Indir: " + sel + " does not exist, choose another one", parent = self.Frame_indir)
+        self.dirchk.check_on_select(self.listbox_indir, "Indir", parent = self.Frame_indir, title = "error")
 
     def listbox_outdir_check_exist(self, event):
-        if self.listbox_outdir.curselection():
-            index = self.listbox_outdir.curselection()[0]
-            sel   = self.listbox_outdir.get(index) # because listbox has single selection
-            #print("current selection is: " + sel + " INDEX: " + str(index)) if self.debug else True
-            if not os.path.isdir(sel):
-                self.listbox_outdir.selection_clear(index) # dont select, MessageBox
-                messagebox.showerror("error", "Outdir: " + sel + " does not exist, choose another one")
+        self.dirchk.check_on_select(self.listbox_outdir, "Outdir", title = "error")
 
     def on_configure(self, event):
         x = event.widget
@@ -1127,6 +1115,14 @@ class Diatisch:
         #self.UR.reset()
         self.historize_process("close directory {:s}".format(self.indir))
 
+    def item_missing(self, t):
+        """True, wenn Verzeichnis/Datei t nicht existiert. Ergebnis der Hintergrundpruefung aus dem Cache,
+        sonst schnelle Pruefung (Netzpfade ohne langen Timeout)."""
+        known = self.dirchk.cache.get(t)
+        if known is not None:
+            return not known
+        return not tools.isdir_fast(t) and not tools.isfile_fast(t)
+
     def new_item_in_xml(self, max_items, item_chosen, ts, parent, entry, attrname):
         # if item_chosen does not exist so that a new item has to be created:
         # removes entries if max value from ini is reached. removes not existing and old entries first
@@ -1156,7 +1152,7 @@ class Diatisch:
                     if num_to_delete > 0:
                         ii = 0
                         for t in reversed(list_items): # now the oldest are on top
-                            if not os.path.isdir(t) and not os.path.isfile(t):
+                            if self.item_missing(t):
                                 if ii < num_to_delete:
                                     DX.delete_diatisch_item(self.config_files_xml, parent, entry, attrname, t)
                                     ii += 1

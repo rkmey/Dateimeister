@@ -397,6 +397,13 @@ def isdir_fast(path):
         return False
     return os.path.isdir(path)
 
+def isfile_fast(path):
+    """Wie isdir_fast, aber fuer Dateien (os.path.isfile)."""
+    host = _unc_host(path)
+    if host is not None and not host_reachable(host):
+        return False
+    return os.path.isfile(path)
+
 class DirChecker:
     """Existenzpruefung von Verzeichnissen im Hintergrund, damit nicht erreichbare Netzlaufwerke
     (langer Windows-Timeout) die Tk-Oberflaeche nicht blockieren.
@@ -409,7 +416,7 @@ class DirChecker:
         self.cache = {}
         self.pending = {}
 
-    def check_bg(self, d, callback):
+    def check_bg(self, d, callback, isfile = False):
         """Existenzpruefung in einem Hintergrund-Thread; callback(ok) laeuft im Tk-Hauptthread.
         Laeuft fuer d schon eine Pruefung (z.B. vom Start), wird callback nur angehaengt: die Wartezeit
         beginnt dann nicht von vorn. Netzwerkpfade: siehe isdir_fast."""
@@ -421,7 +428,7 @@ class DirChecker:
 
         def worker():
             try:
-                ok = isdir_fast(d)
+                ok = isfile_fast(d) if isfile else isdir_fast(d)
             except Exception:
                 ok = False
             q.put(ok)
@@ -450,10 +457,11 @@ class DirChecker:
             if lb.get(i) == d:
                 lb.itemconfig(i, fg = "black" if ok else "gray")
 
-    def check_on_select(self, lb, name):
+    def check_on_select(self, lb, name, parent = None, title = "showerror", isfile = False):
         """Wird beim Anklicken eines Listbox-Eintrags aufgerufen. Bekannt nicht vorhandene Eintraege
         werden sofort abgelehnt (kein Warten auf den Netz-Timeout); ansonsten laeuft die Pruefung im
-        Hintergrund, und der Eintrag wird ggf. nachtraeglich wieder abgewaehlt."""
+        Hintergrund, und der Eintrag wird ggf. nachtraeglich wieder abgewaehlt.
+        parent/title: fuer die Fehlermeldung, isfile=True: Eintraege sind Dateien statt Verzeichnisse."""
         sel = lb.curselection()
         if not sel:
             return
@@ -462,13 +470,14 @@ class DirChecker:
         print("current selection is: " + d + " INDEX: " + str(index)) if self.debug else True
 
         def show_error():
-            messagebox.showerror("showerror", name + ": " + d + " does not exist, choose another one")
+            kw = {"parent": parent} if parent is not None else {}
+            messagebox.showerror(title, name + ": " + d + " does not exist, choose another one", **kw)
 
         if self.cache.get(d) is False:
             lb.selection_clear(index) # dont select, MessageBox
             show_error()
             # im Hintergrund neu pruefen: ist das Laufwerk wieder da, wird der Eintrag wieder schwarz
-            self.check_bg(d, lambda ok: self.mark(lb, d, ok))
+            self.check_bg(d, lambda ok: self.mark(lb, d, ok), isfile)
             return
 
         def done(ok):
@@ -478,20 +487,21 @@ class DirChecker:
                     if lb.get(i) == d and i in lb.curselection():
                         lb.selection_clear(i)
                 show_error()
-        self.check_bg(d, done)
+        self.check_bg(d, done, isfile)
 
-    def check_list(self, lb, label, dirs):
+    def check_list(self, lb, label, dirs, isfile = False):
         """Prueft die Existenz der Verzeichnisse parallel im Hintergrund (siehe check_bg).
         Nicht existierende Eintraege werden in der Listbox ausgegraut. Das Label bekommt den ersten
         existierenden Eintrag (= zuletzt benutzt), sobald alle davor stehenden Eintraege geprueft sind -
-        aber nur, wenn der Benutzer das Label inzwischen nicht selbst geaendert hat."""
-        initial_text = label.cget('text')
+        aber nur, wenn der Benutzer das Label inzwischen nicht selbst geaendert hat.
+        label = None: nur Ausgrauen. isfile=True: Eintraege sind Dateien statt Verzeichnisse."""
+        initial_text = label.cget('text') if label is not None else None
         order = list(dirs)
         results = {}
         state = {"label_done": False}
 
         def choose_label():
-            if state["label_done"]:
+            if label is None or state["label_done"]:
                 return
             for d in order:
                 if d not in results:
@@ -509,7 +519,7 @@ class DirChecker:
             choose_label()
 
         for d in order:
-            self.check_bg(d, lambda ok, d = d: on_result(d, ok))
+            self.check_bg(d, lambda ok, d = d: on_result(d, ok), isfile)
 
     def select_in_listbox(self, lb, directory):
         """Zeigt directory in der Listbox (neu ganz oben, falls noch nicht vorhanden) und selektiert es."""
