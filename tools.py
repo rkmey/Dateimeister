@@ -346,6 +346,7 @@ class Globals:
     list_result_diatisch = []
     resized = False # only temporary set to True on resize window
     eventManager = None
+    thumbnails = {}
 
 def info_box(nachricht, level="info"):
     """
