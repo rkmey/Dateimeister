@@ -68,7 +68,7 @@ class MyDuplicates:
         self.root.resizable(True, True)
         self.root.title("Dateimeister")
         title = self.root.title()
-        self.root.title(title + " for " + Globals.outdir)
+        self.root.title(title + " for " + Globals.imagetype)
         self.root.minsize(120, 100)
         self.root.maxsize(4000, 4000)
         self.root.configure(background=tools._bgcolor)
@@ -84,8 +84,6 @@ class MyDuplicates:
         # register at thumbnail, so it can call us for reacting to state
         # Create secondary (or popup) window.
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
-        title = self.root.title()
-        self.root.title(title + " for " + Globals.outdir)
 
         self.width  = 0 # for resize
         self.height = 0 # for resize
@@ -801,5 +799,5 @@ class MyDuplicates:
 
     def __del__(self):
         self.a = 1
-        print("*** Deleting MyDuplicates-Objekt. Outdir is " + str(Globals.outdir))
+        print("*** Deleting MyDuplicates-Objekt. Imagetype is " + str(Globals.imagetype))
 

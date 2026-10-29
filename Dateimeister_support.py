@@ -1074,6 +1074,10 @@ class Dateimeister_support:
     def Button_generate_pressed(self, *args):
         types = self._get_selected_types()
         if not types:
+            print("DEBUG vor No type selected: curselection={}, lb_size={}, generated={}".format(
+                self.lb_gen.curselection(),
+                self.lb_gen.size(),
+                Globals.generated)) if self.debug else True
             messagebox.showinfo("Generate", "No type selected. Please select at least one type in the listbox.")
             return None
 
@@ -1082,8 +1086,10 @@ class Dateimeister_support:
         self.rbg.set("1")        # sort within type
         self.rbvalue.set("1")    # sort name asc
 
-        if combined in self.dict_source_target:
+        if Globals.generated and combined in self.dict_source_target:
             # already generated with this exact set: re-sort with default and display
+            Globals.imagetypes_selected = list(types)   # wird von _sort_within_types gebraucht
+            Globals.imagetype = combined
             self.dict_sort_method[combined] = "1"
             if self.rbg.get() == "1":
                 self._sort_within_types(combined, int(self.rbvalue.get()))
@@ -1607,6 +1613,10 @@ class Dateimeister_support:
               " click_order=" + str(self.imagetypes_click_order) +
               " keys=" + str(self.dict_gen_files_keys)) if self.debug else True
         if not selected_types:
+            print("DEBUG vor No type selected: curselection={}, lb_size={}, generated={}".format(
+                self.lb_gen.curselection(),
+                self.lb_gen.size(),
+                Globals.generated)) if self.debug else True
             messagebox.showinfo(
                 "Generate",
                 "No type selected. Please select at least one type in the listbox."
@@ -1965,15 +1975,6 @@ class Dateimeister_support:
         Globals.dict_thumbnails[Globals.imagetype] = {} # necessary to initialize first level
         self.display_images(Globals.imagetype, close_childs = True)
 
-        types = self._get_selected_types()
-        if not types:
-            messagebox.showinfo("Generate", "No type selected. Please select at least one type in the listbox.")
-            return None
-
-        combined = self._combined_key(types)
-        Globals.imagetypes_selected = list(types)
-        Globals.imagetype = combined
-
 
     # display images of given type
     def display_images(self, imagetype:str = "", close_childs:bool = False):
@@ -1997,15 +1998,7 @@ class Dateimeister_support:
         busy = tools.BusyDialog(self.root, text="Fotos werden geladen…")
 
         filename = self.dict_gen_files[imagetype]
-        # For a single type these are identical to dict_subdirs / dict_outdirs.
-        # For a combined display key (e.g. "JPEG-RAW-VIDEO") there is no
-        # entry in dict_subdirs / dict_outdirs; use the first selected type
-        # as the reference for the label and the duplicate-window title.
-        first_type = Globals.imagetypes_selected[0] if Globals.imagetypes_selected else imagetype
-        subdir = self.dict_subdirs[first_type]
-        Globals.outdir = self.dict_outdirs_by_type[first_type]
         self.stop_all_players() # should not continue running
-
 
         self.clear_dict_2nd(Globals.thumbnails, imagetype)
         self.release_players()
@@ -2026,14 +2019,6 @@ class Dateimeister_support:
         for this_sourcefile in self.dict_source_target[imagetype]:
             this_targetfile = self.dict_source_target[imagetype][this_sourcefile]
             lineno += 1
-            source_without_dir = re.sub(re.escape(self.label_indir.cget('text')), '', this_sourcefile)
-            source_without_dir = re.sub(r'^[\\\/]', '', source_without_dir)
-            target_without_dir = re.sub(re.escape(self.label_outdir.cget('text')), '', this_targetfile)
-            target_without_dir = re.sub(r'[\\\/]', '/', target_without_dir) # replace all backslashes by slash
-            my_subdir = subdir
-            my_subdir = re.sub(r'[\\\/]', '/', my_subdir) # replace all backslashes by slash
-            target_without_dir = re.sub(re.escape(my_subdir), '', target_without_dir) # replace subdir
-            target_without_dir = re.sub(r'^[\\\/]+', '', target_without_dir) # replace first slash
             text_w = 80
             #thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = source_without_dir, target = target_without_dir)
             thisline = "{source:<{len1}s}{target:<{len1}s}\n".format(len1 = text_w, source = this_sourcefile, target = this_targetfile)
@@ -2438,7 +2423,17 @@ class Dateimeister_support:
             self.xview('moveto', 0)
 
     def state_gen_required(self):
-        self.button_undo.config(state = DISABLED)    
+        """Called when indir / outdir / a checkbox changes.
+
+        Clears the current display and disables the follow-up buttons,
+        and drops the data for the current display key so the next
+        Generate performs a fresh scan (e.g. when addrelpath, newer,
+        recursive, prefix, num, indir or outdir has changed).
+
+        The listbox selection (lb_gen) is NOT touched: it is the input
+        for Generate and must survive option changes.
+        """
+        self.button_undo.config(state = DISABLED)
         self.button_redo.config(state = DISABLED)
         self.clear_text(self.t_text1)
         self.canvas_gallery.delete("all")
@@ -2448,12 +2443,27 @@ class Dateimeister_support:
         self.button_include.config(state = DISABLED)
         self.button_exec.config(state = DISABLED)
         self.button_duplicates.config(state = DISABLED)
-        #button_generate.config(state = DISABLED)
         self.label_num.config(text = "0")
-        self.clear_textbox(self.lb_gen)
+        # self.clear_textbox(self.lb_gen)   # NOT cleared: lb_gen is the input for Generate
         self.clear_dict_2nd(Globals.thumbnails, Globals.imagetype)
         self.release_players()
         self.clear_dict_2nd(Globals.dict_thumbnails, Globals.imagetype)
+
+        # The data for the current display key is now stale - drop it so the
+        # next Generate does a fresh scan instead of taking the
+        # "already generated, just display" shortcut in
+        # Button_generate_pressed.
+        Globals.generated = False
+        for d in (self.dict_source_target,
+                  self.dict_source_target_jpeg,
+                  self.dict_source_target_tooold,
+                  self.dict_relpath,
+                  self.dict_gen_files,
+                  self.dict_gen_files_delete,
+                  self.dict_gen_files_delrelpath,
+                  self.dict_sort_method,
+                  Globals.dict_duplicates):
+            d.pop(Globals.imagetype, None)
 
     def new_dir_in_xml(self, dirtype, max_dirs, dir_chosen, ts):
         do_del = True

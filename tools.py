@@ -343,7 +343,6 @@ class Globals:
     gap = 10
     dict_thumbnails = {}
     dict_duplicates = {}
-    outdir = ""
     list_result_diatisch = []
     resized = False # only temporary set to True on resize window
     eventManager = None
