@@ -17,6 +17,8 @@ import ctypes
 import time
 import operator
 import threading
+import queue
+import socket
 import copy
 import subprocess
 import shutil
@@ -110,7 +112,66 @@ def companion_key(sourcefile, firstname):
     Ordners bekommen, weil viele Kameras bei 0001 neu anfangen."""
     folder = os.path.normcase(os.path.normpath(os.path.dirname(sourcefile)))
     return (folder, firstname.upper())
+
+def true_case_path(path):
+    """Liefert den Pfad in der Schreibweise, wie sie im Dateisystem steht (nur Windows noetig:
+    dort ist der Key-Pfad aus der Listbox kleingeschrieben, die cmd-Files brauchen aber die echte
+    Schreibweise). Existiert der Pfad nicht oder geht etwas schief: unveraendert zurueck."""
+    if sys.platform != "win32" or not path:
+        return path
+    try:
+        buf = ctypes.create_unicode_buffer(32768)
+        n = ctypes.windll.kernel32.GetLongPathNameW(os.path.normpath(path), buf, len(buf))
+        if 0 < n < len(buf):
+            p = buf.value
+            if len(p) > 1 and p[1] == ':':
+                p = p[0].upper() + p[1:]          # Laufwerksbuchstabe gross
+            return p.replace('\\', '/')           # wie bisher mit / weiterarbeiten
+    except Exception:
+        pass
+    return path
     
+def _unc_host(path):
+    """Rechnername, wenn path auf einer Netzwerkfreigabe liegt (UNC-Pfad oder gemapptes Laufwerk), sonst None."""
+    if sys.platform != "win32" or not path:
+        return None
+    p = path.replace('/', '\\')
+    host = None
+    if p.startswith('\\\\'):
+        host = p[2:].split('\\')[0]
+    elif len(p) >= 2 and p[1] == ':':
+        try:
+            buf = ctypes.create_unicode_buffer(1024)
+            size = ctypes.c_ulong(len(buf))
+            if ctypes.windll.mpr.WNetGetConnectionW(p[:2], buf, ctypes.byref(size)) == 0:
+                remote = buf.value
+                if remote.startswith('\\\\'):
+                    host = remote[2:].split('\\')[0]
+        except Exception:
+            return None
+    # Sonderformen (\\?\, WebDAV mit @SSL, IPv6-Literal) nicht vorab testen
+    if not host or host in ('?', '.') or '@' in host or host.lower().endswith('.ipv6-literal.net'):
+        return None
+    return host
+
+def host_reachable(host, timeout = 2.0):
+    """Schneller Erreichbarkeitstest des Fileservers (SMB-Port 445, ersatzweise 139)."""
+    for port in (445, 139):
+        try:
+            with socket.create_connection((host, port), timeout = timeout):
+                return True
+        except OSError:
+            continue
+    return False
+
+def isdir_fast(path):
+    """Wie os.path.isdir, aber bei Netzwerkfreigaben mit vorgeschaltetem Kurztest: ist der Server nicht
+    erreichbar, kommt das Ergebnis nach ca. 2-4 s statt nach dem langen Windows-Timeout."""
+    host = _unc_host(path)
+    if host is not None and not host_reachable(host):
+        return False
+    return os.path.isdir(path)
+
 class Dateimeister_support:
     def __init__(self, root, debug):
         if root is None:
@@ -171,6 +232,8 @@ class Dateimeister_support:
         self.dict_source_target_tooold = {}
         self.win_diatisch = None
         self.dict_lb_camera_index = {}
+        self.dir_pending = {}        # Verzeichnis -> Callbacks einer gerade laufenden Hintergrundpruefung
+        self.dir_exists_cache = {}   # Verzeichnis (Listbox-Text) -> existiert? Ergebnis der Hintergrundpruefungen
         self.diatisch_camera_name = "DIATISCH" # name used for insert / retrieve index in listbox
 
         # ------------------------------------------------------------------
@@ -784,26 +847,16 @@ class Dateimeister_support:
         # descending by usedate
         sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
         # make list
-        ii = 0
-        indexes = []
-        use_as_dir = True
         for tfile in sorted_d:
             self.listbox_indir.insert(END, tfile)
-            if not os.path.isdir(tfile):
-                #print("INDIR: " + tfile + " INDEX: " + str(ii))
-                indexes.append(ii) # list of indizes to grey out because dir does not exist
-            else:
-                if use_as_dir: 
-                    self.label_indir.config(text = tfile) # first entry is last used
-                    use_as_dir = False
-            ii += 1
-        if ii > 0:
+        if self.listbox_indir.size() > 0:
             self.listbox_indir.select_set(0)
             self.button_indir_from_list.config(state = NORMAL)
-        else: 
+        else:
             self.button_indir_from_list.config(state = DISABLED)
-        for ii in indexes:
-            self.listbox_indir.itemconfig(ii, fg="gray")
+        # Existenzpruefung im Hintergrund: ein nicht erreichbares Netzlaufwerk (Timeout)
+        # darf den Start nicht blockieren. Ausgrauen und Label folgen, sobald das Ergebnis da ist.
+        self._check_dirs_async(self.listbox_indir, self.label_indir, list(sorted_d))
 
         # fill out combobox
         result = DX.get_outdirs(Globals.config_files_xml)
@@ -820,26 +873,16 @@ class Dateimeister_support:
         # descending by usedate
         sorted_d = dict( sorted(dict_filename_usedate.items(), key=operator.itemgetter(1), reverse=True))
         # make list
-        ii = 0
-        indexes = []
-        use_as_dir = True
         for tfile in sorted_d:
             self.listbox_outdir.insert(END, tfile)
-            if not os.path.isdir(tfile):
-                print("OUTDIR: " + tfile + " INDEX: " + str(ii)) if self.debug else True
-                indexes.append(ii) # list of indizes to disable because dir does not exist
-            else:
-                if use_as_dir: 
-                    self.label_outdir.config(text = tfile) # first entry is last used
-                    use_as_dir = False
-            ii += 1
-        if ii > 0:
+        if self.listbox_outdir.size() > 0:
             self.listbox_outdir.select_set(0)
             self.button_outdir_from_list.config(state = NORMAL)
-        else: 
+        else:
             self.button_outdir_from_list.config(state = DISABLED)
-        for ii in indexes:
-            self.listbox_outdir.itemconfig(ii, fg="gray")
+        # Existenzpruefung im Hintergrund: ein nicht erreichbares Netzlaufwerk (Timeout)
+        # darf den Start nicht blockieren. Ausgrauen und Label folgen, sobald das Ergebnis da ist.
+        self._check_dirs_async(self.listbox_outdir, self.label_outdir, list(sorted_d))
         
         # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handler
         Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed)
@@ -1183,22 +1226,83 @@ class Dateimeister_support:
         if not olddir or outdir != olddir:
             self.state_gen_required()
 
+    def _isdir_bg(self, d, callback):
+        """Existenzpruefung in einem Hintergrund-Thread; callback(ok) laeuft im Tk-Hauptthread.
+        Laeuft fuer d schon eine Pruefung (z.B. vom Start), wird callback nur angehaengt: die Wartezeit
+        beginnt dann nicht von vorn. Netzwerkpfade: siehe isdir_fast."""
+        if d in self.dir_pending:
+            self.dir_pending[d].append(callback)
+            return
+        self.dir_pending[d] = [callback]
+        q = queue.Queue()
+
+        def worker():
+            try:
+                ok = isdir_fast(d)
+            except Exception:
+                ok = False
+            q.put(ok)
+
+        def poll():
+            try:
+                if not self.root.winfo_exists():
+                    return
+                try:
+                    ok = q.get_nowait()
+                except queue.Empty:
+                    self.root.after(50, poll)
+                    return
+                for cb in self.dir_pending.pop(d, []):
+                    cb(ok)
+            except tk.TclError:                 # Fenster wurde inzwischen geschlossen
+                return
+
+        threading.Thread(target = worker, daemon = True).start()
+        self.root.after(20, poll)
+
+    def _dir_checked(self, lb, d, ok):
+        """Ergebnis einer Pruefung merken und den Listbox-Eintrag entsprechend einfaerben."""
+        self.dir_exists_cache[d] = ok
+        for i in range(lb.size()):
+            if lb.get(i) == d:
+                lb.itemconfig(i, fg = "black" if ok else "gray")
+
+    def _check_dir_on_select(self, lb, name):
+        """Wird beim Anklicken eines Listbox-Eintrags aufgerufen. Bekannt nicht vorhandene Eintraege
+        werden sofort abgelehnt (kein Warten auf den Netz-Timeout); ansonsten laeuft die Pruefung im
+        Hintergrund, und der Eintrag wird ggf. nachtraeglich wieder abgewaehlt."""
+        sel = lb.curselection()
+        if not sel:
+            return
+        index = sel[0]
+        d = lb.get(index) # because listbox has single selection
+        print("current selection is: " + d + " INDEX: " + str(index)) if self.debug else True
+
+        def show_error():
+            messagebox.showerror("showerror", name + ": " + d + " does not exist, choose another one")
+
+        if self.dir_exists_cache.get(d) is False:
+            lb.selection_clear(index) # dont select, MessageBox
+            show_error()
+            # im Hintergrund neu pruefen: ist das Laufwerk wieder da, wird der Eintrag wieder schwarz
+            self._isdir_bg(d, lambda ok: self._dir_checked(lb, d, ok))
+            return
+
+        def done(ok):
+            self._dir_checked(lb, d, ok)
+            if not ok:
+                for i in range(lb.size()):
+                    if lb.get(i) == d and i in lb.curselection():
+                        lb.selection_clear(i)
+                show_error()
+        self._isdir_bg(d, done)
+
     def listbox_indir_check_exist(self, event):
-        index = self.listbox_indir.curselection()[0]
-        indir = self.listbox_indir.get(index) # because listbox has single selection
-        print("current selection is: " + indir + " INDEX: " + str(index)) if self.debug else True
-        if not os.path.isdir(indir):
-            self.listbox_indir.selection_clear(index) # dont select, MessageBox
-            messagebox.showerror("showerror", "Indir: " + indir + " does not exist, choose another one")
-    
+        self._check_dir_on_select(self.listbox_indir, "Indir")
+
     def listbox_outdir_check_exist(self, event):
-        index = self.listbox_outdir.curselection()[0]
-        outdir = self.listbox_outdir.get(index) # because listbox has single selection
-        print("current selection is: " + outdir + " INDEX: " + str(index)) if self.debug else True
-        if not os.path.isdir(outdir):
-            self.listbox_outdir.selection_clear(index) # dont select, MessageBox
-            messagebox.showerror("showerror", "outdir: " + outdir + " does not exist, choose another one")
-        
+        self._check_dir_on_select(self.listbox_outdir, "outdir")
+
     def open_config(self):
         # get config_files for indir / type
         endung = 'xml'
@@ -1495,28 +1599,83 @@ class Dateimeister_support:
         a = 0
         #self.stop_all_players()
         
+    def _check_dirs_async(self, lb, label, dirs):
+        """Prueft die Existenz der Verzeichnisse parallel im Hintergrund (siehe _isdir_bg).
+        Nicht existierende Eintraege werden in der Listbox ausgegraut. Das Label bekommt den ersten
+        existierenden Eintrag (= zuletzt benutzt), sobald alle davor stehenden Eintraege geprueft sind -
+        aber nur, wenn der Benutzer das Label inzwischen nicht selbst geaendert hat."""
+        initial_text = label.cget('text')
+        order = list(dirs)
+        results = {}
+        state = {"label_done": False}
+
+        def choose_label():
+            if state["label_done"]:
+                return
+            for d in order:
+                if d not in results:
+                    return                      # ein weiter oben stehender Eintrag ist noch offen
+                if results[d]:
+                    state["label_done"] = True
+                    if label.cget('text') == initial_text:   # Benutzer hat nichts anderes gewaehlt
+                        label.config(text = d)
+                    return
+            state["label_done"] = True          # keiner existiert
+
+        def on_result(d, ok):
+            results[d] = ok
+            self._dir_checked(lb, d, ok)        # Cache + Einfaerben
+            choose_label()
+
+        for d in order:
+            self._isdir_bg(d, lambda ok, d = d: on_result(d, ok))
+
+    def _select_dir_in_listbox(self, lb, directory):
+        """Zeigt directory in der Listbox (neu ganz oben, falls noch nicht vorhanden) und selektiert es."""
+        norm = re.sub(r'\\', '/', directory).lower()
+        items = [re.sub(r'\\', '/', lb.get(i)).lower() for i in range(lb.size())]
+        if norm in items:
+            idx = items.index(norm)
+        else:
+            lb.insert(0, norm)   # Liste ist nach usedate absteigend sortiert: neu = oben
+            idx = 0
+        self.dir_exists_cache[lb.get(idx)] = True   # kam aus dem Dateidialog, existiert also
+        lb.itemconfig(idx, fg="black")   # evtl. vorher ausgegraut, weil das Verzeichnis fehlte
+        lb.selection_clear(0, END)
+        lb.selection_set(idx)
+        lb.see(idx)
+
     def Press_indir(self, *args):
-        indir = fd.askdirectory() 
+        indir = fd.askdirectory()
         print ("indir %s" % indir) if self.debug else True
-        #self.clear_textbox(self.listbox_indir)
-        self.label_indir.config(text = indir)
-        # gen required if new dir != old dir
+        if not indir:   # Dialog abgebrochen
+            return
         olddir = self.label_indir.cget('text')
+        self.label_indir.config(text = indir)
+        self._select_dir_in_listbox(self.listbox_indir, indir)
+        self.button_indir_from_list.config(state = NORMAL)
+        # sofort in der xml speichern (wie generate), sonst ist der Eintrag nach Neustart weg
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        self.new_dir_in_xml('indir', self.max_indirs, re.sub(r'\\', '/', indir).lower(), ts)
+        # gen required if new dir != old dir
         if not olddir or indir != olddir:
             self.state_gen_required()
-            olddir = indir
 
     def Press_outdir(self, *args):
-        #outdir = fd.askopenindir() 
-        outdir = fd.askdirectory() 
+        outdir = fd.askdirectory()
         print ("outdir %s" % outdir) if self.debug else True
-        #self.clear_textbox(self.listbox_outdir)
-        self.label_outdir.config(text = outdir)
-        # gen required if new dir != old dir
+        if not outdir:   # Dialog abgebrochen
+            return
         olddir = self.label_outdir.cget('text')
+        self.label_outdir.config(text = outdir)
+        self._select_dir_in_listbox(self.listbox_outdir, outdir)
+        self.button_outdir_from_list.config(state = NORMAL)
+        # sofort in der xml speichern (wie generate), sonst ist der Eintrag nach Neustart weg
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        self.new_dir_in_xml('outdir', self.max_outdirs, re.sub(r'\\', '/', outdir).lower(), ts)
+        # gen required if new dir != old dir
         if not olddir or outdir != olddir:
             self.state_gen_required()
-            olddir = outdir
 
     def B_camera_press(self, *args):
         # get selected indices
@@ -1590,8 +1749,12 @@ class Dateimeister_support:
 
     def generate(self, *args):
         # get indir, outdir, camera
-        indir  = self.label_indir.cget('text')
-        outdir = self.label_outdir.cget('text')
+        indir  = true_case_path(self.label_indir.cget('text'))   # echte Schreibweise fuer die cmd-Files
+        outdir = true_case_path(self.label_outdir.cget('text'))
+        if indir:
+            self.label_indir.config(text = indir)
+        if outdir:
+            self.label_outdir.config(text = outdir)
         thiscamera = self.o_camera.get();
         if not indir:
             messagebox.showerror("showerror", "kein Indir ausgewählt")
@@ -2497,7 +2660,9 @@ class Dateimeister_support:
                     if num_to_delete > 0:
                         ii = 0
                         for t in reversed(list_dirs): # now the oldest are on top
-                            if not os.path.isdir(t):
+                            # nur bekannte "nicht vorhanden"-Eintraege loeschen; os.path.isdir wuerde bei einem
+                            # toten Netzpfad bis zum Timeout blockieren. Unbekannt = als vorhanden behandeln.
+                            if self.dir_exists_cache.get(t, True) is False:
                                 if ii < num_to_delete:
                                     if dirtype == 'indir':
                                         DX.delete_indir(Globals.config_files_xml, t)
