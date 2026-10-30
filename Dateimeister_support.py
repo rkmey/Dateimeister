@@ -3524,7 +3524,7 @@ class Dateimeister_support:
             str_ret = str_ret.replace('<source>', sourcefile)
             str_ret = str_ret.replace('<target>', targetfile)
             str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
-            thiscmdfile.write(comment + str_ret + '\n')
+            thiscmdfile.write(comment + ' ' + str_ret + '\n')
         thiscmdfile.close()
 
         # --- Delete ---
@@ -3555,7 +3555,7 @@ class Dateimeister_support:
             str_ret = str_ret.replace('<source>', sourcefile)
             str_ret = str_ret.replace('<target>', targetfile)
             str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
-            thiscmdfile.write(comment + str_ret + '\n')
+            thiscmdfile.write(comment + ' ' + str_ret + '\n')
         thiscmdfile.close()
         
         # --- Delrelpath ---

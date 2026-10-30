@@ -183,9 +183,13 @@ class MyDuplicates:
         self.dict_thumbnail_player = {}
         self.caller.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
+
         self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
         self.thisduplicate = None
-        self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
+        # force window height / width to work and call initial resize for fonts
+        self.root.update_idletasks()
+        self.resize()
+
         # 20260915 for better maintenace we convert the whole mechanism from callbacks to events, register event handler
         Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed)
         Globals.eventManager.bind("Closing", self.on_closing) # if a window or a process like generate closes
@@ -712,7 +716,7 @@ class MyDuplicates:
         old_width  = self.width
         old_height = self.height
         # we use the new dimension of the frame for calculating fontsize needed
-        self.root.update()
+        self.root.update_idletasks()
         new_width  = self.root.winfo_width()
         new_height = self.root.winfo_height()
         if (old_width != new_width or old_height != new_height):
@@ -720,8 +724,8 @@ class MyDuplicates:
             self.width  = new_width
             self.height = new_height
             self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug)) 
-        if self.thisduplicate:
-            self.display_duplicate(self.thisduplicate)
+            if self.thisduplicate:
+                self.display_duplicate(self.thisduplicate)
 
     def debug_info_resize(self, text):
         print("{:s} elapsed start resize".format(text))
@@ -784,19 +788,22 @@ class MyDuplicates:
     def get_thumbnail_by_position(self, canvas_x, canvas_y):
         index = -1
         found = False
-        for thumbnail in self.thumbnails_duplicates[Globals.imagetype]:
+        # The dict may not contain an entry for Globals.imagetype yet (e.g.
+        # before the first display_duplicate call). Return (None, None) in
+        # that case instead of raising a KeyError.
+        thumbs = self.thumbnails_duplicates.get(Globals.imagetype, [])
+        for thumbnail in thumbs:
             start = thumbnail.getStart()
             end   = thumbnail.getEnd()
             if (canvas_x >= start and canvas_x <= end):
-                index = self.thumbnails_duplicates[Globals.imagetype].index(thumbnail)
-                #print("retrieved " + thumbnail.getFile() + " Index: " + str(index))
+                index = thumbs.index(thumbnail)
                 found = True
                 break
         if not found:
             thumbnail = None
             index = None
-        return (thumbnail, index)
-
+        return (thumbnail, index)    
+    
     def __del__(self):
         self.a = 1
         print("*** Deleting MyDuplicates-Objekt. Imagetype is " + str(Globals.imagetype))
