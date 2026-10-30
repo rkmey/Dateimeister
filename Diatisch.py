@@ -1053,7 +1053,7 @@ class Diatisch:
             newsize = (display_width, display_height)
             r_img = img
             r_img.thumbnail(newsize)
-            photo = ImageTk.PhotoImage(r_img)
+            photo = ImageTk.PhotoImage(r_img, master = self.source_canvas)
             # insert into self.list_source_images
             i = MyImage(filename, os.stat(filename).st_mtime, self.source_canvas, tag_prefix + str(tag_no))
             self.list_source_images.append(i)
@@ -1076,7 +1076,7 @@ class Diatisch:
                 newsize = (display_width, display_height)
                 r_img = img
                 r_img.thumbnail(newsize)
-                photo = ImageTk.PhotoImage(r_img)
+                photo = ImageTk.PhotoImage(r_img, master = self.target_canvas)
                 # insert into self.list_target_images
                 i = MyImage(filename, os.stat(filename).st_mtime, self.target_canvas, tag_prefix + str(tag_no))
                 self.list_target_images.append(i)

@@ -77,7 +77,7 @@ class VideoPlayer:
         # PIL Konvertierung & Resize
         pil_img = PIL.Image.frombytes("RGB", (v_w, v_h), img_data)
         pil_img = pil_img.resize((self.image_width, self.image_height), PIL.Image.Resampling.LANCZOS)
-        self.photo = PIL.ImageTk.PhotoImage(image=pil_img)
+        self.photo = PIL.ImageTk.PhotoImage(image=pil_img, master = self.canvas)
         return self.photo
 
     def get_photo(self, silent=False):

@@ -10,6 +10,7 @@ import operator
 import threading
 import queue
 import socket
+import ntpath
 import copy
 import subprocess, json
 import shutil
@@ -338,6 +339,53 @@ def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, 
 # ------------------------------------------------------------------------------
 # Verzeichnispruefung (auch fuer Netzlaufwerke): schnell und ohne die GUI zu blockieren
 # ------------------------------------------------------------------------------
+def _case_walk(path, lookup):
+    """Ersetzt jede Komponente von path durch lookup(teilpfad) (= echte Schreibweise dieser Komponente;
+    None oder eine Exception: Komponente bleibt, wie sie ist). Laufwerk bzw. UNC-Wurzel (Server und
+    Freigabe) bleiben unveraendert. Plattformunabhaengig (ntpath), damit der Ablauf ohne Windows testbar ist."""
+    p = path.replace('/', '\\')
+    drive, rest = ntpath.splitdrive(p)
+    prefix = drive + ('\\' if rest.startswith('\\') else '')
+    done = []
+    for name in [x for x in rest.split('\\') if x]:
+        partial = prefix + '\\'.join(done + [name])
+        try:
+            real = lookup(partial)
+        except Exception:
+            real = None
+        done.append(real if real else name)
+    return prefix + '\\'.join(done)
+
+_win_find = None    # (kernel32, WIN32_FIND_DATAW) - erst beim ersten Aufruf unter Windows aufgebaut
+
+def _win_find_real_name(partial):
+    """Echte Schreibweise der LETZTEN Komponente von partial (FindFirstFileW) oder None."""
+    global _win_find
+    if _win_find is None:
+        class WIN32_FIND_DATAW(ctypes.Structure):
+            _fields_ = [("dwFileAttributes", ctypes.c_uint32),
+                        ("ftCreationTime", ctypes.c_uint32 * 2),
+                        ("ftLastAccessTime", ctypes.c_uint32 * 2),
+                        ("ftLastWriteTime", ctypes.c_uint32 * 2),
+                        ("nFileSizeHigh", ctypes.c_uint32),
+                        ("nFileSizeLow", ctypes.c_uint32),
+                        ("dwReserved0", ctypes.c_uint32),
+                        ("dwReserved1", ctypes.c_uint32),
+                        ("cFileName", ctypes.c_wchar * 260),
+                        ("cAlternateFileName", ctypes.c_wchar * 14)]
+        k32 = ctypes.WinDLL("kernel32", use_last_error = True)   # eigene Instanz: ctypes.windll nicht veraendern
+        k32.FindFirstFileW.argtypes = [ctypes.c_wchar_p, ctypes.POINTER(WIN32_FIND_DATAW)]
+        k32.FindFirstFileW.restype = ctypes.c_void_p
+        k32.FindClose.argtypes = [ctypes.c_void_p]
+        _win_find = (k32, WIN32_FIND_DATAW)
+    k32, data_cls = _win_find
+    data = data_cls()
+    handle = k32.FindFirstFileW(partial, ctypes.byref(data))
+    if handle is None or handle == ctypes.c_void_p(-1).value:   # INVALID_HANDLE_VALUE
+        return None
+    k32.FindClose(handle)
+    return data.cFileName
+
 def true_case_path(path):
     """Liefert den Pfad in der Schreibweise, wie sie im Dateisystem steht (nur Windows noetig:
     dort ist der Key-Pfad aus der Listbox kleingeschrieben, die cmd-Files brauchen aber die echte
@@ -349,6 +397,12 @@ def true_case_path(path):
         n = ctypes.windll.kernel32.GetLongPathNameW(os.path.normpath(path), buf, len(buf))
         if 0 < n < len(buf):
             p = buf.value
+            # GetLongPathName korrigiert nicht zuverlaessig jede Komponente (die letzte blieb in der
+            # uebergebenen Schreibweise) -> jede Komponente einzeln beim Dateisystem nachfragen
+            try:
+                p = _case_walk(p, _win_find_real_name)
+            except Exception:
+                pass
             if len(p) > 1 and p[1] == ':':
                 p = p[0].upper() + p[1:]          # Laufwerksbuchstabe gross
             return p.replace('\\', '/')           # wie bisher mit / weiterarbeiten
@@ -1312,7 +1366,15 @@ def is_bad_image(path):
     """True, wenn new_image() diese Datei nicht lesen konnte (es wurde ein Platzhalter angezeigt)."""
     return path in _REPORTED_BAD_IMAGES
 
-def new_image(file = None, height = 100, pic = None):
+def new_image(file = None, height = 100, pic = None, master = None):
+    """Erzeugt ein PhotoImage fuer den uebergebenen Tk-Master.
+
+    master muss der Widget-Besitzer sein (z.B. das Canvas), zu dem das
+    Bild gehoert. Wird master nicht uebergeben, nimmt ImageTk den
+    Default-Root - das ist bei mehreren Tk-Instanzen (Tests!) die
+    falsche und ggf. schon zerstoerte Instanz und fuehrt spaeter zu
+    TclError: image "pyimageNNN" doesn't exist.
+    """
     img = None
     try:
         if file:
@@ -1339,7 +1401,7 @@ def new_image(file = None, height = 100, pic = None):
         # blauer Platzhalter im Format 4:3, passend zum Rechteck fuer "kein Bild"
         r_img = Image.new("RGB", (max(1, int(height * 4 / 3)), max(1, int(height))), "blue")
         img = r_img
-    pimg = ImageTk.PhotoImage(r_img)
+    pimg = ImageTk.PhotoImage(r_img, master = master)
     image_width, image_height = pimg.width(), pimg.height()
     if file:
         img.close()

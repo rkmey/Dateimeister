@@ -939,7 +939,7 @@ class MyFSVideo:
                     try:
                         with Image.open(filename) as img:
                             img.load()
-                            photo = ImageTk.PhotoImage(img)
+                            photo = ImageTk.PhotoImage(img, master = self.canvas_gallery)
                             photos.append(photo)
                             #print(f"Photo from {filename} generated") if self.debug else True
                         break

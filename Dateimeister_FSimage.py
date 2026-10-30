@@ -767,7 +767,7 @@ class MyFSImage:
 
         newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
         r_img = self.image.resize(newsize, Image.Resampling.NEAREST)
-        self.pimg = ImageTk.PhotoImage(r_img)
+        self.pimg = ImageTk.PhotoImage(r_img, master = self.f)
         self.f.delete('images')
         self.id = self.f.create_image(0, 0, anchor='nw', image=self.pimg, tags='images')
         self.f.tag_raise("rect")

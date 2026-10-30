@@ -192,6 +192,7 @@ class Dateimeister_support:
         self.dict_gen_files_delrelpath_by_type = {}
         self.dict_sourcefile_to_type           = {}
         self.locked_lb_gen                     = False  # recursion guard for label updates
+        self._generate_in_progress             = False  # True waehrend generate() laeuft
 
         self.init()
 
@@ -1111,9 +1112,9 @@ class Dateimeister_support:
             self.height = new_height
             self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug))
 
-            # adjust some widgets     
-            rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x 
-            rel_width_sb_y = rel_width_sb_x * self.frame_text.winfo_width() / self.frame_text.winfo_height() # width relative to y 
+            # adjust some widgets
+            rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x
+            rel_width_sb_y = rel_width_sb_x * self.frame_text.winfo_width() / self.frame_text.winfo_height() # width relative to y
             print("Frame1: relwidth_x is {:.4f}({:d}), relwidth_y is {:.4f}({:d})".format(rel_width_sb_x, self.frame_text.winfo_width(), rel_width_sb_y, self.frame_text.winfo_height())) if self.debug else True
             self.V.place(relx = 1, rely = self.frame_text_label_height, relheight = 1-self.frame_text_label_height-rel_width_sb_y, relwidth = rel_width_sb_x, anchor = tk.NE)
             self.H.place(relx = 0, rely = 1, relheight = rel_width_sb_y, relwidth = 1-rel_width_sb_x, anchor = tk.SW)
@@ -1121,10 +1122,23 @@ class Dateimeister_support:
             self.H.update()
             self.t_text1.place(relx=0.0, rely=self.frame_text_label_height, relheight=1-self.frame_text_label_height-rel_width_sb_y, relwidth=1-rel_width_sb_x)
             self.t_text1.update()
-            if Globals.imagetype != "": # new sort of existing images
+
+            # Nur neu zeichnen, wenn ein vollstaendiger Anzeigezustand fuer den
+            # aktuellen Key existiert. Waehrend generate() laeuft (oder nach
+            # state_gen_required), ist Globals.imagetype zwar gesetzt, aber
+            # dict_gen_files / dict_source_target sind gerade geleert oder noch
+            # nicht gefuellt. Ohne diesen Guard wirft display_images() einen
+            # KeyError auf self.dict_gen_files[imagetype].
+            if (not self._generate_in_progress
+                    and Globals.imagetype != ""
+                    and Globals.imagetype in self.dict_gen_files
+                    and Globals.imagetype in self.dict_source_target
+                    and Globals.imagetype in Globals.thumbnails):
                 Globals.resized = True
-                self.display_images(Globals.imagetype, close_childs = False)
-                Globals.resized = False
+                try:
+                    self.display_images(Globals.imagetype, close_childs = False)
+                finally:
+                    Globals.resized = False
             self.resize_start = False
 
     def debug_info_resize(self, text):
@@ -1192,8 +1206,15 @@ class Dateimeister_support:
     def apply_config(self):
         tree = ET.parse(self.config_file)
         xmlroot = tree.getroot()
-        time = xmlroot.attrib['time']
-        print(time) if self.debug else True    
+        time   = xmlroot.attrib['time']
+        outdir = xmlroot.attrib['outdir']
+        camera = xmlroot.attrib['camera']
+        print(
+            f"apply attributes from {self.config_file} time is {time} "
+            f"outdir is {outdir} "
+            f"camera is {camera}"
+        ) if self.debug else True
+
         for thumbnail in xmlroot.findall('thumbnail'):
             #print (thumbnail.attrib['filename'])   
             image = thumbnail.find('image').text
@@ -1307,14 +1328,20 @@ class Dateimeister_support:
             self.filemenu.entryconfig(MENUITEM_FILE_RECENT, state=NORMAL)
 
 
-    def write_config(self, filename): # Config-xml unter neuem Namen sichern
+    def write_config(self, filename): # Confcamig-xml unter neuem Namen sichern
         file1 = open(filename, "w")
-        
+        outdir = self.label_outdir.cget('text')
+        camera = camera = self.o_camera.get()
         s = '<?xml version="1.0" encoding="iso-8859-1"?>' + "\n"
         file1.write(s)
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        s = f"""<thumbnails
+  time="{ts}"
+  outdir="{outdir}"
+  camera="{camera}"
+>
+"""
 
-        s = '<thumbnails time="' + ts + '">' + "\n"
         file1.write(s)
         for thumbnail in Globals.thumbnails[Globals.imagetype]:
             s = "    <thumbnail filename=\"" + thumbnail.getFile() + "\">\n"
@@ -1569,6 +1596,23 @@ class Dateimeister_support:
             self.button_select_all.config(state = DISABLED)
 
     def generate(self, *args):
+        """Oeffentlicher Einstiegspunkt fuer Generate.
+
+        Setzt ein Flag, das resize() und display_images() daran hindert,
+        waehrend des Scans die Anzeige neu aufzubauen (sonst KeyError auf
+        self.dict_gen_files[imagetype], weil das Dict am Anfang von
+        _generate_impl geleert wird). Doppelaufrufe werden ignoriert.
+        """
+        if self._generate_in_progress:
+            print("generate: already in progress, ignoring re-entry") if self.debug else True
+            return None
+        self._generate_in_progress = True
+        try:
+            return self._generate_impl(*args)
+        finally:
+            self._generate_in_progress = False
+
+    def _generate_impl(self, *args):
         # get indir, outdir, camera
         indir  = tools.true_case_path(self.label_indir.cget('text'))   # echte Schreibweise fuer die cmd-Files
         outdir = tools.true_case_path(self.label_outdir.cget('text'))
@@ -1629,22 +1673,22 @@ class Dateimeister_support:
         else:
             addrelpath  = "n"
         print ("INDIR is  " + indir) if self.debug else True
-        
+
         owndir = os.getcwd()
 
         self.clear_text(self.t_text1)
         self.canvas_gallery.delete("all")
 
-        # we try to open the templatefile. we do it here because one does not have to stop the program when file not found. 
+        # we try to open the templatefile. we do it here because one does not have to stop the program when file not found.
         # Just correct it and run generate again
         self.get_templates() # read them into dict_templates (instance variable)
         # cleanup
         # only if new generate not if we just shall sort images
-        if not Globals.generated:        
+        if not Globals.generated:
             self.close_child_windows()
             # reset all process-states
             self.UR.reset()
-            self.button_undo.config(state = DISABLED)    
+            self.button_undo.config(state = DISABLED)
             self.button_redo.config(state = DISABLED)
             self.clear_textbox(self.lb_gen)
 
@@ -1714,7 +1758,7 @@ class Dateimeister_support:
                 target_prefix = ''
 
             # show the busy dialog
-            busy = tools.BusyDialog(self.root, text= dateityp + " files are analyzed…")        
+            busy = tools.BusyDialog(self.root, text= dateityp + " files are analyzed…")
             st, st_jpeg, st_tooold, relpath = DG.dateimeister(
                 dateityp, endung, indir, thisoutdir, addrelpath, recursive,
                 self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch,
@@ -1973,6 +2017,18 @@ class Dateimeister_support:
         This method does NOT reset any editing state - that is the
         responsibility of the caller.
         """
+        # Guard gegen unfertigen Zustand: display_images() wird auch von
+        # resize() und rb_g() / rb_sort() aufgerufen, dort aber nicht
+        # notwendigerweise mit vollstaendigem dict_gen_files /
+        # dict_source_target. Ohne diesen Guard laeuft der folgende
+        # Zugriff auf self.dict_gen_files[imagetype] in einen KeyError.
+        if imagetype == "" or imagetype not in self.dict_gen_files:
+            print("display_images: skip, no cmd file for '{:s}'".format(imagetype)) if self.debug else True
+            return
+        if imagetype not in self.dict_source_target:
+            print("display_images: skip, no source/target data for '{:s}'".format(imagetype)) if self.debug else True
+            return
+
         t_start = time.time()
         memory_before = 0 # to get the amount of memory needed especially for video players
         if self.debug:
@@ -1982,6 +2038,7 @@ class Dateimeister_support:
         busy = tools.BusyDialog(self.root, text="Fotos werden geladen…")
 
         filename = self.dict_gen_files[imagetype]
+
         self.stop_all_players() # should not continue running
 
         self.clear_dict_2nd(Globals.thumbnails, imagetype)
@@ -2143,7 +2200,7 @@ class Dateimeister_support:
                                                        # (process_type=original_process_type)
                                                        # bleibt es RAW
                                 pimg, image_width, image_height = tools.new_image(
-                                    file=showfile, height=canvas_height
+                                    file=showfile, height=canvas_height, master = self.canvas_gallery
                                 )
                             else:
                                 print("RAW not displayable: " + file) if self.debug else True
@@ -2151,13 +2208,13 @@ class Dateimeister_support:
                                 process_type = "none"
                         else:
                             # PIL.Image in ImageTk.PhotoImage umwandeln
-                            pimg = ImageTk.PhotoImage(pimg_pil)
+                            pimg = ImageTk.PhotoImage(pimg_pil, master = self.canvas_gallery)
                     else:
                         pimg = Globals.dict_thumbnails[imagetype][file].getImage()
                         image_width, image_height = pimg.width(), pimg.height()                
                 elif process_type != 'VIDEO': # we have to convert image to photoimage
                     if new_image_required or new_thumbnail_required: # we need a new image
-                        pimg, image_width, image_height = tools.new_image(file = showfile, height = canvas_height)
+                        pimg, image_width, image_height = tools.new_image(file = showfile, height = canvas_height, master = self.canvas_gallery)
                     else: # we can use the existing
                         pimg = Globals.dict_thumbnails[imagetype][file].getImage()
                     image_width, image_height = pimg.width(), pimg.height()

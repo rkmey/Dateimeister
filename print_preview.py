@@ -227,7 +227,7 @@ class PrintPreview:
         w = max(1, int(pil.width * scale))
         h = self.thumb_height
         resized = pil.resize((w, h), Image.LANCZOS)
-        entry["photo"] = ImageTk.PhotoImage(resized)
+        entry["photo"] = ImageTk.PhotoImage(resized, master = self.canvas)
         entry["w"], entry["h"] = w, h
         if entry["img_id"] is not None:
             self.canvas.itemconfig(entry["img_id"], image=entry["photo"])

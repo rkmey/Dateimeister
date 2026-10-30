@@ -399,7 +399,7 @@ class MyDuplicates:
                         newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
                         img = img.resize(newsize, Image.Resampling.LANCZOS)
                         image_width, image_height = img.size
-                        pimg = ImageTk.PhotoImage(img)
+                        pimg = ImageTk.PhotoImage(img, master = self.f)
                 else:
                     # STILL (JPEG/PNG): Originaldatei laden
                     img  = Image.open(showfile)
@@ -408,7 +408,7 @@ class MyDuplicates:
                     newsize = (int(image_width_orig * faktor), int(image_height_orig * faktor))
                     img = img.resize(newsize, Image.Resampling.LANCZOS)
                     image_width, image_height = img.size
-                    pimg = ImageTk.PhotoImage(img)
+                    pimg = ImageTk.PhotoImage(img, master = self.f)
 
                 # --- DEBUG ---
                 print(f"DEBUG display_duplicate: process_type={thumbnail.get_process_type()}, showfile={showfile}") if self.debug else True
