@@ -120,17 +120,17 @@ class Dateimeister_support:
         self.root.protocol( 'WM_DELETE_WINDOW' , self.close_handler)
 
         # Creates a toplevel widget.
-        root.geometry("1446x921+31+20")
-        root.minsize(120, 100)
-        root.maxsize(4000, 4000)
-        root.resizable(1,  1)
-        root.title("Dateimeister")
-        root.configure(background=tools._bgcolor)
-        root.configure(highlightbackground="#d9d9d9")
-        root.configure(highlightcolor="black")
+        self.root.geometry("1446x921+31+20")
+        self.root.minsize(120, 100)
+        self.root.maxsize(4000, 4000)
+        self.root.resizable(1,  1)
+        self.root.title("Dateimeister")
+        self.root.configure(background=tools._bgcolor)
+        self.root.configure(highlightbackground="#d9d9d9")
+        self.root.configure(highlightcolor="black")
 
-        self.menubar = tk.Menu(root,font="TkMenuFont",bg=tools._bgcolor,fg=tools._fgcolor)
-        root.configure(menu = self.menubar)
+        self.menubar = tk.Menu(self.root,font="TkMenuFont",bg=tools._bgcolor,fg=tools._fgcolor)
+        self.root.configure(menu = self.menubar)
 
         self.dict_process_image = {}
         self.win_duplicates = None
@@ -832,12 +832,12 @@ class Dateimeister_support:
 
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
-        self.timer = tools.RestartableTimer(root, 666, self.resize)  # ms
+        self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
         self.resize_start = False
         self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
 
         # create a timer for managing players and metadata
-        self.timer_players_and_metadata = tools.RestartableTimer(root, 1500, self.manage_players_and_metadata)  # ms
+        self.timer_players_and_metadata = tools.RestartableTimer(self.root, 1500, self.manage_players_and_metadata)  # ms
         self.list_visible_thumbnails = []
         self.broken_videos = set() # Videodateien, fuer die beim Scrollen kein Player erzeugt werden konnte
         self.printer = None
