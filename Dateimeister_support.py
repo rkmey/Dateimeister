@@ -516,7 +516,7 @@ class Dateimeister_support:
         relw_button = 0.9
         relh_button = 0.8
         dict_widgets = {}
-        dict_widgets["6"] = {
+        dict_widgets["0"] = {
           "WIDGET":tk.Label,"VAR":"label_gen","OFFSET":0.0,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","TEXT":"Generate Parameters","FONT":self.text_font}
         dict_widgets["1"] = {
           "WIDGET":tk.Checkbutton,"VAR":"cb_recursive","OFFSET":0.1,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.state_gen_required,
@@ -1205,14 +1205,31 @@ class Dateimeister_support:
 
     def apply_config(self):
         tree = ET.parse(self.config_file)
+        not_exist = "attr does not exist"
         xmlroot = tree.getroot()
-        time   = xmlroot.attrib['time']
-        outdir = xmlroot.attrib['outdir']
-        camera = xmlroot.attrib['camera']
+        time   = xmlroot.get('time', not_exist)
+        outdir   = xmlroot.get('outdir', not_exist)
+        camera   = xmlroot.get('camera', not_exist)
+        sort_method_g   = xmlroot.get('sort_method_g', not_exist)
+        sort_method_m   = xmlroot.get('sort_method_m', not_exist)
+        cb_recursive   = xmlroot.get('cb_recursive', not_exist)
+        cb_prefix   = xmlroot.get('cb_prefix', not_exist)
+        cb_newer   = xmlroot.get('cb_newer', not_exist)
+        cb_addrelpath   = xmlroot.get('cb_addrelpath', not_exist)
+        cb_num   = xmlroot.get('cb_num', not_exist)
+
         print(
-            f"apply attributes from {self.config_file} time is {time} "
-            f"outdir is {outdir} "
-            f"camera is {camera}"
+            f"apply attributes from {self.config_file}:\n"
+            f"time is {time}\n"
+            f"outdir is {outdir}\n"
+            f"camera is {camera}\n"
+            f"sort_method_g is {sort_method_g}\n"
+            f"sort_method_m is {sort_method_m}\n"
+            f"cb_recursive is {cb_recursive}\n"
+            f"cb_prefix is {cb_prefix}\n"
+            f"cb_newer is {cb_newer}\n"
+            f"cb_addrelpath is {cb_addrelpath}\n"
+            f"cb_num is {cb_num}\n"
         ) if self.debug else True
 
         for thumbnail in xmlroot.findall('thumbnail'):
@@ -1332,6 +1349,7 @@ class Dateimeister_support:
         file1 = open(filename, "w")
         outdir = self.label_outdir.cget('text')
         camera = camera = self.o_camera.get()
+
         s = '<?xml version="1.0" encoding="iso-8859-1"?>' + "\n"
         file1.write(s)
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
@@ -1339,6 +1357,13 @@ class Dateimeister_support:
   time="{ts}"
   outdir="{outdir}"
   camera="{camera}"
+  sort_method_g="{self.rbg.get()}"
+  sort_method_m="{self.rbvalue.get()}"
+  cb_recursive="{self.cb_recursive_var.get()}"
+  cb_prefix="{self.cb_prefix_var.get()}"
+  cb_newer="{self.cb_newer_var.get()}"
+  cb_addrelpath="{self.cb_addrelpath_var.get()}"
+  cb_num="{self.cb_num_var.get()}"
 >
 """
 
