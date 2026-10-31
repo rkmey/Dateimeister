@@ -531,7 +531,7 @@ class Dateimeister_support:
           "WIDGET":tk.Checkbutton,"VAR":"cb_addrelpath","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.state_gen_required,
           "RB_VAR":"cb_addrelpath_var","RB_TYPE":tk.IntVar,"RB_VALUE":"0","TEXT":"add relative path","STATE":tk.NORMAL,"TT":"add relative path for the targetfile (to avoid duplicate problem)","FONT":self.text_font}
         dict_widgets["5"] = {
-          "WIDGET":tk.Checkbutton,"VAR":"cb_num","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.state_gen_required,
+          "WIDGET":tk.Checkbutton,"VAR":"cb_num","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"START","CALLBACK":self.on_cb_num_toggle,
           "RB_VAR":"cb_num_var","RB_TYPE":tk.IntVar,"RB_VALUE":"0","TEXT":"numerate images in canvas","STATE":tk.NORMAL,"TT":"numerate images in canvas (within image)","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.frame_checkboxes, "VERTICAL", font = self.text_font, bgcolor = tools._bgcolor)
 
@@ -712,7 +712,6 @@ class Dateimeister_support:
         self.t_text1.bindtags(tuple(tags))        
         print("Bindtags: %s " % str(self.t_text1.bindtags())) if self.debug else True
 
-        self.cb_num.config(command = self.on_cb_num_toggle)
         self.listbox_indir.bind('<Double-1>', self.listbox_indir_double)
         self.listbox_outdir.bind('<Double-1>', self.listbox_outdir_double)
         self.listbox_indir.bind("<<ListboxSelect>>", lambda event: self.listbox_indir_check_exist(event))
@@ -1207,22 +1206,26 @@ class Dateimeister_support:
         tree = ET.parse(self.config_file)
         not_exist = "attr does not exist"
         xmlroot = tree.getroot()
-        time   = xmlroot.get('time', not_exist)
+        time    = xmlroot.get('time', not_exist)
+        indir   = xmlroot.get('indir', not_exist)
         outdir   = xmlroot.get('outdir', not_exist)
         camera   = xmlroot.get('camera', not_exist)
+        process_types = xmlroot.get('process_types', not_exist)
         sort_method_g   = xmlroot.get('sort_method_g', not_exist)
         sort_method_m   = xmlroot.get('sort_method_m', not_exist)
-        cb_recursive   = xmlroot.get('cb_recursive', not_exist)
-        cb_prefix   = xmlroot.get('cb_prefix', not_exist)
-        cb_newer   = xmlroot.get('cb_newer', not_exist)
-        cb_addrelpath   = xmlroot.get('cb_addrelpath', not_exist)
-        cb_num   = xmlroot.get('cb_num', not_exist)
+        cb_recursive   = int(xmlroot.get('cb_recursive', not_exist))
+        cb_prefix   = int(xmlroot.get('cb_prefix', not_exist))
+        cb_newer   = int(xmlroot.get('cb_newer', not_exist))
+        cb_addrelpath   = int(xmlroot.get('cb_addrelpath', not_exist))
+        cb_num   = int(xmlroot.get('cb_num', not_exist))
 
         print(
             f"apply attributes from {self.config_file}:\n"
             f"time is {time}\n"
+            f"indir is {indir}\n"
             f"outdir is {outdir}\n"
             f"camera is {camera}\n"
+            f"process_types is {process_types}\n"
             f"sort_method_g is {sort_method_g}\n"
             f"sort_method_m is {sort_method_m}\n"
             f"cb_recursive is {cb_recursive}\n"
@@ -1231,6 +1234,58 @@ class Dateimeister_support:
             f"cb_addrelpath is {cb_addrelpath}\n"
             f"cb_num is {cb_num}\n"
         ) if self.debug else True
+        
+        # find out if at least one control has changed which would require a new generate
+        lc = [
+            [indir, self.label_indir.cget('text')],
+            [outdir, self.label_outdir.cget('text')],
+            [camera, self.o_camera.get()],
+            [cb_recursive, self.cb_recursive_var.get()],
+            [cb_prefix, self.cb_prefix_var.get()],
+            [cb_newer, self.cb_newer_var.get()],
+            [cb_addrelpath, self.cb_addrelpath_var.get()],
+        ]
+        list_result_r = []
+        for i in lc:
+            if i[0] != i[1]:
+                print(f"config diff gen required: {i[0]} - {i[1]}")
+                list_result_r.append(i)
+            
+        # find out if at least one control has changed which would require a new sort
+        lc = [
+            [sort_method_g, self.rbg.get()],
+            [sort_method_m, self.rbvalue.get()],
+        ]
+        list_result_s = []
+        for i in lc:
+            if i[0] != i[1]:
+                print(f"config diff sot required: {i[0]} - {i[1]}")
+                list_result_s.append(i)
+
+        if len(list_result_r) > 0:
+            result = messagebox.askyesnocancel(
+                title="New  generate required",
+                message="New generate required, all displayed images will be removed from canvas. Continue?"
+            )
+            if result is True:
+                print("Yes")
+            elif result is False:
+                print("No")
+            else:
+                print("Cancel")
+                
+        else:
+            if len(list_result_s) > 0:
+                result = messagebox.askyesnocancel(
+                    title="New  sort required",
+                    message="New sort required for displayed images. Continue?"
+                )
+                if result is True:
+                    print("Yes")
+                elif result is False:
+                    print("No")
+                else:
+                    print("Cancel")
 
         for thumbnail in xmlroot.findall('thumbnail'):
             #print (thumbnail.attrib['filename'])   
@@ -1347,16 +1402,20 @@ class Dateimeister_support:
 
     def write_config(self, filename): # Confcamig-xml unter neuem Namen sichern
         file1 = open(filename, "w")
+        indir  = self.label_indir.cget('text')
         outdir = self.label_outdir.cget('text')
         camera = camera = self.o_camera.get()
+        process_types = ','.join(Globals.imagetypes_selected)
 
         s = '<?xml version="1.0" encoding="iso-8859-1"?>' + "\n"
         file1.write(s)
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         s = f"""<thumbnails
   time="{ts}"
+  indir="{indir}"
   outdir="{outdir}"
   camera="{camera}"
+  process_types="{process_types}"
   sort_method_g="{self.rbg.get()}"
   sort_method_m="{self.rbvalue.get()}"
   cb_recursive="{self.cb_recursive_var.get()}"
@@ -2475,6 +2534,7 @@ class Dateimeister_support:
         tenths = int((elapsed * 10) % 10)
         diff_formatted = f"{self.num_images:d} in {hours:02d}:{minutes:02d}:{seconds:02d}.{tenths}"
         self.label_num.config(text = diff_formatted)
+        self.on_cb_num_toggle() # apply user-supplied value from checkbox
         if self.debug:
             process = psutil.Process(os.getpid())
             gc.collect()
