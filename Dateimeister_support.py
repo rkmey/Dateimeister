@@ -40,6 +40,7 @@ from tkinter.font import Font
 from time import gmtime, strftime
 
 import xml.etree.ElementTree as ET
+from xml.sax.saxutils import quoteattr, escape
     
 from PIL import Image, ImageTk
 from datetime import datetime, timezone
@@ -745,6 +746,7 @@ class Dateimeister_support:
         menubar.add_cascade(label="File", menu=self.filemenu)
         self.recentmenu = Menu(menubar, tearoff=0)
         self.filemenu.add_cascade(label="Open Recent", menu=self.recentmenu)
+        self.filemenu.add_command(label="Generate from config...", command=self.generate_from_config)
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.root.quit)
         self.filemenu.entryconfig(MENUITEM_FILE_NEW, state=DISABLED)
@@ -1202,111 +1204,6 @@ class Dateimeister_support:
             self.filemenu.entryconfig(MENUITEM_FILE_OPEN_APPLY_CONFIG, state=NORMAL)
             self.apply_config()
 
-    def apply_config(self):
-        tree = ET.parse(self.config_file)
-        not_exist = "attr does not exist"
-        xmlroot = tree.getroot()
-        time    = xmlroot.get('time', not_exist)
-        indir   = xmlroot.get('indir', not_exist)
-        outdir   = xmlroot.get('outdir', not_exist)
-        camera   = xmlroot.get('camera', not_exist)
-        process_types = xmlroot.get('process_types', not_exist)
-        sort_method_g   = xmlroot.get('sort_method_g', not_exist)
-        sort_method_m   = xmlroot.get('sort_method_m', not_exist)
-        cb_recursive   = int(xmlroot.get('cb_recursive', not_exist))
-        cb_prefix   = int(xmlroot.get('cb_prefix', not_exist))
-        cb_newer   = int(xmlroot.get('cb_newer', not_exist))
-        cb_addrelpath   = int(xmlroot.get('cb_addrelpath', not_exist))
-        cb_num   = int(xmlroot.get('cb_num', not_exist))
-
-        print(
-            f"apply attributes from {self.config_file}:\n"
-            f"time is {time}\n"
-            f"indir is {indir}\n"
-            f"outdir is {outdir}\n"
-            f"camera is {camera}\n"
-            f"process_types is {process_types}\n"
-            f"sort_method_g is {sort_method_g}\n"
-            f"sort_method_m is {sort_method_m}\n"
-            f"cb_recursive is {cb_recursive}\n"
-            f"cb_prefix is {cb_prefix}\n"
-            f"cb_newer is {cb_newer}\n"
-            f"cb_addrelpath is {cb_addrelpath}\n"
-            f"cb_num is {cb_num}\n"
-        ) if self.debug else True
-        
-        # find out if at least one control has changed which would require a new generate
-        lc = [
-            [indir, self.label_indir.cget('text')],
-            [outdir, self.label_outdir.cget('text')],
-            [camera, self.o_camera.get()],
-            [cb_recursive, self.cb_recursive_var.get()],
-            [cb_prefix, self.cb_prefix_var.get()],
-            [cb_newer, self.cb_newer_var.get()],
-            [cb_addrelpath, self.cb_addrelpath_var.get()],
-        ]
-        list_result_r = []
-        for i in lc:
-            if i[0] != i[1]:
-                print(f"config diff gen required: {i[0]} - {i[1]}")
-                list_result_r.append(i)
-            
-        # find out if at least one control has changed which would require a new sort
-        lc = [
-            [sort_method_g, self.rbg.get()],
-            [sort_method_m, self.rbvalue.get()],
-        ]
-        list_result_s = []
-        for i in lc:
-            if i[0] != i[1]:
-                print(f"config diff sot required: {i[0]} - {i[1]}")
-                list_result_s.append(i)
-
-        if len(list_result_r) > 0:
-            result = messagebox.askyesnocancel(
-                title="New  generate required",
-                message="New generate required, all displayed images will be removed from canvas. Continue?"
-            )
-            if result is True:
-                print("Yes")
-            elif result is False:
-                print("No")
-            else:
-                print("Cancel")
-                
-        else:
-            if len(list_result_s) > 0:
-                result = messagebox.askyesnocancel(
-                    title="New  sort required",
-                    message="New sort required for displayed images. Continue?"
-                )
-                if result is True:
-                    print("Yes")
-                elif result is False:
-                    print("No")
-                else:
-                    print("Cancel")
-
-        for thumbnail in xmlroot.findall('thumbnail'):
-            #print (thumbnail.attrib['filename'])   
-            image = thumbnail.find('image').text
-            mystate = int(thumbnail.find('state').text)
-            #print(image)
-            #print(mystate)
-            # apply config
-            if image in Globals.dict_thumbnails[Globals.imagetype]:
-                if Globals.dict_thumbnails[Globals.imagetype][image] in Globals.thumbnails[Globals.imagetype]:
-                    if mystate == INCLUDE:
-                        Globals.dict_thumbnails[Globals.imagetype][image].setState(INCLUDE)
-                    else:
-                        Globals.dict_thumbnails[Globals.imagetype][image].setState(EXCLUDE)
-                else:
-                    print("thumbnail for " + Globals.imagetype + " file " + image + " not found") if self.debug else True
-                    print(Globals.thumbnails) if self.debug else True
-            else:
-                print("Imagefile: " + image + " not found in _dict thumdnails of type " + Globals.imagetype) if self.debug else True
-        self.historize_process()
-
 
     def save_config(self): # Config-xml speichern
         print("Config File is: " + self.config_file) if self.debug else True
@@ -1399,48 +1296,411 @@ class Dateimeister_support:
         else:
             self.filemenu.entryconfig(MENUITEM_FILE_RECENT, state=NORMAL)
 
+    """ changed read / write config, helper functions and menue handler for ecerythine required for 
+    restoring a complete environment like a regression test suite
+    """
+    # ======================================================================
+    # BLOCK 1: generate_from_config (new menu item) + simplified apply_config + helpers
+    #
+    # generate_from_config: file dialog -> read config -> preflight -> (confirm if a display
+    #   exists) -> restore controls -> generate() -> include / exclude -> compare with config.
+    #   Always a full restore; there is no comparison with the current state.
+    # apply_config: unchanged purpose, only include / exclude on the current display.
+    #
+    # Menu: after the line  self.filemenu.add_cascade(label="Open Recent", menu=self.recentmenu)
+    # add            self.filemenu.add_command(label="Generate from config...",
+    #                                          command=self.generate_from_config)
+    # (index 9; the MENUITEM_* constants 0..8 stay valid).
+    # ======================================================================
 
-    def write_config(self, filename): # Confcamig-xml unter neuem Namen sichern
-        file1 = open(filename, "w")
+    _SORT_G_VALUES = ("1", "2")
+    _SORT_M_VALUES = ("1", "2", "3", "4")
+
+    @staticmethod
+    def _norm_path(p):
+        return re.sub(r'\\', '/', p or "").lower()
+
+    def _have_data(self):
+        """True if there is a generated + displayed result for the current key."""
+        return bool(Globals.generated
+                    and Globals.imagetype != ""
+                    and Globals.imagetype in self.dict_source_target
+                    and Globals.imagetype in Globals.dict_thumbnails
+                    and len(Globals.thumbnails.get(Globals.imagetype, [])) > 0)
+
+    def _environment_snapshot(self, cam, types):
+        """Everything besides the controls that goes into DG.dateimeister:
+        suffixes / subdir / process_image per type (from the camera config xml,
+        for the currently selected camera) and skip_dirs_* (from the ini)."""
+        env = {
+            # effective sets as the generator builds them (None / empty -> defaults, "none" -> empty)
+            "skip_dirs_top": ",".join(sorted(DG.parse_dir_list(getattr(Globals, "skip_dirs_top", None),
+                                                               DG.DEFAULT_SKIP_DIRS_TOP))),
+            "skip_dirs_any": ",".join(sorted(DG.parse_dir_list(getattr(Globals, "skip_dirs_any", None),
+                                                               DG.DEFAULT_SKIP_DIRS_ANY))),
+            "types": {},
+        }
+        for t in types:
+            raw = self.dict_cameras.get(cam, {}).get(t, "")
+            suffixes = sorted(s.strip() for s in raw.split(",") if s.strip())
+            env["types"][t] = {
+                "subdir":   self.dict_subdirs.get(t, ""),
+                "suffixes": ",".join(suffixes),
+                "process":  ",".join("%s=%s" % (s, self.dict_process_image.get(s, "")) for s in suffixes),
+            }
+        return env
+
+    def _read_environment(self, root):
+        """<environment> element of the config xml -> dict, or None (old config files)."""
+        el = root.find("environment")
+        if el is None:
+            return None
+        env = {"skip_dirs_top": el.get("skip_dirs_top", ""),
+               "skip_dirs_any": el.get("skip_dirs_any", ""),
+               "types": {}}
+        for te in el.findall("type"):
+            env["types"][te.get("name", "")] = {"subdir":   te.get("subdir", ""),
+                                                "suffixes": te.get("suffixes", ""),
+                                                "process":  te.get("process", "")}
+        return env
+
+    def _compare_environment(self, cfg):
+        """Differences between the environment saved in the config and the current one
+        (camera config xml, ini). A new generate cannot fix these, so they are only reported."""
+        old = cfg.get("env")
+        if not old:
+            return []
+        new = self._environment_snapshot(self.o_camera.get(), cfg["types"])
+        lines = []
+        for k in ("skip_dirs_top", "skip_dirs_any"):
+            if old[k] != new[k]:
+                lines.append("ini %s changed: config = '%s', now = '%s'" % (k, old[k], new[k]))
+        for t in cfg["types"]:
+            o, n = old["types"].get(t), new["types"].get(t)
+            if o is None or n is None:
+                continue
+            for field in ("subdir", "suffixes", "process"):
+                if o[field] != n[field]:
+                    lines.append("camera config, type %s, %s changed: config = '%s', now = '%s'"
+                                 % (t, field, o[field], n[field]))
+        return lines
+
+    def _read_config(self, path):
+        """Parse the config xml into a dict. Returns None (after a message) if unreadable.
+        Missing attributes (old config files) give None / [] and cfg["complete"] = False."""
+        try:
+            root = ET.parse(path).getroot()
+        except (ET.ParseError, OSError) as e:
+            messagebox.showerror("Apply config", "Cannot read config file:\n" + str(path) + "\n\n" + str(e))
+            return None
+
+        def get_int(name):
+            try:
+                return int(root.get(name))
+            except (TypeError, ValueError):
+                return None
+
+        cfg = {
+            "indir":  root.get("indir"),
+            "outdir": root.get("outdir"),
+            "camera": root.get("camera"),
+            "types":  [t.strip() for t in (root.get("process_types") or "").split(",") if t.strip()],
+            "sort_g": root.get("sort_method_g"),
+            "sort_m": root.get("sort_method_m"),
+            "cb_recursive":  get_int("cb_recursive"),
+            "cb_prefix":     get_int("cb_prefix"),
+            "cb_newer":      get_int("cb_newer"),
+            "cb_addrelpath": get_int("cb_addrelpath"),
+            "cb_num":        get_int("cb_num"),
+            "thumbs": [],   # [(image, state), ...] in display order
+            "env": self._read_environment(root),
+            "diatisch": [f.text for f in root.findall("diatisch_list/file") if f.text],
+        }
+        for th in root.findall("thumbnail"):
+            img = th.find("image")
+            st  = th.find("state")
+            if img is None or st is None or not img.text:
+                continue
+            try:
+                state = int(st.text)
+            except (TypeError, ValueError):
+                continue
+            cfg["thumbs"].append((img.text, state))
+
+        cfg["complete"] = bool(
+            cfg["indir"] and cfg["outdir"] and cfg["camera"] and cfg["types"]
+            and cfg["sort_g"] in self._SORT_G_VALUES
+            and cfg["sort_m"] in self._SORT_M_VALUES
+            and all(cfg[k] is not None for k in ("cb_recursive", "cb_prefix", "cb_newer", "cb_addrelpath")))
+        return cfg
+
+    def _preflight(self, cfg):
+        """Check everything a restore needs BEFORE any control is touched.
+        Returns (real camera name, list of problems)."""
+        problems = []
+        cams = {str(c).upper(): c for c in self.dict_cameras}
+        real_cam = cams.get(cfg["camera"].upper())
+        if real_cam is None:
+            problems.append("camera '%s' is not defined" % cfg["camera"])
+        else:
+            missing = [t for t in cfg["types"] if t not in self.dict_cameras[real_cam]]
+            if missing:
+                problems.append("camera '%s' has no type(s): %s" % (real_cam, ", ".join(missing)))
+        for name in ("indir", "outdir"):
+            if not tools.isdir_fast(cfg[name]):   # short test for unreachable network shares
+                problems.append("%s '%s' does not exist or is not reachable" % (name, cfg[name]))
+        return real_cam, problems
+
+    def _select_camera(self, name):
+        """Select the camera like a click in lb_camera (B_camera_press rebuilds
+        dict_cameras / dict_subdirs / dict_process_image and lb_gen)."""
+        items = [self.lb_camera.get(i) for i in range(self.lb_camera.size())]
+        match = [i for i, c in enumerate(items) if str(c).upper() == name.upper()]
+        if not match:
+            return False
+        self.lb_camera.selection_clear(0, END)
+        self.lb_camera.selection_set(match[0])
+        self.lb_camera.see(match[0])
+        self.B_camera_press()
+        return True
+
+    def _set_cb_num(self, cfg):
+        if cfg["cb_num"] is not None:
+            self.cb_num_var.set(cfg["cb_num"])
+
+    def _restore_controls(self, cfg, cam):
+        """Set camera, types, dirs, checkboxes and sort radios from the config.
+        .set() on the variables does NOT fire the widget callbacks, so
+        state_gen_required / rb_sort etc. are not triggered here."""
+        # camera (also refills lb_gen with all types of the camera)
+        if cam.upper() != self.o_camera.get().upper():
+            if not self._select_camera(cam):
+                return False
+        else:
+            self._fill_lb_gen_for_camera(self.o_camera.get())
+
+        # Diatisch file list: B_camera_press clears it, so set it AFTER the camera selection.
+        # generate() uses the list whenever it is non-empty, so a stale list must be cleared
+        # for a normal scan config.
+        Globals.list_result_diatisch = list(cfg["diatisch"])
+
+        # types in click order (= order of process_types in the config)
+        keys = self.dict_gen_files_keys
+        order = []
+        self.lb_gen.selection_clear(0, END)
+        for t in cfg["types"]:
+            if t in keys:
+                idx = keys.index(t)
+                if idx not in order:
+                    order.append(idx)
+                    self.lb_gen.selection_set(idx)
+        self.imagetypes_click_order = order
+        self._update_lb_gen_labels()
+
+        # dirs
+        self.label_indir.config(text = cfg["indir"])
+        self.dirchk.select_in_listbox(self.listbox_indir, cfg["indir"])
+        self.button_indir_from_list.config(state = NORMAL)
+        self.label_outdir.config(text = cfg["outdir"])
+        self.dirchk.select_in_listbox(self.listbox_outdir, cfg["outdir"])
+        self.button_outdir_from_list.config(state = NORMAL)
+
+        # checkboxes
+        self.cb_recursive_var.set(cfg["cb_recursive"])
+        self.cb_prefix_var.set(cfg["cb_prefix"])
+        self.cb_newer_var.set(cfg["cb_newer"])
+        self.cb_addrelpath_var.set(cfg["cb_addrelpath"])
+        self._set_cb_num(cfg)
+
+        # sort: generate() reads rbg / rbvalue itself and sorts accordingly
+        self.rbg.set(cfg["sort_g"])
+        self.rbvalue.set(cfg["sort_m"])
+        return True
+
+    def _restore_and_generate(self, cfg, cam, cfg_file):
+        """Level 2. Returns True if a display for the config's types exists afterwards."""
+        self.state_gen_required()          # clears display, Globals.generated = False
+        if not self._restore_controls(cfg, cam):
+            messagebox.showerror("Apply config", "Camera '%s' could not be selected." % cam)
+            return False
+        self.generate()                    # synchronous, ends with display_images_prepare()
+        ok = (Globals.generated
+              and Globals.imagetype == self._combined_key(cfg["types"])
+              and len(Globals.thumbnails.get(Globals.imagetype, [])) > 0)
+        # display_images_prepare() has reset config_file and title -> restore them
+        self.config_file = cfg_file
+        self.root.title(self.title + ' ' + cfg_file)
+        self.filemenu.entryconfig(MENUITEM_FILE_SAVE_CONFIG_AS, state=NORMAL)
+        return ok
+
+    def _apply_states(self, cfg):
+        """Set include / exclude from the config. Returns the files of the config
+        that have no thumbnail in the current display."""
+        key = Globals.imagetype
+        valid = {id(t) for t in Globals.thumbnails.get(key, [])}
+        by_norm = {self._norm_path(f): th for f, th in Globals.dict_thumbnails.get(key, {}).items()
+                   if id(th) in valid}
+        missing = []
+        for image, state in cfg["thumbs"]:
+            th = by_norm.get(self._norm_path(image))
+            if th is None:
+                missing.append(image)
+                continue
+            th.setState(INCLUDE if state == INCLUDE else EXCLUDE)
+        return missing
+
+    def _verify_against_cfg(self, cfg):
+        """Compare file set and order of the current display with the config.
+        Returns a list of text lines (empty = identical)."""
+        key = Globals.imagetype
+        cur = [self._norm_path(t.getFile()) for t in Globals.thumbnails.get(key, [])]
+        exp = [self._norm_path(i) for i, _ in cfg["thumbs"]]
+        cur_set, exp_set = set(cur), set(exp)
+        miss  = [p for p in exp if p not in cur_set]
+        extra = [p for p in cur if p not in exp_set]
+        lines = []
+        if miss:
+            lines.append("%d file(s) of the config are not in the current display, e.g.:\n  %s"
+                         % (len(miss), "\n  ".join(miss[:5])))
+        if extra:
+            lines.append("%d file(s) of the current display are not in the config, e.g.:\n  %s"
+                         % (len(extra), "\n  ".join(extra[:5])))
+        if not miss and not extra and cur != exp:
+            lines.append("same files, but the order differs from the config")
+        return lines
+
+    # the handler for the new menü item
+    def generate_from_config(self):
+        """File > Generate from config...
+        Restores ALL settings from a config file (camera, types, dirs, checkboxes, sort,
+        Diatisch list), generates and applies include / exclude. Always starts from scratch:
+        no comparison with whatever is currently set or displayed."""
+        cfg_file = fd.askopenfilename(initialdir = os.path.join(Globals.datadir, Globals.config_files_subdir),
+                                      filetypes=[("config files", "xml")])
+        if not cfg_file:
+            return
+        cfg = self._read_config(cfg_file)
+        if cfg is None:
+            return
+        if not cfg["complete"]:
+            messagebox.showerror("Generate from config",
+                "This config file contains no settings (old format).\n"
+                "Generate the matching display first and use 'Open Apply config'.")
+            return
+        cam, problems = self._preflight(cfg)
+        if problems:
+            messagebox.showerror("Generate from config",
+                "The config cannot be restored:\n\n" + "\n".join(problems))
+            return
+        if Globals.generated:   # something would be lost
+            if not messagebox.askokcancel("Generate from config",
+                    "The current display, including unsaved include / exclude changes, "
+                    "will be discarded. Continue?"):
+                return
+        if not self._restore_and_generate(cfg, cam, cfg_file):
+            messagebox.showerror("Generate from config",
+                "Generate did not produce a display for the types of the config. "
+                "Include / exclude was not applied.")
+            return
+        self.on_cb_num_toggle()
+        self._apply_states(cfg)
+        self.historize_process()
+        lines = self._compare_environment(cfg) + self._verify_against_cfg(cfg)
+        if lines:
+            messagebox.showwarning("Generate from config",
+                "The restored display is not identical to the config:\n\n" + "\n".join(lines))
+
+    def apply_config(self):
+        """Apply include / exclude from the config file to the CURRENT display
+        (File > Open Apply config / Apply config / Open Recent). No settings are changed."""
+        cfg_file = self.config_file
+        if not cfg_file or not os.path.isfile(cfg_file):
+            messagebox.showerror("Apply config", "No config file selected, or the file does not exist.")
+            return
+        if not self._have_data():
+            messagebox.showerror("Apply config",
+                "There is no display. Generate first, or use 'Generate from config'.")
+            return
+        cfg = self._read_config(cfg_file)
+        if cfg is None:
+            return
+        if cfg["types"] and self._combined_key(cfg["types"]) != Globals.imagetype:
+            messagebox.showinfo("Apply config",
+                "This config was saved for the types '%s', the display shows '%s'.\n"
+                "Use 'Generate from config' to restore it completely."
+                % (", ".join(cfg["types"]), Globals.imagetype))
+        missing = self._apply_states(cfg)
+        self.historize_process()
+        if missing:
+            messagebox.showwarning("Apply config",
+                "%d of %d files of the config are not in the current display."
+                % (len(missing), len(cfg["thumbs"])))
+
+
+    # ======================================================================
+    # Replaces the old write_config(). Same file format, but
+    #  - attribute values and text are XML-escaped (&, <, ", ...)
+    #  - written with the declared encoding iso-8859-1; characters outside it
+    #    become &#...; character references
+    #  - file is closed even on errors
+    # needs at the top of the module:  from xml.sax.saxutils import quoteattr, escape
+    # ======================================================================
+    def write_config(self, filename): # save config xml
         indir  = self.label_indir.cget('text')
         outdir = self.label_outdir.cget('text')
-        camera = camera = self.o_camera.get()
+        camera = self.o_camera.get()
         process_types = ','.join(Globals.imagetypes_selected)
-
-        s = '<?xml version="1.0" encoding="iso-8859-1"?>' + "\n"
-        file1.write(s)
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-        s = f"""<thumbnails
-  time="{ts}"
-  indir="{indir}"
-  outdir="{outdir}"
-  camera="{camera}"
-  process_types="{process_types}"
-  sort_method_g="{self.rbg.get()}"
-  sort_method_m="{self.rbvalue.get()}"
-  cb_recursive="{self.cb_recursive_var.get()}"
-  cb_prefix="{self.cb_prefix_var.get()}"
-  cb_newer="{self.cb_newer_var.get()}"
-  cb_addrelpath="{self.cb_addrelpath_var.get()}"
-  cb_num="{self.cb_num_var.get()}"
->
-"""
 
-        file1.write(s)
-        for thumbnail in Globals.thumbnails[Globals.imagetype]:
-            s = "    <thumbnail filename=\"" + thumbnail.getFile() + "\">\n"
-            file1.write(s)
-            s = "        <image>" + str(thumbnail.getFile()) + "</image>\n"
-            file1.write(s)
-            s = "        <state>" + str(thumbnail.getState()) + "</state>\n"
-            file1.write(s)
-            s = "    </thumbnail>\n"
-            file1.write(s)
-        s = '</thumbnails>' + "\n"
-        file1.write(s)
-        # Closing file
-        file1.close()
-        
+        attrs = [
+            ("time", ts),
+            ("indir", indir),
+            ("outdir", outdir),
+            ("camera", camera),
+            ("process_types", process_types),
+            ("sort_method_g", self.rbg.get()),
+            ("sort_method_m", self.rbvalue.get()),
+            ("cb_recursive", self.cb_recursive_var.get()),
+            ("cb_prefix", self.cb_prefix_var.get()),
+            ("cb_newer", self.cb_newer_var.get()),
+            ("cb_addrelpath", self.cb_addrelpath_var.get()),
+            ("cb_num", self.cb_num_var.get()),
+        ]
+        with open(filename, "w", encoding="iso-8859-1", errors="xmlcharrefreplace") as f:
+            f.write('<?xml version="1.0" encoding="iso-8859-1"?>\n')
+            f.write("<thumbnails\n")
+            for name, value in attrs:
+                f.write("  %s=%s\n" % (name, quoteattr(str(value))))
+            f.write(">\n")
+            env = self._environment_snapshot(camera, list(Globals.imagetypes_selected))
+            f.write("    <environment skip_dirs_top=%s skip_dirs_any=%s>\n"
+                    % (quoteattr(env["skip_dirs_top"]), quoteattr(env["skip_dirs_any"])))
+            for tname, te in env["types"].items():
+                f.write("        <type name=%s subdir=%s suffixes=%s process=%s />\n"
+                        % (quoteattr(tname), quoteattr(te["subdir"]),
+                           quoteattr(te["suffixes"]), quoteattr(te["process"])))
+            f.write("    </environment>\n")
+            diatisch_files = [str(x) for x in (Globals.list_result_diatisch or [])]
+            if diatisch_files:   # generate() takes the Diatisch branch whenever this list is non-empty
+                f.write("    <diatisch_list>\n")
+                for x in diatisch_files:
+                    f.write("        <file>%s</file>\n" % escape(x))
+                f.write("    </diatisch_list>\n")
+            for thumbnail in Globals.thumbnails[Globals.imagetype]:
+                file = str(thumbnail.getFile())
+                f.write("    <thumbnail filename=%s>\n" % quoteattr(file))
+                f.write("        <image>%s</image>\n" % escape(file))
+                f.write("        <state>%s</state>\n" % str(thumbnail.getState()))
+                f.write("    </thumbnail>\n")
+            f.write("</thumbnails>\n")
+    
+    
+    """ END changed read / write config, helper functions and menue handler for ecerythine required for 
+    restoring a complete environment like a regression test suite
+    """
+
+
+
     def get_dict_of_config_files(self, pindir, imagetype): # returns dict sorted by usedate asc
         # lower and slash instead of backslash
         indir = re.sub(r'\\', '/', pindir).lower()
