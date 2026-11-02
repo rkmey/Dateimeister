@@ -629,7 +629,7 @@ class Diatisch:
         self.config_file = ""
         self.ctr_targetfiles = 0
         self.indir = ""
-        self.win_messages = None
+        self.win_exec = None
         self.win_processlist = None
         self.imagetype  = "JPEG"
         self.imagetypes = "JPG, JPEG"
@@ -2518,10 +2518,10 @@ class Diatisch:
 
             self.write_cmdfile(self.outdir)
             # show exec window
-            if self.win_messages is not None: # stop MyMessagesWindow-Objekt
-                self.win_messages.close_handler()
-                self.win_messages = None
-            self.win_messages = DM.MyMessagesWindow(self, self.datadir, self.cmd_files_subdir, self.imagetype, self.dict_gen_filenames["COPY"], self.dict_gen_filenames["DELETE"], None) 
+            if self.win_exec is not None: # stop MyExecWindow-Objekt
+                self.win_exec.close_handler()
+                self.win_exec = None
+            self.win_exec = DM.MyExecWindow(self, self.datadir, self.cmd_files_subdir, self.imagetype, self.dict_gen_filenames["COPY"], self.dict_gen_filenames["DELETE"], None) 
 
     def button_processlist_pressed(self):
         # show process window            

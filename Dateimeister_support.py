@@ -161,7 +161,7 @@ class Dateimeister_support:
         self.UR = UR.Undo_Redo_Dateimeister(self.debug_p)
         # Undo /Redo control end
 
-        self.win_messages = None
+        self.win_exec = None
         self.dict_thumbnails_lineno = {}
         self.dict_duplicates_sourcefiles = {}
         self.duplicates = False
@@ -2782,9 +2782,9 @@ class Dateimeister_support:
 
         self.button_exec.config(state = NORMAL)
         self.write_cmdfile(imagetype)
-        if self.win_messages is not None: # stop MyMessagesWindow-Objekt
-            self.win_messages.close_handler()
-            self.win_messages = None
+        if self.win_exec is not None: # stop MyExecWindow-Objekt
+            self.win_exec.close_handler()
+            self.win_exec = None
 
         busy.close()
         elapsed = time.time() - t_start
@@ -2925,9 +2925,9 @@ class Dateimeister_support:
             ClosingEvent("", self) # file, self, see tools
         )
         self.dict_file_image = {}
-        if self.win_messages is not None: # stop MyMessagesWindow-Objekt
-            self.win_messages.close_handler()
-            self.win_messages = None
+        if self.win_exec is not None: # stop MyExecWindow-Objekt
+            self.win_exec.close_handler()
+            self.win_exec = None
 
     def get_templates(self):
         self.dict_templates = {}
@@ -2950,14 +2950,14 @@ class Dateimeister_support:
         #print(templates)
             
     def button_exec_pressed(self):
-        if self.win_messages is not None: # stop MyMessagesWindow-Objekt
-            self.win_messages.close_handler()
-            self.win_messages = None
+        if self.win_exec is not None: # stop MyExecWindow-Objekt
+            self.win_exec.close_handler()
+            self.win_exec = None
         # write the cmd files fresh right before they are used - this is now
         # the single point where they get persisted, instead of after every
         # individual include/exclude change
         self.write_cmdfile(Globals.imagetype)
-        self.win_messages = DM.MyMessagesWindow(self, Globals.datadir, Globals.cmd_files_subdir, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], self.dict_gen_files_delrelpath[Globals.imagetype]) 
+        self.win_exec = DM.MyExecWindow(self, Globals.datadir, Globals.cmd_files_subdir, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], self.dict_gen_files_delrelpath[Globals.imagetype]) 
 
     def write_cmdfiles(self):
         for imagetype in self.dict_source_target:

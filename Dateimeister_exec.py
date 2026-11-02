@@ -12,7 +12,7 @@ from tkinter import Scrollbar
 import Tooltip as TT
 
 
-class MyMessagesWindow:
+class MyExecWindow:
 
     # The class "constructor" - It's actually an initializer
     def __init__(self, pmain, datadir, cmd_files_subdir, imagetype,
@@ -328,7 +328,7 @@ class MyMessagesWindow:
                                         text='Label')
 
     # ------------------------------------------------------------------
-    # Verhalten (unveraendert aus der bisherigen MyMessagesWindow)
+    # Verhalten (unveraendert aus der bisherigen My-Messages-Window)
     # ------------------------------------------------------------------
     def script_select(self):
         print("Script selected is: " + self.rb_value.get())
