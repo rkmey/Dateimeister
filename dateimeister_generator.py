@@ -279,6 +279,7 @@ def process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixe
     # files have been deleted. Only files that are really copied ("j") can have created their subdir.
     # We register the subdir and all its parents (a, a/b, a/b/c); only the subdir itself counts the file.
     # The order does not matter here, the generator writes the deepest paths first.
+    # the numbers dont affect the funcionality, they are just for information!
     if docopy == "j" and relpath:
         parts = relpath.split('/')
         for i in range(1, len(parts) + 1):
