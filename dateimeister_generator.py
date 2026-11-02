@@ -222,6 +222,19 @@ def dateimeister(dateityp, endung, indir, outdir, addrelpath, recursive, newer, 
   
     return dict_1, dict_2, dict_3, dict_relpath
     
+def get_relpath(root, indir):
+    """Relativer Pfad von root unter indir, immer mit '/' als Trenner.
+    '' wenn root == indir ist oder nicht unter indir liegt (z.B. select_list mit Dateien
+    von einem anderen Ordner oder Laufwerk) -> diese Dateien landen dann direkt in outdir."""
+    try:
+        rel = os.path.relpath(root, indir)
+    except ValueError:  # Windows: anderes Laufwerk
+        return ""
+    rel = rel.replace('\\', '/')
+    if rel == '.' or rel == '..' or rel.startswith('../'):
+        return ""
+    return rel
+
 def process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixes, addrelpath, newer, target_prefix):
     global dict_result, dict_result_all, dict_result_tooold, dict_relpath
     relpath = ""
@@ -233,82 +246,42 @@ def process_file(root, filename, fullname, dateityp, indir, outdir, list_suffixe
         match = re.search(rf".*?\.{suffix}$", filename, re.IGNORECASE)
         if match:
             process = "j"
-            #print("File " + filename + " matches: " + suffix)
             break
     if process == "j":
         if addrelpath == 'j':
-            relpath  = re.sub(re.escape(indir), '', root)
-            relpath  = re.sub(r'^[\\\/]', '', relpath)
-            target_dir = outdir + '/' + relpath
-        else: 
+            relpath = get_relpath(root, indir)
+            target_dir = outdir + '/' + relpath if relpath else outdir
+        else:
             target_dir = outdir
         if newer: # copy only if source file is newer
-            statinfo = os.stat(fullname)
-            st_mtime = statinfo.st_mtime
-            strdatetime = datetime.fromtimestamp(st_mtime)
-            # check if file exists in target-dir
-            #print("F: " + fullname + " mstime " + str(strdatetime) + " relpath is: " + relpath)
+            st_mtime = os.stat(fullname).st_mtime
             targetfilename = os.path.join(target_dir, target_prefix + filename)
             if os.path.isfile(targetfilename):
                 st_mtime_target = os.stat(targetfilename).st_mtime
-                strdatetime_target = datetime.fromtimestamp(st_mtime_target)
-                #print("Targetfile " + filename + " exists in " + target_dir + " mstime " + str(st_mtime_target))
                 if st_mtime > st_mtime_target:
                     docopy = "j"
-                else: 
+                else:
                     docopy = "o"
             else: # target does not exist
-                a = 1
                 docopy = "j"
-                #print("Targetfile " + filename + " does not exists in " + target_dir)
         else: # copy anyway
             docopy = "j"
-        sourcefile = os.path.join(root,       filename)
+        sourcefile = os.path.join(root, filename)
         #20260421 replace // at the beginning by \\ as windows interprets a slash in position 1 as "paramater follows"...
-        if sourcefile.startswith("//"):        
-            sourcefile = re.sub(r"/", r"\\", sourcefile) # replace single backslash by slash
+        if sourcefile.startswith("//"):
+            sourcefile = re.sub(r"/", r"\\", sourcefile)
         targetfile = os.path.join(target_dir, target_prefix + filename)
-        targetfile = re.sub(r"\\", "/", targetfile) # replace single backslash by slash
+        targetfile = re.sub(r"\\", "/", targetfile)
         dict_result_all[sourcefile] = targetfile # all matching files regardless of copy-status
     if docopy == "j" or docopy == "o":
         dict_result[sourcefile] = targetfile
-        # we have to store relpath in dict_relpath for the delete script which deletes those relpaths if they are empty
-        # after the files have been deleted  (undo copy). From the rightmst subdir to the left we check if relpath already exists if
-        # yes we appen the rightmost portion (can be empty)
-        right = ""
-        thispath = relpath
-        thispath = re.sub(r'\\', '/', thispath)
-        if thispath != "":
-            do_process = True
-        else:
-            do_process = False
-        while do_process:
-            #print("> thispath: " + thispath)
-            if thispath in dict_relpath:
-                if right == "": # only incr +ement count of files for this dir
-                    dict_relpath[thispath] += 1
-                    #print("> ex. direntry: " + thispath)
-                else: # make new entry
-                    newkey = thispath + '/' + right
-                    dict_relpath[newkey] = 1
-                    #print("> new direntry: " + newkey)
-                do_process = False # done
-            else: # remove rightmost subdir
-                #print("> dir not in dict: " + thispath)
-                match = re.search(r'([\\\/]+)(^[\\\/]+)$', thispath) # find slash followed by not slash till end
-                if match:
-                    slash = match.group(1)
-                    right = match.group(2)
-                    to_remove = escape(ext)
-                    thispath = re.sub(rf'[\\\/]{to_remove}$', '', thispath)
-                    #print("> Anfang: " + thispath + " Ende: " + right)
-                else: # string without slash, 1 more try if not empty
-                    if thispath != "":
-                        # was not in dir, so make an entry
-                        dict_relpath[thispath] = 1
-                        do_process = False
-                    else:
-                        do_process = False
+    # dict_relpath is used by the delete script (undo copy) to remove subdirs which are empty after the
+    # files have been deleted. Only files that are really copied ("j") can have created their subdir.
+    # We register the subdir and all its parents (a, a/b, a/b/c); only the subdir itself counts the file.
+    # The order does not matter here, the generator writes the deepest paths first.
+    if docopy == "j" and relpath:
+        parts = relpath.split('/')
+        for i in range(1, len(parts) + 1):
+            dict_relpath.setdefault('/'.join(parts[:i]), 0)
+        dict_relpath[relpath] += 1
     return sourcefile, targetfile, docopy, process
-                                
-

@@ -1,6 +1,6 @@
 [copy]echo D|xcopy /Y "<source>" "<target>"[/copy]
 [delete]del /Q "<target>"[/delete]
-[delrelpath]call :DeleteIfEmpty %OUTDIR%<trenner><relpath>[/delrelpath]
+[delrelpath]call :DeleteIfEmpty "%OUTDIR%<trenner><relpath>"[/delrelpath]
 
 [empty]
 @exit /b  

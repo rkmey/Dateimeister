@@ -3976,7 +3976,9 @@ class Dateimeister_support:
             else:
                 outdir_cmd = outdir_t
             thiscmdfile.write("@set OUTDIR=" + outdir_cmd + '\n')
-            for relpath in self.dict_relpath_by_type.get(dateityp, {}):
+            relpaths = self.dict_relpath_by_type.get(dateityp, {})
+            # deepest paths first: a parent can only be removed after its subdirs are gone
+            for relpath in sorted(relpaths, key=lambda p: p.replace('\\', '/').count('/'), reverse=True):
                 str_ret = template_delrelpath
                 if self.platform == "WINDOWS":
                     str_ret = str_ret.replace('<trenner>', '\\')
@@ -3995,7 +3997,7 @@ class Dateimeister_support:
         for ii in str_ret.split('\n'):
             thiscmdfile.write(ii + '\n')
         thiscmdfile.close()
-
+        
     def close_handler(self): #called when window is closing: unbind event handlers send closing event and destroy window
         # 20260915 important to avoid call after object is destroyed!
         Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
