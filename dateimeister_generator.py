@@ -6,7 +6,6 @@ import os.path
 import re
 from datetime import datetime, timezone
 import functools
-import Dateimeister as DM
 
 # Ordner, die beim rekursiven Scan nicht betreten werden (Namensvergleich ohne Gross/Kleinschreibung).
 # Dort liegen keine Fotos, die man verwalten will, aber viele defekte/gesperrte Dateien.

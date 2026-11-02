@@ -40,7 +40,6 @@ import dateimeister_generator as DG
 import Undo_Redo as UR
 import Dateimeister_FSimage as FS
 import Dateimeister_FSVideo as FV
-import Dateimeister_messages as DM
 import Dateimeister_Duplicates as DD
 
 import Tooltip as TT
