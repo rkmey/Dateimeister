@@ -1239,7 +1239,7 @@ class Dateimeister_support:
         indir = self.label_indir.cget('text')
         # lower and slash instead of backslash
         indir = re.sub(r'\\', '/', indir).lower()
-        my_config_file = re.sub(r'\\', '/', self.config_file).lower()
+        my_config_file = re.sub(r'\\', '/', config_file).lower()
         #print("*** new config_file: " + my_config_file)
 
         result, sorted_d = self.get_dict_of_config_files(indir, Globals.imagetype)
@@ -3724,12 +3724,17 @@ class Dateimeister_support:
         ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
         cameraname = self.diatisch_camera_name
         dict_cameras_usedate = DX.get_cameras_usedate(Globals.config_files_xml)
+
         if cameraname not in dict_cameras_usedate:
+            # complete the internal camera: suffixes INCLUDING process_image
+            # and subdir, so a fresh registry behaves like the maintained ones
+            # (otherwise dict_process_image would be empty for this camera and
+            # collect_jpeg_companions could reach its exit() branch).
             ctype  = "JPEG"
-            suffix = "JPG"
-            DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts)
-            suffix = "JPEG"
-            DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts)
+            for suffix in ("JPG", "JPEG"):
+                DX.new_camera_type_suffix(Globals.config_files_xml, cameraname, ctype, suffix, ts)
+                DX.new_process_image_camera(Globals.config_files_xml, cameraname, ctype, suffix, "JPEG")
+            DX.new_subdir_camera(Globals.config_files_xml, cameraname, ctype, "jpeg")
 
         dict_cameras = DX.get_cameras_types_suffixes(Globals.config_files_xml)
         dict_t = {}
