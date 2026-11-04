@@ -158,6 +158,8 @@ def choose_printer(parent: Optional[tk.Misc] = None) -> Optional[str]:
 
 
 def _file_printer_extension(printer_name: str) -> Optional[str]:
+    if not printer_name:
+        return None    # dialog cancelled / default printer: no file extension
     file_ext = None
     match = re.search(rf".*?microsoft.*?pdf", printer_name, re.I)
     if match:
@@ -167,7 +169,6 @@ def _file_printer_extension(printer_name: str) -> Optional[str]:
         if match:
             file_ext = filetype = ".xps"
     return file_ext
-
 
 
 def configure_printer(printer_name: str, parent_hwnd: int = 0):

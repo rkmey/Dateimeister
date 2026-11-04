@@ -1341,7 +1341,9 @@ class Dateimeister_support:
             "types": {},
         }
         for t in types:
-            raw = self.dict_cameras.get(cam, {}).get(t, "")
+            # camera keys are always UPPERCASE (get_camera_xml); the label
+            # text in o_camera may be mixed case -> normalize for the lookup
+            raw = self.dict_cameras.get(cam.upper(), {}).get(t, "")
             suffixes = sorted(s.strip() for s in raw.split(",") if s.strip())
             env["types"][t] = {
                 "subdir":   self.dict_subdirs.get(t, ""),
@@ -2253,16 +2255,31 @@ class Dateimeister_support:
                               "erhalten ('{:s}'), Inhalt ist aber unterschiedlich. "
                               "Neuer Zieldateiname: '{:s}'".format(mysource, original_target, new_target))
                     if len(group) > 1:
+                        # echte Duplikat-Gruppe (identischer Inhalt) bleibt
+                        # auch als Gruppe in dict_duplicates registriert
                         Globals.dict_duplicates[combined][new_target.upper()] = group
-                        for mysource in group:
-                            self.dict_duplicates_sourcefiles[combined][mysource] = new_target
+                    # Badge-Map: ALLE umbenannten Dateien eintragen, auch
+                    # Einzeldateien - sie waren Teil einer Zielnamen-Kollision,
+                    # die fuer den User sonst unsichtbar bliebe (die Gallery
+                    # zeigt die QUELLnamen, die Umbenennung in _001/_002
+                    # steht nur im Zielnamen)
+                    for mysource in group:
+                        self.dict_duplicates_sourcefiles[combined][mysource] = new_target
 
     def collect_jpeg_companions(self):
         """Sammelt alle Dateien mit process_type JPEG in dict_firstname_fullname, Schluessel (Ordner, Vorname), damit
         USE_JPEG-Dateien ihr Begleit-JPEG im selben Ordner finden. Gesucht wird in ALLEN Typen: wie der Typ heisst, ist beliebig, massgeblich ist
         allein der process_type des Suffix. Die Generator-Liste dict_source_target_jpeg enthaelt je Typ alle
-        passenden Dateien, unabhaengig von Zeitstempel / Copy-Status."""
-        regpattern = r'^.*?[\/\\]([^\/\\]+)\.([^\/\\\.]+)$' # zwischen dem letzten / bzw. \\ und dem letzten Punkt steht der Vorname, Nachname danach
+        passenden Dateien, unabhaengig von Zeitstempel / Copy-Status.
+        Rueckgabe: True, wenn alle Dateien zugeordnet wurden; False, wenn
+        mindestens ein Suffix ohne process_image-Eintrag uebersprungen wurde
+        (seit Korrektur vom 03.11.2026: kein exit() mehr - die betroffene
+        Datei wird uebersprungen, alle Fehler gesammelt und EINMAL gemeldet)."""
+        # Schluessel normalisieren: der Lookup laeuft unten mit .upper(),
+        # klein geschriebene suffix-Namen in der Registry sind damit unschaedlich
+        process_upper = {k.upper(): v for k, v in self.dict_process_image.items()}
+        skipped = []
+        regpattern = r'^.*?[\\/\\]([^\\/\\]+)\.([^\\/\.]+)$' # zwischen dem letzten / bzw. \ und dem letzten Punkt steht der Vorname, Nachname danach
         for dateityp in self.dict_source_target_jpeg:
             for this_sourcefile in self.dict_source_target_jpeg[dateityp]:
                 match = re.search(regpattern, this_sourcefile)
@@ -2271,16 +2288,21 @@ class Dateimeister_support:
                     continue
                 firstname = match.group(1)
                 lastname  = match.group(2).upper()
-                # Show error if no process_type available
-                if lastname not in self.dict_process_image:
-                    messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for: " + firstname + ' ' + lastname + ' ' + this_sourcefile)
-                    print("dict_process_image is: " + str(self.dict_process_image)) if self.debug else True
-                    exit()
-                if self.dict_process_image[lastname].upper() == "JPEG":
+                # Skip file if no process_type entry (no exit() anymore)
+                if lastname not in process_upper:
+                    skipped.append(this_sourcefile)
+                    print("GENERATE no entry in ini-file found for: " + firstname + ' ' + lastname + ' ' + this_sourcefile) if self.debug else True
+                    continue
+                if process_upper[lastname].upper() == "JPEG":
                     key = companion_key(this_sourcefile, firstname)
                     if key not in self.dict_firstname_fullname:
                         self.dict_firstname_fullname[key] = []
                     self.dict_firstname_fullname[key].append(this_sourcefile) # mehrere JPEGs mit demselben Namen im selben Ordner (z.B. .jpg und .jpeg): das letzte gilt
+        if skipped:
+            messagebox.showerror("GENERATE", "Section process_type, no entry in ini-file found for:\n" + "\n".join(skipped))
+            print("dict_process_image is: " + str(self.dict_process_image)) if self.debug else True
+            return False
+        return True
 
     def display_images_prepare(self, *args):
         """Entry point for a new display (Generate result).
