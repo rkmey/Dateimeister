@@ -2147,7 +2147,7 @@ class Dateimeister_support:
 
             # collect duplicates per type and store them under the combined key
             for src, tgt in st.items():
-                dup_key = tgt.upper()
+                dup_key = self._dup_key(tgt)
                 if dup_key not in Globals.dict_duplicates[combined]:
                     Globals.dict_duplicates[combined][dup_key] = []
                 Globals.dict_duplicates[combined][dup_key].append(src)
@@ -2211,6 +2211,20 @@ class Dateimeister_support:
         # NEW: after generate, show the result immediately
         self.display_images_prepare()
 
+    def _dup_key(self, targetfile):
+        """Schluessel fuer Globals.dict_duplicates. DIE eine Konventions-Stelle:
+        WINDOWS-Dateisysteme sind case-insensitiv (IMG_0001.JPG und img_0001.jpg
+        sind dasselbe Ziel) -> GROSS-Normalisierung; UNIX-Dateisysteme sind
+        case-sensitiv (a/File1.jpg und a/file1.jpg sind zwei verschiedene Ziele)
+        -> Original-Schreibweise. macOS (APFS) ist wie Windows case-insensitiv
+        und gehoert kuenftig in den WINDOWS-Zweig.
+        WICHTIG: Scan (_generate_impl), _finalize_duplicates (Umbenennungs-
+        schluessel) und der DUP-RENAME-Canvas-Check muessen ALLE diese Funktion
+        rufen, sonst laufen Einfuegen und Nachschlagen auseinander."""
+        if self.platform == "UNIX":
+            return targetfile
+        return targetfile.upper()
+
     def _finalize_duplicates(self, combined):
         """Duplicate detection for the combined display key.
 
@@ -2257,7 +2271,7 @@ class Dateimeister_support:
                     if len(group) > 1:
                         # echte Duplikat-Gruppe (identischer Inhalt) bleibt
                         # auch als Gruppe in dict_duplicates registriert
-                        Globals.dict_duplicates[combined][new_target.upper()] = group
+                        Globals.dict_duplicates[combined][self._dup_key(new_target)] = group
                     # Badge-Map: ALLE umbenannten Dateien eintragen, auch
                     # Einzeldateien - sie waren Teil einer Zielnamen-Kollision,
                     # die fuer den User sonst unsichtbar bliebe (die Gallery
@@ -2659,7 +2673,7 @@ class Dateimeister_support:
                 if myimage.getDuplicate() == 'j':
                     print ("Duplicate: " + file) if self.debug else True
                     dup_text = "DUP"
-                    if this_targetfile.upper() not in Globals.dict_duplicates[imagetype]:
+                    if self._dup_key(this_targetfile) not in Globals.dict_duplicates[imagetype]:
                         # is in a duplicates group and is single element -> renamed but not shown in duplicates
                         dup_text = "DUP RENAME"
                     text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text=dup_text, fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
