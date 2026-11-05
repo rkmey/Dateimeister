@@ -50,6 +50,12 @@ Metadata = dict[str, Inner]
 INCLUDE = 1
 EXCLUDE = 2
 
+# Encoding für die internen cmd-Dateien (copy/delete/delrelpath).
+# Muss in Schreiber (Dateimeister_support.write_cmdfile) und Leser
+# (Dateimeister_exec) identisch sein - die Dateien werden ausschließlich
+# App-intern verwendet.
+CMD_FILE_ENCODING = "utf-8"
+
 # some colors...
 _bgcolor = 'grey90'
 _bgcolor_dbg = 'green'

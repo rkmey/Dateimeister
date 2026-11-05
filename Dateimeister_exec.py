@@ -10,6 +10,7 @@ from tkinter.constants import *
 from tkinter import Scrollbar
 
 import Tooltip as TT
+import tools
 
 
 class MyExecWindow:
@@ -358,10 +359,11 @@ class MyExecWindow:
 
     def show_script(self, script):
         try:
-            file = open(script)
+            with open(script, encoding=tools.CMD_FILE_ENCODING) as file:
+                text = file.read()
         except FileNotFoundError:
             print("File does not exist: " + script)
-        text = file.read()
+            return
         self.Text_script.delete(1.0, 'end')
         self.Text_script.insert('end', text)
         self.Text_script.insert('end', "\r\n")

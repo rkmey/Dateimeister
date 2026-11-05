@@ -462,6 +462,7 @@ def new_camera_type_suffix(xmlfile, cameraname, ctype, suffix, usedate):
         new_camera(xmlfile, cameraname, usedate)
         new_camera_type_suffix(xmlfile, cameraname, ctype, suffix, usedate)
         rc = 1
+    return rc
 
 
 def update_camera_type_suffix(xmlfile, cameraname, ctype, suffix, newname, usedate):

@@ -3935,7 +3935,7 @@ class Dateimeister_support:
 
         # --- Copy ---
         cmd_file_full = self.dict_gen_files[imagetype] # filename was already built by generate-method
-        thiscmdfile = open(cmd_file_full, 'w')
+        thiscmdfile = open(cmd_file_full, 'w', encoding=tools.CMD_FILE_ENCODING)
         thiscmdfile.write(header) 
         dict_files = self.dict_source_target[imagetype]
         for sourcefile in dict_files:
@@ -3966,7 +3966,7 @@ class Dateimeister_support:
 
         # --- Delete ---
         cmd_file_full = self.dict_gen_files_delete[imagetype] # filename was already built by generate-method
-        thiscmdfile = open(cmd_file_full, 'w')
+        thiscmdfile = open(cmd_file_full, 'w', encoding=tools.CMD_FILE_ENCODING)
         thiscmdfile.write(header) 
         dict_files = self.dict_source_target[imagetype]
         for sourcefile in dict_files:
@@ -3998,7 +3998,7 @@ class Dateimeister_support:
         # --- Delrelpath ---
         # One file for all types; '@set OUTDIR' before each type group.
         cmd_file_full = self.dict_gen_files_delrelpath[imagetype] # filename was already built by generate-method
-        thiscmdfile = open(cmd_file_full, 'w')
+        thiscmdfile = open(cmd_file_full, 'w', encoding=tools.CMD_FILE_ENCODING)
         thiscmdfile.write(header)
         for dateityp in Globals.imagetypes_selected:
             outdir_t = self.dict_outdirs_by_type.get(dateityp, "")
