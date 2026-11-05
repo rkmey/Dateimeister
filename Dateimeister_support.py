@@ -2658,7 +2658,11 @@ class Dateimeister_support:
                 self.lastposition += image_width + Globals.gap
                 if myimage.getDuplicate() == 'j':
                     print ("Duplicate: " + file) if self.debug else True
-                    text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                    dup_text = "DUP"
+                    if this_targetfile.upper() not in Globals.dict_duplicates[imagetype]:
+                        # is in a duplicates group and is single element -> renamed but not shown in duplicates
+                        dup_text = "DUP RENAME"
+                    text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text=dup_text, fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup = self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(dict_image_lineno[file]))
             else: # wir haben kein Bild, ein Rechteck einfügen
@@ -2715,7 +2719,11 @@ class Dateimeister_support:
                 lastpos = self.lastposition
                 self.lastposition += image_width + Globals.gap
                 if myimage.getDuplicate() == 'j':
-                    text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text="DUP", fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
+                    dup_text = "DUP"
+                    if this_targetfile.upper() not in Globals.dict_duplicates[imagetype]:
+                        # is in a duplicates group and is single element -> renamed but not shown in duplicates
+                        dup_text = "DUP RENAME"
+                    text_id_dup = self.canvas_gallery.create_text(self.lastposition - Globals.gap - dist_text, dist_text, text=dup_text, fill="green", font=('Helvetica 10 bold'), anchor =  tk.NE, tag = "dup_text")
                     rect_id_dup =self.canvas_gallery.create_rectangle(self.canvas_gallery.bbox(text_id_dup), outline="blue", fill = "white", tag = 'dup_rect')
                 #print ("*** File " + file + " Type " + imagetype + " Lineno: " + str(dict_image_lineno[file]))
             # update if thumbnail reuse
