@@ -2976,22 +2976,17 @@ class Dateimeister_support:
     def get_templates(self):
         self.dict_templates = {}
         try:
-            file = open(self.templatefile)
+            with open(self.templatefile) as file:
+                templates = file.read().replace('\n', '<<<NL>>>')
         except FileNotFoundError:
             print("File does not exist: " + self.templatefile)
-        templates = file.read().replace('\n', '<<<NL>>>')
-        #print(templates)
+            return
         regpattern = r'\[([^\]]+)\](.*?)\[/\1\]'
         list_t = re.findall(regpattern, templates)
         for ii in list_t:
             templatename = ii[0].upper()
             template     = ii[1]
-            #print("templatename: " + templatename)
-            #print(template)
             self.dict_templates[templatename] = template
-        
-        templates = re.sub(r'<<<NL>>>', '\n', templates)
-        #print(templates)
             
     def button_exec_pressed(self):
         if self.win_exec is not None: # stop MyExecWindow-Objekt
