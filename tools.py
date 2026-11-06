@@ -1363,6 +1363,109 @@ def calc_fontsize(physical_width: int, physical_height: int, new_width: int, new
     print(f"RESIZE: ({source_info}) new width {new_width} new height {new_height} set fontsize to {fontsize_use}") if debug else True
     return fontsize_use
     
+def calc_fit_fontsize(font, text, avail_w, avail_h, min_size = 6, max_size = 48, pad_x = 8, pad_y = 4):
+    """Largest integer fontsize so that <text> really fits into the available
+    box (avail_w x avail_h pixels), found by MEASURING (not estimating):
+
+        width : font.measure(text)          <= avail_w - pad_x
+        height: font.metrics("linespace")  <= avail_h - pad_y
+
+    The binary search runs directly ON <font>, which must belong EXCLUSIVELY
+    to the calling widget. <font> is left at the fitted size, so no temporary
+    fonts are created on every resize.
+    pad_x should include the indicator space for Checkbutton/Radiobutton.
+    Because measure/metrics work in real pixels, DPI differences are
+    handled correctly by construction.
+    """
+    if not text or avail_w <= pad_x or avail_h <= pad_y:
+        font.configure(size = min_size)
+        return min_size
+    lo, hi = min_size, max_size
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        font.configure(size = mid)
+        if (font.measure(text) <= avail_w - pad_x
+                and font.metrics("linespace") <= avail_h - pad_y):
+            lo = mid          # fits -> try bigger
+        else:
+            hi = mid - 1      # does not fit -> try smaller
+    font.configure(size = lo)   # ensure final size
+    return lo
+    
+# ----------------------------------------------------------------------
+# automatic font fit: reusable helpers for windows laid out with place()
+# ----------------------------------------------------------------------
+
+FIT_TYPES = (tk.Button, tk.Label, tk.Checkbutton, tk.Radiobutton, tk.Listbox)
+
+def iter_widgets(parent):
+    """Recursively yield ALL descendant widgets of parent."""
+    for w in parent.winfo_children():
+        yield w
+        yield from iter_widgets(w)
+
+class FontFitter:
+    """Scales text widget fonts so the text really fits into the current
+    widget box (measured, not estimated). Usable for ANY window laid out
+    with place().
+
+    - each fitted widget gets its OWN font clone (created lazily on first fit)
+    - all widgets of the same class share ONE size: the largest size that
+      fits EVERY member of the group (minimum of individual fits) -> calm look
+    - place() keeps the boxes fixed, so font changes cannot change the layout
+      -> no resize recursion possible
+    - Entry / Text / Frame / Canvas are skipped by type; widgets in
+      self.exclude stay on the base font
+
+    Usage:
+        self.font_fitter = tools.FontFitter(self.text_font)          # once, in __init__
+        self.font_fitter.exclude.update({...})                       # optional, any time
+        self.font_fitter.fit(self.root)                              # on resize
+
+    class_params: optional per-class overrides, e.g.
+        {"Label": {"pad_x": 2, "min_size": 9}}
+    min_size is a FLOOR: below it the text may clip, but never vanishes.
+    """
+    def __init__(self, base_font, exclude = None, min_size = 6, max_size = 48,
+                 class_params = None):
+        self.base_font = base_font
+        self.exclude = set(exclude) if exclude else set()
+        self.min_size = min_size
+        self.max_size = max_size
+        self.class_params = class_params or {}
+        self.dict_fonts = {}     # widget -> own font clone (lazily created)
+
+    def fit(self, root):
+        """One pass over the widget tree of <root>: measure every text
+        widget, then apply ONE uniform size per widget class."""
+        groups = {}   # winfo_class -> list of (widget, font, text, pad_x, min_size)
+        for w in iter_widgets(root):
+            if not isinstance(w, FIT_TYPES) or w in self.exclude:
+                continue
+            if w not in self.dict_fonts:
+                fnt = self.base_font.copy()      # own clone for this widget
+                w.configure(font = fnt)
+                self.dict_fonts[w] = fnt
+            if not w.winfo_ismapped():
+                continue
+            params = self.class_params.get(w.winfo_class(), {})
+            pad_x = params.get("pad_x", 24 if isinstance(w, (tk.Checkbutton, tk.Radiobutton)) else 8)
+            if isinstance(w, tk.Listbox):
+                text = max(w.get(0, "end"), key = len) if w.size() > 0 else ""
+            else:
+                text = w.cget("text")
+            min_size = params.get("min_size", self.min_size)
+            groups.setdefault(w.winfo_class(), []).append((w, self.dict_fonts[w], text, pad_x, min_size))
+
+        # one uniform size per group: the minimum of the individual fits
+        for members in groups.values():
+            group_size = min(calc_fit_fontsize(fnt, text, w.winfo_width(), w.winfo_height(),
+                                               min_size = ms, max_size = self.max_size, pad_x = pad_x)
+                             for (w, fnt, text, pad_x, ms) in members)
+            for (w, fnt, text, pad_x, ms) in members:
+                fnt.configure(size = group_size)    
+    
+
 """ creates a new image from <file> with the height <height> abd width according to image size
 returns the image, width and height. if img is supplied dont open file else open file
 """

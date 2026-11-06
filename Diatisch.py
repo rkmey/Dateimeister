@@ -66,7 +66,6 @@ class pt(Enum):
 class ScrollableCanvas(tk.Canvas):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
-        self.bind("<Configure>", self.on_configure)
         self.select_ctr = 0
 
     def on_configure(self, event):
@@ -225,8 +224,13 @@ class Diatisch:
         else:
             self.root = root
         self.title = "Diatisch"
+
+        self.text_font = Font(family="Helvetica", size=6)
+        self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
+
         self.root.title(self.title)
         self.dirchk = tools.DirChecker(self.root, debug)   # Hintergrundpruefung der Verzeichnisse/Dateien (siehe tools.py)
+        self.list_imagefiles = list_imagefiles
         #print("List Imagefiles is: " + str(list_imagefiles))
         # Fenstergröße
         self.physical_width  = self.root.winfo_screenwidth()
@@ -261,7 +265,6 @@ class Diatisch:
 
         self.width  = 0
         self.height = 0
-        self.text_font = Font(family="Helvetica", size=6)
 
         self.frame_labels_height = 0.04 # needed for calculation of font size
         self.label_height = 0.7 # needed for calculation of font size
@@ -670,15 +673,28 @@ class Diatisch:
         self.sort_method = 0
         self.read_ini()
 
-        self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
-        self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
+        # automatic font fit for all text widgets (central helper: tools.FontFitter)
+        self.font_fitter = tools.FontFitter(
+            self.text_font,
+            class_params={
+                "Label": {
+                    "pad_x": 2,
+                    "min_size": 9
+                },
+                "Button": {
+                    "pad_x": 2,
+                    "min_size": 7
+                }
+            }
+        )
+        #self.font_fitter.exclude.update({self.lb_camera, self.lb_gen}) # exclude widgets from automatic resize
 
+        self.root.bind("<Configure>", self.on_configure)
+        self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
         self.init()
         # historize initial state
         self.historize_process("initial")
         self.processid_displayed = self.UR.get_processid_akt() # used for keep track of predecessor of processid to be displayed from selection in procell_list, initialized to actual processid
-        if list_imagefiles:
-            self.load_images(None, list_imagefiles)
 
     def init(self):
         # Menubar
@@ -742,6 +758,10 @@ class Diatisch:
         
         templates = re.sub(r'<<<NL>>>', '\n', templates)
         #print(templates)
+
+        if self.list_imagefiles:
+            self.load_images(None, self.list_imagefiles)
+
 
     def read_ini(self):
         inifile = "Dateimeister.ini" 
@@ -978,6 +998,7 @@ class Diatisch:
             self.width  = new_width
             self.height = new_height
             self.text_font.configure(size=int(.8 * tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug)))
+            self.font_fitter.fit(self.root)
 
     def debug_info_resize(self, text):
         print("{:s} elapsed start resize".format(text))

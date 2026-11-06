@@ -59,6 +59,12 @@ class MyDuplicates:
     def __init__(self, caller: object = None, debug: bool = False):
         # Creates a toplevel widget.
         self.root = tk.Toplevel()
+        
+        self.text_font = Font(family="Helvetica", size=6)
+        self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
+        # self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
+        self.thisduplicate = None
+
         self.physical_width  = self.root.winfo_screenwidth()
         self.physical_height = self.root.winfo_screenheight()
         width,height=Globals.screen_width,Globals.screen_height
@@ -86,7 +92,6 @@ class MyDuplicates:
 
         self.width  = 0 # for resize
         self.height = 0 # for resize
-        self.text_font = Font(family="Helvetica", size=6)
 
         self.Button_dupl = tk.Button(self.root)
         self.Button_dupl.place(relx=0.63, rely=0.195, relheight=.04, relwidth=.08)
@@ -181,10 +186,25 @@ class MyDuplicates:
         self.dict_file_image = {}
         self.dict_thumbnail_player = {}
         self.caller.button_duplicates.config(state = DISABLED) # Duplicates Window must not exist more than once
+
+        # automatic font fit for all text widgets (central helper: tools.FontFitter)
+        self.font_fitter = tools.FontFitter(
+            self.text_font,
+            class_params={
+                "Label": {
+                    "pad_x": 2,
+                    "min_size": 9
+                },
+                "Button": {
+                    "pad_x": 2,
+                    "min_size": 7
+                }
+            }
+        )
+        self.font_fitter.exclude.update({self.lb_duplicates}) # exclude widgets from automatic resize
+        
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
 
-        self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
-        self.thisduplicate = None
         # force window height / width to work and call initial resize for fonts
         self.root.update_idletasks()
         self.resize()
@@ -722,7 +742,8 @@ class MyDuplicates:
             # store new values
             self.width  = new_width
             self.height = new_height
-            self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug)) 
+            self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug))
+            self.font_fitter.fit(self.root)            
             if self.thisduplicate:
                 self.display_duplicate(self.thisduplicate)
 

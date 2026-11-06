@@ -832,11 +832,9 @@ class Dateimeister_support:
         self._last_tooltip_thumbnail = None
         self.active_video_player = None
 
-        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         # create a timer which prevents from redrawing images while mouse is still moving for resize window
         self.timer = tools.RestartableTimer(self.root, 666, self.resize)  # ms
         self.resize_start = False
-        self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
 
         # create a timer for managing players and metadata
         self.timer_players_and_metadata = tools.RestartableTimer(self.root, 1500, self.manage_players_and_metadata)  # ms
@@ -844,6 +842,24 @@ class Dateimeister_support:
         self.broken_videos = set() # Videodateien, fuer die beim Scrollen kein Player erzeugt werden konnte
         self.printer = None
         self.preview = None
+
+        # automatic font fit for all text widgets (central helper: tools.FontFitter)
+        self.font_fitter = tools.FontFitter(
+            self.text_font,
+            class_params={
+                "Label": {
+                    "pad_x": 2,
+                    "min_size": 9
+                },
+                "Button": {
+                    "pad_x": 2,
+                    "min_size": 9
+                }
+            }
+        )
+        self.font_fitter.exclude.update({self.lb_camera, self.lb_gen}) # exclude widgets from automatic resize
+        self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
+        self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
 
     # ----------------------------------------------------------------------
     # NEW: multi-selection handling in the lb_gen listbox
@@ -1112,6 +1128,7 @@ class Dateimeister_support:
             self.width  = new_width
             self.height = new_height
             self.text_font.configure(size=tools.calc_fontsize(self.physical_width, self.physical_height, self.width, self.height, self.debug))
+            self.font_fitter.fit(self.root)
 
             # adjust some widgets
             rel_width_sb_x = self.frame_text.winfo_width() / self.root.winfo_width() * .01 # width relative to x
