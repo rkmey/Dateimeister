@@ -268,34 +268,23 @@ class Diatisch:
 
         self.frame_labels_height = 0.04 # needed for calculation of font size
         self.label_height = 0.7 # needed for calculation of font size
+        labels_w = .47
 
         self.Frame_labels = tk.Frame(self.root)
-        self.Frame_labels.place(relx=.01, rely=0.00, relheight=self.frame_labels_height, relwidth=0.98)
+        self.Frame_labels.place(relx=.01, rely=0.00, relheight=self.frame_labels_height, relwidth=labels_w)
         self.Frame_labels.configure(relief='flat')
         self.Frame_labels.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         self.Label_source_ctr = tk.Label(self.Frame_labels)
-        self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.1)
+        self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.3)
         self.Label_source_ctr.configure(anchor=tk.NW)
         self.Label_source_ctr.configure(font=self.text_font)
         self.Label_source_ctr.configure(text='Num Images Source: 0')
 
-        self.Label_process_id = tk.Label(self.Frame_labels)
-        self.Label_process_id.place(relx=0.5, rely=0.0, relheight=self.label_height, relwidth=0.1)
-        self.Label_process_id.configure(anchor=tk.NW)
-        self.Label_process_id.configure(font=self.text_font)
-        self.Label_process_id.configure(text='Process ID: 0')
-
-        self.Label_target_ctr = tk.Label(self.Frame_labels)
-        self.Label_target_ctr.place(relx=.88, rely=0.0, relheight=self.label_height, relwidth=0.1)
-        self.Label_target_ctr.configure(anchor=tk.NE)
-        self.Label_target_ctr.configure(font=self.text_font)
-        self.Label_target_ctr.configure(text='Num Images Target: 0')
-
         # source radio buttons for sorting on label frame
         anz_button_source = 4
-        buttonpos_source  = 0.15
-        relwidth_source   = (.3) / anz_button_source
+        buttonpos_source  = 0.25
+        relwidth_source   = (.5) / anz_button_source
         self.rbvalue = tk.StringVar()
         dict_rbtext = {"1": "sort name asc", "2": "sort name desc", "3": "sort mod. asc.", "4": "sort mod. desc"}
         for i in dict_rbtext:
@@ -304,6 +293,30 @@ class Diatisch:
             rb.place(relx = relx_i, rely=0.0, relheight=1.0, relwidth = relwidth_source)
             rb.configure(font=self.text_font)
         self.rbvalue.set("1")
+        
+        # Frame for process_id, camera and num target
+        self.Frame_labels2 = tk.Frame(self.root)
+        self.Frame_labels2.place(relx=labels_w, rely=0.00, relheight=self.frame_labels_height, relwidth=0.98-labels_w)
+        self.Frame_labels2.configure(relief='flat')
+        self.Frame_labels2.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
+
+        # create label for process_id, camera information and button (change camera) and label for target counter
+        relw = .15
+        relh = 1
+        gap = .001
+        dict_widgets = {}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Label,"VAR":"Label_process_id","OFFSET":gap,"RELH":self.label_height,"RELW":.1,"ANCHOR":"START","TEXT":"Process ID: 0","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Label,"VAR":"Label_camera","OFFSET":gap,"RELH":self.label_height,"RELW":.1,"ANCHOR":"START","TEXT":"Camera: ","FONT":self.text_font}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Label,"VAR":"Label_camera_chosen","OFFSET":gap,"RELH":self.label_height,"RELW":.5,"ANCHOR":"START","TEXT":"<camera>","FONT":self.text_font}
+        dict_widgets["4"] = {
+          "WIDGET":tk.Button,"VAR":"button_camera","OFFSET":gap,"RELH":relh,"RELW":.1,"ANCHOR":"START","CALLBACK":self.button_camera_pressed,
+          "TEXT":"chande camera...","STATE":tk.ACTIVE,"TT":"Choose camera...","FONT":self.text_font}
+        dict_widgets["5"] = {
+          "WIDGET":tk.Label,"VAR":"Label_target_ctr","OFFSET":gap,"RELH":self.label_height,"RELW":.15,"ANCHOR":"START","TEXT":"Num Images Target: 0","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.Frame_labels2, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         self.Frame_source = tk.Frame(self.root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.75, relwidth=0.48)
@@ -1002,7 +1015,9 @@ class Diatisch:
 
     def debug_info_resize(self, text):
         print("{:s} elapsed start resize".format(text))
-                
+        
+    def button_camera_pressed(self):
+        True
 
     def load_images(self, p_indir = None, p_imagefiles_source = None, p_imagefiles_target = None):
         # if list-source is given use it, else ask for dir to open

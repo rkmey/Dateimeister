@@ -857,7 +857,7 @@ class Dateimeister_support:
                 }
             }
         )
-        self.font_fitter.exclude.update({self.lb_camera, self.lb_gen}) # exclude widgets from automatic resize
+        self.font_fitter.exclude.update({self.lb_camera, self.listbox_indir, self.listbox_outdir, self.lb_gen}) # exclude widgets from automatic resize
         self.root.bind("<Configure>", self.on_configure) # we want to know if size changes
         self.root.after(0, self.resize) # force window height / width to work and call initial resize for fonts
 
