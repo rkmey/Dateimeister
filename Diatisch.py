@@ -23,7 +23,10 @@ import dateimeister_generator as DG
 import Dateimeister_exec as DM
 import Dateimeister_FSimage as FS
 import Dateimeister_processlist as DP
+import Dateimeister_camera as DCAM
+
 import tools
+
 from ini_validator import load_and_validate_ini 
 
 import cv2
@@ -267,31 +270,49 @@ class Diatisch:
         self.height = 0
 
         self.frame_labels_height = 0.04 # needed for calculation of font size
-        self.label_height = 0.7 # needed for calculation of font size
+        self.label_height = 0.8 # needed for calculation of font size
         labels_w = .47
 
         self.Frame_labels = tk.Frame(self.root)
-        self.Frame_labels.place(relx=.01, rely=0.00, relheight=self.frame_labels_height, relwidth=labels_w)
+        self.Frame_labels.place(relx=.0, rely=0.00, relheight=self.frame_labels_height, relwidth=labels_w)
         self.Frame_labels.configure(relief='flat')
         self.Frame_labels.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
-        self.Label_source_ctr = tk.Label(self.Frame_labels)
-        self.Label_source_ctr.place(relx=0.0, rely=0.0, relheight=self.label_height, relwidth=0.3)
-        self.Label_source_ctr.configure(anchor=tk.NW)
-        self.Label_source_ctr.configure(font=self.text_font)
-        self.Label_source_ctr.configure(text='Num Images Source: 0')
+        #set some defaults
+        relw_button = 0.1
+        relh_button = 0.8
+        relw_label = 0.2
+        relh_label = 0.8
+        gap = 0.0
 
-        # source radio buttons for sorting on label frame
-        anz_button_source = 4
-        buttonpos_source  = 0.25
-        relwidth_source   = (.5) / anz_button_source
+        # the sort radio buttons
         self.rbvalue = tk.StringVar()
-        dict_rbtext = {"1": "sort name asc", "2": "sort name desc", "3": "sort mod. asc.", "4": "sort mod. desc"}
-        for i in dict_rbtext:
-            rb = tk.Radiobutton(self.Frame_labels, text = dict_rbtext[i], value = i, variable = self.rbvalue, command = self.rb_sort, indicatoron = 0)
-            relx_i = buttonpos_source + (int(i) - 1) * relwidth_source
-            rb.place(relx = relx_i, rely=0.0, relheight=1.0, relwidth = relwidth_source)
-            rb.configure(font=self.text_font)
+        self.dict_sort_method = {} # here we keep type(JPEG...) -> sort method(1...4)
+        self.rbg = tk.StringVar()
+
+        dict_widgets = {}
+        dict_widgets["0"] = {
+          "WIDGET":tk.Label,"VAR":"Label_source_ctr","OFFSET":gap,"RELH":relh_label,"RELW":relw_label,"ANCHOR":"CENTER","TEXT":"Num Images Source: 0","FONT":self.text_font}
+        dict_widgets["1"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_g1","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_g,
+          "RB_VAR":self.rbg,"RB_VALUE":"1","TEXT":"sort within type","STATE":tk.NORMAL,"TT":"sort images within type first","FONT":self.text_font}
+        dict_widgets["2"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_g2","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_g,
+          "RB_VAR":self.rbg,"RB_VALUE":"2","TEXT":"sort all","STATE":tk.NORMAL,"TT":"sort images globally over all types","FONT":self.text_font}
+        dict_widgets["3"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas1","OFFSET":0.01,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
+          "RB_VAR":self.rbvalue,"RB_VALUE":"1","TEXT":"sort name asc","STATE":tk.NORMAL,"TT":"sort images by name(ascending)","FONT":self.text_font}
+        dict_widgets["4"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas2","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
+          "RB_VAR":self.rbvalue,"RB_VALUE":"2","TEXT":"sort name desc","STATE":tk.NORMAL,"TT":"sort images by name(descending)","FONT":self.text_font}
+        dict_widgets["5"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas3","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
+          "RB_VAR":self.rbvalue,"RB_VALUE":"3","TEXT":"sort mod. asc","STATE":tk.NORMAL,"TT":"sort images by modification date(ascending)","FONT":self.text_font}
+        dict_widgets["6"] = {
+          "WIDGET":tk.Radiobutton,"VAR":"rb_sort_canvas4","OFFSET":0.00,"RELH":relh_button,"RELW":relw_button,"ANCHOR":"CENTER","CALLBACK":self.rb_sort,
+          "RB_VAR":self.rbvalue,"RB_VALUE":"4","TEXT":"sort mod. desc","STATE":tk.NORMAL,"TT":"sort images by modification date(descending)","FONT":self.text_font}
+        tools.create_widgets_from_dict(dict_widgets, self.Frame_labels, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
+        self.rbg.set("1")
         self.rbvalue.set("1")
         
         # Frame for process_id, camera and num target
@@ -301,21 +322,20 @@ class Diatisch:
         self.Frame_labels2.configure(background=tools._bgcolor_dbg) if self.debug else True # uncomment for same colour as window (default) or depend on debug
 
         # create label for process_id, camera information and button (change camera) and label for target counter
-        relw = .15
-        relh = 1
+        relh = .8
         gap = .001
         dict_widgets = {}
         dict_widgets["1"] = {
-          "WIDGET":tk.Label,"VAR":"Label_process_id","OFFSET":gap,"RELH":self.label_height,"RELW":.1,"ANCHOR":"START","TEXT":"Process ID: 0","FONT":self.text_font}
+          "WIDGET":tk.Label,"VAR":"Label_process_id","OFFSET":gap,"RELH":self.label_height,"RELW":.12,"ANCHOR":"CENTER","TEXT":"Process ID: 0","FONT":self.text_font}
         dict_widgets["2"] = {
-          "WIDGET":tk.Label,"VAR":"Label_camera","OFFSET":gap,"RELH":self.label_height,"RELW":.1,"ANCHOR":"START","TEXT":"Camera: ","FONT":self.text_font}
+          "WIDGET":tk.Label,"VAR":"Label_camera","OFFSET":gap,"RELH":self.label_height,"RELW":.1,"ANCHOR":"CENTER","TEXT":"Camera: ","FONT":self.text_font}
         dict_widgets["3"] = {
-          "WIDGET":tk.Label,"VAR":"Label_camera_chosen","OFFSET":gap,"RELH":self.label_height,"RELW":.5,"ANCHOR":"START","TEXT":"<camera>","FONT":self.text_font}
+          "WIDGET":tk.Label,"VAR":"Label_camera_chosen","OFFSET":gap,"RELH":self.label_height,"RELW":.5,"ANCHOR":"CENTER","TEXT":"<camera>","FONT":self.text_font}
         dict_widgets["4"] = {
-          "WIDGET":tk.Button,"VAR":"button_camera","OFFSET":gap,"RELH":relh,"RELW":.1,"ANCHOR":"START","CALLBACK":self.button_camera_pressed,
+          "WIDGET":tk.Button,"VAR":"button_camera","OFFSET":gap,"RELH":relh,"RELW":.15,"ANCHOR":"CENTER","CALLBACK":self.button_camera_pressed,
           "TEXT":"chande camera...","STATE":tk.ACTIVE,"TT":"Choose camera...","FONT":self.text_font}
         dict_widgets["5"] = {
-          "WIDGET":tk.Label,"VAR":"Label_target_ctr","OFFSET":gap,"RELH":self.label_height,"RELW":.15,"ANCHOR":"START","TEXT":"Num Images Target: 0","FONT":self.text_font}
+          "WIDGET":tk.Label,"VAR":"Label_target_ctr","OFFSET":gap,"RELH":self.label_height,"RELW":.20,"ANCHOR":"CENTER","TEXT":"Num Images Target: 0","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.Frame_labels2, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
 
         self.Frame_source = tk.Frame(self.root)
@@ -692,11 +712,11 @@ class Diatisch:
             class_params={
                 "Label": {
                     "pad_x": 2,
-                    "min_size": 9
+                    "min_size": 6
                 },
                 "Button": {
                     "pad_x": 2,
-                    "min_size": 7
+                    "min_size": 6 
                 }
             }
         )
@@ -738,6 +758,17 @@ class Diatisch:
         self.recentmenu_cfg = tk.Menu(self.menubar, tearoff=0)
         self.configmenu.add_cascade(label="Open Recent", menu=self.recentmenu_cfg)
 
+        # the tools menu
+        self.toolsmenu = tk.Menu(self.menubar, tearoff=0)
+        self.toolsmenu.add_command(label="Edit Cameras...", command = self.cameras_edit)
+        self.menubar.add_cascade(label="Tools", menu=self.toolsmenu)
+
+        # the help menu
+        self.helpmenu = tk.Menu(self.menubar, tearoff=0)
+        self.helpmenu.add_command(label="Help Index", command=self.donothing)
+        self.helpmenu.add_command(label="About...", command=self.donothing)
+        self.menubar.add_cascade(label="Help", menu=self.helpmenu)
+
         self.endis_menu_items()
         self.update_listbox_cfg()
         self.update_listbox_indir()
@@ -775,9 +806,8 @@ class Diatisch:
         if self.list_imagefiles:
             self.load_images(None, self.list_imagefiles)
 
-
     def read_ini(self):
-        inifile = "Dateimeister.ini" 
+        inifile = "Diatisch.ini" 
         # Properties
         # we let ini_validator.py do te work
         from diatisch_ini_properties import dict_ini_spec # contains all the properties
@@ -1018,6 +1048,10 @@ class Diatisch:
         
     def button_camera_pressed(self):
         True
+
+    def cameras_edit(self):
+        self.win_camera = DCAM.MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug) 
+
 
     def load_images(self, p_indir = None, p_imagefiles_source = None, p_imagefiles_target = None):
         # if list-source is given use it, else ask for dir to open
@@ -2623,6 +2657,9 @@ class Diatisch:
             self.order_date_asc()
         elif i == 4:
             self.order_date_desc()
+            
+    def rb_g(self):
+        pass
             
     def order_name_asc(self): # order images on source canvas by name asc
         self.list_source_images = sorted(self.list_source_images, key=lambda x: x.get_filename(), reverse=False)

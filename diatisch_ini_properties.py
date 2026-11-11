@@ -27,6 +27,7 @@ dict_ini_spec = {
     ("misc", "max_indirs_diatisch"):       {"var": "max_indirs",                "type": "int", "action": "error"},
     ("misc", "max_outdirs_diatisch"):      {"var": "max_outdirs",               "type": "int", "action": "error"},
     ("misc", "uncomment"):                 {"var": "uncomment",                 "type": "str", "action": "error"},
-    ("misc", "platform"):                  {"var": "platform",                  "type": "str", "action": "error"}
+    ("misc", "platform"):                  {"var": "platform",                  "type": "str", "action": "error"},
+    ("misc", "proc_types"):                {"var": "proctypes",                 "type": "str", "action": "error"},
 }
 
