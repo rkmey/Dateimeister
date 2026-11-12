@@ -4,6 +4,8 @@ from tkinter.constants import *
 from tkinter import filedialog as fd
 from tkinter import messagebox
 from tkinter.font import Font
+import tkinter.ttk as ttk
+
 from PIL import Image, ImageTk
 import Tooltip as TT
 import time
@@ -26,6 +28,7 @@ import Dateimeister_processlist as DP
 import Dateimeister_camera as DCAM
 
 import tools
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent, CameraChangedEvent
 
 from ini_validator import load_and_validate_ini 
 
@@ -324,19 +327,23 @@ class Diatisch:
         # create label for process_id, camera information and button (change camera) and label for target counter
         relh = .8
         gap = .001
+        # for the combobox
+        self.cb_camera_var = tk.StringVar(value="Test")
+        
         dict_widgets = {}
         dict_widgets["1"] = {
           "WIDGET":tk.Label,"VAR":"Label_process_id","OFFSET":gap,"RELH":self.label_height,"RELW":.12,"ANCHOR":"CENTER","TEXT":"Process ID: 0","FONT":self.text_font}
         dict_widgets["2"] = {
           "WIDGET":tk.Label,"VAR":"Label_camera","OFFSET":gap,"RELH":self.label_height,"RELW":.1,"ANCHOR":"CENTER","TEXT":"Camera: ","FONT":self.text_font}
         dict_widgets["3"] = {
-          "WIDGET":tk.Label,"VAR":"Label_camera_chosen","OFFSET":gap,"RELH":self.label_height,"RELW":.5,"ANCHOR":"CENTER","TEXT":"<camera>","FONT":self.text_font}
+          "WIDGET":ttk.Combobox,"VAR":"cb_camera","OFFSET":gap,"RELH":70,"RELW":.5,"ANCHOR":"CENTER","FONT":self.text_font}
         dict_widgets["4"] = {
           "WIDGET":tk.Button,"VAR":"button_camera","OFFSET":gap,"RELH":relh,"RELW":.15,"ANCHOR":"CENTER","CALLBACK":self.button_camera_pressed,
           "TEXT":"chande camera...","STATE":tk.ACTIVE,"TT":"Choose camera...","FONT":self.text_font}
         dict_widgets["5"] = {
           "WIDGET":tk.Label,"VAR":"Label_target_ctr","OFFSET":gap,"RELH":self.label_height,"RELW":.20,"ANCHOR":"CENTER","TEXT":"Num Images Target: 0","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.Frame_labels2, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
+        self.cb_camera.config(textvariable=self.cb_camera_var)
 
         self.Frame_source = tk.Frame(self.root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.75, relwidth=0.48)
@@ -704,7 +711,6 @@ class Diatisch:
         self.dict_file_FSImage_source = {} # dict for keeping track of FS Images
         self.dict_file_FSImage_target = {} # dict for keeping track of FS Images
         self.sort_method = 0
-        self.read_ini()
 
         # automatic font fit for all text widgets (central helper: tools.FontFitter)
         self.font_fitter = tools.FontFitter(
@@ -717,6 +723,10 @@ class Diatisch:
                 "Button": {
                     "pad_x": 2,
                     "min_size": 6 
+                },
+                "ttk.Combobox": {
+                    "pad_x": 2,
+                    "min_size": 9
                 }
             }
         )
@@ -730,6 +740,18 @@ class Diatisch:
         self.processid_displayed = self.UR.get_processid_akt() # used for keep track of predecessor of processid to be displayed from selection in procell_list, initialized to actual processid
 
     def init(self):
+        self.read_ini()
+
+        # initialize the event handler which we use for communication between windows (include / exclude) if not exist
+        if not Globals.eventManager:
+            Globals.eventManager = tools.EventManager()
+        # zentrale Drucklogik: nimmt PrintRequestEvent von überall entgegen
+        Globals.eventManager.bind("PrintRequestEvent", self.handle_print_request)
+        # if camera changed we should know
+        Globals.eventManager.bind("CameraChangedEvent", self.handle_camera_changed)        
+        
+        self.update_combobox_camera()
+
         # Menubar
         self.menubar = tk.Menu(self.root)
         self.root.configure(menu = self.menubar)
@@ -806,6 +828,118 @@ class Diatisch:
         if self.list_imagefiles:
             self.load_images(None, self.list_imagefiles)
 
+    def update_combobox_camera(self):
+        # Kameradaten einlesen
+        dict_t, dict_s, dict_pi = DX.get_camera_xml(
+            self.config_files_xml,
+            debug=self.debug
+        )
+
+        if self.debug:
+            print(f"dict_t  is {dict_t}")
+            print(f"dict_s  is {dict_s}")
+            print(f"dict_pi is {dict_pi}")
+
+        # Last-Use-Datum der Kameras
+        dict_cameras_usedate = DX.get_cameras_usedate(
+            self.config_files_xml
+        )
+        entries = []
+        for camera in dict_t:
+            st = camera
+            d1 = dict_t[camera]
+            for cam_type in d1:
+                st += f" {cam_type}("
+                suffixes = d1[cam_type]
+                suffix_list = [
+                    x.strip()
+                    for x in suffixes.split(",")
+                    if x.strip()
+                ]
+                for i, p in enumerate(suffix_list):
+                    st += f" {p}:{dict_pi[p]}"
+                    if i < len(suffix_list) - 1:
+                        st += ","
+                st += ")"
+
+            if self.debug:
+                print(f"ST is {st}")
+
+            # Usedate für Sortierung merken
+            usedate = dict_cameras_usedate.get(camera, 0)
+            entries.append(
+                {
+                    "camera": camera,
+                    "usedate": usedate,
+                    "display": st
+                }
+            )
+
+        # Absteigend nach Usedate sortieren
+        entries.sort(
+            key=lambda x: x["usedate"],
+            reverse=True
+        )
+
+        # Liste für Combobox erzeugen
+        list_cam = [e["display"] for e in entries]
+        self.cb_camera.configure(values=list_cam)
+        # Ersten (= jüngsten) Eintrag auswählen
+        if list_cam:
+            self.cb_camera.current(0)
+            # falls textvariable vorhanden:
+            self.cb_camera_var.set(list_cam[0])
+
+        if self.debug:
+            print("Sortierte Kameraliste:")
+            for e in entries:
+                print(
+                    f"{e['usedate']}  "
+                    f"{e['camera']}  "
+                    f"{e['display']}"
+                )
+
+    def xupdate_combobox_camera(self):
+       # update the camera combobox
+        dict_t, dict_s, dict_pi = DX.get_camera_xml(self.config_files_xml, debug = self.debug)
+        print (f"dict_t is {dict_t}") if self.debug else True
+        print (f"dict_s is {dict_s}") if self.debug else True
+        print (f"dict_pi is {dict_pi}") if self.debug else True
+        dict_cameras_usedate = DX.get_cameras_usedate(self.config_files_xml)
+        list_cam = []
+        for camera in dict_t:
+            st = camera
+            d1 = dict_t[camera]
+            for type in d1:
+                st += ' ' + type + '('
+                suffixes = dict_t[camera][type]
+                suffix_list = [x.strip() for x in suffixes.split(",")]
+                i = 0
+                for p in suffix_list:
+                    i += 1
+                    st += ' ' + p + ':' + dict_pi[p]
+                    if i < len(suffix_list):
+                        st += ','
+                st += ')'    
+            print(f"ST is {st}")
+            
+            list_cam.append(st)
+        self.cb_camera.config(values = list_cam)    
+        camera, cam_key = DX.get_recent_camera(self.config_files_xml, debug = self.debug)
+        self.cb_camera_var.set(cam_key)
+
+    def handle_print_request(self, event):
+        """Zentrale Drucklogik: nimmt PrintRequestEvent entgegen, egal ob aus
+        MyFSImage, MyFSVideo, MyDuplicates oder aus dem eigenen Context-Menu.
+        Erzeugt / holt den einen PrintPreview und ruft add_photo(filename)."""
+        filename = event.filename
+        print(f"Print request: file={filename} source={event.source}") if self.debug else True
+
+    def handle_camera_changed(self, event):
+        """ called when Dateimeister_camera fires event that camera has changes
+        """
+        print (f"camera changed event received for camera: {event.camera}")
+
     def read_ini(self):
         inifile = "Diatisch.ini" 
         # Properties
@@ -813,7 +947,7 @@ class Diatisch:
         from diatisch_ini_properties import dict_ini_spec # contains all the properties
         # we create the attributes in 'self' except those which have a "target" (Globals) in the line. the attributes are also generated in cfg
         # diatisch only needs attributes in self, so the parameter for the target_registry is set to None
-        cfg, has_errors, has_warnings, problems = load_and_validate_ini(inifile, spec = dict_ini_spec, target = self, target_registry=None)
+        cfg, has_errors, has_warnings, problems = load_and_validate_ini(inifile, spec = dict_ini_spec, target = self, target_registry={"Globals": tools.Globals})
         print("Ini-Datei ist vollständig und gültig.")
         print("Beispiel: config_files_xml =", self.config_files_xml, type(self.config_files_xml), self.uncomment)
         
@@ -892,6 +1026,8 @@ class Diatisch:
         # fill cfg listbox and recentmenu cfg
         self.listbox_cfg.delete(0, 'end')
         self.recentmenu_cfg.delete(0, "end")
+        print("xmlfile: " + self.config_files_xml)
+
         result = DX.get_diatisch_items_usedate(self.config_files_xml, "config_files", "configfile", "filename")
         dict_filename_usedate = {}
         for tfile in result:
@@ -899,7 +1035,7 @@ class Diatisch:
             attribute = result[tfile]
             searchattr = 'usedate'
             for attribut in attribute:
-                print("  " + attribut + " = " + attribute[attribut]) if self.debug else True
+                #print("  " + attribut + " = " + attribute[attribut]) if self.debug else True
                 if attribut == searchattr:
                     dict_filename_usedate[tfile] = attribute[searchattr]
             
@@ -936,7 +1072,7 @@ class Diatisch:
             attribute = result[item]
             searchattr = 'usedate'
             for attribut in attribute:
-                print("  " + attribut + " = " + attribute[attribut]) if self.debug else True
+                #print("  " + attribut + " = " + attribute[attribut]) if self.debug else True
                 if attribut == searchattr:
                     dict_filename_usedate[item] = attribute[searchattr]
             
@@ -972,7 +1108,7 @@ class Diatisch:
             attribute = result[item]
             searchattr = 'usedate'
             for attribut in attribute:
-                print("  " + attribut + " = " + attribute[attribut]) if self.debug else True
+                #print("  " + attribut + " = " + attribute[attribut]) if self.debug else True
                 if attribut == searchattr:
                     dict_filename_usedate[item] = attribute[searchattr]
             
@@ -1050,7 +1186,7 @@ class Diatisch:
         True
 
     def cameras_edit(self):
-        self.win_camera = DCAM.MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug) 
+        self.win_camera = DCAM.MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug, xmlfile = self.config_files_xml) 
 
 
     def load_images(self, p_indir = None, p_imagefiles_source = None, p_imagefiles_target = None):
@@ -1401,7 +1537,17 @@ class Diatisch:
                 print ("FSImage Source exists for file: " + file) if self.debug else True
             else:
                 thumbnail = Thumbnail(img, file, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_source, self, "Source ", "Copy", "Copy", "", "", self.debug)
+                fs_image = FS.MyFSImage(
+                    file = file, 
+                    thumbnail = thumbnail, 
+                    caller = self,
+                    str_title_prefix = "Source: ", 
+                    str_include = "Copy",
+                    str_exclude = "Copy",
+                    str_included = "",
+                    str_excluded = "",
+                    debug = self.debug
+                )
                 self.dict_file_FSImage_source[file] = fs_image
                 self.historize_process("show source FSImage {:s}".format(file))
 
@@ -1426,7 +1572,17 @@ class Diatisch:
                 print ("FSImage Target exists for file: " + file) if self.debug else True
             else:
                 thumbnail = Thumbnail(img, file, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(file, thumbnail, self.dict_file_FSImage_target, self, "Target ", "Delete", "Delete", "", "", self.debug)
+                fs_image = FS.MyFSImage(
+                    file = file, 
+                    thumbnail = thumbnail, 
+                    caller = self,
+                    str_title_prefix = "Target: ", 
+                    str_include = "Delete",
+                    str_exclude = "Delete",
+                    str_included = "",
+                    str_excluded = "",
+                    debug = self.debug
+                )
                 self.dict_file_FSImage_target[file] = fs_image
                 self.historize_process("show target FSImage {:s}".format(file))
 
@@ -2213,6 +2369,21 @@ class Diatisch:
         self.endis_menu_items()
         return dict_images
 
+    # ----------------------------------------------------------------------
+    # 20261112: event handler for closing event
+    # ----------------------------------------------------------------------
+    def on_closing(self, event): #if a FS exists in dict_file_image delete entry
+        # source
+        if event.filename in self.dict_file_FSImage_source:
+            thisobj = self.dict_file_FSImage_source[event.filename]
+            if thisobj is event.obj: # has been created by us, not by someone else
+                del self.dict_file_FSImage_source[event.filename]
+        # target
+        if event.filename in self.dict_file_FSImage_target:
+            thisobj = self.dict_file_FSImage_target[event.filename]
+            if thisobj is event.obj: # has been created by us, not by someone else
+                del self.dict_file_FSImage_target[event.filename]
+
     # Undo /Redo functions
     def process_undo(self, event):
         print("ctrl_z pressed.") if self.debug else True
@@ -2318,13 +2489,27 @@ class Diatisch:
             for i in self.dict_file_FSImage_source:
                 fsimage = self.dict_file_FSImage_source[i]
                 fsimage.thumbnail.fs_close = None # otherwise fs_close would historize close for each FSImage, which is only necessary if user closes the window 
-                fsimage.close_handler_external()
+                # 20261112 generate closing event, FS-Childs will close themselves
+                Globals.eventManager.generate(
+                    "Closing",
+                    ClosingEvent("", self) # file, self, see tools
+                )
             self.dict_file_FSImage_source = {}
             # create FSImage and insert into dict
             for i in h.dict_file_thumbnail_source:
                 img = h.dict_file_thumbnail_source[i].image
                 thumbnail = Thumbnail(img, i, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_source, self, "Source ", "Copy", "Copy", "", "", self.debug)
+                fs_image = FS.MyFSImage(
+                    file = i, 
+                    thumbnail = thumbnail, 
+                    caller = self,
+                    str_title_prefix = "Source: ", 
+                    str_include = "Copy",
+                    str_exclude = "Copy",
+                    str_included = "",
+                    str_excluded = "",
+                    debug = self.debug
+                )
                 self.dict_file_FSImage_source[i] = fs_image
         if h.str_hashsum_file_thumbnail_target != self.dict_processid_histobj[processid_predecessor].str_hashsum_file_thumbnail_target: # rebuild FSImages target
             print("restore FSImages") if self.debug else True
@@ -2332,13 +2517,27 @@ class Diatisch:
             for i in self.dict_file_FSImage_target:
                 fsimage = self.dict_file_FSImage_target[i]
                 fsimage.thumbnail.fs_close = None # otherwise fs_close would historize close for each FSImage, which is only necessary if user closes the window 
-                fsimage.close_handler_external()
+                # 20261112 generate closing event, FS-Childs will close themselves
+                Globals.eventManager.generate(
+                    "Closing",
+                    ClosingEvent("", self) # file, self, see tools
+                )
             self.dict_file_FSImage_target = {}
             # create FSImage and insert into dict
             for i in h.dict_file_thumbnail_target:
                 img = h.dict_file_thumbnail_target[i].image
                 thumbnail = Thumbnail(img, i, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(i, thumbnail, self.dict_file_FSImage_target, self, "Target ", "Delete", "Delete", "", "", self.debug)
+                fs_image = FS.MyFSImage(
+                    file = i, 
+                    thumbnail = thumbnail, 
+                    caller = self,
+                    str_title_prefix = "Target: ", 
+                    str_include = "Delete",
+                    str_exclude = "Delete",
+                    str_included = "",
+                    str_excluded = "",
+                    debug = self.debug
+                )
                 self.dict_file_FSImage_target[i] = fs_image
                     
         
@@ -2422,6 +2621,10 @@ class Diatisch:
                 #print(i) if self.debug else True
                 self.list_result.append(i.get_filename())
             self.callback()
+
+        Globals.eventManager.unbind("PrintRequestEvent", self.handle_print_request)
+        Globals.eventManager.unbind("CameraChangedEvent", self.handle_camera_changed)
+
         self.close_child_windows()
         self.root.destroy()
 
@@ -2711,7 +2914,6 @@ class HistObj:
         self.str_hashsum_file_thumbnail_target = ""
         
         self.text = ""
-
 
 if __name__ == "__main__":
     # MUSS die aller erste Aktion sein, bevor irgendein Tk-Fenster erzeugt wird!

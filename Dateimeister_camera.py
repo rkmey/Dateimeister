@@ -18,26 +18,46 @@ import dateimeister_config_xml as DX
 import Undo_Redo as UR
 
 import tools
-from tools import Globals
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent, CameraChangedEvent
 
 class MyCameraTreeview:
 
     # The class "constructor" - It's actually an initializer
-    def __init__(self, pmain: object = None, proctypes:str = None, debug:bool = False, cameraname=None):
+    def __init__(self, pmain: object = None, proctypes:str = None, debug:bool = False, cameraname=None, xmlfile = None):
         self.main = pmain
         self.cameraname = cameraname
         self.root = tk.Toplevel()
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
         self.debug = debug
+        
+        self.xmlfile = None
+        if xmlfile is None:
+            messagebox.showerror(message="no xmlfile given",
+                                   title="Treeview Selection",
+                                   parent=self.root)
+            return None
+        else:
+            self.xmlfile = xmlfile
 
         if cameraname is not None:
             self.root.title(cameraname)
         else:
             self.root.title("Cameras")
-        width, height = Globals.screen_width, Globals.screen_height
-        v_dim = str(int(width * .75)) + 'x' + str(int(height * .75))
-        self.root.geometry(v_dim)
+
+        # Fenstergröße
+        self.physical_width   = self.root.winfo_screenwidth()
+        self.physical_height  = self.root.winfo_screenheight()
+        w = self.physical_width  // 2
+        h = self.physical_height // 2
+
+        x = (self.physical_width  - w) // 2
+        y = (self.physical_height - h) // 2
+
+        self.root.geometry(f"{w}x{h}+{x}+{y}")
+        #my_w.maxsize(300,220)  # (maximum ) width , ( maximum) height
+        self.root.minsize(int(self.physical_height / 2), int(self.physical_height / 2))  # (minimum ) width , ( minimum) height
         self.root.resizable(True, True)
+        self.root.update()
 
         self.text_font = Font(family="Helvetica", size=6)
 
@@ -182,6 +202,7 @@ class MyCameraTreeview:
         self.dict_subdirs = {}          # {camera: {type: subdir}}
         self.dict_process_image = {}    # {camera: {type: {suffix: process}}}
         self.locked = False
+        self.cams_changed = set()
 
         # initial disabled state
         self.entry_subdir.config(state=DISABLED)
@@ -194,7 +215,7 @@ class MyCameraTreeview:
 
         self.lock_treeview(False)
         # populate treeview from xml
-        self.treeview_from_xml(Globals.config_files_xml)
+        self.treeview_from_xml(self.xmlfile)
 
     # ----------------------------------------------------------------------
     # Generic widget helper: works with Entry and ttk.Combobox
@@ -724,7 +745,7 @@ class MyCameraTreeview:
         if self.newitem == "SUFFIX_NEW":
             suffix = self.entry_suffix.get().upper()
             if suffix is not None and suffix != "":
-                rc = DX.new_camera_type_suffix(Globals.config_files_xml,
+                rc = DX.new_camera_type_suffix(self.xmlfile,
                                                self.camera, self.ctype, suffix, ts)
             else:
                 messagebox.showinfo("MyCameraTreeview",
@@ -736,14 +757,14 @@ class MyCameraTreeview:
 
         elif self.newitem == "SUFFIX_RENAME":
             suffix_new = self.entry_suffix.get().upper()
-            rc = DX.update_camera_type_suffix(Globals.config_files_xml,
+            rc = DX.update_camera_type_suffix(self.xmlfile,
                                               self.camera, self.ctype, self.suffix,
                                               suffix_new, ts)
             self.suffix = suffix_new
 
         elif self.newitem == "SUFFIX_DELETE":
             suffix = self.suffix
-            rc = DX.update_camera_type_suffix(Globals.config_files_xml,
+            rc = DX.update_camera_type_suffix(self.xmlfile,
                                               self.camera, self.ctype, suffix, "", ts)
             print("delete suffix rc: " + str(rc))
 
@@ -759,7 +780,7 @@ class MyCameraTreeview:
                     self.entry_suffix.focus_set()
                     return
                 else:
-                    rc = DX.new_camera_type_suffix(Globals.config_files_xml,
+                    rc = DX.new_camera_type_suffix(self.xmlfile,
                                                    self.camera, ctype, suffix, ts)
             else:
                 messagebox.showinfo("MyCameraTreeview",
@@ -771,17 +792,17 @@ class MyCameraTreeview:
 
         elif self.newitem == "TYPE_RENAME":
             type_new = self.entry_type.get().upper()
-            rc = DX.update_camera_type(Globals.config_files_xml,
+            rc = DX.update_camera_type(self.xmlfile,
                                        self.camera, self.ctype, type_new, ts)
             self.ctype = type_new
 
         elif self.newitem == "TYPE_DELETE":
-            rc = DX.update_camera_type(Globals.config_files_xml,
+            rc = DX.update_camera_type(self.xmlfile,
                                        self.camera, self.ctype, "", ts)
 
         elif self.newitem == "TYPE_SUBDIR":
             subdir = self.entry_subdir.get()
-            rc = DX.new_subdir_camera(Globals.config_files_xml,
+            rc = DX.new_subdir_camera(self.xmlfile,
                                       self.camera, self.ctype, subdir)
             if rc == 0:
                 print("subdir created for camera " + self.camera + " type " + self.ctype)
@@ -798,7 +819,7 @@ class MyCameraTreeview:
                                     parent=self.root)
                 self.entry_process_image.focus_set()
                 return
-            rc = DX.new_process_image_camera(Globals.config_files_xml,
+            rc = DX.new_process_image_camera(self.xmlfile,
                                              self.camera, self.ctype, self.suffix,
                                              process_image)
             if rc == 0:
@@ -830,7 +851,7 @@ class MyCameraTreeview:
                         self.entry_suffix.focus_set()
                         return
                     else:
-                        rc = DX.new_camera_type_suffix(Globals.config_files_xml,
+                        rc = DX.new_camera_type_suffix(self.xmlfile,
                                                        camera, ctype, suffix, ts)
             else:
                 messagebox.showinfo("MyCameraTreeview",
@@ -843,22 +864,22 @@ class MyCameraTreeview:
         elif self.newitem == "CAMERA_RENAME":
             print(" rename requested for: " + self.camera)
             camera_new = self.entry_camera.get().upper()
-            rc = DX.update_camera(Globals.config_files_xml, self.camera, camera_new)
+            rc = DX.update_camera(self.xmlfile, self.camera, camera_new)
             self.camera = camera_new
 
         elif self.newitem == "CAMERA_DELETE":
             print(" delete requested for: " + self.camera)
-            rc = DX.update_camera(Globals.config_files_xml, self.camera, "")
+            rc = DX.update_camera(self.xmlfile, self.camera, "")
 
         # reset the dialog and unlock BEFORE refreshing the treeview, so that
         # treeview_from_xml can trigger the next forced dialog cleanly.
         self.enable_processing(False, False, False, False, False, False,
                                "", "", "", "", "")
         self.lock_treeview(False)
-        self.treeview_from_xml(Globals.config_files_xml)
+        self.treeview_from_xml(self.xmlfile)
         if self.camera is not None and self.camera != "":
             self.open_camera(self.camera)
-        self.update_main_window()
+            self.cams_changed.add(self.camera)
         self.historize_process()
 
     def cancel_new(self, event=None):
@@ -881,21 +902,6 @@ class MyCameraTreeview:
             for iid_child in item_children:
                 self.tv.item(iid_child, open=True)
 
-    def update_main_window(self):
-        """
-        Push the freshly read per-camera data into the main window, restricted
-        to the camera that is currently being edited.
-        The main window keeps its flat dicts (dict_subdirs etc.); those are
-        rebuilt for exactly this camera here.
-        """
-        camera = self.camera
-        if camera is None or camera == "":
-            try:
-                camera = self.main.o_camera.get()
-            except Exception:
-                camera = ""
-        self.main.dict_cameras, self.main.dict_subdirs, self.main.dict_process_image = \
-            self.main.get_camera_xml(camera=camera)
 
     # ----------------------------------------------------------------------
     # Undo / Redo functions
@@ -947,12 +953,12 @@ class MyCameraTreeview:
     def apply_process_id(self, process_id, processid_predecessor):
         """
         Restore a historized xml state: copy the xml file belonging to
-        process_id over Globals.config_files_xml and refresh the treeview.
+        process_id over xmlfile and refresh the treeview.
         """
         xml_filename = self.dict_processid_xmlfile[process_id]
         print("apply_process_id, xml to apply is: ", xml_filename)
         sourcefile = xml_filename
-        targetfile = Globals.config_files_xml
+        targetfile = self.xmlfile
         try:
             shutil.copy(sourcefile, targetfile)
         except shutil.FileNotFoundError:
@@ -963,7 +969,7 @@ class MyCameraTreeview:
             print("Permission denied.")
         except:
             print("Error occurred while copying file.")
-        self.treeview_from_xml(Globals.config_files_xml)
+        self.treeview_from_xml(self.xmlfile)
         if self.camera is not None and self.camera != "":
             self.open_camera(self.camera)
 
@@ -974,13 +980,12 @@ class MyCameraTreeview:
         """
         self.UR.historize_process()
         processid_akt = self.UR.get_processid_akt()
-        config_dir = os.path.join(Globals.datadir, Globals.config_files_subdir)
-        xml_filename = Globals.config_files_xml
+        xml_filename = self.xmlfile
         # insert _<processid> before the file extension
         xml_filename = re.sub(r'\.([^\.]+)$', rf"_{processid_akt}.\1", xml_filename)
         self.dict_processid_xmlfile[processid_akt] = xml_filename
         print("historize_process, new xml is: ", xml_filename)
-        sourcefile = Globals.config_files_xml
+        sourcefile = self.xmlfile
         targetfile = xml_filename
         try:
             shutil.copy(sourcefile, targetfile)
@@ -999,6 +1004,12 @@ class MyCameraTreeview:
 
     def close_handler(self):
         """WM_DELETE_WINDOW handler: destroy the camera window."""
+        for cam in self.cams_changed:
+            Globals.eventManager.generate(
+                "CameraChangedEvent",
+                CameraChangedEvent(cam, self)
+            )
+
         self.root.destroy()
 
     def __del__(self):

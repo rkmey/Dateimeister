@@ -59,7 +59,7 @@ import Dateimeister_camera as DCAM
 
 import Tooltip as TT
 import tools
-from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent, CameraChangedEvent
 from tools import MyThumbnail
 
 from enum import Enum
@@ -228,9 +228,12 @@ class Dateimeister_support:
         self.dict_file_image = {}
         self.dict_visible_id_thumbnail_video = {} # holds all visible videos, initially and after scrolling, key: canvas_id, value: thumbnail
         # initialize the event handler which we use for communication between windows (include / exclude)
-        Globals.eventManager = tools.EventManager()
+        if not Globals.eventManager:
+            Globals.eventManager = tools.EventManager()
         # zentrale Drucklogik: nimmt PrintRequestEvent von überall entgegen
-        Globals.eventManager.bind("PrintRequestEvent", self.handle_print_request)        
+        Globals.eventManager.bind("PrintRequestEvent", self.handle_print_request)
+        # if camera changed we should know
+        Globals.eventManager.bind("CameraChangedEvent", self.handle_camera_changed)        
         
 
         # Fenstergröße
@@ -952,6 +955,18 @@ class Dateimeister_support:
             thisobj = self.dict_file_image[event.filename]
             if thisobj is event.obj: # has been created by us, not by someone else
                 del self.dict_file_image[event.filename]
+
+    def handle_camera_changed(self, event):
+        print (f"camera changed event received for camera: {event.camera}")
+        thiscamera = self.o_camera.get()
+        if thiscamera == event.camera:
+            print (f"camera changed event received for camera: {event.camera} new generate required")
+            # rebuild the flat per-camera dicts for the newly selected camera.
+            # get_camera_xml() must NOT touch o_camera when called with an
+            # explicit camera; it only rebuilds the listbox.
+            self.dict_cameras, self.dict_subdirs, self.dict_process_image = self.get_camera_xml(camera=thiscamera)
+            self.generate()
+           
 
     #printing
     def choose_printer(self):
@@ -3662,7 +3677,7 @@ class Dateimeister_support:
         self.win_duplicates = DD.MyDuplicates(self, debug = self.debug) 
        
     def menu_cameras_edit(self):
-        self.win_camera = DCAM.MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug) 
+        self.win_camera = DCAM.MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug, xmlfile = Globals.config_files_xml) 
 
     def menu_diatisch(self):
         # if jpeg build list of not excluded imagefiles and call diatisch
@@ -4064,6 +4079,7 @@ class Dateimeister_support:
         Globals.eventManager.unbind("FileStateChanged", self.on_file_state_changed)
         Globals.eventManager.unbind("Closing", self.on_closing)
         Globals.eventManager.unbind("PrintRequestEvent", self.handle_print_request)
+        Globals.eventManager.unbind("CameraChangedEvent", self.handle_camera_changed)
         self.dict_visible_id_thumbnail_video.clear()
         self.close_child_windows()
         self.root.destroy()

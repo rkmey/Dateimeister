@@ -718,6 +718,17 @@ class PrintRequestEvent:
         self.filename = filename
         self.source = source
 
+class CameraChangedEvent:
+    """released when Dateimeister_camera changes a camera.
+    camera:    name of the camera in uper case which is changed
+    source:    object which releases the event (FSImage, FSVideo,
+               MyDuplicates, Dateimeister_support, Dateimeister_camera...)
+    """
+    def __init__(self, camera: str, source: object = None):
+        self.camera = camera
+        self.source = source
+
+
 class BusyDialog:
     def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):
         self.root = root

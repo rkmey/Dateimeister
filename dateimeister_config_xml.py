@@ -1,5 +1,8 @@
 import xml.etree.ElementTree as ET
 import re
+import time
+from datetime import datetime, timezone
+from time import gmtime, strftime
 
 
 # =============================================================================
@@ -897,3 +900,77 @@ def indent(elem, level=0):
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
             
+            
+def get_camera_xml(xmlfile = None, camera=None, debug = 'n'):
+    """
+    Build the flat per-type / per-suffix dictionaries for the currently
+    selected camera. These dicts feed generate() and display_images(),
+    which index them as dict_subdirs[type] and dict_process_image[suffix].
+
+    The data itself comes from the per-camera accessors in
+    dateimeister_config_xml; the flat top-level nodes in the xml are no
+    longer read.
+
+    camera: the camera whose data to load.
+    """
+    ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+    dict_cameras_usedate = get_cameras_usedate(xmlfile)
+    dict_cameras = get_cameras_types_suffixes(xmlfile)
+    dict_t = {}
+    for camera_name in dict_cameras:
+        cam_key = camera_name.upper()
+        dict_t[camera_name] = {}
+        type_num = 0
+        for type_name in dict_cameras[camera_name]:
+            type_num += 1
+            suffixes = ", ".join(dict_cameras[camera_name][type_name])
+            dict_t[camera_name][type_name] = suffixes
+            print("Camera: " + camera_name + " Type: " + type_name +
+                  " Suffixes: " + suffixes) if debug else True
+            if len(suffixes) == 0:
+                messagebox.showerror("INIT", "Camera " + camera_name +
+                                     " type " + type_name + " no suffix defined")
+                exit()
+        if type_num == 0:
+            messagebox.showerror("INIT", "Camera " + camera_name + " no type defined")
+            exit()
+
+    # --- flat dicts for generate() / display_images() ---
+    dict_s = dict(get_subdirs_per_camera(xmlfile).get(cam_key, {}))
+    for imagetype in dict_s:
+        print("Subdir {:s}, {:s}".format(imagetype, dict_s[imagetype])) if debug else True
+
+    dict_pi = {}
+    pi_per_cam = get_process_image_per_camera(xmlfile).get(cam_key, {})
+    for type_name, suffix_dict in pi_per_cam.items():
+        for suffix_name, process in suffix_dict.items():
+            dict_pi[suffix_name] = process
+    for t in dict_pi:
+        print("Process Image  {:s}, {:s}".format(t, dict_pi[t])) if debug else True
+
+    return dict_t, dict_s, dict_pi
+
+def get_recent_camera(xmlfile=None, camera=None, debug = 'n'):
+    """
+    returns the camera which was used last
+    """
+
+    ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+    dict_cameras = get_cameras_types_suffixes(xmlfile)
+    dict_cameras_usedate = get_cameras_usedate(xmlfile)
+    dict_t = {}
+    usedate_high = ""
+    index = 0
+    for key in dict_cameras_usedate:
+        usedate = dict_cameras_usedate[key]
+        print("Kamera {:s} usedate:{:s}".format(key, usedate)) if debug else True
+        if usedate > usedate_high:
+            usedate_high = usedate
+            index_high = index
+            cameraname_high = key
+        index += 1
+    camera = cameraname_high
+    cam_key = camera.upper()
+    return camera, cam_key
+
+

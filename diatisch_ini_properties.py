@@ -20,8 +20,14 @@ dict_ini_spec = {
     ("dirs", "datadir"):                   {"var": "datadir",                   "type": "str", "checkdir": "yes", "checkfile": "no",  "action": "error"},
     ("dirs", "config_files_subdir"):       {"var": "config_files_subdir",       "type": "str", "checkdir": "no",  "checkfile": "no",  "action": "error"},
     ("dirs", "cmd_files_subdir"):          {"var": "cmd_files_subdir",          "type": "str", "checkdir": "no",  "checkfile": "no",  "action": "error"},
+    # needed for camera treeview
+    ("dirs", "datadir"):                   {"var": "datadir",                   "type": "str", "checkdir": "yes", "checkfile": "no",  "target": "Globals", "action": "error"},
+    ("dirs", "config_files_subdir"):       {"var": "config_files_subdir",       "type": "str", "checkdir": "no",  "checkfile": "no",  "target": "Globals", "action": "error"},
 
     ("misc", "config_files_diatisch_xml"): {"var": "config_files_xml",          "type": "str", "checkdir": "no",  "checkfile": "yes", "action": "error"},
+    # needed for camera treeview
+    ("misc", "config_files_xml"):          {"var": "config_files_xml",          "type": "str", "target": "Globals", "action": "error"},
+
     ("misc", "templatefile_diatisch"):     {"var": "templatefile",              "type": "str", "checkdir": "no",  "checkfile": "yes", "action": "error"},
     ("misc", "max_configfiles_diatisch"):  {"var": "max_configfiles",           "type": "int", "action": "error"},
     ("misc", "max_indirs_diatisch"):       {"var": "max_indirs",                "type": "int", "action": "error"},
