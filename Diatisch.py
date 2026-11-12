@@ -339,7 +339,7 @@ class Diatisch:
           "WIDGET":ttk.Combobox,"VAR":"cb_camera","OFFSET":gap,"RELH":70,"RELW":.5,"ANCHOR":"CENTER","FONT":self.text_font}
         dict_widgets["4"] = {
           "WIDGET":tk.Button,"VAR":"button_camera","OFFSET":gap,"RELH":relh,"RELW":.15,"ANCHOR":"CENTER","CALLBACK":self.button_camera_pressed,
-          "TEXT":"chande camera...","STATE":tk.ACTIVE,"TT":"Choose camera...","FONT":self.text_font}
+          "TEXT":"edit camera...","STATE":tk.ACTIVE,"TT":"Choose camera...","FONT":self.text_font}
         dict_widgets["5"] = {
           "WIDGET":tk.Label,"VAR":"Label_target_ctr","OFFSET":gap,"RELH":self.label_height,"RELW":.20,"ANCHOR":"CENTER","TEXT":"Num Images Target: 0","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.Frame_labels2, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
@@ -1183,7 +1183,9 @@ class Diatisch:
         print("{:s} elapsed start resize".format(text))
         
     def button_camera_pressed(self):
-        True
+        str_cam = self.cb_camera.get()
+        camera = str_cam.split()[0] if str_cam.split() else ""
+        self.win_camera = DCAM.MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug, xmlfile = self.config_files_xml, cameraname = camera) 
 
     def cameras_edit(self):
         self.win_camera = DCAM.MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug, xmlfile = self.config_files_xml) 

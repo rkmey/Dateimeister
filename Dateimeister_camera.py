@@ -279,6 +279,8 @@ class MyCameraTreeview:
         last_camera = None
         ctype_num = 0
         for camera in dict_cameras:
+            if self.cameraname and camera != self.cameraname:
+                continue
             last_camera = camera
             cam_key = camera.upper()
             ctype_num = 0
