@@ -24,6 +24,13 @@ dict_ini_spec = {
     ("dirs", "datadir"):                   {"var": "datadir",                   "type": "str", "checkdir": "yes", "checkfile": "no",  "target": "Globals", "action": "error"},
     ("dirs", "config_files_subdir"):       {"var": "config_files_subdir",       "type": "str", "checkdir": "no",  "checkfile": "no",  "target": "Globals", "action": "error"},
 
+    # temp dir for print previews (RAW -> PNG), used via Globals.temp_files_path
+    ("dirs", "temp_files_subdir"):         {"var": "temp_files_subdir",         "type": "str", "checkdir": "no",  "checkfile": "no",  "target": "Globals", "action": "error"},
+    # folders which are not entered when scanning (section [scan]), same as in Dateimeister. Empty / missing = default list.
+    # If your dateimeister_ini_properties.py defines these two differently, copy the lines from there 1:1.
+    ("scan", "skip_dirs_top"):             {"var": "skip_dirs_top",             "type": "str", "target": "Globals", "action": "warn"},
+    ("scan", "skip_dirs_any"):             {"var": "skip_dirs_any",             "type": "str", "target": "Globals", "action": "warn"},
+
     ("misc", "config_files_diatisch_xml"): {"var": "config_files_xml",          "type": "str", "checkdir": "no",  "checkfile": "yes", "action": "error"},
     # needed for camera treeview
     ("misc", "config_files_xml"):          {"var": "config_files_xml",          "type": "str", "target": "Globals", "action": "error"},

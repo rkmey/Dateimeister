@@ -6,7 +6,7 @@ from tkinter import messagebox
 from tkinter.font import Font
 import tkinter.ttk as ttk
 
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw, ExifTags
 import Tooltip as TT
 import time
 from datetime import datetime, timezone
@@ -26,6 +26,8 @@ import Dateimeister_exec as DM
 import Dateimeister_FSimage as FS
 import Dateimeister_processlist as DP
 import Dateimeister_camera as DCAM
+import print_utils
+from print_preview import PrintPreview
 
 import tools
 from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent, CameraChangedEvent
@@ -69,6 +71,14 @@ class pt(Enum):
     COPY_SELECTED_TAIL = 8
     
 
+# process types as configured per suffix in the camera xml
+PROCESS_JPEG     = "JPEG"
+PROCESS_USE_JPEG = "USE_JPEG"
+PROCESS_RAW      = "RAW"
+# labels of the file-menu entries (addressed by label, not by index)
+MENU_LABEL_CHOOSE_PRINTER = "Choose Printer..."
+MENU_LABEL_PRINT          = "Print selected"
+
 class ScrollableCanvas(tk.Canvas):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
@@ -105,7 +115,7 @@ class MyImage:
                         
     def getFile(self):
         return self.filename    
-        
+
     def get_filename(self):
         return self.filename
     def get_mts(self):
@@ -142,14 +152,25 @@ class MyImage:
             return False
     def get_tag(self):
         return self.tag
+    # type (e.g. JPEG, RAW) and process type (JPEG, USE_JPEG, RAW) are looked up by filename, so that
+    # copies of MyImage (history, target) need no extra constructor parameters
+    @property
+    def imgtype(self):
+        return Diatisch.dict_file_meta.get(self.filename, ("", ""))[0]
+    @property
+    def process_type(self):
+        return Diatisch.dict_file_meta.get(self.filename, ("", ""))[1]
         
      
 class Thumbnail:
     #image = "" # hier stehen Klassenvariablen, im Gegensatz zu den Instanzvariablen
     # The class "constructor" - It's actually an initializer 
-    def __init__(self, image, file, player, canvas, debug, canvas_type, fs_close, fs_button):
+    def __init__(self, image, file, player, canvas, debug, canvas_type, fs_close, fs_button, process_type = None, showfile = None):
         self.image = image
         self.file = file
+        self.showfile = showfile if showfile else file
+        self.process_type = (process_type if process_type else getattr(image, "process_type", "")) or ""
+        self.process_type = self.process_type.upper()
         self.player = player 
         self.fsimage = None
         self.state = FS.INCLUDE
@@ -166,7 +187,96 @@ class Thumbnail:
         self.filectime = datetime.fromtimestamp(st_ctime).strftime('%Y-%m-%d %H:%M')
         self.filemtime = datetime.fromtimestamp(st_mtime).strftime('%Y-%m-%d %H:%M')
         self.filesize  = os.stat(file).st_size/(1024*1024.0) 
-        
+
+        # ------------------------------------------------------------------
+        # Metadata store: always exists, so MyFSImage can always access it.
+        # The categories match tools.MyThumbnail so MyFSImage can treat
+        # both thumbnail types alike.
+        # ------------------------------------------------------------------
+        self.metadata = {
+            "EXIF": {},
+            "GPS": {},
+            "Video": {},
+            "File": {},
+            "General": {},
+        }
+        self.metadata_read = False
+
+    # ------------------------------------------------------------------
+    # Metadata (needed by MyFSImage._populate_metadata_tree)
+    # ------------------------------------------------------------------
+    def set_metadata(self):
+        """Read metadata once. For Diatisch only still images are shown
+        (RAW handled via rawpy, everything else via PIL/EXIF)."""
+        if self.metadata_read:
+            return
+        path = self.file
+        if not os.path.exists(path):
+            self.metadata_read = True
+            return
+        try:
+            if self.is_raw():
+                import rawpy_loader
+                raw_meta = rawpy_loader.load_raw_metadata(path)
+                for cat, entries in raw_meta.items():
+                    self.metadata.setdefault(cat, {}).update(entries)
+            else:
+                ex = self._extract_useful_exif(path)
+                for k, v in ex.items():
+                    self.metadata["EXIF"][k] = v
+            stat = os.stat(path)
+            self.metadata["File"]["Size"] = str(stat.st_size)
+            self.metadata["File"]["Modified"] = datetime.fromtimestamp(
+                stat.st_mtime).strftime('%Y-%m-%d %H:%M')
+        except Exception as e:
+            print(f"Thumbnail.set_metadata: {path}: {type(e).__name__}: {e}") if self.debug else True
+        self.metadata_read = True
+
+    @staticmethod
+    def _extract_useful_exif(path):
+        """Same selection of tags as tools.MyThumbnail.extract_useful_exif."""
+        useful = {}
+        try:
+            img = Image.open(path)
+            exif = img.getexif()
+            if not exif:
+                return useful
+            tag_map = {v: k for k, v in ExifTags.TAGS.items()}
+
+            def get(tag_name):
+                tag_id = tag_map.get(tag_name)
+                if tag_id in exif:
+                    return str(exif[tag_id])
+                return None
+
+            if (v := get("FNumber")):
+                useful["Aperture"] = f"f/{v}"
+            if (v := get("ExposureTime")):
+                useful["Exposure Time"] = v
+            if (v := get("ISOSpeedRatings")):
+                useful["ISO"] = v
+            if (v := get("FocalLength")):
+                useful["Focal Length"] = v
+            if (v := get("Model")):
+                useful["Camera Model"] = v
+            if (v := get("DateTimeOriginal")):
+                useful["Original Date"] = v
+            if (v := get("ExposureBiasValue")):
+                useful["Exposure Bias Value"] = v
+            if (v := get("WhiteBalance")):
+                useful["White Balance"] = v
+            if (v := get("Orientation")):
+                useful["Orientation"] = v
+            w, h = img.size
+            useful["Width"] = str(w)
+            useful["Height"] = str(h)
+        except Exception:
+            pass
+        return useful
+
+    def get_metadata(self):
+        return self.metadata
+
     def get_filectime(self):
         return self.filectime
         
@@ -208,6 +318,22 @@ class Thumbnail:
     def get_imagetype(self): # FSImage expects this method
         return 'STILL'
 
+    # same query methods as tools.MyThumbnail, so that FSImage can treat both alike
+    def is_raw(self):
+        return self.process_type == PROCESS_RAW
+
+    def is_video(self):
+        return False
+
+    def is_broken(self):
+        return False
+
+    def get_process_type(self):
+        return self.process_type
+
+    def getShowfile(self):
+        return self.showfile
+
     def __del__(self):
         if self.player is not None:
             self.player.pstop()
@@ -224,6 +350,7 @@ class Diatisch:
     idx_akt  = 0 # current index into dict according to history (undo / redo)
     dict_filename_images = {}
     dict_filename_images[idx_akt] = {} # Filename -> MyImage contains all source filenames which is sufficient as target files are a subset of source files
+    dict_file_meta = {} # filename -> (type, process type), used by MyImage.imgtype / process_type
     def __init__(self, debug, root = None, list_imagefiles = None, list_result = None, callback = None): # if called from own main root will be initialized there
         if root is None:
             self.root = tk.Toplevel()
@@ -344,6 +471,8 @@ class Diatisch:
           "WIDGET":tk.Label,"VAR":"Label_target_ctr","OFFSET":gap,"RELH":self.label_height,"RELW":.20,"ANCHOR":"CENTER","TEXT":"Num Images Target: 0","FONT":self.text_font}
         tools.create_widgets_from_dict(dict_widgets, self.Frame_labels2, "HORIZONTAL", font = self.text_font, bgcolor = tools._bgcolor)
         self.cb_camera.config(textvariable=self.cb_camera_var)
+        self.cb_camera.configure(state = 'readonly') # camera is chosen from the list, index of the selection gives the camera name
+        self.cb_camera.bind('<<ComboboxSelected>>', self.on_camera_selected)
 
         self.Frame_source = tk.Frame(self.root)
         self.Frame_source.place(relx=.01, rely=0.05, relheight=0.75, relwidth=0.48)
@@ -659,10 +788,13 @@ class Diatisch:
         self.context_menu_source.add_command(label="Show"   , command=self.canvas_image_source_event)    
         self.context_menu_source.add_command(label="Copy Selected"   , command=self.copy_selected_source_images)    
         self.context_menu_source.add_command(label="Copy "   , command=self.copy_single_source_image)    
+        self.context_menu_source.add_command(label="Print", command=self.print_image_under_menu)
         self.context_menu_target = tk.Menu(self.target_canvas, tearoff=0)
         self.context_menu_target.add_command(label="Show"   , command=self.canvas_image_target_event)  
         self.context_menu_target.add_command(label="Delete Selected"   , command=self.delete_selected_target_images)    
         self.context_menu_target.add_command(label="Delete "   , command=self.delete_single_target_image)    
+
+        self.context_menu_target.add_command(label="Print", command=self.print_image_under_menu)
 
         self.default_indir  = ""
         self.datadir = ""
@@ -711,6 +843,18 @@ class Diatisch:
         self.dict_file_FSImage_source = {} # dict for keeping track of FS Images
         self.dict_file_FSImage_target = {} # dict for keeping track of FS Images
         self.sort_method = 0
+        # print
+        self.printer = None
+        self.preview = None
+        self.image_to_print = None # image under the context menu
+        # camera data of the currently selected camera (see load_camera_data)
+        self.camera = ""
+        self.camera_names = []        # names parallel to the values of the combobox
+        self.dict_cameras = {}        # TYPE -> "SUF1, SUF2" (only types / suffixes which Diatisch can show)
+        self.dict_process_image = {}  # SUFFIX -> process type (JPEG, USE_JPEG, RAW)
+        self.dict_suffix_type = {}    # SUFFIX -> TYPE
+        self.dict_firstname_fullname = {} # (folder, firstname) -> companion JPEG for RAW / USE_JPEG
+        self.loaded_dir = None        # directory of the last load (None if loaded from lists), needed for reload on camera change
 
         # automatic font fit for all text widgets (central helper: tools.FontFitter)
         self.font_fitter = tools.FontFitter(
@@ -762,6 +906,10 @@ class Diatisch:
         self.filemenu.add_command(label="New Outdir", command=self.new_outdir)
         self.filemenu.add_command(label="Open", command=self.load_images)
         self.filemenu.add_command(label="Close", command=self.close_indir)
+        # printing, same as in Dateimeister_support
+        self.filemenu.add_separator()
+        self.filemenu.add_command(label=MENU_LABEL_CHOOSE_PRINTER, command=self.choose_printer)
+        self.filemenu.add_command(label=MENU_LABEL_PRINT, command=self.print_selected, state=DISABLED)
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.root.quit)
         self.menubar.add_cascade(label="File", menu=self.filemenu)
@@ -828,76 +976,213 @@ class Diatisch:
         if self.list_imagefiles:
             self.load_images(None, self.list_imagefiles)
 
-    def update_combobox_camera(self):
-        # Kameradaten einlesen
-        dict_t, dict_s, dict_pi = DX.get_camera_xml(
-            self.config_files_xml,
-            debug=self.debug
-        )
-
-        if self.debug:
-            print(f"dict_t  is {dict_t}")
-            print(f"dict_s  is {dict_s}")
-            print(f"dict_pi is {dict_pi}")
-
-        # Last-Use-Datum der Kameras
-        dict_cameras_usedate = DX.get_cameras_usedate(
-            self.config_files_xml
-        )
+    def update_combobox_camera(self, keep_camera = None):
+        # fill the camera combobox, newest camera (usedate) first. If keep_camera is given and still exists it stays selected.
+        # Also (re)loads the camera data (types, suffixes, process types) of the selected camera.
+        dict_cameras = DX.get_cameras_types_suffixes(self.config_files_xml)
+        dict_usedate = DX.get_cameras_usedate(self.config_files_xml)
+        dict_pi_all  = DX.get_process_image_per_camera(self.config_files_xml)
         entries = []
-        for camera in dict_t:
+        for camera, d1 in dict_cameras.items():
             st = camera
-            d1 = dict_t[camera]
-            for cam_type in d1:
+            for cam_type, suffixes in d1.items():
+                pi = dict_pi_all.get(camera, {}).get(cam_type, {})
                 st += f" {cam_type}("
-                suffixes = d1[cam_type]
-                suffix_list = [
-                    x.strip()
-                    for x in suffixes.split(",")
-                    if x.strip()
-                ]
-                for i, p in enumerate(suffix_list):
-                    st += f" {p}:{dict_pi[p]}"
-                    if i < len(suffix_list) - 1:
-                        st += ","
+                st += ",".join(f" {s}:{pi.get(s.upper(), '?')}" for s in suffixes)
                 st += ")"
+            entries.append({"camera": camera, "usedate": dict_usedate.get(camera, ""), "display": st})
+        entries.sort(key = lambda e: e["usedate"], reverse = True)
 
-            if self.debug:
-                print(f"ST is {st}")
-
-            # Usedate für Sortierung merken
-            usedate = dict_cameras_usedate.get(camera, 0)
-            entries.append(
-                {
-                    "camera": camera,
-                    "usedate": usedate,
-                    "display": st
-                }
-            )
-
-        # Absteigend nach Usedate sortieren
-        entries.sort(
-            key=lambda x: x["usedate"],
-            reverse=True
-        )
-
-        # Liste für Combobox erzeugen
+        self.camera_names = [e["camera"] for e in entries]
         list_cam = [e["display"] for e in entries]
-        self.cb_camera.configure(values=list_cam)
-        # Ersten (= jüngsten) Eintrag auswählen
+        self.cb_camera.configure(values = list_cam)
+        idx = 0
+        if keep_camera and keep_camera.upper() in self.camera_names:
+            idx = self.camera_names.index(keep_camera.upper())
         if list_cam:
-            self.cb_camera.current(0)
-            # falls textvariable vorhanden:
-            self.cb_camera_var.set(list_cam[0])
-
+            self.cb_camera.current(idx)
+            self.cb_camera_var.set(list_cam[idx])
+            self.load_camera_data(self.camera_names[idx])
+        else:
+            self.cb_camera_var.set("")
+            self.load_camera_data("")
         if self.debug:
             print("Sortierte Kameraliste:")
             for e in entries:
-                print(
-                    f"{e['usedate']}  "
-                    f"{e['camera']}  "
-                    f"{e['display']}"
-                )
+                print(f"{e['usedate']}  {e['camera']}  {e['display']}")
+
+    def get_current_camera(self):
+        # name of the camera selected in the combobox ("" if none)
+        idx = self.cb_camera.current()
+        if 0 <= idx < len(self.camera_names):
+            return self.camera_names[idx]
+        return ""
+
+    def load_camera_data(self, camera):
+        # build the per-camera dicts. Only suffixes whose process type is allowed by proc_types in the ini (and is not VIDEO)
+        # are used, because Diatisch shows still images.
+        self.camera = camera
+        self.dict_cameras = {}
+        self.dict_process_image = {}
+        self.dict_suffix_type = {}
+        allowed = {p.strip().upper() for p in self.proctypes.split(",") if p.strip()} - {"VIDEO"}
+        if camera:
+            cam_key = camera.upper()
+            dict_types = DX.get_cameras_types_suffixes(self.config_files_xml).get(cam_key, {})
+            pi = DX.get_process_image_per_camera(self.config_files_xml).get(cam_key, {})
+            for type_name, suffixes in dict_types.items():
+                usable = []
+                for s in suffixes:
+                    s = s.strip()
+                    process = pi.get(type_name, {}).get(s.upper(), "")
+                    if s and process in allowed:
+                        usable.append(s)
+                        self.dict_process_image[s.upper()] = process
+                        self.dict_suffix_type[s.upper()] = type_name
+                    else:
+                        print(f"camera {camera} type {type_name} suffix {s}: process type '{process}' not usable in Diatisch, skipped") if self.debug else True
+                if usable:
+                    self.dict_cameras[type_name] = ", ".join(usable)
+        if not self.dict_cameras: # no camera or no usable type: behave like before (JPEG only)
+            print("Diatisch: no usable camera types, using default JPEG: JPG, JPEG")
+            self.dict_cameras["JPEG"] = "JPG, JPEG"
+            for s in ("JPG", "JPEG"):
+                self.dict_process_image[s] = PROCESS_JPEG
+                self.dict_suffix_type[s]   = "JPEG"
+        print(f"Diatisch camera {camera}: types {self.dict_cameras}") if self.debug else True
+
+    def process_type_of(self, filename):
+        # process type (JPEG, USE_JPEG, RAW) of a file according to its suffix, "" if unknown
+        ext = os.path.splitext(filename)[1].lstrip(".").upper()
+        return self.dict_process_image.get(ext, "")
+
+    def type_of(self, filename):
+        ext = os.path.splitext(filename)[1].lstrip(".").upper()
+        return self.dict_suffix_type.get(ext, "")
+
+    def on_camera_selected(self, event = None):
+        # user picked another camera in the combobox
+        camera = self.get_current_camera()
+        if not camera or camera.upper() == self.camera.upper():
+            return
+        ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+        try:
+            DX.update_camera_usedate(self.config_files_xml, camera, ts) # so it is the preselected one next time
+        except Exception as e:
+            print(f"cannot update usedate of camera {camera}: {e}")
+        self.load_camera_data(camera)
+        self.reload_after_camera_change()
+
+    def reload_after_camera_change(self):
+        # rebuild the source images with the types / suffixes of the current camera. Target images which are still
+        # visible in the new source list are kept (in their order), the others are dropped. Undo brings everything back.
+        keep = [i.get_filename() for i in self.list_target_images]
+        if self.loaded_dir:
+            self.load_images(self.loaded_dir, None, None, keep)
+        elif self.list_source_images:
+            sources = [i.get_filename() for i in self.list_source_images]
+            self.load_images(None, sources, None, keep)
+
+    # --- companion JPEG and thumbnails -----------------------------------------------------------------------------------
+    @staticmethod
+    def _companion_key(path):
+        return (os.path.normcase(os.path.normpath(os.path.dirname(path))), os.path.splitext(os.path.basename(path))[0].lower())
+
+    def _collect_companions(self, files):
+        # remember the JPEGs by (folder, firstname), so RAW / USE_JPEG files find the JPEG with the same name
+        self.dict_firstname_fullname = {}
+        for f in files:
+            if self.process_type_of(f) == PROCESS_JPEG:
+                self.dict_firstname_fullname[self._companion_key(f)] = f # more than one: the last one counts
+
+    def _companion(self, file):
+        c = self.dict_firstname_fullname.get(self._companion_key(file))
+        if c and os.path.normcase(c) != os.path.normcase(file):
+            return c
+        base = os.path.splitext(file)[0] # e.g. file list from Dateimeister: look into the folder
+        for suffix, process in self.dict_process_image.items():
+            if process == PROCESS_JPEG:
+                for s in (suffix.lower(), suffix):
+                    cand = base + "." + s
+                    if tools.isfile_fast(cand):   # network share: short test, no long timeout
+                        return cand
+        return None
+
+    def get_showfile(self, file):
+        # file which the detail window (FSImage) shows: companion JPEG for USE_JPEG, otherwise the file itself
+        if self.process_type_of(file) == PROCESS_USE_JPEG:
+            return self._companion(file) or file
+        return file
+
+    def _load_raw_pil(self, filename):
+        # embedded JPEG of a RAW file as PIL image, None if not possible
+        try:
+            import rawpy_loader
+            pil, w, h = rawpy_loader.load_raw_thumbnail(filename, height = self.row_height)
+            return pil
+        except Exception as e:
+            print(f"RAW not displayable: {filename} ({type(e).__name__}: {e})") if self.debug else True
+            return None
+
+    def _placeholder_image(self, label):
+        img = Image.new("RGB", (int(self.row_height * 1.5), self.row_height), "#2f4f8f")
+        ImageDraw.Draw(img).text((10, 10), label or "?", fill = "white")
+        return img
+
+    def make_photo(self, filename, canvas):
+        # thumbnail for a file depending on its process type. RAW: embedded JPEG, otherwise companion JPEG,
+        # otherwise (and for unreadable files) a blue rectangle, so that the file stays visible and selectable.
+        ptype = self.process_type_of(filename)
+        pil = None
+        try:
+            if ptype == PROCESS_RAW:
+                pil = self._load_raw_pil(filename)
+                if pil is None:
+                    comp = self._companion(filename)
+                    if comp:
+                        pil = Image.open(comp)
+            elif ptype == PROCESS_USE_JPEG:
+                comp = self._companion(filename)
+                if comp:
+                    pil = Image.open(comp)
+            else: # JPEG or unknown suffix (e.g. from config file): try as normal image
+                pil = Image.open(filename)
+            if pil is not None:
+                w, h = pil.size
+                faktor = min(self.row_height / h, self.image_width / w)
+                pil.thumbnail((int(w * faktor), int(h * faktor)))
+        except Exception as e:
+            print(f"Image not readable: {filename} ({type(e).__name__}: {e})")
+            pil = None
+        if pil is None:
+            pil = self._placeholder_image(ptype or "?")
+        return ImageTk.PhotoImage(pil, master = canvas)
+
+    def create_fsimage(self, canvas_type, img, file):
+        # detail window for source or target image. file = original filename (key in dict_file_FSImage_*)
+        showfile = self.get_showfile(file)
+        if canvas_type == "Source":
+            canvas, prefix, text = self.source_canvas, "Source: ", "Copy"
+        else:
+            canvas, prefix, text = self.target_canvas, "Target: ", "Delete"
+        thumbnail = Thumbnail(img, file, None, canvas, self.debug, canvas_type, self.fs_close, self.fs_button,
+                              process_type = self.process_type_of(file), showfile = showfile)
+        # read metadata once, so MyFSImage always has something to show
+        try:
+            thumbnail.set_metadata()
+        except Exception as e:
+            print(f"create_fsimage: set_metadata failed for {file}: {type(e).__name__}: {e}") if self.debug else True
+        return FS.MyFSImage(
+            file = showfile,
+            thumbnail = thumbnail,
+            caller = self,
+            str_title_prefix = prefix,
+            str_include = text,
+            str_exclude = text,
+            str_included = "",
+            str_excluded = "",
+            debug = self.debug
+        )
 
     def xupdate_combobox_camera(self):
        # update the camera combobox
@@ -928,17 +1213,109 @@ class Diatisch:
         camera, cam_key = DX.get_recent_camera(self.config_files_xml, debug = self.debug)
         self.cb_camera_var.set(cam_key)
 
+    # --- printing (same as in Dateimeister_support) -----------------------------------------------------------------------
+    def choose_printer(self):
+        ret = print_utils.choose_printer(self.root)
+        print(f"Printer selected is {ret}") if self.debug else True
+        self.printer = ret
+
+    def _is_own_print_source(self, source):
+        # Dateimeister and Diatisch share the event manager. Only handle requests from our own windows.
+        if source is self:
+            return True
+        for d in (self.dict_file_FSImage_source, self.dict_file_FSImage_target):
+            for v in d.values():
+                if v is source:
+                    return True
+        return getattr(source, "caller", None) is self or getattr(source, "main", None) is self
+
     def handle_print_request(self, event):
-        """Zentrale Drucklogik: nimmt PrintRequestEvent entgegen, egal ob aus
-        MyFSImage, MyFSVideo, MyDuplicates oder aus dem eigenen Context-Menu.
-        Erzeugt / holt den einen PrintPreview und ruft add_photo(filename)."""
+        # central print logic: takes PrintRequestEvent from FSImage or from our own context menu,
+        # creates / reuses the one PrintPreview and calls add_photo(filename).
         filename = event.filename
         print(f"Print request: file={filename} source={event.source}") if self.debug else True
+        if not self._is_own_print_source(event.source):
+            return
+        if self.preview is None or not self._is_preview_window_alive(self.preview):
+            self.preview = PrintPreview(
+                self.root,
+                rows = 3,
+                preview_dir = Globals.temp_files_path,
+                printer = self.printer,
+                close_callback = self.preview_closed
+            )
+        self.preview.add_photo(filename)
+        self.preview.bring_to_front()
+        self.filemenu.entryconfig(MENU_LABEL_PRINT, state = NORMAL)
 
+    @staticmethod
+    def _is_preview_window_alive(preview):
+        try:
+            return bool(preview.window.winfo_exists())
+        except tk.TclError:
+            return False
+
+    def preview_closed(self):
+        # callback called by PrintPreview when it is closed
+        print("PRINT Preview closed") if self.debug else True
+        self.preview = None
+        self.filemenu.entryconfig(MENU_LABEL_PRINT, state = DISABLED)
+
+    def print_selected(self):
+        # file menu 'Print selected': forward to the visible PrintPreview
+        if self.preview is None or not self._is_preview_window_alive(self.preview):
+            return
+        self.preview.print_selected()
+
+    def print_image_under_menu(self):
+        # context menu 'Print' of source / target canvas
+        if self.image_to_print is not None:
+            self.print_image(self.image_to_print)
+
+    def print_image(self, img):
+        filename = img.get_filename()
+        ptype = self.process_type_of(filename)
+        printfile = filename
+        if ptype == PROCESS_RAW:
+            # embedded JPEG in original size as temporary PNG; fallback: companion JPEG
+            pil = None
+            try:
+                import rawpy_loader
+                pil = rawpy_loader.load_raw_embedded(filename)
+            except Exception as e:
+                print(f"RAW not loadable: {filename} ({type(e).__name__}: {e})")
+            if pil is not None:
+                import uuid
+                os.makedirs(Globals.temp_files_path, exist_ok = True)
+                printfile = os.path.join(Globals.temp_files_path, f"print_{uuid.uuid4().hex}.png")
+                pil.save(printfile, format = "PNG")
+            else:
+                printfile = self._companion(filename)
+                if not printfile:
+                    tools.info_box(f"RAW konnte nicht geladen werden: {filename}", "fehler")
+                    return
+        elif ptype == PROCESS_USE_JPEG:
+            printfile = self._companion(filename)
+            if not printfile:
+                tools.info_box(f"Kein Begleit-JPEG gefunden: {filename}", "fehler")
+                return
+        Globals.eventManager.generate("PrintRequestEvent", PrintRequestEvent(printfile, self))
+
+    # --- camera changed ---------------------------------------------------------------------------------------------------
     def handle_camera_changed(self, event):
-        """ called when Dateimeister_camera fires event that camera has changes
-        """
-        print (f"camera changed event received for camera: {event.camera}")
+        # called when Dateimeister_camera fires the event that a camera has been changed
+        print(f"camera changed event received for camera: {event.camera}") if self.debug else True
+        try:
+            if not self.root.winfo_exists():
+                return
+        except tk.TclError:
+            return
+        old = self.camera
+        # cameras / types / suffixes may have changed: rebuild combobox and camera data, keep our camera if it still exists
+        self.update_combobox_camera(keep_camera = old)
+        if self.camera.upper() == (event.camera or "").upper() or self.camera.upper() != old.upper():
+            print(f"camera {self.camera} changed, reload required") if self.debug else True
+            self.reload_after_camera_change()
 
     def read_ini(self):
         inifile = "Diatisch.ini" 
@@ -957,6 +1334,19 @@ class Diatisch:
         if self.platform != "UNIX" and self.platform != "WINDOWS":
             messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + self.platform)
             exit()
+        # datadir / config_files_subdir are also needed in Globals (camera treeview). A key can only appear once in
+        # dict_ini_spec, so the attribute in self may be missing -> fall back to the Globals value
+        if not self.datadir:
+            self.datadir = getattr(Globals, "datadir", "") or ""
+        if not self.config_files_subdir:
+            self.config_files_subdir = getattr(Globals, "config_files_subdir", "") or ""
+        # temp dir for print previews (RAW -> PNG, PrintPreview)
+        temp_subdir = getattr(Globals, "temp_files_subdir", None) or "daten/temp"
+        Globals.temp_files_path = os.path.join(self.datadir, temp_subdir)
+        try:
+            os.makedirs(Globals.temp_files_path, exist_ok = True)
+        except OSError as e:
+            print(f"cannot create temp dir {Globals.temp_files_path}: {e}")
         # end properties
 
     def close_child_windows(self): #closes fs-images    
@@ -964,11 +1354,18 @@ class Diatisch:
         # delete all fsimage by close-call
         for t in self.dict_file_FSImage_source:
             u = self.dict_file_FSImage_source[t]
-            u.close_handler_external()
+            Globals.eventManager.generate(
+                "ClosingEvent",
+                ClosingEvent("", self) # file, self, see tools
+            )
+            
         self.dict_file_FSImage_source = {}
         for t in self.dict_file_FSImage_target:
             u = self.dict_file_FSImage_target[t]
-            u.close_handler_external()
+            Globals.eventManager.generate(
+                "ClosingEvent",
+                ClosingEvent("", self) # file, self, see tools
+            )
         self.dict_file_FSImage_target = {}
 
     def recent_config_cfg(self, item):
@@ -1183,17 +1580,26 @@ class Diatisch:
         print("{:s} elapsed start resize".format(text))
         
     def button_camera_pressed(self):
-        str_cam = self.cb_camera.get()
-        camera = str_cam.split()[0] if str_cam.split() else ""
+        camera = self.get_current_camera() # camera names may contain blanks, so not parsed from the display text
         self.win_camera = DCAM.MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug, xmlfile = self.config_files_xml, cameraname = camera) 
 
     def cameras_edit(self):
         self.win_camera = DCAM.MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug, xmlfile = self.config_files_xml) 
 
 
-    def load_images(self, p_indir = None, p_imagefiles_source = None, p_imagefiles_target = None):
+    def load_images(self, p_indir = None, p_imagefiles_source = None, p_imagefiles_target = None, p_keep_targets = None):
         # if list-source is given use it, else ask for dir to open
         # if list-target is given use it
+        # p_keep_targets: target files to keep (e.g. after a camera change), only files which are still in source are used
+        directory = None
+        if p_imagefiles_source: # imagefiles given by caller, no directory needed
+            pass
+        elif p_indir: # directory given by caller
+            directory = p_indir
+        else: # display dir dialog
+            directory = fd.askdirectory(parent = self.root)
+            if not directory: # cancelled, the current display stays untouched
+                return False
         # close all FSImage-Windows
         self.close_child_windows()
         self.list_source_images = []
@@ -1208,100 +1614,105 @@ class Diatisch:
         #self.UR.reset()
         tag_prefix = 'P'
         tag_no = 0
-        directory = None
-        busy = tools.BusyDialog(self.root, text= " files are loaded…")        
-        if p_imagefiles_source: # imagefiles given by caller, no directory needed
-            self.image_files = p_imagefiles_source
-        elif p_indir: #directory given by caller
-            directory = p_indir
-        else: # display dir dialog
-            directory = fd.askdirectory()
-            if not directory: # something went wrong
-                messagebox.showerror("Open", "unable to open: " + directory, parent = self.root)
-                return False
-        if directory: # read files from directory
-            # ask checkbox if recursive
-            if self.cb_recursive_var.get():
-                recursive = "j"
-            else:
-                recursive = "n"
-
-            if recursive == "j":
-                files_total = tools.count_files_recursive(p_indir)
-            else:
-                files_total = tools.count_files_top(p_indir)
-            self.dict_source_target, dict_source_target_jpeg, self.dict_source_target_tooold, self.dict_relpath = \
-              DG.dateimeister(self.imagetype, self.imagetypes, directory, "", "n", recursive, False, "", None, self.sort_method, busy, files_total, self.debug)
-            # copy result to image_files
-            tfiles = []
-            for i in self.dict_source_target:          
-                tfiles.append(i)
-            self.image_files.clear()
-            self.image_files = sorted(tfiles)
-            # now make an entry for this indir.
-            ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
-            this_i = re.sub(r'\\', '/', directory).lower()
-            # delete indir-entries from xml if number gt than max from ini, oldest and not existing first. we have to supply the necessary xml-information
-            self.new_item_in_xml(self.max_indirs, this_i, ts, "indirs", "indir", "name")
-            # now create new indir
-            DX.new_dir_diatisch(self.config_files_xml, "indirs", "indir", "name", directory.lower(), ts)
-        for img_file in self.image_files:
-            tag_no += 1
-            if directory:
-                filename = os.path.join(directory, img_file)
-            else:
-                filename = img_file
-            # get image
-            img = Image.open(filename)
-            image_width_orig, image_height_orig = img.size
-            faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
-            #print("Image " + filename + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor)) if self.debug else True
-            display_width  = int(image_width_orig * faktor)
-            display_height = int(image_height_orig * faktor)
-            newsize = (display_width, display_height)
-            r_img = img
-            r_img.thumbnail(newsize)
-            photo = ImageTk.PhotoImage(r_img, master = self.source_canvas)
-            # insert into self.list_source_images
-            i = MyImage(filename, os.stat(filename).st_mtime, self.source_canvas, tag_prefix + str(tag_no))
-            self.list_source_images.append(i)
-            Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = photo
-            
-        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
-        self.unselect_all(self.dict_source_images, self.source_canvas)
-        self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
-        
-        if p_imagefiles_target: # imagefiles given by caller
-            for filename in p_imagefiles_target:
+        missing = []
+        try:
+            if p_imagefiles_source:
+                self.image_files = list(p_imagefiles_source)
+                self._collect_companions(self.image_files)
+            if directory: # read files from directory, one scan per type of the selected camera
+                if self.cb_recursive_var.get():
+                    recursive = "j"
+                else:
+                    recursive = "n"
+                skip_top = getattr(Globals, "skip_dirs_top", None)
+                skip_any = getattr(Globals, "skip_dirs_any", None)
+                # count files first - do it inside a BusyDialog so the user sees something is going on
+                busy = tools.BusyDialog(self.root, text="Dateien werden gezählt…")
+                try:
+                    if recursive == "j":
+                        files_total = DG.count_files(directory, skip_top, skip_any) # same exclusions as the scan
+                    else:
+                        files_total = tools.count_files_top(directory)
+                finally:
+                    busy.close()
+                # now scan with progress feedback (BusyDialog with cancel support)
+                dict_source_target = {}
+                dict_source_jpeg   = {}
+                busy = tools.BusyDialog(self.root, text="Dateien werden geladen…")
+                try:
+                    for dateityp, endung in self.dict_cameras.items():
+                        if busy.cancelled:
+                            break
+                        st, st_jpeg, st_tooold, relpath = \
+                          DG.dateimeister(dateityp, endung, directory, "", "n", recursive, False, "", None, 0, busy, files_total, skip_top, skip_any, self.debug)
+                        dict_source_target.update(st)
+                        dict_source_jpeg.update(st_jpeg)
+                finally:
+                    busy.close()
+                self.dict_source_target = dict_source_target
+                self.image_files = sorted(dict_source_target)
+                self._collect_companions(list(dict_source_jpeg) + self.image_files)
+                # now make an entry for this indir.
+                ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
+                this_i = re.sub(r'\\', '/', directory).lower()
+                # delete indir-entries from xml if number gt than max from ini, oldest and not existing first. we have to supply the necessary xml-information
+                self.new_item_in_xml(self.max_indirs, this_i, ts, "indirs", "indir", "name")
+                # now create new indir
+                DX.new_dir_diatisch(self.config_files_xml, "indirs", "indir", "name", directory.lower(), ts)
+            for img_file in self.image_files:
+                if directory:
+                    filename = os.path.join(directory, img_file)
+                else:
+                    filename = img_file
+                if not tools.isfile_fast(filename):   # network share: short test, no long timeout
+                    missing.append(filename)
+                    continue
                 tag_no += 1
-                # get image
-                img = Image.open(filename)
-                image_width_orig, image_height_orig = img.size
-                faktor = min(self.row_height / image_height_orig, self.image_width / image_width_orig)
-                #print("Image " + filename + " width = " + str(image_width_orig) + " height = " + str(image_height_orig) + " Faktor = " + str(faktor)) if self.debug else True
-                display_width  = int(image_width_orig * faktor)
-                display_height = int(image_height_orig * faktor)
-                newsize = (display_width, display_height)
-                r_img = img
-                r_img.thumbnail(newsize)
-                photo = ImageTk.PhotoImage(r_img, master = self.target_canvas)
-                # insert into self.list_target_images
-                i = MyImage(filename, os.stat(filename).st_mtime, self.target_canvas, tag_prefix + str(tag_no))
-                self.list_target_images.append(i)
-                #Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = photo
-            
-            self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
-            self.unselect_all(self.dict_target_images, self.target_canvas)
-            self.target_canvas.configure(scrollregion=self.target_canvas.bbox("all")) # update scrollregion
-            if len(self.list_target_images) > 0: # anz target images > 0    
-                self.button_exec.config(state = tk.NORMAL)        
+                Diatisch.dict_file_meta[filename] = (self.type_of(filename), self.process_type_of(filename))
+                photo = self.make_photo(filename, self.source_canvas)
+                # insert into self.list_source_images
+                i = MyImage(filename, os.stat(filename).st_mtime, self.source_canvas, tag_prefix + str(tag_no))
+                self.list_source_images.append(i)
+                Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = photo
 
+            self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
+            self.unselect_all(self.dict_source_images, self.source_canvas)
+            self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
+
+            if p_keep_targets: # only files which are still in source
+                p_imagefiles_target = [f for f in p_keep_targets if f in Diatisch.dict_filename_images[Diatisch.idx_akt]]
+            if p_imagefiles_target: # imagefiles given by caller
+                for filename in p_imagefiles_target:
+                    if not tools.isfile_fast(filename):
+                        missing.append(filename)
+                        continue
+                    tag_no += 1
+                    if filename not in Diatisch.dict_filename_images[Diatisch.idx_akt]: # target which is not in source: needs own photo
+                        Diatisch.dict_file_meta[filename] = (self.type_of(filename), self.process_type_of(filename))
+                        Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = self.make_photo(filename, self.source_canvas)
+                    # insert into self.list_target_images
+                    i = MyImage(filename, os.stat(filename).st_mtime, self.target_canvas, tag_prefix + str(tag_no))
+                    self.list_target_images.append(i)
+
+                self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
+                self.unselect_all(self.dict_target_images, self.target_canvas)
+                self.target_canvas.configure(scrollregion=self.target_canvas.bbox("all")) # update scrollregion
+                if len(self.list_target_images) > 0: # anz target images > 0
+                    self.button_exec.config(state = tk.NORMAL)
+        except Exception:
+            import traceback
+            traceback.print_exc()
+
+        self.loaded_dir = directory # None if loaded from lists
+        if directory:
+            self.indir = directory
         print("LOAD ", directory)
-        busy.close()
         display_dir = "n.a."
-        if directory: 
+        if directory:
             self.update_listbox_indir()
             display_dir = directory
+        if missing:
+            messagebox.showwarning("Load", "{:d} file(s) not found and skipped:\n{:s}".format(len(missing), "\n".join(missing[:10])), parent = self.root)
         # sort images according to radiobuttons
         self.rb_sort()
         self.historize_process("load directory {:s}".format(display_dir))
@@ -1390,6 +1801,8 @@ class Diatisch:
             text     = img.get_filename()
             self.context_menu_source.entryconfig(0, label = "Show " + text)
             self.context_menu_source.entryconfig(2, label = "Copy " + text)
+            self.context_menu_source.entryconfig(3, label = "Print " + text)
+            self.image_to_print = img
             self.single_image_to_copy = img # will be set to None in update_target_canvas after copying
             selected = False
             for i in self.list_source_images:
@@ -1415,6 +1828,8 @@ class Diatisch:
             text     = img.get_filename()
             self.context_menu_target.entryconfig(0, label = "Show " + text)
             self.context_menu_target.entryconfig(2, label = "Delete " + text)
+            self.context_menu_target.entryconfig(3, label = "Print " + text)
+            self.image_to_print = img
             self.single_image_to_delete = img # will be set to None in delete_target_canvas after delete
             selected = False
             for i in self.list_target_images:
@@ -1442,7 +1857,7 @@ class Diatisch:
             image_id = closest[0]
             if image_id in self.dict_source_images:
                 img      = self.dict_source_images[image_id]
-                text = "{:s}\n created {:s} size {:.3f}".format(img.getFile(), img.get_filectime(), img.get_filesize())
+                text = "{:s}\n type {:s}, created {:s} size {:.3f}".format(img.getFile(), img.imgtype or "?", img.get_filectime(), img.get_filesize())
                 if text != self.tooltiptext_st:
                     self.st.update(text)
                     self.tooltiptext_st = text
@@ -1462,7 +1877,7 @@ class Diatisch:
             image_id = closest[0]
             if image_id in self.dict_target_images:
                 img      = self.dict_target_images[image_id]
-                text = "{:s}\n created {:s} size {:.3f}".format(img.getFile(), img.get_filectime(), img.get_filesize())
+                text = "{:s}\n type {:s}, created {:s} size {:.3f}".format(img.getFile(), img.imgtype or "?", img.get_filectime(), img.get_filesize())
                 if text != self.tooltiptext_tt:
                     self.tt.update(text)
                     self.tooltiptext_tt = text
@@ -1538,18 +1953,7 @@ class Diatisch:
             if file in self.dict_file_FSImage_source: #dont display twice
                 print ("FSImage Source exists for file: " + file) if self.debug else True
             else:
-                thumbnail = Thumbnail(img, file, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(
-                    file = file, 
-                    thumbnail = thumbnail, 
-                    caller = self,
-                    str_title_prefix = "Source: ", 
-                    str_include = "Copy",
-                    str_exclude = "Copy",
-                    str_included = "",
-                    str_excluded = "",
-                    debug = self.debug
-                )
+                fs_image = self.create_fsimage("Source", img, file)
                 self.dict_file_FSImage_source[file] = fs_image
                 self.historize_process("show source FSImage {:s}".format(file))
 
@@ -1573,18 +1977,7 @@ class Diatisch:
             if file in self.dict_file_FSImage_target: #dont display twice
                 print ("FSImage Target exists for file: " + file) if self.debug else True
             else:
-                thumbnail = Thumbnail(img, file, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(
-                    file = file, 
-                    thumbnail = thumbnail, 
-                    caller = self,
-                    str_title_prefix = "Target: ", 
-                    str_include = "Delete",
-                    str_exclude = "Delete",
-                    str_included = "",
-                    str_excluded = "",
-                    debug = self.debug
-                )
+                fs_image = self.create_fsimage("Target", img, file)
                 self.dict_file_FSImage_target[file] = fs_image
                 self.historize_process("show target FSImage {:s}".format(file))
 
@@ -1898,13 +2291,19 @@ class Diatisch:
             self.single_image_to_copy = image
             self.copy_single_source_image()
             if filename in self.dict_file_FSImage_source:
-                self.dict_file_FSImage_source[filename].close_handler_external()
+                Globals.eventManager.generate(
+                    "ClosingEvent",
+                    ClosingEvent("", self) # file, self, see tools
+                )
                 self.dict_file_FSImage_source.pop(filename)
         elif canvas_type == "Target": # delete Image and close
             self.single_image_to_delete = image
             self.delete_single_target_image()
             if filename in self.dict_file_FSImage_target:
-                self.dict_file_FSImage_target[filename].close_handler_external()
+                Globals.eventManager.generate(
+                    "ClosingEvent",
+                    ClosingEvent("", self) # file, self, see tools
+                )
                 self.dict_file_FSImage_target.pop(filename)
 
     def fs_close(self, canvas_type, thumbnail, state, image):
@@ -2199,7 +2598,10 @@ class Diatisch:
         for filename in list_FSImages_to_delete:
             if filename in self.dict_file_FSImage_target:
                 self.dict_file_FSImage_target[filename].thumbnail.fs_close = None # otherwise fs_close would historize close for each FSImage, which is only necessary if user closes the window 
-                self.dict_file_FSImage_target[filename].close_handler_external()
+                Globals.eventManager.generate(
+                    "ClosingEvent",
+                    ClosingEvent("", self) # file, self, see tools
+                )
                 self.dict_file_FSImage_target.pop(filename)
         
         # reset to none
@@ -2374,17 +2776,11 @@ class Diatisch:
     # ----------------------------------------------------------------------
     # 20261112: event handler for closing event
     # ----------------------------------------------------------------------
-    def on_closing(self, event): #if a FS exists in dict_file_image delete entry
-        # source
-        if event.filename in self.dict_file_FSImage_source:
-            thisobj = self.dict_file_FSImage_source[event.filename]
-            if thisobj is event.obj: # has been created by us, not by someone else
-                del self.dict_file_FSImage_source[event.filename]
-        # target
-        if event.filename in self.dict_file_FSImage_target:
-            thisobj = self.dict_file_FSImage_target[event.filename]
-            if thisobj is event.obj: # has been created by us, not by someone else
-                del self.dict_file_FSImage_target[event.filename]
+    def on_closing(self, event): #if a FS exists in dict_file_FSImage_* delete entry
+        # the FSImage may show another file than the key (companion JPEG), so we look for the object
+        for d in (self.dict_file_FSImage_source, self.dict_file_FSImage_target):
+            for k in [k for k, v in d.items() if v is event.obj]: # has been created by us, not by someone else
+                del d[k]
 
     # Undo /Redo functions
     def process_undo(self, event):
@@ -2500,18 +2896,7 @@ class Diatisch:
             # create FSImage and insert into dict
             for i in h.dict_file_thumbnail_source:
                 img = h.dict_file_thumbnail_source[i].image
-                thumbnail = Thumbnail(img, i, None, self.source_canvas, self.debug, "Source", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(
-                    file = i, 
-                    thumbnail = thumbnail, 
-                    caller = self,
-                    str_title_prefix = "Source: ", 
-                    str_include = "Copy",
-                    str_exclude = "Copy",
-                    str_included = "",
-                    str_excluded = "",
-                    debug = self.debug
-                )
+                fs_image = self.create_fsimage("Source", img, i)
                 self.dict_file_FSImage_source[i] = fs_image
         if h.str_hashsum_file_thumbnail_target != self.dict_processid_histobj[processid_predecessor].str_hashsum_file_thumbnail_target: # rebuild FSImages target
             print("restore FSImages") if self.debug else True
@@ -2528,20 +2913,9 @@ class Diatisch:
             # create FSImage and insert into dict
             for i in h.dict_file_thumbnail_target:
                 img = h.dict_file_thumbnail_target[i].image
-                thumbnail = Thumbnail(img, i, None, self.target_canvas, self.debug, "Target", self.fs_close, self.fs_button)
-                fs_image = FS.MyFSImage(
-                    file = i, 
-                    thumbnail = thumbnail, 
-                    caller = self,
-                    str_title_prefix = "Target: ", 
-                    str_include = "Delete",
-                    str_exclude = "Delete",
-                    str_included = "",
-                    str_excluded = "",
-                    debug = self.debug
-                )
+                fs_image = self.create_fsimage("Target", img, i)
                 self.dict_file_FSImage_target[i] = fs_image
-                    
+                        
         
     def historize_process(self, text = None):
         h = HistObj()
@@ -2727,6 +3101,8 @@ class Diatisch:
         DX.new_cfgfile_diatisch(self.config_files_xml, filename, ts, ctr_source, ctr_target)
         # update listbox
         self.update_listbox_cfg()
+        # the file was just written by us: cache knows it exists
+        self.dirchk.cache[filename] = True
 
     def new_indir(self):
         # get dir from dir dialog, insert in xml, update listbox-indirs
@@ -2757,7 +3133,7 @@ class Diatisch:
         # now create new outdir
         DX.new_dir_diatisch(self.config_files_xml, "outdirs", "outdir", "name", this_i, ts)
         self.update_listbox_outdir()    
-        
+    
     
     def donothing(self):
         print("Menuitem not yet implemented") if self.debug else True
@@ -2852,20 +3228,39 @@ class Diatisch:
                 thiscmdfile.write(comment + str_ret + '\n')
             thiscmdfile.close()
 
-    def rb_sort(self):
-        i = int(self.rbvalue.get())
-        if i == 1:
-            self.order_name_asc()
-        elif i == 2:
-            self.order_name_desc()
-        elif i == 3:
-            self.order_date_asc()
-        elif i == 4:
-            self.order_date_desc()
-            
-    def rb_g(self):
-        pass
-            
+    def rb_sort(self, event = None):
+        # radiobuttons name / date asc / desc
+        self.sort_source_images()
+
+    def rb_g(self, event = None):
+        # radiobuttons 'sort within type' (rbg == "1") / 'sort all' (rbg == "2")
+        self.sort_source_images()
+
+    def sort_source_images(self):
+        # rbvalue: 1 name asc, 2 name desc, 3 mod. date asc, 4 mod. date desc
+        # rbg "1" (sort within type): one block per type in the order of the camera types, inside each block by rbvalue
+        # rbg "2" (sort all): sort over all types
+        method = int(self.rbvalue.get())
+        mtime_cache = {}
+        def mtime(path):
+            if path not in mtime_cache:
+                try:
+                    mtime_cache[path] = os.stat(path).st_mtime
+                except OSError:
+                    mtime_cache[path] = 0.0
+            return mtime_cache[path]
+        if method in (1, 2):
+            key = lambda x: x.get_filename()
+        else:
+            key = lambda x: mtime(x.get_filename())
+        lst = sorted(self.list_source_images, key = key, reverse = method in (2, 4))
+        if self.rbg.get() == "1":
+            type_order = {t: n for n, t in enumerate(self.dict_cameras)}
+            lst.sort(key = lambda x: type_order.get(x.imgtype, 999)) # stable: keeps the order inside the type
+        self.list_source_images = lst
+        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
+        self.apply_selections(self.list_source_images, self.source_canvas)
+
     def order_name_asc(self): # order images on source canvas by name asc
         self.list_source_images = sorted(self.list_source_images, key=lambda x: x.get_filename(), reverse=False)
         self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
