@@ -1006,12 +1006,11 @@ class MyCameraTreeview:
 
     def close_handler(self):
         """WM_DELETE_WINDOW handler: destroy the camera window."""
-        for cam in self.cams_changed:
+        for cam in getattr(self, "cams_changed", set()):
             Globals.eventManager.generate(
                 "CameraChangedEvent",
                 CameraChangedEvent(cam, self)
             )
-
         self.root.destroy()
 
     def __del__(self):
