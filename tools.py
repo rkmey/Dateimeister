@@ -736,7 +736,7 @@ class BusyDialog:
 
         self.dialog = tk.Toplevel(root)
         self.dialog.title(title)
-        self.dialog.geometry("320x180")
+        self.dialog.geometry("480x240")
         self.dialog.resizable(False, False)
 
         # Modal
@@ -765,6 +765,14 @@ class BusyDialog:
                                        command=self._cancel)
         self.button_cancel.pack(pady=10)
 
+        # Breite an den tatsächlichen Inhalt anpassen (Titel + Label),
+        # aber nie schmaler als 480 px - sonst springt die Groesse
+        # zwischen den einzelnen BusyDialogs hin und her.
+        self.dialog.update_idletasks()
+        req_w = self.dialog.winfo_reqwidth()
+        req_h = self.dialog.winfo_reqheight()
+        self.dialog.geometry(f"{max(480, req_w)}x{max(240, req_h)}")
+        
         self.dialog.update()
 
     def _cancel(self):

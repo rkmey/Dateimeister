@@ -1279,23 +1279,28 @@ class Diatisch:
         ptype = self.process_type_of(filename)
         printfile = filename
         if ptype == PROCESS_RAW:
-            # embedded JPEG in original size as temporary PNG; fallback: companion JPEG
-            pil = None
+            busy = tools.BusyDialog(self.root, title="RAW wird für den Druck vorbereitet…")
             try:
-                import rawpy_loader
-                pil = rawpy_loader.load_raw_embedded(filename)
-            except Exception as e:
-                print(f"RAW not loadable: {filename} ({type(e).__name__}: {e})")
-            if pil is not None:
-                import uuid
-                os.makedirs(Globals.temp_files_path, exist_ok = True)
-                printfile = os.path.join(Globals.temp_files_path, f"print_{uuid.uuid4().hex}.png")
-                pil.save(printfile, format = "PNG")
-            else:
-                printfile = self._companion(filename)
-                if not printfile:
-                    tools.info_box(f"RAW konnte nicht geladen werden: {filename}", "fehler")
-                    return
+                busy.update_progress(0, 1)          # Event-Loop einmal treiben
+                pil = None
+                try:
+                    import rawpy_loader
+                    pil = rawpy_loader.load_raw_embedded(filename)
+                except Exception as e:
+                    print(f"RAW not loadable: {filename} ({type(e).__name__}: {e})")
+                busy.update_progress(1, 1)          # fertig
+                if pil is not None:
+                    import uuid
+                    os.makedirs(Globals.temp_files_path, exist_ok=True)
+                    printfile = os.path.join(Globals.temp_files_path, f"print_{uuid.uuid4().hex}.png")
+                    pil.save(printfile, format="PNG")
+                else:
+                    printfile = self._companion(filename)
+                    if not printfile:
+                        tools.info_box(f"RAW konnte nicht geladen werden: {filename}", "fehler")
+                        return
+            finally:
+                busy.close()
         elif ptype == PROCESS_USE_JPEG:
             printfile = self._companion(filename)
             if not printfile:
@@ -1583,7 +1588,6 @@ class Diatisch:
     def cameras_edit(self):
         self.win_camera = DCAM.MyCameraTreeview(pmain = self, proctypes = self.proctypes, debug = self.debug, xmlfile = self.config_files_xml) 
 
-
     def load_images(self, p_indir = None, p_imagefiles_source = None, p_imagefiles_target = None, p_keep_targets = None):
         # if list-source is given use it, else ask for dir to open
         # if list-target is given use it
@@ -1612,6 +1616,7 @@ class Diatisch:
         tag_prefix = 'P'
         tag_no = 0
         missing = []
+        cancelled_any = False
         try:
             if p_imagefiles_source:
                 self.image_files = list(p_imagefiles_source)
@@ -1632,20 +1637,21 @@ class Diatisch:
                         files_total = tools.count_files_top(directory)
                 finally:
                     busy.close()
-                # now scan with progress feedback (BusyDialog with cancel support)
+                # now scan per type, each type gets its own BusyDialog with cancel support
                 dict_source_target = {}
                 dict_source_jpeg   = {}
-                busy = tools.BusyDialog(self.root, text="Dateien werden geladen…")
-                try:
-                    for dateityp, endung in self.dict_cameras.items():
-                        if busy.cancelled:
-                            break
+                for dateityp, endung in self.dict_cameras.items():
+                    busy = tools.BusyDialog(self.root, text=f"{dateityp}: Dateien werden geladen…")
+                    try:
                         st, st_jpeg, st_tooold, relpath = \
                           DG.dateimeister(dateityp, endung, directory, "", "n", recursive, False, "", None, 0, busy, files_total, skip_top, skip_any, self.debug)
                         dict_source_target.update(st)
                         dict_source_jpeg.update(st_jpeg)
-                finally:
-                    busy.close()
+                    finally:
+                        busy.close()
+                    if busy.cancelled:
+                        cancelled_any = True
+                        break
                 self.dict_source_target = dict_source_target
                 self.image_files = sorted(dict_source_target)
                 self._collect_companions(list(dict_source_jpeg) + self.image_files)
@@ -1656,46 +1662,96 @@ class Diatisch:
                 self.new_item_in_xml(self.max_indirs, this_i, ts, "indirs", "indir", "name")
                 # now create new indir
                 DX.new_dir_diatisch(self.config_files_xml, "indirs", "indir", "name", directory.lower(), ts)
+
+            # --- thumbnails per type, each type gets its own BusyDialog ---
+            files_by_type = {}
             for img_file in self.image_files:
-                if directory:
-                    filename = os.path.join(directory, img_file)
-                else:
-                    filename = img_file
-                if not tools.isfile_fast(filename):   # network share: short test, no long timeout
-                    missing.append(filename)
-                    continue
-                tag_no += 1
-                Diatisch.dict_file_meta[filename] = (self.type_of(filename), self.process_type_of(filename))
-                photo = self.make_photo(filename, self.source_canvas)
-                # insert into self.list_source_images
-                i = MyImage(filename, os.stat(filename).st_mtime, self.source_canvas, tag_prefix + str(tag_no))
-                self.list_source_images.append(i)
-                Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = photo
+                filename = os.path.join(directory, img_file) if directory else img_file
+                t = self.type_of(filename) or "?"
+                files_by_type.setdefault(t, []).append(filename)
 
-            self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
-            self.unselect_all(self.dict_source_images, self.source_canvas)
-            self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
+            for dateityp, files_of_type in files_by_type.items():
+                busy = tools.BusyDialog(self.root, text=f"{dateityp}: Vorschaubilder werden erzeugt…")
+                try:
+                    total = len(files_of_type)
+                    for idx, filename in enumerate(files_of_type, start=1):
+                        if busy.cancelled:
+                            break
+                        busy.update_progress(idx, total)
+                        if not tools.isfile_fast(filename):   # network share: short test, no long timeout
+                            missing.append(filename)
+                            continue
+                        tag_no += 1
+                        Diatisch.dict_file_meta[filename] = (self.type_of(filename), self.process_type_of(filename))
+                        photo = self.make_photo(filename, self.source_canvas)
+                        # insert into self.list_source_images
+                        i = MyImage(filename, os.stat(filename).st_mtime, self.source_canvas, tag_prefix + str(tag_no))
+                        self.list_source_images.append(i)
+                        Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = photo
+                finally:
+                    busy.close()
+                if busy.cancelled:
+                    cancelled_any = True
+                    break
 
+            # --- source canvas, with BusyDialog ---
+            busy = tools.BusyDialog(self.root, text="Source-Canvas wird aufgebaut…")
+            try:
+                self.dict_source_images = self.display_image_objects(
+                    self.list_source_images, self.source_canvas, self.Label_source_ctr, busy=busy)
+                self.unselect_all(self.dict_source_images, self.source_canvas)
+                self.source_canvas.configure(scrollregion=self.source_canvas.bbox("all")) # update scrollregion
+            finally:
+                busy.close()
+            if busy.cancelled:
+                cancelled_any = True
+
+            # --- target ---
             if p_keep_targets: # only files which are still in source
                 p_imagefiles_target = [f for f in p_keep_targets if f in Diatisch.dict_filename_images[Diatisch.idx_akt]]
-            if p_imagefiles_target: # imagefiles given by caller
+            if p_imagefiles_target and not cancelled_any: # imagefiles given by caller
+                files_target_by_type = {}
                 for filename in p_imagefiles_target:
-                    if not tools.isfile_fast(filename):
-                        missing.append(filename)
-                        continue
-                    tag_no += 1
-                    if filename not in Diatisch.dict_filename_images[Diatisch.idx_akt]: # target which is not in source: needs own photo
-                        Diatisch.dict_file_meta[filename] = (self.type_of(filename), self.process_type_of(filename))
-                        Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = self.make_photo(filename, self.source_canvas)
-                    # insert into self.list_target_images
-                    i = MyImage(filename, os.stat(filename).st_mtime, self.target_canvas, tag_prefix + str(tag_no))
-                    self.list_target_images.append(i)
+                    t = self.type_of(filename) or "?"
+                    files_target_by_type.setdefault(t, []).append(filename)
 
-                self.dict_target_images = self.display_image_objects(self.list_target_images, self.target_canvas, self.Label_target_ctr)
-                self.unselect_all(self.dict_target_images, self.target_canvas)
-                self.target_canvas.configure(scrollregion=self.target_canvas.bbox("all")) # update scrollregion
-                if len(self.list_target_images) > 0: # anz target images > 0
-                    self.button_exec.config(state = tk.NORMAL)
+                for dateityp, files_of_type in files_target_by_type.items():
+                    busy = tools.BusyDialog(self.root, text=f"{dateityp}: Target-Vorschaubilder werden erzeugt…")
+                    try:
+                        total = len(files_of_type)
+                        for idx, filename in enumerate(files_of_type, start=1):
+                            if busy.cancelled:
+                                break
+                            busy.update_progress(idx, total)
+                            if not tools.isfile_fast(filename):
+                                missing.append(filename)
+                                continue
+                            tag_no += 1
+                            if filename not in Diatisch.dict_filename_images[Diatisch.idx_akt]: # target which is not in source: needs own photo
+                                Diatisch.dict_file_meta[filename] = (self.type_of(filename), self.process_type_of(filename))
+                                Diatisch.dict_filename_images[Diatisch.idx_akt][filename] = self.make_photo(filename, self.source_canvas)
+                            # insert into self.list_target_images
+                            i = MyImage(filename, os.stat(filename).st_mtime, self.target_canvas, tag_prefix + str(tag_no))
+                            self.list_target_images.append(i)
+                    finally:
+                        busy.close()
+                    if busy.cancelled:
+                        cancelled_any = True
+                        break
+
+                if self.list_target_images:
+                    busy = tools.BusyDialog(self.root, text="Target-Canvas wird aufgebaut…")
+                    try:
+                        self.dict_target_images = self.display_image_objects(
+                            self.list_target_images, self.target_canvas, self.Label_target_ctr, busy=busy)
+                        self.unselect_all(self.dict_target_images, self.target_canvas)
+                        self.target_canvas.configure(scrollregion=self.target_canvas.bbox("all")) # update scrollregion
+                        if len(self.list_target_images) > 0: # anz target images > 0
+                            self.button_exec.config(state = tk.NORMAL)
+                    finally:
+                        busy.close()
+                    if busy.cancelled:
+                        cancelled_any = True
         except Exception:
             import traceback
             traceback.print_exc()
@@ -1711,7 +1767,11 @@ class Diatisch:
         if missing:
             messagebox.showwarning("Load", "{:d} file(s) not found and skipped:\n{:s}".format(len(missing), "\n".join(missing[:10])), parent = self.root)
         # sort images according to radiobuttons
-        self.rb_sort()
+        busy = tools.BusyDialog(self.root, text="Sortierung wird angewendet…")
+        try:
+            self.rb_sort(busy=busy)
+        finally:
+            busy.close()
         self.historize_process("load directory {:s}".format(display_dir))
         self.root.lift()
 
@@ -2725,7 +2785,11 @@ class Diatisch:
         else:
             return False
 
-    def display_image_objects(self, list_obj, canvas, label_ctr): # display list of images on canvas, use already converted photos in objects, better performance
+    def display_image_objects(self, list_obj, canvas, label_ctr, busy=None):
+        # display list of images on canvas, use already converted photos in objects, better performance
+        # busy: optional tools.BusyDialog, receives update_progress per image and
+        #       can cancel by setting busy.cancelled. Already drawn images stay
+        #       on the canvas - cancellation is "soft" (keep what is loaded).
         xpos = 0
         ypos = 0
         row  = 0
@@ -2733,7 +2797,12 @@ class Diatisch:
         ctr  = 0
         canvas.delete("all")
         dict_images = {}
-        for i in list_obj:
+        total = len(list_obj) if list_obj else 0
+        for idx, i in enumerate(list_obj, start=1):
+            if busy is not None and busy.cancelled:
+                break
+            if busy is not None:
+                busy.update_progress(idx, total)
             filename = i.get_filename()
             #print("try to show image: " , filename) if self.debug else True
             photo = i.get_image()
@@ -3227,18 +3296,19 @@ class Diatisch:
                 thiscmdfile.write(comment + str_ret + '\n')
             thiscmdfile.close()
 
-    def rb_sort(self, event = None):
+    def rb_sort(self, event = None, busy=None):
         # radiobuttons name / date asc / desc
-        self.sort_source_images()
+        self.sort_source_images(busy=busy)
 
-    def rb_g(self, event = None):
+    def rb_g(self, event = None, busy=None):
         # radiobuttons 'sort within type' (rbg == "1") / 'sort all' (rbg == "2")
-        self.sort_source_images()
+        self.sort_source_images(busy=busy)
 
-    def sort_source_images(self):
+    def sort_source_images(self, busy=None):
         # rbvalue: 1 name asc, 2 name desc, 3 mod. date asc, 4 mod. date desc
         # rbg "1" (sort within type): one block per type in the order of the camera types, inside each block by rbvalue
         # rbg "2" (sort all): sort over all types
+        # busy: optional tools.BusyDialog, forwarded to display_image_objects
         method = int(self.rbvalue.get())
         mtime_cache = {}
         def mtime(path):
@@ -3257,25 +3327,10 @@ class Diatisch:
             type_order = {t: n for n, t in enumerate(self.dict_cameras)}
             lst.sort(key = lambda x: type_order.get(x.imgtype, 999)) # stable: keeps the order inside the type
         self.list_source_images = lst
-        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
+        self.dict_source_images = self.display_image_objects(
+            self.list_source_images, self.source_canvas, self.Label_source_ctr, busy=busy)
         self.apply_selections(self.list_source_images, self.source_canvas)
 
-    def order_name_asc(self): # order images on source canvas by name asc
-        self.list_source_images = sorted(self.list_source_images, key=lambda x: x.get_filename(), reverse=False)
-        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
-        self.apply_selections(self.list_source_images, self.source_canvas)
-    def order_name_desc(self): # order images on source canvas by name desc
-        self.list_source_images = sorted(self.list_source_images, key=lambda x: x.get_filename(), reverse=True)
-        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
-        self.apply_selections(self.list_source_images, self.source_canvas)
-    def order_date_asc(self): # order images on source canvas by date asc
-        self.list_source_images = sorted(self.list_source_images, key=lambda x: os.path.getmtime(x.get_filename()), reverse=False)
-        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
-        self.apply_selections(self.list_source_images, self.source_canvas)
-    def order_date_desc(self): # order images on source canvas by date desc
-        self.list_source_images = sorted(self.list_source_images, key=lambda x: os.path.getmtime(x.get_filename()), reverse=True)
-        self.dict_source_images = self.display_image_objects(self.list_source_images, self.source_canvas, self.Label_source_ctr)
-        self.apply_selections(self.list_source_images, self.source_canvas)
 
     def apply_selections(self, list_images, canvas):
         # now select / unselect, remember: display image objects always shows selecttion frame because it is drawn last!

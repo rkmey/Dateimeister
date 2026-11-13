@@ -559,19 +559,45 @@ class MyFSImage:
         self.button_fit()
 
     def print_handler(self):
-        """Print button: fires a PrintRequestEvent. ..."""
+        """Print button: fires a PrintRequestEvent.
+
+        For STILL images the original file goes directly to the PrintPreview.
+        For RAW images the currently displayed image (embedded JPEG or full
+        resolution, depending on raw_mode) is saved as a temporary PNG first.
+        That save can take 1-2 seconds for high-resolution images, so a
+        modal BusyDialog is shown around it: grab_set() prevents the user
+        from clicking into the half-finished FSImage window while the save
+        is running.
+        """
         if not self.is_raw:
+            # STILL: original file goes directly to the PrintPreview.
             filename = self.file
-        else:
-            if self.image is None:
-                # Image already released (window is closing). Ignore.
-                return
-            import uuid
-            filename = os.path.join(
-                Globals.temp_files_path,
-                f"print_{uuid.uuid4().hex}.png"
+            Globals.eventManager.generate(
+                "PrintRequestEvent",
+                PrintRequestEvent(filename, self)
             )
+            return
+
+        # RAW: current image (embedded or full) as temporary PNG.
+        if self.image is None:
+            # Image already released (window is closing). Ignore.
+            return
+
+        import uuid
+        filename = os.path.join(
+            Globals.temp_files_path,
+            f"print_{uuid.uuid4().hex}.png"
+        )
+        busy = tools.BusyDialog(
+            self.root,
+            title="Bild wird für den Druck vorbereitet…"
+        )
+        try:
+            busy.update_progress(0, 1)      # Event-Loop einmal treiben
             self.image.save(filename, format="PNG")
+            busy.update_progress(1, 1)      # fertig
+        finally:
+            busy.close()
 
         Globals.eventManager.generate(
             "PrintRequestEvent",
