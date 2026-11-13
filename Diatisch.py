@@ -892,7 +892,9 @@ class Diatisch:
         # zentrale Drucklogik: nimmt PrintRequestEvent von überall entgegen
         Globals.eventManager.bind("PrintRequestEvent", self.handle_print_request)
         # if camera changed we should know
-        Globals.eventManager.bind("CameraChangedEvent", self.handle_camera_changed)        
+        Globals.eventManager.bind("CameraChangedEvent", self.handle_camera_changed)
+        # if  fsimage closes
+        Globals.eventManager.bind("Closing", self.on_closing)        
         
         self.update_combobox_camera()
 
@@ -1327,6 +1329,7 @@ class Diatisch:
         cfg, has_errors, has_warnings, problems = load_and_validate_ini(inifile, spec = dict_ini_spec, target = self, target_registry={"Globals": tools.Globals})
         print("Ini-Datei ist vollständig und gültig.")
         print("Beispiel: config_files_xml =", self.config_files_xml, type(self.config_files_xml), self.uncomment)
+        print(f"retrieving data from {self.config_files_xml}") if self.debug else True
         
         # some operations on selected properties
         self.platform = self.platform.upper()
@@ -1334,12 +1337,6 @@ class Diatisch:
         if self.platform != "UNIX" and self.platform != "WINDOWS":
             messagebox.showerror("INIT", "Platform must be Windows or Unix, not " + self.platform)
             exit()
-        # datadir / config_files_subdir are also needed in Globals (camera treeview). A key can only appear once in
-        # dict_ini_spec, so the attribute in self may be missing -> fall back to the Globals value
-        if not self.datadir:
-            self.datadir = getattr(Globals, "datadir", "") or ""
-        if not self.config_files_subdir:
-            self.config_files_subdir = getattr(Globals, "config_files_subdir", "") or ""
         # temp dir for print previews (RAW -> PNG, PrintPreview)
         temp_subdir = getattr(Globals, "temp_files_subdir", None) or "daten/temp"
         Globals.temp_files_path = os.path.join(self.datadir, temp_subdir)
@@ -2780,6 +2777,7 @@ class Diatisch:
         # the FSImage may show another file than the key (companion JPEG), so we look for the object
         for d in (self.dict_file_FSImage_source, self.dict_file_FSImage_target):
             for k in [k for k, v in d.items() if v is event.obj]: # has been created by us, not by someone else
+                print(f"FSImage for {event.filename} has been closed")
                 del d[k]
 
     # Undo /Redo functions
@@ -3000,6 +2998,7 @@ class Diatisch:
 
         Globals.eventManager.unbind("PrintRequestEvent", self.handle_print_request)
         Globals.eventManager.unbind("CameraChangedEvent", self.handle_camera_changed)
+        Globals.eventManager.unbind("Closing", self.on_closing)        
 
         self.close_child_windows()
         self.root.destroy()
