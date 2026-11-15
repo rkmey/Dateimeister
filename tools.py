@@ -316,7 +316,8 @@ def parse_title(s):
     text, relsize, pos = m.group(2), float(m.group(3)), m.group(4)
     return text, relsize, pos
 
-def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w):
+def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, d_s, d_w,
+                              show_h=True, show_v=True):
     """
     this function places a listbox or other scrollable element in a given Frame with horizontal and vertical scrollbars
     element ist the element to be placed, sb_h and sb_v the scrollbars (horizonzal, vertical)
@@ -324,9 +325,11 @@ def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, 
     the box with the scrollbars fills the area in the frame completely.
     the relative width is given with respect to the listbox to be constructed, so we have to correct it according to its rel. width
     The height of the horizontal scrollbar is the same as the width of the vertical scrollbar
-    on call the frame is given and the width of the vertical scrollbar. 
+    on call the frame is given and the width of the vertical scrollbar.
+
+    show_h / show_v: if False, the respective scrollbar is not placed and its
+    space is given to the element. Both default to True (previous behaviour).
     """
-    
     # scrollbar width as fraction of frame-width
     parent_width_in_pixel  = frame.winfo_width()
     parent_height_in_pixel = frame.winfo_height()
@@ -335,12 +338,30 @@ def place_box_with_scrollbars(caller, frame, element, sb_h, sb_v, rw, d_n, d_e, 
     factor = parent_width_in_pixel / parent_height_in_pixel
     rel_size_sb_x = rw * element_width_in_pixel / parent_width_in_pixel
     rel_size_sb_y = rel_size_sb_x * factor # width relative to y
-    element_width  = element_width_in_pixel / parent_width_in_pixel - rel_size_sb_x
-    element_height = element_height_in_pixel / parent_height_in_pixel - rel_size_sb_y
-    element.place(relx = d_w, rely = d_n, relheight = element_height, relwidth = element_width, anchor = tk.NW)     
-    sb_h.place(relx = d_w, rely = d_n + element_height, relheight = rel_size_sb_y, relwidth = element_width, anchor = tk.NW)
-    sb_v.place(relx = d_w + element_width, rely = d_n, relheight = element_height, relwidth = rel_size_sb_x, anchor = tk.NW)
 
+    if show_v:
+        element_width = element_width_in_pixel / parent_width_in_pixel - rel_size_sb_x
+    else:
+        element_width = element_width_in_pixel / parent_width_in_pixel
+
+    if show_h:
+        element_height = element_height_in_pixel / parent_height_in_pixel - rel_size_sb_y
+    else:
+        element_height = element_height_in_pixel / parent_height_in_pixel
+
+    element.place(relx = d_w, rely = d_n, relheight = element_height, relwidth = element_width, anchor = tk.NW)
+
+    if show_h:
+        sb_h.place(relx = d_w, rely = d_n + element_height, relheight = rel_size_sb_y,
+                   relwidth = element_width, anchor = tk.NW)
+    else:
+        sb_h.place_forget()
+
+    if show_v:
+        sb_v.place(relx = d_w + element_width, rely = d_n, relheight = element_height,
+                   relwidth = rel_size_sb_x, anchor = tk.NW)
+    else:
+        sb_v.place_forget()
 
 # ------------------------------------------------------------------------------
 # Verzeichnispruefung (auch fuer Netzlaufwerke): schnell und ohne die GUI zu blockieren

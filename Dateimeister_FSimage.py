@@ -301,6 +301,8 @@ class MyFSImage:
         Globals.eventManager.bind("FileStateChanged", self.on_file_state_changed)
         Globals.eventManager.bind("Closing", self.on_closing)
 
+        self.is_fullscreen = False
+
         self.zoomfaktor = 1.0
         self.f.focus_set()
         self.image_zoom(self.zoomfaktor)
@@ -338,7 +340,6 @@ class MyFSImage:
 
         # --- FULLSCREEN ---
         # State for the fullscreen mode and the auto-hide overlay.
-        self.is_fullscreen = False
         self._hide_timer_id = None
         self._mouse_watch_id = None
         self._last_mouse_pos = None
@@ -428,6 +429,11 @@ class MyFSImage:
         self.frame_2.place_forget()
         self.frame_canvas.place(relx=0, rely=0, relheight=1.0, relwidth=1.0)
 
+        # In fullscreen the canvas must be really borderless and the
+        # scrollbars must not eat any space. The user scrolls with the
+        # arrow keys (bindings already exist in __init__).
+        self._enter_fullscreen_canvas()
+
         self.root.attributes("-fullscreen", True)
         self.root.bind("<Escape>", self.exit_fullscreen)
 
@@ -455,6 +461,10 @@ class MyFSImage:
         self.root.attributes("-fullscreen", False)
         self.root.unbind("<Escape>")
 
+        # Restore the canvas layout (border, scrollbar reservation) BEFORE
+        # re-placing the frames, so image_zoom works on the normal geometry.
+        self._exit_fullscreen_canvas()
+
         # Detach the overlay frames and put them back in their original position.
         self.frame_1_1.place_forget()
         self.frame_1_2.place_forget()
@@ -474,6 +484,47 @@ class MyFSImage:
         self.frame_2.place(relx=relw_frame_canvas + 2 * gap, rely=relh_1 + 3 * gap, relheight=relh_2, relwidth=relw_frame_2 - 2 * gap)
 
         self._reapply_zoom()
+
+    def _enter_fullscreen_canvas(self):
+        """Fullscreen: canvas fills the whole frame, no border, no scrollbars.
+
+        The user scrolls with the arrow keys (bindings already exist in
+        __init__). The normal canvas placement is saved on self so that
+        exit_fullscreen can restore it exactly - including the place
+        options (anchor etc.) that place_box_with_scrollbars used.
+        """
+        # remember the normal geometry of the canvas
+        self._fs_saved_canvas_place = self.f.place_info()
+        # place the canvas over the whole frame_canvas
+        self.f.place(relx=0, rely=0, relheight=1.0, relwidth=1.0)
+        # no border, no highlight, no ridge
+        self.f.configure(borderwidth=0, highlightthickness=0, relief="flat")
+        # hide the scrollbars (all scrollbars are managed by place,
+        # so place_forget is enough and reliable)
+        self.H_I.place_forget()
+        self.V_I.place_forget()
+        self._fs_scrollbars_hidden = True
+
+    def _exit_fullscreen_canvas(self):
+        """Restore the normal canvas geometry (border, scrollbars)."""
+        if not getattr(self, "_fs_scrollbars_hidden", False):
+            return
+        # restore border / highlight / relief
+        self.f.configure(borderwidth="2",
+                         highlightbackground="#d9d9d9",
+                         highlightcolor="black",
+                         relief="ridge")
+        # restore the normal placement of the canvas
+        saved = getattr(self, "_fs_saved_canvas_place", None)
+        if saved:
+            self.f.place(**saved)
+        else:
+            # fallback: the geometry used in __init__
+            tools.place_box_with_scrollbars(
+                self, self.frame_canvas, self.f, self.H_I, self.V_I,
+                rw=0.01, d_n=0.0, d_e=0.0, d_s=0.0, d_w=0.0
+            )
+        self._fs_scrollbars_hidden = False
 
     def _show_controls_overlay(self):
         """Show the control frames as an overlay on top of the canvas.
@@ -778,6 +829,11 @@ class MyFSImage:
 
         zoomfaktor == 0 means: compute the factor so the image fits the canvas.
         zoomfaktor == 1 means: 100% (pixel-for-pixel).
+
+        The canvas and scrollbars are placed by tools.place_box_with_scrollbars,
+        which is the single place where this layout is computed. In fullscreen
+        both scrollbars are hidden regardless of the image size - the user
+        scrolls with the arrow keys.
         """
         image_width_orig, image_height_orig = self.image.size
         self.f.update()
@@ -800,14 +856,20 @@ class MyFSImage:
         self.f.tag_raise("text")
         self.f.update()
 
-        if newsize[0] <= canvas_width:
-            self.H_I.pack_forget()
+        if self.is_fullscreen:
+            # Fullscreen: no scrollbars at all, the canvas fills the frame.
+            self.f.place(relx=0, rely=0, relheight=1.0, relwidth=1.0)
+            self.H_I.place_forget()
+            self.V_I.place_forget()
         else:
-            self.H_I.pack(side=BOTTOM, fill=BOTH)
-        if newsize[1] <= canvas_height:
-            self.V_I.pack_forget()
-        else:
-            self.V_I.pack(side=RIGHT, fill=Y)
+            # Non-fullscreen: single source of truth for the layout.
+            need_h = newsize[0] > canvas_width
+            need_v = newsize[1] > canvas_height
+            tools.place_box_with_scrollbars(
+                self, self.frame_canvas, self.f, self.H_I, self.V_I,
+                rw=0.01, d_n=0.0, d_e=0.0, d_s=0.0, d_w=0.0,
+                show_h=need_h, show_v=need_v
+            )
 
         self.f.config(scrollregion=self.f.bbox("all"))
 
