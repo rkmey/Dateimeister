@@ -212,7 +212,7 @@ class Dateimeister_support:
         # we create the attributes in 'self' except those which have a "target" (Globals) in the line. the attributes are also generated in cfg
         cfg, has_errors, has_warnings, problems = load_and_validate_ini(inifile, spec = dict_ini_spec, target = self, target_registry={"Globals": tools.Globals})
         print("Ini-Datei ist vollständig und gültig.")
-        print("Beispiel: cfg.max_configfiles =", cfg.max_configfiles, type(cfg.max_configfiles), cfg.templatefile_diatisch, cfg.proctypes, tools.Globals.config_files_xml)
+        print("Beispiel: cfg.max_configfiles =", cfg.max_configfiles, type(cfg.max_configfiles), cfg.templatefile, cfg.proctypes, tools.Globals.config_files_xml)
         print(f"num thumbnails preview is {Globals.num_video_thumbnails}") if self.debug else True
         print("Proctype: " + self.proctypes) 
        
@@ -3978,35 +3978,30 @@ class Dateimeister_support:
         cmd_file_full = self.dict_gen_files[imagetype] # filename was already built by generate-method
         thiscmdfile = open(cmd_file_full, 'w', encoding=tools.CMD_FILE_ENCODING)
         thiscmdfile.write(header) 
-        dict_files = self.dict_source_target[imagetype]
         num_total = 0
         num_excluded = 0
+        dict_files = self.dict_source_target.get(imagetype, {})
         for sourcefile in dict_files:
             num_total += 1
             comment = ""
-            do_include = False
             #print(imagetype + ', ' + sourcefile)
-            if imagetype in Globals.dict_thumbnails and sourcefile in Globals.dict_thumbnails[imagetype]:
-                thumbnail = Globals.dict_thumbnails[imagetype][sourcefile]
+            thumbnail = Globals.dict_thumbnails.get(imagetype, {}).get(sourcefile)
+            if thumbnail:
                 if thumbnail.getState() == EXCLUDE:
-                    comment = Globals.uncomment
                     num_excluded += 1
-                else: # we have to incluse this file even if it is too old
-                    do_include = True
-            # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
-            if do_include == False:
-                if imagetype in self.dict_source_target_tooold and sourcefile in self.dict_source_target_tooold[imagetype]:
-                    comment = Globals.uncomment 
-            targetfile = dict_files[sourcefile]
-            if self.platform == "WINDOWS":
-                targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
-            elif self.platform == "UNIX":
-                targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
-            str_ret = template_copy
-            str_ret = str_ret.replace('<source>', sourcefile)
-            str_ret = str_ret.replace('<target>', targetfile)
-            str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
-            thiscmdfile.write(comment + ' ' + str_ret + '\n')
+                    comment = Globals.uncomment
+                    if sourcefile in self.dict_source_target_tooold.get(imagetype, {}):
+                        comment += ' -TOOOLD- '
+                targetfile = dict_files[sourcefile]
+                if self.platform == "WINDOWS":
+                    targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
+                elif self.platform == "UNIX":
+                    targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
+                str_ret = template_copy
+                str_ret = str_ret.replace('<source>', sourcefile)
+                str_ret = str_ret.replace('<target>', targetfile)
+                str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
+                thiscmdfile.write(comment + ' ' + str_ret + '\n')
         thiscmdfile.close()
         Globals.files_for_exec = num_total - num_excluded
 
@@ -4014,31 +4009,26 @@ class Dateimeister_support:
         cmd_file_full = self.dict_gen_files_delete[imagetype] # filename was already built by generate-method
         thiscmdfile = open(cmd_file_full, 'w', encoding=tools.CMD_FILE_ENCODING)
         thiscmdfile.write(header) 
-        dict_files = self.dict_source_target[imagetype]
+        dict_files = self.dict_source_target.get(imagetype, {})
         for sourcefile in dict_files:
             comment = ""
-            do_include = False
             #print(imagetype + ', ' + sourcefile)
-            if imagetype in Globals.dict_thumbnails and sourcefile in Globals.dict_thumbnails[imagetype]:
-                thumbnail = Globals.dict_thumbnails[imagetype][sourcefile]
+            thumbnail = Globals.dict_thumbnails.get(imagetype, {}).get(sourcefile)
+            if thumbnail:
                 if thumbnail.getState() == EXCLUDE:
                     comment = Globals.uncomment
-                else: # we have to incluse this file even if it is too old
-                    do_include = True
-            # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
-            if do_include == False:
-                if imagetype in self.dict_source_target_tooold and sourcefile in self.dict_source_target_tooold[imagetype]:
-                    comment = Globals.uncomment 
-            targetfile = dict_files[sourcefile]
-            if self.platform == "WINDOWS":
-                targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
-            elif self.platform == "UNIX":
-                targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
-            str_ret = template_delete
-            str_ret = str_ret.replace('<source>', sourcefile)
-            str_ret = str_ret.replace('<target>', targetfile)
-            str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
-            thiscmdfile.write(comment + ' ' + str_ret + '\n')
+                    if sourcefile in self.dict_source_target_tooold.get(imagetype, {}):
+                        comment += ' -TOOOLD- '
+                targetfile = dict_files[sourcefile]
+                if self.platform == "WINDOWS":
+                    targetfile = re.sub(r'/', '\\\\', targetfile) # replace / by \
+                elif self.platform == "UNIX":
+                    targetfile = re.sub(r'\\', '/', targetfile) # replace \ by /
+                str_ret = template_delete
+                str_ret = str_ret.replace('<source>', sourcefile)
+                str_ret = str_ret.replace('<target>', targetfile)
+                str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
+                thiscmdfile.write(comment + ' ' + str_ret + '\n')
         thiscmdfile.close()
         
         # --- Delrelpath ---

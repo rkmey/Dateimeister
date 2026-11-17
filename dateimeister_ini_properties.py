@@ -29,15 +29,10 @@ dict_ini_spec = {
     ("misc", "uncomment"):                 {"var": "uncomment",                 "type": "str", "target": "Globals", "action": "error"},
     ("misc", "platform"):                  {"var": "platform",                  "type": "str", "action": "error"},
     ("misc", "config_files_xml"):          {"var": "config_files_xml",          "type": "str", "target": "Globals", "action": "error"},
-    ("misc", "config_files_diatisch_xml"): {"var": "config_files_diatisch_xml", "type": "str", "action": "error"},
     ("misc", "templatefile"):              {"var": "templatefile",              "type": "str", "checkdir": "no",  "checkfile": "yes", "action": "error"},
-    ("misc", "templatefile_diatisch"):     {"var": "templatefile_diatisch",     "type": "str", "checkdir": "no",  "checkfile": "yes", "action": "error"},
     ("misc", "max_configfiles"):           {"var": "max_configfiles",           "type": "int", "action": "error"},
     ("misc", "max_indirs"):                {"var": "max_indirs",                "type": "int", "action": "error"},
     ("misc", "max_outdirs"):               {"var": "max_outdirs",               "type": "int", "action": "error"},
-    ("misc", "max_configfiles_diatisch"):  {"var": "max_configfiles_diatisch",  "type": "int", "action": "error"},
-    ("misc", "max_indirs_diatisch"):       {"var": "max_indirs_diatisch",       "type": "int", "action": "error"},
-    ("misc", "max_outdirs_diatisch"):      {"var": "max_outdirs_diatisch",      "type": "int", "action": "error"},
     ("misc", "num_video_thumbnails"):      {"var": "num_video_thumbnails",      "type": "int", "target": "Globals", "action": "error"},
 
     # Ausgeschlossene Ordner beim Scan, mehrzeilig/kommagetrennt (siehe Kommentare in Dateimeister.ini).
