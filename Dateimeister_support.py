@@ -3979,7 +3979,10 @@ class Dateimeister_support:
         thiscmdfile = open(cmd_file_full, 'w', encoding=tools.CMD_FILE_ENCODING)
         thiscmdfile.write(header) 
         dict_files = self.dict_source_target[imagetype]
+        num_total = 0
+        num_excluded = 0
         for sourcefile in dict_files:
+            num_total += 1
             comment = ""
             do_include = False
             #print(imagetype + ', ' + sourcefile)
@@ -3987,6 +3990,7 @@ class Dateimeister_support:
                 thumbnail = Globals.dict_thumbnails[imagetype][sourcefile]
                 if thumbnail.getState() == EXCLUDE:
                     comment = Globals.uncomment
+                    num_excluded += 1
                 else: # we have to incluse this file even if it is too old
                     do_include = True
             # we also have to check if file is too old but only if include us not requqested by thumbnail (manually included)
@@ -4004,6 +4008,7 @@ class Dateimeister_support:
             str_ret = re.sub(r'<<<NL>>>', '\n', str_ret) # reconstruct newline in template
             thiscmdfile.write(comment + ' ' + str_ret + '\n')
         thiscmdfile.close()
+        Globals.files_for_exec = num_total - num_excluded
 
         # --- Delete ---
         cmd_file_full = self.dict_gen_files_delete[imagetype] # filename was already built by generate-method

@@ -632,6 +632,7 @@ class Globals:
     resized = False # only temporary set to True on resize window
     eventManager = None
     thumbnails = {}
+    files_for_exec = 0
 
 def info_box(nachricht, level="info"):
     """
