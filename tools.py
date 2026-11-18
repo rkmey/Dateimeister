@@ -634,7 +634,7 @@ class Globals:
     thumbnails = {}
     files_for_exec = 0
 
-def info_box(nachricht, level="info"):
+def info_box(nachricht = None, level="info", parent = None):
     """
     Zeigt eine Box mit Source-Infos an.
     level: "info", "warnung" oder "fehler" (beendet Programm)
@@ -643,6 +643,7 @@ def info_box(nachricht, level="info"):
     datei = os.path.basename(caller.f_code.co_filename)
     zeile = caller.f_lineno
     funktion = caller.f_code.co_name
+    parent = parent
     
     # Herkunft zusammenbauen
     klasse = caller.f_locals.get('self').__class__.__name__ + "." if 'self' in caller.f_locals else ""
@@ -651,12 +652,12 @@ def info_box(nachricht, level="info"):
     voller_text = f"{nachricht}{source_info}"
 
     if level.lower() == "fehler":
-        mb.showerror("Kritischer Fehler", voller_text)
+        mb.showerror("Kritischer Fehler", voller_text, parent = parent)
         sys.exit()  # Beendet das Programm sofort
     elif level.lower() == "warnung":
-        mb.showwarning("Warnung", voller_text)
+        mb.showwarning("Warnung", voller_text, parent = parent)
     else:
-        mb.showinfo("Information", voller_text)
+        mb.showinfo("Information", voller_text, parent = parent)
 
 """
 this method determines if an object with item id is (partially) visible on the canvas - or scrolded away, for instance

@@ -386,14 +386,89 @@ class MyExecWindow:
         elif self.action == "delete" or self.action == "delrelpath":
             cmdfile = self.deletescript
         self.Label_script.config(text=cmdfile)
-        my_cmd = "call " + cmdfile
         owndir = os.getcwd()
         os.chdir(os.path.join(self.datadir, self.cmd_files_subdir))
-        my_cmd_output = subprocess.Popen(
-            my_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        (output, error) = my_cmd_output.communicate()
-        self.show_messages(output, True)
-        self.show_errors(error, True)
+
+        process = subprocess.Popen(
+            ["cmd.exe"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="cp850",
+            errors="replace",
+            bufsize=1
+        )
+
+        lines_total = 0
+        lines_up_to_here = 0
+        lines_exec = 0
+        lines_exec_success = 0
+        output   = []
+        messages = []
+        errors   = []
+        # we process one command after another
+        try:
+            with open(cmdfile, encoding="cp850") as file:
+                lines_total = sum(1 for line in file)            
+            lines_up_to_here = 0
+            lines_exec = 0
+            lines_exec_success = 0
+            with open(cmdfile, encoding="cp850") as file:
+                busy = tools.BusyDialog(self.root, text= f"executing {cmdfile}")
+                for line in file:
+                    lines_up_to_here += 1
+                    command = line.strip()
+                    if not busy.cancelled:
+                        if not command or command.lower().startswith(("rem ", "@rem ")):
+                            continue
+                        lines_exec += 1
+
+                        # exec and show error status
+                        process.stdin.write(command + "\n")
+                        process.stdin.write('@echo __RESULT__%ERRORLEVEL%\n')
+                        process.stdin.flush()
+
+                        # Auf Ergebnis warten
+                        output = []
+                        while True:
+                            result = process.stdout.readline()
+                            output.append(result)
+                            if result == "":
+                                raise RuntimeError(
+                                    "cmd.exe unexpededly ended"
+                                )
+                            if result.startswith("__RESULT__"):
+                                errorlevel = int(
+                                    result.split("__RESULT__")[1]
+                                )
+                                break
+
+                        busy.update_progress(lines_up_to_here, lines_total)
+                        if errorlevel == 0:
+                            message = f"{command}: {errorlevel}"
+                            lines_exec_success += 1
+                            messages.append(message)
+                        else:
+                            error_text = "".join(output).replace("\r", " ").replace("\n", " ").strip()
+                            errors.append(error_text)
+                    else: 
+                        break
+                        command = line.strip()
+                busy.close()
+
+        finally:
+            process.stdin.write("exit\n")
+            process.stdin.close()
+            process.wait()
+            self.show_messages("\n".join(messages), True)
+            if (lines_exec - lines_exec_success) > 0:
+                self.show_errors("\n".join(errors), True)
+                tools.info_box(parent = self.root,
+                    nachricht = f"errors ({lines_exec - lines_exec_success}) during {self.action}, check messages and errors",
+                    level = "warnung"
+                )
+
         if (self.action == "delete" and self.delrelpathscript is not None
                 and self.cb_delrelpath_var.get()):
             cmdfile_delrelpath = self.delrelpathscript
@@ -406,6 +481,7 @@ class MyExecWindow:
             self.show_errors(error, False)
             self.Label_script.config(text=cmdfile + ' + ' + cmdfile_delrelpath)
         os.chdir(owndir)
+
 
     def close_handler(self):
         self.root.destroy()
