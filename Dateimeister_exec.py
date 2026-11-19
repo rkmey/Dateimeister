@@ -11,13 +11,13 @@ from tkinter import Scrollbar
 
 import Tooltip as TT
 import tools
-
+from tools import Globals, INCLUDE, EXCLUDE, FileStateEvent, ClosingEvent, PrintRequestEvent, CameraChangedEvent
 
 class MyExecWindow:
 
     # The class "constructor" - It's actually an initializer
-    def __init__(self, pmain, datadir, cmd_files_subdir, imagetype,
-                 copyscript=None, deletescript=None, delrelpathscript=None):
+    def __init__(self, pmain, datadir, cmd_files_subdir, imagetype, dict_target_count, dict_source_target, dup_key,
+                 copyscript=None, deletescript=None, delrelpathscript=None, debug = 'n'):
         self.root = tk.Toplevel()
         self.main = pmain
 
@@ -26,9 +26,14 @@ class MyExecWindow:
         self.copyscript = copyscript
         self.deletescript = deletescript
         self.delrelpathscript = delrelpathscript
+        self.dict_target_count = dict_target_count
+        self.dict_source_target = dict_source_target
+        self._dup_key = dup_key
+        self.imagetype = imagetype
+        self.debug = debug
 
         self.root.protocol("WM_DELETE_WINDOW", self.close_handler)
-        self.root.title(imagetype)
+        self.root.title(self.imagetype)
 
         # ----- Fenster-Layout (frueher Toplevel_messages in Dateimeister.py) -----
         self._build_ui()
@@ -43,6 +48,7 @@ class MyExecWindow:
 
         self.cb_delrelpath_var.set(0)
         self.Button_execute.config(command=self.exec_handler)
+        self.Button_expected.config(command=self.expected_handler)
 
         # ----- Scrollbars -----
         # Script
@@ -96,6 +102,9 @@ class MyExecWindow:
         self.Checkbutton_delrelpath.config(state=DISABLED)
         self.Label_scripttype.config(text="Copyscript")
 
+        # get expected copies, new files and overwrites
+        num_expected_copies, num_override, num_new = self.count_expected_copies(Globals.imagetype)
+        print(f"EXEC pressed, num expected, override, new = {num_expected_copies},{num_override},{num_new}") if self.debug else True
     # ------------------------------------------------------------------
     # UI-Aufbau (aus Dateimeister.Toplevel_messages uebernommen)
     # ------------------------------------------------------------------
@@ -165,6 +174,23 @@ class MyExecWindow:
                                       text='copy')
         self.Button_execute_tooltip = TT.ToolTip(
             self.Button_execute, 'execute command')
+
+        # Button_expected
+        self.Button_expected = tk.Button(top)
+        self.Button_expected.place(relx=0.179, rely=0.85, height=34, width=77)
+        self.Button_expected.configure(activebackground="beige",
+                                      activeforeground="black",
+                                      background="#d9d9d9",
+                                      compound='left',
+                                      disabledforeground="#a3a3a3",
+                                      font="-family {Segoe UI} -size 9",
+                                      foreground="black",
+                                      highlightbackground="#d9d9d9",
+                                      highlightcolor="black",
+                                      pady="0",
+                                      text='show expected')
+        self.Button_expected_tooltip = TT.ToolTip(
+            self.Button_expected, 'expected command')
 
         # Checkbutton_delrelpath
         self.cb_delrelpath_var = tk.IntVar()
@@ -380,6 +406,10 @@ class MyExecWindow:
         self.Text_errors.insert('end', text)
         self.Text_errors.insert('end', "\r\n")
 
+    def expected_handler(self):
+        num_expected_copies = self.count_expected_copies(Globals.imagetype)
+        print(f"Expected pressed, num expected = {num_expected_copies}") if self.debug else True
+
     def exec_handler(self):
         if self.action == "copy":
             cmdfile = self.copyscript
@@ -481,6 +511,45 @@ class MyExecWindow:
             self.show_errors(error, False)
             self.Label_script.config(text=cmdfile + ' + ' + cmdfile_delrelpath)
         os.chdir(owndir)
+
+    def count_expected_copies(self, imagetype):
+        """Anzahl der Dateien, die beim Exec tatsaechlich kopiert werden.
+
+        Startet mit der Anzahl der Ziele (= Anzahl der moeglichen Kopien)
+        und zieht fuer jede ausgeschlossene Quelle eine Kopie ab. Ist der
+        Count eines Ziels dadurch 0, wird das Ziel gar nicht kopiert und
+        die erwartete Anzahl sinkt um 1.
+
+        Das Zaehl-Dict wird dabei NICHT dauerhaft veraendert - es wird
+        eine Arbeitskopie benutzt, damit wiederholte Aufrufe dasselbe
+        Ergebnis liefern.
+        """
+        base = self.dict_target_count.get(imagetype, {})
+        counts = dict(base)
+        num_expected = len(counts)
+        thumbnails = Globals.dict_thumbnails.get(imagetype, {})
+        source_target = self.dict_source_target.get(imagetype, {})   # <-- .get statt []
+
+        for src, tgt in source_target.items():
+            th = thumbnails.get(src)
+            if th is not None and th.getState() == EXCLUDE:
+                key = self._dup_key(tgt)
+                counts[key] -= 1
+                if counts[key] == 0:
+                    num_expected -= 1
+        
+        num_new = 0
+        num_override = 0
+        for t in counts:
+            n = counts[t]
+            if n > 0: # not excluded
+                if tools.isfile_fast(t):
+                    print(f"{t} : already exists") if self.debug else True
+                    num_override += 1
+                else:
+                    print(f"{t} : does not exist") if self.debug else True
+                    num_new += 1
+        return num_expected, num_override, num_new
 
 
     def close_handler(self):

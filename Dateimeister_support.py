@@ -192,6 +192,7 @@ class Dateimeister_support:
         self.dict_gen_files_delete_by_type     = {}
         self.dict_gen_files_delrelpath_by_type = {}
         self.dict_sourcefile_to_type           = {}
+        self.dict_target_count                 = {}
         self.locked_lb_gen                     = False  # recursion guard for label updates
         self._generate_in_progress             = False  # True waehrend generate() laeuft
 
@@ -2089,6 +2090,7 @@ class Dateimeister_support:
             self.dict_gen_files_delete_by_type     = {}
             self.dict_gen_files_delrelpath_by_type = {}
             self.dict_sourcefile_to_type           = {}
+            self.dict_target_count                 = {}
 
             # now make an entry for this indir / outdir. For indir we use the already existing function for config_files without type / config_file
             ts = strftime("%Y%m%d-%H:%M:%S", time.localtime())
@@ -2109,6 +2111,7 @@ class Dateimeister_support:
             Globals.dict_duplicates[combined]          = {}
             self.dict_duplicates_sourcefiles[combined] = {}
             self.dict_sourcefile_to_type[combined]     = {}
+            self.dict_target_count[combined]           = {}
 
         # --- Scan per semantic type and merge into the combined key ---
         sort_method = ""
@@ -2198,6 +2201,13 @@ class Dateimeister_support:
         # finalize duplicate detection: remove singles from dict_duplicates,
         # build hashes, rename as before
         self._finalize_duplicates(combined)
+        
+        self.dict_target_count[combined] = {}
+        for src, tgt in self.dict_source_target[combined].items():
+            key = self._dup_key(tgt)
+            self.dict_target_count[combined][key] = \
+                self.dict_target_count[combined].get(key, 0) + 1   
+        print(f"{self.dict_target_count[combined]}") if self.debug else True
 
         self.collect_jpeg_companions()
 
@@ -2703,7 +2713,7 @@ class Dateimeister_support:
                 lastpos = self.lastposition
                 self.lastposition += image_width + Globals.gap
                 if myimage.getDuplicate() == 'j':
-                    print ("Duplicate: " + file) if self.debug else True
+                    #print ("Duplicate: " + file) if self.debug else True
                     dup_text = "DUP"
                     if self._dup_key(this_targetfile) not in Globals.dict_duplicates[imagetype]:
                         # is in a duplicates group and is single element -> renamed but not shown in duplicates
@@ -2793,7 +2803,7 @@ class Dateimeister_support:
             # if visible, we collect metadata
             if visible:
                 myimage.set_metadata()
-                print (str(myimage.metadata)) if self.debug else True
+                #print (str(myimage.metadata)) if self.debug else True
 
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")
@@ -3028,7 +3038,19 @@ class Dateimeister_support:
         # the single point where they get persisted, instead of after every
         # individual include/exclude change
         self.write_cmdfile(Globals.imagetype)
-        self.win_exec = DM.MyExecWindow(self, Globals.datadir, Globals.cmd_files_subdir, Globals.imagetype, self.dict_gen_files[Globals.imagetype], self.dict_gen_files_delete[Globals.imagetype], self.dict_gen_files_delrelpath[Globals.imagetype]) 
+        self.win_exec = DM.MyExecWindow(
+            self, 
+            Globals.datadir, 
+            Globals.cmd_files_subdir, 
+            Globals.imagetype,
+            self.dict_target_count,
+            self.dict_source_target,
+            self._dup_key,
+            self.dict_gen_files[Globals.imagetype], 
+            self.dict_gen_files_delete[Globals.imagetype], 
+            self.dict_gen_files_delrelpath[Globals.imagetype],
+            self.debug
+            ) 
 
     def write_cmdfiles(self):
         for imagetype in self.dict_source_target:
