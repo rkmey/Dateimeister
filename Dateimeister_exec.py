@@ -102,9 +102,6 @@ class MyExecWindow:
         self.Checkbutton_delrelpath.config(state=DISABLED)
         self.Label_scripttype.config(text="Copyscript")
 
-        # get expected copies, new files and overwrites
-        num_expected_copies, num_override, num_new = self.count_expected_copies(Globals.imagetype)
-        print(f"EXEC pressed, num expected, override, new = {num_expected_copies},{num_override},{num_new}") if self.debug else True
     # ------------------------------------------------------------------
     # UI-Aufbau (aus Dateimeister.Toplevel_messages uebernommen)
     # ------------------------------------------------------------------
@@ -408,7 +405,7 @@ class MyExecWindow:
 
     def expected_handler(self):
         num_expected_copies = self.count_expected_copies(Globals.imagetype)
-        print(f"Expected pressed, num expected = {num_expected_copies}") if self.debug else True
+        print(f"Expected pressed, num expected for {Globals.imagetype} = {num_expected_copies}") if self.debug else True
 
     def exec_handler(self):
         if self.action == "copy":
