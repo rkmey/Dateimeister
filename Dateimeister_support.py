@@ -2139,7 +2139,7 @@ class Dateimeister_support:
                 target_prefix = ''
 
             # show the busy dialog
-            busy = tools.BusyDialog(self.root, text= dateityp + " files are analyzed…")
+            busy = tools.BusyDialog(self.root, text= dateityp + " files are analyzed…", position="CENTER", relative_to="root")
             st, st_jpeg, st_tooold, relpath = DG.dateimeister(
                 dateityp, endung, indir, thisoutdir, addrelpath, recursive,
                 self.cb_newer_var.get(), target_prefix, Globals.list_result_diatisch,
@@ -2148,6 +2148,12 @@ class Dateimeister_support:
                 getattr(Globals, "skip_dirs_any", None),
                 self.debug) # 0: Generator sortiert nicht, das macht resort()
             busy.close()
+            # FIX 20261120: Analyse abgebrochen -> Teilergebnisse verwerfen
+            # (wie beim Kamera-Wechsel), keine cmd-Dateien, keine Anzeige.
+            if busy.cancelled:
+                os.chdir(owndir)
+                self.state_gen_required()
+                return
 
             # type-specific helper dicts
             self.dict_outdirs_by_type[dateityp] = thisoutdir
@@ -2457,7 +2463,7 @@ class Dateimeister_support:
             process = psutil.Process(os.getpid())
             gc.collect()
             memory_before = process.memory_info().rss
-        busy = tools.BusyDialog(self.root, text="Fotos werden geladen…")
+        busy = tools.BusyDialog(self.root, text=f"Fotos {imagetype} werden geladen…", position="CENTER", relative_to="root")
 
         filename = self.dict_gen_files[imagetype]
 
@@ -2804,6 +2810,14 @@ class Dateimeister_support:
             if visible:
                 myimage.set_metadata()
                 #print (str(myimage.metadata)) if self.debug else True
+
+        # FIX 20261120: user aborted the load (Cancel-Button). Everything
+        # up to here is PARTIAL. Discard it completely - same as after a
+        # camera change - and write no cmd files.
+        if busy.cancelled:
+            busy.close()
+            self.state_gen_required()
+            return
 
         self.canvas_gallery.tag_raise("dup_rect")
         self.canvas_gallery.tag_raise("dup_text")

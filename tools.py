@@ -753,7 +753,9 @@ class CameraChangedEvent:
 
 
 class BusyDialog:
-    def __init__(self, root, title="Bitte warten", text="Vorgang läuft…"):
+    def __init__(self, root, title="Bitte warten", text="Vorgang läuft…",
+                 position="NW", relative_to="screen"):
+
         self.root = root
         self.cancelled = False
 
@@ -775,8 +777,12 @@ class BusyDialog:
         self.label_text.pack(pady=10)
 
         # Fortschrittsbalken
-        self.progress = ttk.Progressbar(self.dialog, orient="horizontal",
-                                        length=250, mode="determinate")
+        self.progress = ttk.Progressbar(
+            self.dialog,
+            orient="horizontal",
+            length=250,
+            mode="determinate"
+        )
         self.progress.pack(pady=5)
 
         # Prozentanzeige
@@ -784,18 +790,63 @@ class BusyDialog:
         self.label_progress.pack()
 
         # Abbrechen-Knopf
-        self.button_cancel = tk.Button(self.dialog, text="Abbrechen",
-                                       command=self._cancel)
+        self.button_cancel = tk.Button(
+            self.dialog,
+            text="Abbrechen",
+            command=self._cancel
+        )
         self.button_cancel.pack(pady=10)
 
-        # Breite an den tatsächlichen Inhalt anpassen (Titel + Label),
-        # aber nie schmaler als 480 px - sonst springt die Groesse
-        # zwischen den einzelnen BusyDialogs hin und her.
+        # Größe an den tatsächlichen Inhalt anpassen
         self.dialog.update_idletasks()
         req_w = self.dialog.winfo_reqwidth()
         req_h = self.dialog.winfo_reqheight()
-        self.dialog.geometry(f"{max(480, req_w)}x{max(240, req_h)}")
-        
+
+        width = max(480, req_w)
+        height = max(240, req_h)
+
+        self.dialog.geometry(f"{width}x{height}")
+        self.dialog.update_idletasks()
+
+        # Bezugsbereich bestimmen
+        if relative_to.lower() == "screen":
+            x = 0
+            y = 0
+            area_width = self.dialog.winfo_screenwidth()
+            area_height = self.dialog.winfo_screenheight()
+
+        elif relative_to.lower() == "root":
+            x = root.winfo_rootx()
+            y = root.winfo_rooty()
+            area_width = root.winfo_width()
+            area_height = root.winfo_height()
+
+        else:
+            raise ValueError("relative_to muss 'screen' oder 'root' sein")
+
+        # Positionen
+        positions = {
+            "NW":     (0,   0),
+            "N":      (0.5, 0),
+            "NE":     (1,   0),
+            "W":      (0,   0.5),
+            "CENTER": (0.5, 0.5),
+            "E":      (1,   0.5),
+            "SW":     (0,   1),
+            "S":      (0.5, 1),
+            "SE":     (1,   1),
+        }
+
+        try:
+            px, py = positions[position.upper()]
+        except KeyError:
+            raise ValueError(f"Ungültige Position: {position}")
+
+        pos_x = x + int((area_width - width) * px)
+        pos_y = y + int((area_height - height) * py)
+
+        self.dialog.geometry(f"+{pos_x}+{pos_y}")
+
         self.dialog.update()
 
     def _cancel(self):
